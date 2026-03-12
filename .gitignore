@@ -1,0 +1,41 @@
+# --- VibeAiLink Ignore List ---
+
+# Next.js Build Output (REPLACED /xt/ with /.next/)
+/.next/
+/out/
+/build/
+
+# Dependencies
+/node_modules/
+/.pnp
+.pnp.*
+.yarn/*
+!.yarn/patches
+!.yarn/plugins
+!.yarn/releases
+!.yarn/versions
+
+# Environment Secrets (CRITICAL: keeps your Gemini/ElevenLabs keys safe)
+.env
+.env.local
+.env.development.local
+.env.test.local
+.env.production.local
+
+# macOS system files (Prevents those annoying .DS_Store files)
+.DS_Store
+
+# Debugging and Logs
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+.pnpm-debug.log*
+/coverage
+
+# Vercel & TypeScript
+.vercel
+*.tsbuildinfo
+next-env.d.ts
+
+# Security
+*.pem
