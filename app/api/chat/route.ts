@@ -1,3 +1,4 @@
+export const runtime = 'edge';
 import { GoogleGenerativeAI, HarmCategory, HarmBlockThreshold } from "@google/generative-ai";
 import { NextResponse } from "next/server";
 
