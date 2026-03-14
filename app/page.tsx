@@ -19,8 +19,8 @@ interface Message {
 }
 
 const initialHosts: Host[] = [
-  { id: 'nyc', src: '/avatars/NY man.jpg', label: 'Michael 米哥', gender: 'male', canDelete: false },
-  { id: 'kr', src: '/avatars/HK girl.jpg', label: 'Teresa 麗莎', gender: 'female', canDelete: false }
+  { id: 'nyc', src: '/avatars/nyman.jpg', label: 'Michael 米哥', gender: 'male', canDelete: false },
+  { id: 'kr', src: '/avatars/hkgirl.jpg', label: 'Teresa 麗莎', gender: 'female', canDelete: false }
 ];
 
 const metroDialects = [
