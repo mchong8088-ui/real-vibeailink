@@ -1,58 +1,62 @@
 export const runtime = 'edge';
 import { GoogleGenerativeAI, HarmCategory, HarmBlockThreshold } from "@google/generative-ai";
+import OpenAI from "openai";
 import { NextResponse } from "next/server";
-
-const sleep = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
 
 export async function POST(req: Request) {
   try {
     const { message, hostName, language } = await req.json();
 
     const langInstructions: { [key: string]: string } = {
-      'zh-HK': 'You must respond in natural, street-style Cantonese (廣東話) using Traditional Chinese characters. Use particles like 呀, 㗎, 喎.',
-      'zh-CN': 'You must respond in standard Mandarin (普通話) using Simplified Chinese characters.',
-      'en-US': 'You must respond in natural, friendly English.',
+      'zh-HK': 'Use natural, humorous, street-style Cantonese (廣東話). Be a witty, charming companion. Use particles like 呀, 㗎, 喎.',
+      'zh-CN': 'Use humorous, standard Mandarin (普通話). Be warm, engaging, and funny.',
+      'en-US': 'Use natural, witty, and humorous English. Be a charming, sharp-witted companion.',
     };
 
     const instruction = langInstructions[language] || langInstructions['zh-HK'];
-    const prompt = `Your name is ${hostName}. STRICT RULE: ${instruction} User says: ${message}`;
+    const systemPrompt = `Your name is ${hostName}. You are a witty, humorous, and supportive companion for retirees. You are sharp, helpful, and never boring. NEVER mention you are an AI. ${instruction}`;
 
-    // --- 1. GEMINI WITH UPDATED MODEL & SAFETY ---
-    let lastGeminiError = null;
-    const MAX_RETRIES = 3;
-
-    for (let i = 0; i < MAX_RETRIES; i++) {
-      try {
-        const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY || "");
-        
-        // Updated to Gemini 3 Flash Preview (Replaces 1.5)
-        const model = genAI.getGenerativeModel({ 
-          model: "gemini-3-flash-preview",
-          safetySettings: [
-            { category: HarmCategory.HARM_CATEGORY_HARASSMENT, threshold: HarmBlockThreshold.BLOCK_NONE },
-            { category: HarmCategory.HARM_CATEGORY_HATE_SPEECH, threshold: HarmBlockThreshold.BLOCK_NONE },
-            { category: HarmCategory.HARM_CATEGORY_SEXUALLY_EXPLICIT, threshold: HarmBlockThreshold.BLOCK_NONE },
-            { category: HarmCategory.HARM_CATEGORY_DANGEROUS_CONTENT, threshold: HarmBlockThreshold.BLOCK_NONE },
-          ],
-        });
-        
-        const result = await model.generateContent(prompt);
-        const text = result.response.text();
-        
-        if (text) {
-          return NextResponse.json({ reply: text });
-        }
-      } catch (err: any) {
-        lastGeminiError = err;
-        console.warn(`Gemini attempt ${i + 1} failed: ${err.message}. Retrying...`);
-        await sleep(1000 * (i + 1));
+    // --- TIER 1: GEMINI (The Primary Humorist) ---
+    try {
+      console.log(`\n--- TRACE: [1] Attempting GEMINI for ${hostName} ---`);
+      const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY || "");
+      const model = genAI.getGenerativeModel({ model: "gemini-2.5-flash" });
+      
+      const result = await model.generateContent(`${systemPrompt}\n\nUser: ${message}`);
+      const text = result.response.text();
+      
+      if (text) {
+        console.log("✅ SUCCESS: Gemini 2.5 Flash responded.");
+        return NextResponse.json({ reply: text });
       }
+    } catch (err: any) {
+      console.log(`⚠️ GEMINI FAILED. Reason: ${err.message}`);
     }
 
-    // --- 2. FALLBACK TO DEEPSEEK ---
-    console.log("Gemini failed after retries. Switching to DeepSeek...");
-    
+    // --- TIER 2: OPENAI (The Reliable Wingman) ---
     try {
+      console.log(`--- TRACE: [2] Attempting OPENAI for ${hostName} ---`);
+      const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
+      const completion = await openai.chat.completions.create({
+        model: "gpt-4o-mini",
+        messages: [
+          { role: "system", content: systemPrompt },
+          { role: "user", content: message }
+        ],
+      });
+
+      const reply = completion.choices[0].message.content;
+      if (reply) {
+        console.log("✅ SUCCESS: OpenAI saved the day.");
+        return NextResponse.json({ reply });
+      }
+    } catch (err: any) {
+      console.log(`⚠️ OPENAI FAILED. Reason: ${err.message}`);
+    }
+
+    // --- TIER 3: DEEPSEEK (The Silent Bodyguard) ---
+    try {
+      console.log(`--- TRACE: [3] Attempting DEEPSEEK for ${hostName} ---`);
       const dsResponse = await fetch("https://api.deepseek.com/chat/completions", {
         method: "POST",
         headers: {
@@ -62,19 +66,19 @@ export async function POST(req: Request) {
         body: JSON.stringify({
           model: "deepseek-chat",
           messages: [
-            { role: "system", content: `You are ${hostName}. ${instruction}` },
+            { role: "system", content: `${systemPrompt}. Do not mention DeepSeek.` },
             { role: "user", content: message }
           ]
         })
       });
-
       const dsData = await dsResponse.json();
+      console.log("✅ SUCCESS: DeepSeek provided the final fallback.");
       return NextResponse.json({ reply: dsData.choices[0].message.content });
     } catch (dsError) {
-      return NextResponse.json({ error: "Service unavailable" }, { status: 500 });
+      return NextResponse.json({ reply: "我依家有啲忙，轉頭再搵我呀！" }, { status: 500 });
     }
 
   } catch (error) {
-    return NextResponse.json({ error: "System busy" }, { status: 500 });
+    return NextResponse.json({ error: "System Error" }, { status: 500 });
   }
 }
