@@ -5,20 +5,30 @@ export async function POST(req: Request) {
   try {
     const { text, voiceId } = await req.json();
 
-    const response = await fetch(`https://api.elevenlabs.io/v1/text-to-speech/${voiceId}`, {
+    // Safety check: if no voiceId is passed, use a default one
+    const targetVoiceId = voiceId || 'n4xdXKggn5lFcXFYE4TA'; 
+
+    // Look for both standard and NEXT_PUBLIC prefixes for Cloudflare compatibility
+    const apiKey = process.env.ELEVENLABS_API_KEY || process.env.NEXT_PUBLIC_ELEVENLABS_API_KEY;
+
+    if (!apiKey) {
+      console.error("Missing ElevenLabs API Key");
+      return NextResponse.json({ error: "Configuration Error" }, { status: 500 });
+    }
+
+    const response = await fetch(`https://api.elevenlabs.io/v1/text-to-speech/${targetVoiceId}`, {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
-        "xi-api-key": process.env.ELEVENLABS_API_KEY || "",
+        "xi-api-key": apiKey,
       },
       body: JSON.stringify({
         text: text,
-        // CRITICAL: Use multilingual_v2 for better Cantonese
         model_id: "eleven_multilingual_v2", 
         voice_settings: {
-          stability: 0.4,       // Lower = more expressive/natural
-          similarity_boost: 0.8, // Higher = keeps the "Mi-Go" character voice
-          style: 0.2,           // Slight style boost for character flair
+          stability: 0.4,       
+          similarity_boost: 0.8, 
+          style: 0.2,           
           use_speaker_boost: true
         }
       }),
@@ -26,15 +36,19 @@ export async function POST(req: Request) {
 
     if (!response.ok) {
       const errorData = await response.json();
-      console.error("ElevenLabs Error:", errorData);
-      return NextResponse.json({ error: "Voice failed" }, { status: 500 });
+      console.error("ElevenLabs API Response Error:", errorData);
+      return NextResponse.json({ error: "Voice synthesis failed" }, { status: response.status });
     }
 
     const audioBuffer = await response.arrayBuffer();
     return new NextResponse(audioBuffer, {
-      headers: { "Content-Type": "audio/mpeg" },
+      headers: { 
+        "Content-Type": "audio/mpeg",
+        "Cache-Control": "no-cache" 
+      },
     });
   } catch (error) {
+    console.error("Voice Route System Error:", error);
     return NextResponse.json({ error: "Voice system busy" }, { status: 500 });
   }
 }
