@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useState, useRef, useEffect } from 'react';
-import { Mic, MicOff, Send, X, Camera, Upload, User, LogOut, Trash2, CheckCircle } from 'lucide-react';
+import { Mic, MicOff, Send, X, Camera, Upload, LogOut, Trash2, CheckCircle } from 'lucide-react';
 
 // --- DATA MODELS ---
 interface Host {
@@ -42,7 +42,7 @@ export default function VibeAiApp() {
   const [selectedLang, setSelectedLang] = useState('zh-HK');
   
   const [user, setUser] = useState<{ name: string; email: string } | null>(null);
-  const [msgCount, setMsgCount] = useState(0); // Track trial messages
+  const [msgCount, setMsgCount] = useState(0); 
   const [authForm, setAuthForm] = useState({ name: '', email: '' });
   
   const [activeModal, setActiveModal] = useState<'none' | 'login' | 'camera' | 'naming' | 'gender' | 'deletion'>('none');
@@ -69,7 +69,6 @@ export default function VibeAiApp() {
     if (savedUser) {
       setUser(JSON.parse(savedUser));
     } else {
-      // Logic 2: If not logged in, show login immediately
       setActiveModal('login');
     }
 
@@ -130,31 +129,24 @@ export default function VibeAiApp() {
   };
 
   const handleSend = async () => {
-    // Logic 5: Allow 10 trial messages if not logged in
     if (!user && msgCount >= 10) {
       setActiveModal('login');
       return;
     }
-
     if (!text.trim() || isTyping) return;
-
     primeAudio(); 
     setMessages(prev => [...prev, { id: Date.now().toString(), text, sender: 'user' }]);
     const currentInput = text; setText(''); 
     setIsTyping(true);
-    
-    // Increment trial count if not logged in
     if (!user) {
       const newCount = msgCount + 1;
       setMsgCount(newCount);
       localStorage.setItem('vibe_trial_count', newCount.toString());
     }
-
     setProgress(10);
     const progressInterval = setInterval(() => {
       setProgress(prev => (prev < 90 ? prev + 1 : prev));
     }, 450);
-
     try {
       const response = await fetch('/api/chat', {
         method: 'POST',
@@ -162,18 +154,13 @@ export default function VibeAiApp() {
         body: JSON.stringify({ message: currentInput, hostName: activeHost.label, language: selectedLang }),
       });
       const data = await response.json();
-      
       setMessages(prev => [...prev, { id: (Date.now() + 1).toString(), text: data.reply, sender: 'ai' }]);
       await playVoice(data.reply);
       setProgress(100);
-    } catch (err) { 
-        console.error("Chat Error:", err); 
+    } catch (err) { console.error("Chat Error:", err); 
     } finally { 
         clearInterval(progressInterval);
-        setTimeout(() => {
-            setIsTyping(false);
-            setProgress(0);
-        }, 500);
+        setTimeout(() => { setIsTyping(false); setProgress(0); }, 500);
     }
   };
 
@@ -189,7 +176,7 @@ export default function VibeAiApp() {
   const handleLogout = () => {
     localStorage.removeItem('vibe_user_v3');
     setUser(null);
-    setActiveModal('login'); // Force login window again after logout
+    setActiveModal('login');
   };
 
   const handleFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -227,6 +214,7 @@ export default function VibeAiApp() {
     }
   };
 
+  // --- Fixed Redirection Logic for Avatar Creation ---
   const finalizeAvatarCreation = () => {
     const newHost: Host = {
       id: `u-${Date.now()}`, src: tempCapturedImage!,
@@ -235,8 +223,12 @@ export default function VibeAiApp() {
     const updated = [...selectableHosts, newHost];
     setSelectableHosts(updated);
     localStorage.setItem('vibe_custom_hosts', JSON.stringify(updated.filter(h => h.canDelete)));
-    setActiveHost(newHost); setActiveModal('none');
-    setTempCapturedImage(null); setNewAvatarName('');
+    
+    // REDIRECT (Go Back): Hide all creation modals and focus on the new vibe
+    setTempCapturedImage(null);
+    setNewAvatarName('');
+    setTempActiveModal('none');
+    setActiveHost(newHost); 
   };
 
   const confirmDeletion = () => {
@@ -273,25 +265,20 @@ export default function VibeAiApp() {
         </div>
         
         <div style={{ display: 'flex', alignItems: 'center', gap: '20px' }}>
-          {/* Welcome Message (Logic 4) */}
-          {user && (
-            <div style={{ display: 'flex', alignItems: 'center', gap: '8px', color: '#4ade80', fontWeight: 'bold', fontSize: '14px', background: 'rgba(74, 222, 128, 0.1)', padding: '8px 12px', borderRadius: '20px' }}>
-              <CheckCircle size={16} />
-              Welcome back, {user.name}!
-            </div>
-          )}
-
           <select value={selectedLang} onChange={(e) => setSelectedLang(e.target.value)} style={{ background: 'rgba(255,255,255,0.15)', color: 'white', border: '1px solid rgba(255,255,255,0.1)', padding: '12px 20px', borderRadius: '12px', fontWeight: 'bold' }}>
             {metroDialects.map(d => <option key={d.code} value={d.code} style={{color: 'black'}}>{d.label}</option>)}
           </select>
           
           {user ? (
+            // Logic 1 & 2: When logged in, show username and welcome message
             <div style={{ display: 'flex', alignItems: 'center', gap: '15px', background: 'rgba(255,255,255,0.1)', padding: '8px 15px', borderRadius: '12px' }}>
-              <span style={{ color: 'white', fontWeight: 'bold' }}>{user.name}</span>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '8px', color: '#4ade80', fontWeight: 'bold', fontSize: '14px' }}>
+                <CheckCircle size={16} />
+                Welcome, {user.name}!
+              </div>
               <LogOut size={20} color="white" onClick={handleLogout} style={{cursor: 'pointer'}} />
             </div>
           ) : (
-            /* Login Button (Logic 1: Real Button in Green) */
             <button 
               onClick={() => setActiveModal('login')} 
               style={{ background: '#22c55e', color: 'white', border: 'none', padding: '10px 24px', borderRadius: '12px', fontWeight: 'bold', cursor: 'pointer', fontSize: '16px', boxShadow: '0 4px 14px rgba(34, 197, 94, 0.4)' }}
@@ -343,7 +330,7 @@ export default function VibeAiApp() {
                 </h3>
                 {!user && (
                   <span style={{ marginLeft: 'auto', fontSize: '12px', color: '#64748b', fontWeight: 'bold' }}>
-                    Trial: {msgCount}/10 messages left
+                    Trial: {msgCount}/10 messages used
                   </span>
                 )}
             </div>
@@ -382,7 +369,7 @@ export default function VibeAiApp() {
 
       {/* --- ALL OVERLAYS & MODALS --- */}
       
-      {/* Login Modal (Logic 3: Centered and High Z-Index) */}
+      {/* Login Modal */}
       {activeModal === 'login' && (
         <div style={overlayStyle}>
           <div style={modalStyle}>
@@ -415,7 +402,7 @@ export default function VibeAiApp() {
           <div style={{ ...modalStyle, width: '600px' }}>
             <video ref={videoRef} autoPlay playsInline style={{ width: '100%', borderRadius: '25px', background: 'black' }} />
             <div style={{ display: 'flex', gap: '20px', width: '100%' }}>
-              <button style={{ ...primaryButtonStyle, flex: 1, background: '#ef4444' }} onClick={() => { streamRef.current?.getTracks().forEach(t => t.stop()); setActiveModal('none'); }}>Cancel</button>
+              <button style={{ ...primaryButtonStyle, flex: 1, background: '#ef4444' }} onClick={() => { streamRef.current?.getTracks().forEach(t => t.stop()); setActiveModal('none'); streamRef.current = null; }}>Cancel</button>
               <button style={{ ...primaryButtonStyle, flex: 1 }} onClick={takeSnap}>Capture</button>
             </div>
             <canvas ref={canvasRef} style={{ display: 'none' }} />
@@ -423,7 +410,7 @@ export default function VibeAiApp() {
         </div>
       )}
 
-      {/* Confirm Captured Image */}
+      {/* Confirm Captured Image / Naming */}
       {tempActiveModal === 'captureConfirm' && (
         <div style={overlayStyle}>
           <div style={modalStyle}>
@@ -460,7 +447,7 @@ export default function VibeAiApp() {
   );
 }
 
-// Styling Constants (Ensuring centering and visibility)
+// Styling Constants
 const overlayStyle: React.CSSProperties = { position: 'fixed', inset: 0, background: 'rgba(15, 23, 42, 0.95)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 10000, backdropFilter: 'blur(8px)' };
 const modalStyle: React.CSSProperties = { background: 'white', padding: '40px', borderRadius: '40px', width: '90%', maxWidth: '400px', display: 'flex', flexDirection: 'column', gap: '20px', alignItems: 'center', boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.5)' };
 const inputStyle: React.CSSProperties = { padding: '18px', width: '100%', borderRadius: '15px', border: '2px solid #f1f5f9', fontSize: '18px', outline: 'none' };
