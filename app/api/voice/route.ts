@@ -12,7 +12,7 @@ export async function POST(req: Request) {
     const apiKey = process.env.ELEVENLABS_API_KEY || process.env.NEXT_PUBLIC_ELEVENLABS_API_KEY;
 
     if (!apiKey) {
-      console.error("Missing ElevenLabs API Key");
+      console.error("❌ Missing ElevenLabs API Key");
       return NextResponse.json({ error: "Configuration Error" }, { status: 500 });
     }
 
@@ -33,6 +33,20 @@ export async function POST(req: Request) {
         }
       }),
     });
+
+    // --- VOICE CHECK LOG START ---
+    console.log(`\n--- [VOICE CHECK] ---`);
+    console.log(`Status: ${response.status} ${response.statusText}`);
+    console.log(`Voice ID: ${targetVoiceId}`);
+    console.log(`Text Preview: ${text.substring(0, 30)}...`);
+    
+    if (response.ok) {
+      console.log(`✅ SUCCESS: Audio generated successfully.`);
+    } else {
+      console.log(`❌ VOICE FAILED: Check API key or Voice ID.`);
+    }
+    console.log(`----------------------\n`);
+    // --- VOICE CHECK LOG END ---
 
     if (!response.ok) {
       const errorData = await response.json();

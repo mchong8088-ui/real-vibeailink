@@ -18,23 +18,36 @@ export async function POST(req: Request) {
 
     // --- TIER 1: GEMINI ---
     try {
-      // Use gemini-2.0-flash or gemini-1.5-flash
       const geminiKey = process.env.GEMINI_API_KEY || process.env.NEXT_PUBLIC_GEMINI_API_KEY;
       const genAI = new GoogleGenerativeAI(geminiKey || "");
-      const model = genAI.getGenerativeModel({ model: "gemini-2.0-flash" });
       
+      // Using the stable 2.5 version
+      const modelName = "gemini-2.5-flash";
+      const model = genAI.getGenerativeModel({ model: modelName });
+      
+      // --- TERMINAL LOG START ---
+      console.log(`\n--- [VIBE CHECK] ---`);
+      console.log(`Host: ${hostName}`);
+      console.log(`Model: ${modelName}`);
+      console.log(`Input: ${message.substring(0, 40)}...`);
+      console.log(`--------------------\n`);
+      // --- TERMINAL LOG END ---
+
       const result = await model.generateContent(`${systemPrompt}\n\nUser: ${message}`);
       const text = result.response.text();
       
       if (text) {
+        console.log("✅ SUCCESS: Gemini 2.5 responded.");
         return NextResponse.json({ reply: text });
       }
     } catch (err: any) {
-      console.error(`GEMINI FAILED: ${err.message}`);
+      console.error(`❌ GEMINI FAILED: ${err.message}`);
+      // If Gemini fails, it will automatically move to Tier 2 (OpenAI) below
     }
 
-    // --- TIER 2: OPENAI ---
+    // --- TIER 2: OPENAI (The Reliable Wingman) ---
     try {
+      console.log("🔄 ATTEMPTING OPENAI FALLBACK...");
       const openAiKey = process.env.OPENAI_API_KEY || process.env.NEXT_PUBLIC_OPENAI_API_KEY;
       const openai = new OpenAI({ apiKey: openAiKey });
       const completion = await openai.chat.completions.create({
@@ -46,13 +59,17 @@ export async function POST(req: Request) {
       });
 
       const reply = completion.choices[0].message.content;
-      if (reply) return NextResponse.json({ reply });
+      if (reply) {
+        console.log("✅ SUCCESS: OpenAI saved the day.");
+        return NextResponse.json({ reply });
+      }
     } catch (err: any) {
-      console.error(`OPENAI FAILED: ${err.message}`);
+      console.error(`❌ OPENAI FAILED: ${err.message}`);
     }
 
-    // --- TIER 3: DEEPSEEK ---
+    // --- TIER 3: DEEPSEEK (The Final Bodyguard) ---
     try {
+      console.log("🔄 ATTEMPTING DEEPSEEK FALLBACK...");
       const dsKey = process.env.DEEPSEEK_API_KEY || process.env.NEXT_PUBLIC_DEEPSEEK_API_KEY;
       const dsResponse = await fetch("https://api.deepseek.com/chat/completions", {
         method: "POST",
@@ -69,6 +86,7 @@ export async function POST(req: Request) {
         })
       });
       const dsData = await dsResponse.json();
+      console.log("✅ SUCCESS: DeepSeek provided the final fallback.");
       return NextResponse.json({ reply: dsData.choices[0].message.content });
     } catch (dsError) {
       return NextResponse.json({ reply: "我依家有啲忙，轉頭再搵我呀！" }, { status: 500 });
