@@ -3,7 +3,7 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { Mic, MicOff, Send, X, Camera, Upload, LogOut, Trash2, CheckCircle, ChevronDown, Volume2, VolumeX } from 'lucide-react';
 
-// --- DATA MODELS ---
+// --- 1. DATA MODELS ---
 interface Host {
   id: string;
   src: string;
@@ -31,22 +31,22 @@ const metroDialects = [
 ];
 
 export default function VibeAiApp() {
+  // --- 2. STATE MANAGEMENT ---
   const [text, setText] = useState('');
   const [isListening, setIsListening] = useState(false);
   const [isTyping, setIsTyping] = useState(false);
   const [isSpeaking, setIsSpeaking] = useState(false);
   const [isMuted, setIsMuted] = useState(false); 
-  const [progress, setProgress] = useState(0); 
   const [messages, setMessages] = useState<Message[]>([]);
   const [selectableHosts, setSelectableHosts] = useState<Host[]>(initialHosts);
   const [activeHost, setActiveHost] = useState<Host>(initialHosts[0]);
   const [selectedLang, setSelectedLang] = useState('zh-HK');
-  
   const [user, setUser] = useState<{ name: string; email: string } | null>(null);
   const [msgCount, setMsgCount] = useState(0); 
   const [authForm, setAuthForm] = useState({ name: '', email: '' });
   
-  const [activeModal, setActiveModal] = useState<'none' | 'login' | 'camera' | 'naming' | 'gender' | 'deletion' | 'dashboard' | 'logoutConfirm'>('none');
+  // Modals
+  const [activeModal, setActiveModal] = useState<'none' | 'login' | 'camera' | 'deletion' | 'dashboard' | 'logoutConfirm'>('none');
   const [tempActiveModal, setTempActiveModal] = useState<'none' | 'uploadType' | 'captureConfirm'>('none');
 
   const [tempCapturedImage, setTempCapturedImage] = useState<string | null>(null);
@@ -54,13 +54,16 @@ export default function VibeAiApp() {
   const [newAvatarGender, setNewAvatarGender] = useState<'male' | 'female'>('female');
   const [hostToDelete, setHostToDelete] = useState<Host | null>(null);
 
+  // --- 3. REFS ---
   const chatEndRef = useRef<HTMLDivElement>(null);
   const videoRef = useRef<HTMLVideoElement>(null);
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const streamRef = useRef<MediaStream | null>(null);
   const recognitionRef = useRef<any>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const pressTimer = useRef<NodeJS.Timeout | null>(null);
 
+  // --- 4. INITIALIZATION ---
   useEffect(() => {
     const savedUser = localStorage.getItem('vibe_user_v3');
     const savedHosts = localStorage.getItem('vibe_custom_hosts');
@@ -97,6 +100,7 @@ export default function VibeAiApp() {
     chatEndRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [messages, isTyping]);
 
+  // --- 5. VOICE & CHAT LOGIC ---
   const playVoice = async (replyText: string) => {
     if (isMuted) return;
     const currentVoiceId = activeHost.gender === 'male' ? 'cHDwXsKG0qHMNLIjOusN' : 'n4xdXKggn5lFcXFYE4TA';
@@ -139,21 +143,30 @@ export default function VibeAiApp() {
     } catch (err) { console.error("Chat Error:", err); } finally { setIsTyping(false); }
   };
 
-  const handleLogin = () => {
-    if (authForm.name && authForm.email) {
-      const newUser = { name: authForm.name, email: authForm.email };
-      setUser(newUser);
-      localStorage.setItem('vibe_user_v3', JSON.stringify(newUser));
+  // --- 6. AVATAR DELETION (LONG PRESS) ---
+  const startPress = (host: Host) => {
+    if (!host.canDelete) return;
+    pressTimer.current = setTimeout(() => {
+      setHostToDelete(host);
+      setActiveModal('deletion');
+    }, 800); // 0.8 seconds to trigger
+  };
+
+  const endPress = () => {
+    if (pressTimer.current) clearTimeout(pressTimer.current);
+  };
+
+  const confirmDeletion = () => {
+    if (hostToDelete) {
+      const updated = selectableHosts.filter(h => h.id !== hostToDelete.id);
+      setSelectableHosts(updated);
+      localStorage.setItem('vibe_custom_hosts', JSON.stringify(updated.filter(h => h.canDelete)));
+      if (activeHost.id === hostToDelete.id) setActiveHost(updated[0]);
       setActiveModal('none');
     }
   };
 
-  const handleLogout = () => {
-    localStorage.removeItem('vibe_user_v3');
-    setUser(null);
-    setActiveModal('login');
-  };
-
+  // --- 7. CAMERA & UPLOAD LOGIC ---
   const handleFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (file) {
@@ -197,6 +210,22 @@ export default function VibeAiApp() {
     setTempCapturedImage(null); setNewAvatarName(''); setTempActiveModal('none'); setActiveHost(newHost); 
   };
 
+  const handleLogin = () => {
+    if (authForm.name && authForm.email) {
+      const newUser = { name: authForm.name, email: authForm.email };
+      setUser(newUser);
+      localStorage.setItem('vibe_user_v3', JSON.stringify(newUser));
+      setActiveModal('none');
+    }
+  };
+
+  const handleLogout = () => {
+    localStorage.removeItem('vibe_user_v3');
+    setUser(null);
+    setActiveModal('login');
+  };
+
+  // --- 8. UI RENDER ---
   return (
     <main style={{ height: '100vh', width: '100vw', background: 'linear-gradient(135deg, #1e1b4b 0%, #4338ca 100%)', display: 'flex', flexDirection: 'column', overflow: 'hidden', fontFamily: 'sans-serif' }}>
       
@@ -232,16 +261,25 @@ export default function VibeAiApp() {
         </div>
       </header>
 
-      {/* CONTENT AREA */}
       <div style={{ flex: 1, display: 'flex', overflow: 'hidden' }}>
         
-        {/* SIDEBAR: ACTION 3 - 210px (1/2 size) */}
+        {/* SIDEBAR: 210px */}
         <div style={{ width: '210px', flexShrink: 0, display: 'flex', flexDirection: 'column', padding: '15px', background: 'rgba(0,0,0,0.15)', borderRight: '1px solid rgba(255,255,255,0.1)' }}>
           <button onClick={() => setTempActiveModal('uploadType')} style={{ background: 'linear-gradient(90deg, #22c55e, #10b981)', color: 'white', border: 'none', padding: '14px', borderRadius: '50px', fontWeight: '900', fontSize: '16px', cursor: 'pointer', marginBottom: '15px' }}>+ CREATE VIBE</button>
           
           <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap', justifyContent: 'center', marginBottom: '15px' }}>
             {selectableHosts.map(h => (
-              <img key={h.id} src={h.src} onClick={() => setActiveHost(h)} style={{ width: '45px', height: '45px', borderRadius: '50%', border: activeHost.id === h.id ? '3px solid #4ade80' : '2px solid rgba(255,255,255,0.2)', cursor: 'pointer', objectFit: 'cover' }} />
+              <img 
+                key={h.id} 
+                src={h.src} 
+                onClick={() => setActiveHost(h)} 
+                onMouseDown={() => startPress(h)}
+                onMouseUp={endPress}
+                onMouseLeave={endPress}
+                onTouchStart={() => startPress(h)}
+                onTouchEnd={endPress}
+                style={{ width: '45px', height: '45px', borderRadius: '50%', border: activeHost.id === h.id ? '3px solid #4ade80' : '2px solid rgba(255,255,255,0.2)', cursor: 'pointer', objectFit: 'cover' }} 
+              />
             ))}
           </div>
 
@@ -249,7 +287,6 @@ export default function VibeAiApp() {
             <div style={{ position: 'relative', width: '100%', maxWidth: '170px' }}>
               <img src={activeHost.src} style={{ width: '100%', borderRadius: '25px', border: '5px solid rgba(255,255,255,0.1)', objectFit: 'cover' }} />
               
-              {/* ACTION 5: Speaker Icon */}
               <button onClick={() => setIsMuted(!isMuted)} style={{ position: 'absolute', bottom: '10px', left: '10px', background: isMuted ? '#ef4444' : '#22c55e', color: 'white', border: 'none', width: '30px', height: '30px', borderRadius: '50%', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
                 {isMuted ? <VolumeX size={16} /> : <Volume2 size={16} />}
               </button>
@@ -261,7 +298,7 @@ export default function VibeAiApp() {
           </div>
         </div>
 
-        {/* CHAT AREA: ACTION 4 - Harmonized Size */}
+        {/* CHAT AREA */}
         <div style={{ flex: 1, padding: '20px', display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
           <div style={{ flex: 1, background: '#ffffff', borderRadius: '30px', overflow: 'hidden', display: 'flex', flexDirection: 'column', boxShadow: '0 20px 50px rgba(0,0,0,0.3)', width: '100%', maxWidth: '750px' }}>
             <div style={{ height: '45px', display: 'flex', alignItems: 'center', padding: '0 20px', borderBottom: '1px solid #f1f5f9', background: '#f8fafc' }}>
@@ -278,8 +315,8 @@ export default function VibeAiApp() {
         </div>
       </div>
 
-      {/* FOOTER: ACTION 4 - Centered and Smaller Input */}
-      <footer style={{ padding: '0 30px 20px', display: 'flex', justifyContent: 'center' }}>
+      {/* FOOTER: CENTERING FIX */}
+      <footer style={{ padding: '0 210px 20px 210px', display: 'flex', justifyContent: 'center' }}>
         <div style={{ background: 'white', borderRadius: '50px', padding: '6px 12px', display: 'flex', alignItems: 'center', gap: '10px', boxShadow: '0 10px 30px rgba(0,0,0,0.2)', width: '100%', maxWidth: '550px' }}>
           <button onClick={() => { setIsListening(!isListening); isListening ? recognitionRef.current?.stop() : recognitionRef.current?.start(); }} style={{ background: isListening ? '#ef4444' : '#f1f5f9', border: 'none', borderRadius: '50%', width: '45px', height: '45px', cursor: 'pointer' }}>
             {isListening ? <MicOff size={20} color="white" /> : <Mic size={20} color="#4f46e5" />}
@@ -290,15 +327,24 @@ export default function VibeAiApp() {
       </footer>
 
       {/* MODALS */}
+      {activeModal === 'deletion' && (
+        <div style={overlayStyle}>
+          <div style={modalStyle}>
+            <Trash2 size={48} color="#ef4444" />
+            <h3 style={{ margin: 0 }}>Delete {hostToDelete?.label}?</h3>
+            <div style={{ display: 'flex', gap: '10px', width: '100%' }}>
+              <button onClick={confirmDeletion} style={{ ...primaryButtonStyle, background: '#ef4444', flex: 1 }}>Delete</button>
+              <button onClick={() => setActiveModal('none')} style={{ ...primaryButtonStyle, background: '#94a3b8', flex: 1 }}>Keep</button>
+            </div>
+          </div>
+        </div>
+      )}
+
       {activeModal === 'dashboard' && (
         <div style={overlayStyle}>
           <div style={modalStyle}>
-            <div style={{ width: '100%', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-              <h2 style={{ fontSize: '22px', fontWeight: '900' }}>Account</h2>
-              <X onClick={() => setActiveModal('none')} style={{ cursor: 'pointer' }} />
-            </div>
+            <h2 style={{ fontSize: '22px', fontWeight: '900' }}>Account</h2>
             <div style={{ width: '100%', padding: '12px', background: '#f8fafc', borderRadius: '12px', textAlign: 'left' }}>
-              <p style={{ margin: 0, color: '#64748b', fontSize: '11px' }}>Account Email</p>
               <p style={{ margin: 0, fontWeight: 'bold' }}>{user?.email}</p>
             </div>
             <button onClick={() => setActiveModal('logoutConfirm')} style={{ ...menuItemStyle, color: '#ef4444' }}><LogOut size={18}/> Sign Out</button>
@@ -374,7 +420,7 @@ export default function VibeAiApp() {
 
 const overlayStyle: React.CSSProperties = { position: 'fixed', inset: 0, background: 'rgba(15, 23, 42, 0.9)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 10000, backdropFilter: 'blur(8px)' };
 const modalStyle: React.CSSProperties = { background: 'white', padding: '25px', borderRadius: '35px', width: '90%', maxWidth: '380px', display: 'flex', flexDirection: 'column', gap: '15px', alignItems: 'center' };
-const inputStyle: React.CSSProperties = { padding: '12px', width: '100%', borderRadius: '12px', border: '1px solid #e2e8f0', fontSize: '16px' };
+const inputStyle: React.CSSProperties = { padding: '12px', width: '100%', borderRadius: '12px', border: '1px solid #e2e8f0', fontSize: '16px', outline: 'none' };
 const primaryButtonStyle: React.CSSProperties = { background: '#6366f1', color: 'white', padding: '14px', width: '100%', borderRadius: '12px', border: 'none', fontWeight: 'bold', fontSize: '16px', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '10px' };
 const menuItemStyle: React.CSSProperties = { width: '100%', border: 'none', background: 'none', padding: '10px', textAlign: 'left', fontSize: '15px', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '10px' };
 const genderButtonStyle: React.CSSProperties = { flex: 1, padding: '12px', borderRadius: '12px', background: '#f8fafc', fontWeight: 'bold', cursor: 'pointer' };
