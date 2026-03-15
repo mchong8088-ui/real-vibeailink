@@ -62,6 +62,7 @@ export default function VibeAiApp() {
   const recognitionRef = useRef<any>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const pressTimer = useRef<NodeJS.Timeout | null>(null);
+  const audioContextRef = useRef<AudioContext | null>(null);
 
   // --- 4. INITIALIZATION ---
   useEffect(() => {
@@ -101,6 +102,21 @@ export default function VibeAiApp() {
   }, [messages, isTyping]);
 
   // --- 5. VOICE & CHAT LOGIC ---
+  const unlockAudio = () => {
+    if (!audioContextRef.current) {
+        audioContextRef.current = new (window.AudioContext || (window as any).webkitAudioContext)();
+    }
+    if (audioContextRef.current.state === 'suspended') {
+        audioContextRef.current.resume();
+    }
+    const buffer = audioContextRef.current.createBuffer(1, 1, 22050);
+    const source = audioContextRef.current.createBufferSource();
+    source.buffer = buffer;
+    source.connect(audioContextRef.current.destination);
+    source.start(0);
+    setIsMuted(!isMuted);
+  };
+
   const playVoice = async (replyText: string) => {
     if (isMuted) return;
     const currentVoiceId = activeHost.gender === 'male' ? 'cHDwXsKG0qHMNLIjOusN' : 'n4xdXKggn5lFcXFYE4TA';
@@ -149,7 +165,7 @@ export default function VibeAiApp() {
     pressTimer.current = setTimeout(() => {
       setHostToDelete(host);
       setActiveModal('deletion');
-    }, 800); // 0.8 seconds to trigger
+    }, 800); 
   };
 
   const endPress = () => {
@@ -287,7 +303,7 @@ export default function VibeAiApp() {
             <div style={{ position: 'relative', width: '100%', maxWidth: '170px' }}>
               <img src={activeHost.src} style={{ width: '100%', borderRadius: '25px', border: '5px solid rgba(255,255,255,0.1)', objectFit: 'cover' }} />
               
-              <button onClick={() => setIsMuted(!isMuted)} style={{ position: 'absolute', bottom: '10px', left: '10px', background: isMuted ? '#ef4444' : '#22c55e', color: 'white', border: 'none', width: '30px', height: '30px', borderRadius: '50%', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+              <button onClick={unlockAudio} style={{ position: 'absolute', bottom: '10px', left: '10px', background: isMuted ? '#ef4444' : '#22c55e', color: 'white', border: 'none', width: '30px', height: '30px', borderRadius: '50%', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
                 {isMuted ? <VolumeX size={16} /> : <Volume2 size={16} />}
               </button>
 
@@ -300,7 +316,7 @@ export default function VibeAiApp() {
 
         {/* CHAT AREA */}
         <div style={{ flex: 1, padding: '20px', display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
-          <div style={{ flex: 1, background: '#ffffff', borderRadius: '30px', overflow: 'hidden', display: 'flex', flexDirection: 'column', boxShadow: '0 20px 50px rgba(0,0,0,0.3)', width: '100%', maxWidth: '750px' }}>
+          <div style={{ flex: 0.95, background: '#ffffff', borderRadius: '30px', overflow: 'hidden', display: 'flex', flexDirection: 'column', boxShadow: '0 20px 50px rgba(0,0,0,0.3)', width: '100%', maxWidth: '750px' }}>
             <div style={{ height: '45px', display: 'flex', alignItems: 'center', padding: '0 20px', borderBottom: '1px solid #f1f5f9', background: '#f8fafc' }}>
                 <span style={{ color: '#1e293b', fontWeight: '800', fontSize: '14px' }}>{isTyping ? "Thinking..." : `Chatting with ${activeHost.label}`}</span>
                 <span style={{ marginLeft: 'auto', fontSize: '11px', color: '#64748b' }}>Trial: {msgCount}/10</span>
@@ -315,8 +331,8 @@ export default function VibeAiApp() {
         </div>
       </div>
 
-      {/* FOOTER: CENTERING FIX */}
-      <footer style={{ padding: '0 210px 20px 210px', display: 'flex', justifyContent: 'center' }}>
+      {/* FOOTER: CENTERED INPUT */}
+      <footer style={{ padding: '0 30px 40px', display: 'flex', justifyContent: 'center' }}>
         <div style={{ background: 'white', borderRadius: '50px', padding: '6px 12px', display: 'flex', alignItems: 'center', gap: '10px', boxShadow: '0 10px 30px rgba(0,0,0,0.2)', width: '100%', maxWidth: '550px' }}>
           <button onClick={() => { setIsListening(!isListening); isListening ? recognitionRef.current?.stop() : recognitionRef.current?.start(); }} style={{ background: isListening ? '#ef4444' : '#f1f5f9', border: 'none', borderRadius: '50%', width: '45px', height: '45px', cursor: 'pointer' }}>
             {isListening ? <MicOff size={20} color="white" /> : <Mic size={20} color="#4f46e5" />}
