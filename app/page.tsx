@@ -30,33 +30,26 @@ const metroDialects = [
 
 export default function VibeAiApp() {
   const [text, setText] = useState('');
-  const [isListening, setIsListening] = useState(false);
   const [isTyping, setIsTyping] = useState(false);
-  const [isSpeaking, setIsSpeaking] = useState(false);
   const [isMuted, setIsMuted] = useState(false);
   const [messages, setMessages] = useState<Message[]>([]);
   const [selectableHosts, setSelectableHosts] = useState<Host[]>(initialHosts);
   const [activeHost, setActiveHost] = useState<Host>(initialHosts[0]);
   const [selectedLang, setSelectedLang] = useState('zh-HK');
   const [user, setUser] = useState<{ name: string; email: string } | null>(null);
-  const [msgCount, setMsgCount] = useState(0);
   const [authForm, setAuthForm] = useState({ name: '', email: '' });
 
-  const [activeModal, setActiveModal] = useState<'none' | 'login' | 'camera' | 'deletion' | 'dashboard' | 'logoutConfirm' | 'disclaimer'>('none');
+  const [activeModal, setActiveModal] = useState<'none' | 'login' | 'dashboard' | 'disclaimer'>('none');
   const [tempActiveModal, setTempActiveModal] = useState<'none' | 'uploadType' | 'captureConfirm'>('none');
   const [tempCapturedImage, setTempCapturedImage] = useState<string | null>(null);
   const [newAvatarName, setNewAvatarName] = useState('');
   const [newAvatarGender, setNewAvatarGender] = useState<'male' | 'female'>('female');
 
   const chatEndRef = useRef<HTMLDivElement>(null);
-  const videoRef = useRef<HTMLVideoElement>(null);
-  const canvasRef = useRef<HTMLCanvasElement>(null);
-  const streamRef = useRef<MediaStream | null>(null);
-  const recognitionRef = useRef<any>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const audioContextRef = useRef<AudioContext | null>(null);
 
-  // --- AUDIO LOGIC ---
+  // --- AUDIO INITIALIZATION ---
   const initAudioContext = () => {
     if (!audioContextRef.current) {
       audioContextRef.current = new (window.AudioContext || (window as any).webkitAudioContext)();
@@ -88,7 +81,11 @@ export default function VibeAiApp() {
 
   const playVoice = async (replyText: string) => {
     if (isMuted) return;
-    const voiceId = activeHost.gender === 'male' ? 'cHDwXsKG0qHMNLIjOusN' : 'n4xdXKggn5lFcXFYE4TA';
+    
+    // ENSURE STABLE VOICE ID: fallback to female if gender is missing
+    const gender = activeHost.gender || 'female';
+    const voiceId = gender === 'male' ? 'cHDwXsKG0qHMNLIjOusN' : 'n4xdXKggn5lFcXFYE4TA';
+    
     try {
       const response = await fetch('/api/voice', {
         method: 'POST',
@@ -99,10 +96,17 @@ export default function VibeAiApp() {
       const blob = await response.blob();
       const url = URL.createObjectURL(blob);
       const audio = new Audio(url);
-      audio.onplay = () => setIsSpeaking(true);
-      audio.onended = () => { setIsSpeaking(false); URL.revokeObjectURL(url); };
-      audio.play();
-    } catch (err) { console.error(err); }
+      
+      // Auto-resume context for mobile stability
+      if (audioContextRef.current?.state === 'suspended') {
+        await audioContextRef.current.resume();
+      }
+      
+      audio.onended = () => URL.revokeObjectURL(url);
+      await audio.play();
+    } catch (err) { 
+      console.error("Voice playback failed:", err); 
+    }
   };
 
   const handleSend = async () => {
@@ -112,6 +116,7 @@ export default function VibeAiApp() {
     setText('');
     setIsTyping(true);
     initAudioContext();
+    
     try {
       const response = await fetch('/api/chat', {
         method: 'POST',
@@ -133,7 +138,11 @@ export default function VibeAiApp() {
   };
 
   return (
-    <main style={{ height: '100dvh', width: '100vw', background: '#1e1b4b', display: 'flex', flexDirection: 'column', overflow: 'hidden', position: 'fixed', fontFamily: 'sans-serif' }}>
+    <main style={{ 
+      height: '100dvh', width: '100vw', 
+      background: 'radial-gradient(circle at top right, #1e1b4b, #0f172a)', // Younger, deeper background
+      display: 'flex', flexDirection: 'column', overflow: 'hidden', position: 'fixed', fontFamily: 'sans-serif' 
+    }}>
       
       <style>{`
         @media (max-width: 768px) {
@@ -148,10 +157,12 @@ export default function VibeAiApp() {
       `}</style>
 
       {/* HEADER */}
-      <header style={{ height: '50px', flexShrink: 0, display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '0 15px', background: 'rgba(0,0,0,0.3)', borderBottom: '1px solid rgba(255,255,255,0.1)', zIndex: 100 }}>
+      <header style={{ height: '50px', flexShrink: 0, display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '0 15px', background: 'rgba(0,0,0,0.4)', backdropFilter: 'blur(10px)', borderBottom: '1px solid rgba(255,255,255,0.1)', zIndex: 100 }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-          <div style={{ width: '28px', height: '28px', background: 'linear-gradient(135deg, #6366f1, #ec4899)', borderRadius: '6px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}><span style={{ color: 'white', fontWeight: '900', fontSize: '14px' }}>V</span></div>
-          <span style={{ color: 'white', fontWeight: '800', fontSize: '14px' }}>VibeAiLink</span>
+          <div style={{ width: '28px', height: '28px', background: 'linear-gradient(135deg, #6366f1, #ec4899)', borderRadius: '6px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+            <span style={{ color: 'white', fontWeight: '900', fontSize: '14px' }}>V</span>
+          </div>
+          <span style={{ color: 'white', fontWeight: '800', fontSize: '14px', letterSpacing: '0.5px' }}>VibeAiLink</span>
         </div>
         <div style={{ display: 'flex', gap: '8px' }}>
           <select value={selectedLang} onChange={(e) => setSelectedLang(e.target.value)} style={{ background: 'rgba(255,255,255,0.15)', color: 'white', border: 'none', padding: '4px', borderRadius: '6px', fontSize: '11px' }}>
@@ -165,68 +176,73 @@ export default function VibeAiApp() {
 
       <div className="main-container" style={{ flex: 1, display: 'flex', overflow: 'hidden' }}>
         {/* SIDEBAR */}
-        <div className="sidebar" style={{ width: '240px', display: 'flex', flexDirection: 'column', gap: '15px', padding: '20px', background: 'rgba(0,0,0,0.15)', flexShrink: 0 }}>
-          <button className="create-vibe-btn" onClick={() => setTempActiveModal('uploadType')} style={{ background: '#22c55e', color: 'white', border: 'none', borderRadius: '8px', padding: '10px', fontWeight: 'bold', fontSize: '13px', cursor: 'pointer' }}>
+        <div className="sidebar" style={{ width: '240px', display: 'flex', flexDirection: 'column', gap: '15px', padding: '20px', background: 'rgba(255,255,255,0.03)', flexShrink: 0 }}>
+          <button className="create-vibe-btn" onClick={() => setTempActiveModal('uploadType')} style={{ background: 'linear-gradient(to right, #6366f1, #ec4899)', color: 'white', border: 'none', borderRadius: '12px', padding: '12px', fontWeight: 'bold', fontSize: '13px', cursor: 'pointer', boxShadow: '0 4px 15px rgba(99, 102, 241, 0.4)' }}>
             Add new Vibe
           </button>
-          <div style={{ display: 'flex', gap: '6px', flexWrap: 'wrap', justifyContent: 'center' }}>
+          
+          <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap', justifyContent: 'center' }}>
             {selectableHosts.map(h => (
-              <img key={h.id} className="small-avatar" src={h.src} onClick={() => setActiveHost(h)} style={{ width: '40px', height: '40px', borderRadius: '50%', border: activeHost.id === h.id ? '2px solid #4ade80' : '1px solid rgba(255,255,255,0.2)', cursor: 'pointer', objectFit: 'cover' }} />
+              <img key={h.id} className="small-avatar" src={h.src} onClick={() => setActiveHost(h)} style={{ width: '42px', height: '42px', borderRadius: '50%', border: activeHost.id === h.id ? '2px solid #ec4899' : '2px solid transparent', padding: '1px', cursor: 'pointer', objectFit: 'cover', transition: 'all 0.2s' }} />
             ))}
           </div>
+
           <div style={{ position: 'relative' }}>
-            <img className="big-avatar" src={activeHost.src} style={{ width: '100%', borderRadius: '18px', border: '2px solid rgba(255,255,255,0.2)', objectFit: 'cover' }} />
-            <button onClick={unlockAudio} style={{ position: 'absolute', bottom: '8px', right: '8px', background: isMuted ? '#ef4444' : '#22c55e', color: 'white', border: 'none', width: '28px', height: '28px', borderRadius: '50%', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-              {isMuted ? <VolumeX size={14} /> : <Volume2 size={14} />}
+            <img className="big-avatar" src={activeHost.src} style={{ width: '100%', borderRadius: '24px', border: '1px solid rgba(255,255,255,0.2)', objectFit: 'cover', boxShadow: '0 10px 30px rgba(0,0,0,0.5)' }} />
+            <button onClick={unlockAudio} style={{ position: 'absolute', bottom: '12px', right: '12px', background: isMuted ? '#ef4444' : '#22c55e', color: 'white', border: 'none', width: '32px', height: '32px', borderRadius: '50%', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', boxShadow: '0 4px 10px rgba(0,0,0,0.3)' }}>
+              {isMuted ? <VolumeX size={16} /> : <Volume2 size={16} />}
             </button>
           </div>
         </div>
 
         {/* CHAT AREA */}
         <div className="chat-area" style={{ flex: 1, padding: '20px', display: 'flex', flexDirection: 'column', overflowY: 'auto' }}>
-          <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
             {messages.map(m => (
               <div key={m.id} style={{
                 alignSelf: m.sender === 'user' ? 'flex-end' : 'flex-start',
                 background: m.sender === 'user' ? '#6366f1' : '#ffffff',
                 color: m.sender === 'user' ? 'white' : '#1e293b',
-                padding: '10px 14px',
-                borderRadius: '15px',
-                maxWidth: '95%',
-                fontSize: '15px'
+                padding: '12px 16px',
+                borderRadius: m.sender === 'user' ? '20px 20px 4px 20px' : '20px 20px 20px 4px',
+                maxWidth: '90%',
+                fontSize: '15px',
+                boxShadow: m.sender === 'user' ? '0 4px 12px rgba(99, 102, 241, 0.3)' : '0 4px 12px rgba(0,0,0,0.1)',
+                border: m.sender === 'ai' ? '1px solid #fce7f3' : 'none' // Subtle pink border for AI
               }}>
                 {m.text}
               </div>
             ))}
-            {isTyping && <div style={{ color: '#94a3b8', fontSize: '12px', fontStyle: 'italic' }}>Thinking...</div>}
+            {isTyping && <div style={{ color: '#ec4899', fontSize: '12px', fontStyle: 'italic', fontWeight: 'bold', marginLeft: '10px' }}>Vibe AI is typing...</div>}
             <div ref={chatEndRef} />
           </div>
         </div>
       </div>
 
       {/* FOOTER INPUT */}
-      <footer className="input-footer" style={{ padding: '15px', display: 'flex', justifyContent: 'center' }}>
-        <div style={{ background: 'white', borderRadius: '30px', padding: '5px 10px', display: 'flex', alignItems: 'center', gap: '8px', width: '100%', maxWidth: '500px' }}>
+      <footer className="input-footer" style={{ padding: '20px', display: 'flex', justifyContent: 'center' }}>
+        <div style={{ background: 'rgba(255,255,255,0.95)', backdropFilter: 'blur(10px)', borderRadius: '30px', padding: '6px 10px', display: 'flex', alignItems: 'center', gap: '8px', width: '100%', maxWidth: '600px', boxShadow: '0 10px 40px rgba(0,0,0,0.4)' }}>
           <input
             value={text}
             onChange={(e) => setText(e.target.value)}
             onKeyDown={(e) => e.key === 'Enter' && handleSend()}
-            placeholder="Ask me..."
-            style={{ flex: 1, border: 'none', outline: 'none', fontSize: '16px', height: '40px', paddingLeft: '10px' }}
+            onFocus={initAudioContext}
+            placeholder="Type your vibe..."
+            style={{ flex: 1, border: 'none', outline: 'none', fontSize: '16px', height: '44px', paddingLeft: '15px', background: 'transparent' }}
           />
-          <button onClick={handleSend} style={{ background: '#6366f1', color: 'white', border: 'none', borderRadius: '50%', width: '38px', height: '38px', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-            <Send size={18}/>
+          <button onClick={handleSend} style={{ background: 'linear-gradient(135deg, #6366f1, #ec4899)', color: 'white', border: 'none', borderRadius: '50%', width: '42px', height: '42px', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', transition: 'transform 0.1s active' }}>
+            <Send size={20}/>
           </button>
         </div>
       </footer>
 
-      {/* MODALS */}
+      {/* MODALS (Simplified for speed) */}
       {activeModal === 'login' && (
         <div style={overlayStyle}>
           <div style={modalStyle}>
-            <h2 style={{ fontWeight: '900', margin: 0 }}>Welcome!</h2>
-            <input placeholder="Name" style={inputStyle} value={authForm.name} onChange={e => setAuthForm({...authForm, name: e.target.value})} />
-            <input placeholder="Email" style={inputStyle} value={authForm.email} onChange={e => setAuthForm({...authForm, email: e.target.value})} />
+            <h2 style={{ fontWeight: '900', color: '#1e1b4b' }}>Get Started</h2>
+            <input placeholder="Your Name" style={inputStyle} value={authForm.name} onChange={e => setAuthForm({...authForm, name: e.target.value})} />
+            <input placeholder="Email Address" style={inputStyle} value={authForm.email} onChange={e => setAuthForm({...authForm, email: e.target.value})} />
             <button style={primaryButtonStyle} onClick={() => setActiveModal('disclaimer')}>Start Vibe</button>
           </div>
         </div>
@@ -235,8 +251,8 @@ export default function VibeAiApp() {
       {activeModal === 'disclaimer' && (
         <div style={overlayStyle}>
           <div style={modalStyle}>
-            <h2 style={{ fontSize: '18px', fontWeight: '900', margin: 0 }}>Terms</h2>
-            <p style={{ fontSize: '12px', textAlign: 'center' }}>AI platform. Users are responsible for content.</p>
+            <h2 style={{ fontSize: '18px', fontWeight: '900' }}>Terms of Use</h2>
+            <p style={{ fontSize: '12px', color: '#64748b', textAlign: 'center' }}>By clicking agree, you accept that this AI is for entertainment purposes. Content is user-driven.</p>
             <button style={primaryButtonStyle} onClick={finalizeLogin}>I Agree</button>
           </div>
         </div>
@@ -245,8 +261,8 @@ export default function VibeAiApp() {
       {tempActiveModal === 'uploadType' && (
         <div style={overlayStyle}>
           <div style={modalStyle}>
-            <h2 style={{ fontWeight: '900', margin: 0 }}>Create Vibe</h2>
-            <button style={primaryButtonStyle} onClick={() => fileInputRef.current?.click()}><Upload size={16}/> Select Photo</button>
+            <h2 style={{ fontWeight: '900' }}>New Vibe</h2>
+            <button style={primaryButtonStyle} onClick={() => fileInputRef.current?.click()}><Upload size={18}/> Select Photo</button>
             <input type="file" ref={fileInputRef} hidden accept="image/*" onChange={(e) => {
               const f = e.target.files?.[0];
               if(f) { setTempCapturedImage(URL.createObjectURL(f)); setTempActiveModal('captureConfirm'); }
@@ -259,11 +275,11 @@ export default function VibeAiApp() {
       {tempActiveModal === 'captureConfirm' && (
         <div style={overlayStyle}>
           <div style={modalStyle}>
-            <img src={tempCapturedImage!} style={{ width: '80px', height: '80px', borderRadius: '50%', objectFit: 'cover' }} />
-            <input placeholder="Name..." style={inputStyle} value={newAvatarName} onChange={e => setNewAvatarName(e.target.value)} />
-            <div style={{ display: 'flex', gap: '8px', width: '100%' }}>
-              <button onClick={() => setNewAvatarGender('male')} style={{ ...genderButtonStyle, border: newAvatarGender === 'male' ? '2px solid #6366f1' : 'none' }}>Male</button>
-              <button onClick={() => setNewAvatarGender('female')} style={{ ...genderButtonStyle, border: newAvatarGender === 'female' ? '2px solid #6366f1' : 'none' }}>Female</button>
+            <img src={tempCapturedImage!} style={{ width: '90px', height: '90px', borderRadius: '50%', objectFit: 'cover', border: '3px solid #ec4899' }} />
+            <input placeholder="Vibe Name..." style={inputStyle} value={newAvatarName} onChange={e => setNewAvatarName(e.target.value)} />
+            <div style={{ display: 'flex', gap: '10px', width: '100%' }}>
+              <button onClick={() => setNewAvatarGender('male')} style={{ ...genderButtonStyle, border: newAvatarGender === 'male' ? '2px solid #6366f1' : '1px solid #e2e8f0' }}>Male</button>
+              <button onClick={() => setNewAvatarGender('female')} style={{ ...genderButtonStyle, border: newAvatarGender === 'female' ? '2px solid #ec4899' : '1px solid #e2e8f0' }}>Female</button>
             </div>
             <button style={primaryButtonStyle} onClick={() => {
               const h: Host = { id: `u-${Date.now()}`, src: tempCapturedImage!, label: newAvatarName, gender: newAvatarGender, canDelete: true };
@@ -279,8 +295,9 @@ export default function VibeAiApp() {
   );
 }
 
-const overlayStyle: React.CSSProperties = { position: 'fixed', inset: 0, background: 'rgba(15, 23, 42, 0.95)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 10000, backdropFilter: 'blur(10px)' };
-const modalStyle: React.CSSProperties = { background: 'white', padding: '20px', borderRadius: '25px', width: '320px', display: 'flex', flexDirection: 'column', gap: '12px', alignItems: 'center' };
-const inputStyle: React.CSSProperties = { padding: '10px', width: '100%', borderRadius: '10px', border: '1px solid #e2e8f0', fontSize: '14px', outline: 'none' };
-const primaryButtonStyle: React.CSSProperties = { background: '#6366f1', color: 'white', padding: '12px', width: '100%', borderRadius: '10px', border: 'none', fontWeight: 'bold', fontSize: '14px', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px' };
-const genderButtonStyle: React.CSSProperties = { flex: 1, padding: '10px', borderRadius: '10px', background: '#f8fafc', fontWeight: 'bold', fontSize: '12px', cursor: 'pointer' };
+// STYLES
+const overlayStyle: React.CSSProperties = { position: 'fixed', inset: 0, background: 'rgba(15, 23, 42, 0.9)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 10000, backdropFilter: 'blur(8px)' };
+const modalStyle: React.CSSProperties = { background: 'white', padding: '30px', borderRadius: '32px', width: '340px', display: 'flex', flexDirection: 'column', gap: '15px', alignItems: 'center', boxShadow: '0 25px 50px rgba(0,0,0,0.3)' };
+const inputStyle: React.CSSProperties = { padding: '14px', width: '100%', borderRadius: '14px', border: '1px solid #e2e8f0', fontSize: '15px', outline: 'none', background: '#f8fafc' };
+const primaryButtonStyle: React.CSSProperties = { background: 'linear-gradient(to right, #6366f1, #ec4899)', color: 'white', padding: '14px', width: '100%', borderRadius: '14px', border: 'none', fontWeight: 'bold', fontSize: '15px', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '10px' };
+const genderButtonStyle: React.CSSProperties = { flex: 1, padding: '12px', borderRadius: '12px', background: 'white', fontWeight: 'bold', fontSize: '13px', cursor: 'pointer', transition: 'all 0.2s' };
