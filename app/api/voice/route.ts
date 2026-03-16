@@ -5,10 +5,10 @@ export async function POST(req: Request) {
   try {
     const { text, voiceId } = await req.json();
 
-    // Safety check: if no voiceId is passed, use a default one
+    // Default to the Female voice if none provided
     const targetVoiceId = voiceId || 'n4xdXKggn5lFcXFYE4TA'; 
 
-    // Look for both standard and NEXT_PUBLIC prefixes for Cloudflare compatibility
+    // Support both standard and Cloudflare environment variable formats
     const apiKey = process.env.ELEVENLABS_API_KEY || process.env.NEXT_PUBLIC_ELEVENLABS_API_KEY;
 
     if (!apiKey) {
@@ -34,33 +34,31 @@ export async function POST(req: Request) {
       }),
     });
 
-    // --- VOICE CHECK LOG START ---
+    // Logging for your terminal (VS Code / Cloudflare Logs)
     console.log(`\n--- [VOICE CHECK] ---`);
     console.log(`Status: ${response.status} ${response.statusText}`);
     console.log(`Voice ID: ${targetVoiceId}`);
-    console.log(`Text Preview: ${text.substring(0, 30)}...`);
     
     if (response.ok) {
-      console.log(`✅ SUCCESS: Audio generated successfully.`);
+      console.log(`✅ SUCCESS: Audio data received from ElevenLabs.`);
     } else {
-      console.log(`❌ VOICE FAILED: Check API key or Voice ID.`);
+      const errorText = await response.text();
+      console.log(`❌ VOICE FAILED: ${errorText}`);
+      return NextResponse.json({ error: "ElevenLabs rejected request" }, { status: response.status });
     }
     console.log(`----------------------\n`);
-    // --- VOICE CHECK LOG END ---
 
-    if (!response.ok) {
-      const errorData = await response.json();
-      console.error("ElevenLabs API Response Error:", errorData);
-      return NextResponse.json({ error: "Voice synthesis failed" }, { status: response.status });
-    }
+    // Convert the response to a Stream (Best for Edge Runtime)
+    const audioData = await response.arrayBuffer();
 
-    const audioBuffer = await response.arrayBuffer();
-    return new NextResponse(audioBuffer, {
+    return new NextResponse(audioData, {
       headers: { 
         "Content-Type": "audio/mpeg",
+        "Content-Length": audioData.byteLength.toString(),
         "Cache-Control": "no-cache" 
       },
     });
+
   } catch (error) {
     console.error("Voice Route System Error:", error);
     return NextResponse.json({ error: "Voice system busy" }, { status: 500 });
