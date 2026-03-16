@@ -1,9 +1,9 @@
 "use client";
 
 import React, { useState, useRef, useEffect } from 'react';
-import { Mic, MicOff, Send, LogOut, Trash2, ChevronDown, Volume2, VolumeX, Menu, Plus } from 'lucide-react';
+import { Mic, MicOff, Send, Volume2, VolumeX, Menu, Plus } from 'lucide-react';
 
-// --- DATA MODELS ---
+// --- MODELS ---
 interface Host {
   id: string;
   src: string;
@@ -11,7 +11,6 @@ interface Host {
   gender: 'male' | 'female';
   canDelete?: boolean; 
 }
-
 interface Message {
   id: string;
   text: string;
@@ -22,12 +21,6 @@ const initialHosts: Host[] = [
   { id: 'nyc', src: '/avatars/nyman.jpg', label: 'Michael 米哥', gender: 'male', canDelete: false },
   { id: 'kr', src: '/avatars/hkgirl.jpg', label: 'Teresa 麗莎', gender: 'female', canDelete: false },
   { id: 'tw', src: '/avatars/twgirl.jpg', label: 'Sophia 蘇菲亞', gender: 'female', canDelete: false }
-];
-
-const metroDialects = [
-  { code: 'zh-HK', label: 'Cantonese (廣東話)' },
-  { code: 'zh-CN', label: 'Mandarin (普通話)' },
-  { code: 'en-US', label: 'English (US)' }
 ];
 
 export default function VibeAiApp() {
@@ -41,72 +34,37 @@ export default function VibeAiApp() {
   const [activeHost, setActiveHost] = useState<Host>(initialHosts[0]);
   const [selectedLang, setSelectedLang] = useState('zh-HK');
   const [user, setUser] = useState<{ name: string; email: string } | null>(null);
-  const [activeModal, setActiveModal] = useState<'none' | 'login' | 'deletion' | 'dashboard' | 'logoutConfirm' | 'disclaimer'>('none');
-  const [tempActiveModal, setTempActiveModal] = useState<'none' | 'uploadType' | 'captureConfirm'>('none');
-
+  
+  // FIX: This ensures Cloudflare finds "authForm"
+  const [authForm, setAuthForm] = useState({ name: '', email: '' });
+  
+  const [activeModal, setActiveModal] = useState<'none' | 'login' | 'dashboard' | 'disclaimer'>('none');
+  const [tempActiveModal, setTempActiveModal] = useState<'none' | 'captureConfirm'>('none');
   const [tempCapturedImage, setTempCapturedImage] = useState<string | null>(null);
   const [newAvatarName, setNewAvatarName] = useState('');
   const [newAvatarGender, setNewAvatarGender] = useState<'male' | 'female'>('female');
 
   const chatEndRef = useRef<HTMLDivElement>(null);
   const audioContextRef = useRef<AudioContext | null>(null);
-  const recognitionRef = useRef<any>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
-  // --- AUDIO PERSISTENCE & MOBILE UNLOCK ---
   const initAudioContext = () => {
     if (!audioContextRef.current) {
       audioContextRef.current = new (window.AudioContext || (window as any).webkitAudioContext)();
     }
-    if (audioContextRef.current.state === 'suspended') {
-      audioContextRef.current.resume();
-    }
+    if (audioContextRef.current.state === 'suspended') audioContextRef.current.resume();
   };
 
   useEffect(() => {
-    const keepAlive = setInterval(() => {
-      if (audioContextRef.current && audioContextRef.current.state === 'running') {
-        const osc = audioContextRef.current.createOscillator();
-        const gain = audioContextRef.current.createGain();
-        gain.gain.value = 0.0001;
-        osc.connect(gain);
-        gain.connect(audioContextRef.current.destination);
-        osc.start(0);
-        osc.stop(0.1);
-      }
-    }, 20000); 
-    return () => clearInterval(keepAlive);
-  }, []);
-
-  useEffect(() => {
     const savedUser = localStorage.getItem('vibe_user_v3');
-    const savedHosts = localStorage.getItem('vibe_custom_hosts');
     if (savedUser) setUser(JSON.parse(savedUser));
     else setActiveModal('login');
-    if (savedHosts) {
-        const custom = JSON.parse(savedHosts);
-        setSelectableHosts([...initialHosts, ...custom]);
-    }
-    const SpeechRecognition = (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition;
-    if (SpeechRecognition) {
-      const recognition = new SpeechRecognition();
-      recognition.continuous = true;
-      recognition.interimResults = true;
-      recognition.onresult = (e: any) => {
-        let t = '';
-        for (let i = e.resultIndex; i < e.results.length; ++i) { t += e.results[i][0].transcript; }
-        setText(t);
-      };
-      recognitionRef.current = recognition;
-    }
   }, []);
 
-  useEffect(() => { chatEndRef.current?.scrollIntoView({ behavior: "smooth" }); }, [messages]);
+  useEffect(() => { chatEndRef.current?.scrollIntoView({ behavior: "smooth" }); }, [messages, isTyping]);
 
   const playVoice = async (replyText: string) => {
-    // FIX 2: Check mute before calling API
-    if (isMuted) { console.log("Sound muted."); return; }
-    
+    if (isMuted) return;
     const voiceId = activeHost.gender === 'male' ? 'cHDwXsKG0qHMNLIjOusN' : 'n4xdXKggn5lFcXFYE4TA';
     try {
       const response = await fetch('/api/voice', {
@@ -118,16 +76,11 @@ export default function VibeAiApp() {
       const blob = await response.blob();
       const url = URL.createObjectURL(blob);
       const audio = new Audio(url);
-      
-      // Reinforce mobile playback
-      if (audioContextRef.current?.state === 'suspended') await audioContextRef.current.resume();
-      
+      initAudioContext();
       audio.onplay = () => setIsSpeaking(true);
       audio.onended = () => { setIsSpeaking(false); URL.revokeObjectURL(url); };
-      
-      // FIX 1: Play sound
-      audio.play().catch(e => console.error("Playback blocked by browser.", e));
-    } catch (err) { console.error("Voice Error:", err); }
+      audio.play();
+    } catch (err) { console.error(err); }
   };
 
   const handleSend = async () => {
@@ -142,14 +95,9 @@ export default function VibeAiApp() {
         body: JSON.stringify({ message: userMsg, hostName: activeHost.label, language: selectedLang }),
       });
       const data = await response.json();
-      setMessages(prev => [...prev, { id: (Date.now() + 1).toString(), text: data.reply, sender: 'ai' }]);
+      setMessages(prev => [...prev, { id: Date.now() + 1 + '', text: data.reply, sender: 'ai' }]);
       await playVoice(data.reply);
-    } catch (e) { console.error(e); } finally { setIsTyping(false); }
-  };
-
-  const handleFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const f = e.target.files?.[0];
-    if (f) { setTempCapturedImage(URL.createObjectURL(f)); setTempActiveModal('captureConfirm'); }
+    } finally { setIsTyping(false); }
   };
 
   const finalizeLogin = () => {
@@ -162,166 +110,127 @@ export default function VibeAiApp() {
 
   return (
     <main style={{ height: '100dvh', width: '100vw', display: 'flex', flexDirection: 'column', overflow: 'hidden', background: '#1e1b4b', position: 'fixed', fontFamily: 'sans-serif' }}>
-      
       <style>{`
-        /* FIX 2: The Sound Wave symbol */
-        .wave-bar { width: 3px; height: 10px; background: #00f2fe; border-radius: 2px; box-shadow: 0 0 8px #00f2fe; }
-        @keyframes wave { 0%, 100% { height: 10px; transform: scaleY(1); } 50% { height: 20px; transform: scaleY(1.3); } }
-        .speaking .wave-bar { animation: wave 0.4s infinite ease-in-out; background: #ec4899; box-shadow: 0 0 8px #ec4899; }
+        .wave-bar { width: 3px; height: 10px; background: #00f2fe; border-radius: 2px; }
+        @keyframes wave { 0%, 100% { height: 10px; } 50% { height: 20px; } }
+        .speaking .wave-bar { animation: wave 0.4s infinite ease-in-out; background: #ec4899; }
         
-        /* Requirement 1: Optimized Mobile Stacked Layout */
         @media (max-width: 768px) {
-          .vibe-header { height: 45px !important; }
           .main-container { flex-direction: column !important; }
-          .sidebar-panel { width: 100% !important; border-right: none !important; border-bottom: 1px solid rgba(255,255,255,0.1); height: auto !important; }
-          .chat-area-main { padding-bottom: 100px !important; }
-          .modal-content { width: 95% !important; max-height: 80vh !important; }
-          
-          /* The new horizontal "Vibe Row" */
-          .vibe-row { display: flex !important; flex-direction: row !important; align-items: center !important; gap: 8px !important; width: 100% !important; overflow-x: auto !important; }
-          .big-vibe-box { width: 60px !important; height: 60px !important; flex-shrink: 0 !important; }
-          .small-vibe { width: 30px !important; height: 30px !important; flex-shrink: 0 !important; }
+          .sidebar-panel { width: 100% !important; border-bottom: 1px solid rgba(255,255,255,0.1); padding: 10px !important; }
+          .vibe-row { display: flex !important; flex-direction: row !important; align-items: center !important; gap: 10px !important; }
+          .big-vibe-box { width: 75px !important; height: 75px !important; flex-shrink: 0; }
+          .small-vibe { width: 35px !important; height: 35px !important; }
           .mobile-hide { display: none !important; }
-          .create-vibe-circle { width: 30px !important; height: 30px !important; border-radius: 50% !important; padding: 0 !important; font-size: 16px !important; display: flex !important; align-items: center !important; justify-content: center !important; flex-shrink: 0 !important; }
         }
       `}</style>
 
       {/* HEADER */}
-      <header className="vibe-header" style={{ height: '55px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '0 15px', background: 'rgba(0,0,0,0.3)', color: 'white' }}>
-        <span style={{ fontWeight: 'bold', fontSize: '16px' }}>VibeAiLink</span>
-        <div style={{ display: 'flex', gap: '8px', alignItems:'center' }}>
-          <select value={selectedLang} onChange={(e) => setSelectedLang(e.target.value)} style={{ background: 'rgba(255,255,255,0.15)', color: 'white', border: 'none', padding: '5px', borderRadius: '8px', fontSize: '11px' }}>
-            {metroDialects.map(d => <option key={d.code} value={d.code} style={{color: 'black'}}>{d.label}</option>)}
-          </select>
-          <button onClick={() => setActiveModal(user ? 'dashboard' : 'login')} style={{ background: user ? 'transparent' : '#22c55e', border: user ? '1px solid white' : 'none', color: 'white', padding: '6px 14px', borderRadius: '15px', fontSize: '11px', fontWeight: 'bold' }}>
-            {user ? <Menu size={16} /> : 'Login'}
-          </button>
-        </div>
+      <header style={{ height: '50px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '0 15px', background: 'rgba(0,0,0,0.3)', color: 'white' }}>
+        <span style={{ fontWeight: 'bold' }}>VibeAiLink</span>
+        <button onClick={() => setActiveModal(user ? 'dashboard' : 'login')} style={{ background: '#22c55e', color: 'white', border: 'none', padding: '5px 15px', borderRadius: '15px', fontSize: '12px' }}>
+          {user ? <Menu size={16}/> : 'Login'}
+        </button>
       </header>
 
-      {/* BODY */}
-      <div className="main-container" style={{ flex: 1, display: 'flex', overflow: 'hidden' }} className="md:flex-row flex-col">
-        
-        {/* Requirement 1: Control Panel */}
-        <div className="sidebar-panel" style={{ width: '220px', display: 'flex', flexDirection: 'column', gap: '15px', padding: '15px', background: 'rgba(0,0,0,0.1)', flexShrink: 0 }}>
+      <div className="main-container" style={{ flex: 1, display: 'flex', overflow: 'hidden' }}>
+        <div className="sidebar-panel" style={{ width: '220px', padding: '20px', background: 'rgba(0,0,0,0.1)', display: 'flex', flexDirection: 'column', gap: '15px' }}>
           
-          {/* Requirement 1: Horizontal Vibe Row */}
-          <div className="vibe-row" style={{ display: 'flex', flexDirection: 'column', gap: '15px' }}>
-              
-              {/* Requirement 4: Upload Button Only (Simplified Logic) */}
-              <button className="create-vibe-btn create-vibe-circle" onClick={() => fileInputRef.current?.click()} style={{ background: 'linear-gradient(90deg, #22c55e, #10b981)', color: 'white', border: 'none', borderRadius: '8px', padding: '10px', fontWeight: 'bold', fontSize: '12px', cursor: 'pointer' }}>
-                <Plus size={16} className="md:hidden"/>
-                <span className="mobile-hide">+ Create your own Vibe</span>
+          {/* THE NEW HORIZONTAL ROW FOR MOBILE */}
+          <div className="vibe-row">
+            <button onClick={() => fileInputRef.current?.click()} style={{ background: '#22c55e', color: 'white', border: 'none', borderRadius: '50%', width: '35px', height: '35px', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+              <Plus size={20} />
+            </button>
+            <input type="file" ref={fileInputRef} hidden accept="image/*" onChange={(e) => {
+              const f = e.target.files?.[0];
+              if(f) { setTempCapturedImage(URL.createObjectURL(f)); setTempActiveModal('captureConfirm'); }
+            }} />
+            
+            <div style={{ display: 'flex', gap: '5px' }}>
+              {selectableHosts.map(h => (
+                <img key={h.id} className="small-vibe" src={h.src} onClick={() => setActiveHost(h)} style={{ width: '35px', height: '35px', borderRadius: '50%', border: activeHost.id === h.id ? '2px solid #4ade80' : '1px solid gray', cursor: 'pointer', objectFit: 'cover' }} />
+              ))}
+            </div>
+
+            <div className="big-vibe-box" style={{ position: 'relative' }}>
+              <img src={activeHost.src} style={{ width: '100%', height: '100%', borderRadius: '12px', objectFit: 'cover', border: '2px solid rgba(255,255,255,0.2)' }} />
+              <button onClick={() => { initAudioContext(); setIsMuted(!isMuted); }} style={{ position: 'absolute', bottom: '4px', right: '4px', background: isMuted ? '#ef4444' : '#22c55e', border: 'none', borderRadius: '50%', width: '22px', height: '22px', color: 'white', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                {isMuted ? <VolumeX size={12}/> : <Volume2 size={12}/>}
               </button>
-              <input type="file" ref={fileInputRef} hidden accept="image/*" onChange={handleFileUpload} />
-
-              {/* Small Avatars */}
-              <div style={{ display: 'flex', gap: '6px', flexWrap: 'wrap', justifyContent: 'center' }}>
-                {selectableHosts.map(h => (
-                  <img key={h.id} className="small-vibe" src={h.src} onClick={() => setActiveHost(h)} style={{ width: '38px', height: '38px', borderRadius: '50%', border: activeHost.id === h.id ? '2px solid #4ade80' : '1px solid rgba(255,255,255,0.2)', cursor: 'pointer', objectFit: 'cover' }} />
-                ))}
-              </div>
-
-              {/* Requirement 1: Shrunken Active Avatar */}
-              <div className="big-vibe-box" style={{ position: 'relative', width: '100%', aspectRatio: '1/1', overflow: 'hidden', borderRadius: '15px' }}>
-                <img src={activeHost.src} style={{ width: '100%', height: '100%', objectFit: 'cover', border: '2px solid rgba(255,255,255,0.2)' }} />
-                <button onClick={unlockAudio} style={{ position: 'absolute', bottom: '6px', right: '6px', background: isMuted ? '#ef4444' : '#22c55e', color: 'white', border: '2px solid #1e1b4b', width: '26px', height: '26px', borderRadius: '50%', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 10 }}>
-                  {isMuted ? <VolumeX size={14} /> : <Volume2 size={14} />}
-                </button>
-              </div>
-          </div>
-          
-          {/* Requirement 3: Assistant Description */}
-          <div style={{ textAlign: 'center' }}>
-              <p style={{ color: 'rgba(255,255,255,0.6)', fontSize: '12px', margin: 0 }}>Hello, I am {activeHost.label},</p>
-              <p style={{ color: 'rgba(255,255,255,0.6)', fontSize: '12px', margin: 0, fontWeight: 'bold' }}>your AI Assistant</p>
+            </div>
           </div>
 
-          {/* FIX 2: Place Sound Wave symbol below the shrunken avatar description */}
-          <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', gap: '4px', padding: '5px' }} className={isSpeaking ? 'speaking mobile-hide' : 'mobile-hide'}>
-              <div className="wave-bar"></div><div className="wave-bar" style={{animationDelay: '0.1s'}}></div><div className="wave-bar" style={{animationDelay: '0.2s'}}></div>
+          <div style={{ textAlign: 'center', color: 'rgba(255,255,255,0.6)', fontSize: '11px' }}>
+            <p style={{ margin: 0 }}>Hello, I am {activeHost.label},</p>
+            <p style={{ margin: 0, fontWeight: 'bold' }}>your AI Assistant</p>
+          </div>
+
+          <div style={{ display: 'flex', justifyContent: 'center', gap: '3px' }} className={isSpeaking ? 'speaking' : ''}>
+            <div className="wave-bar"></div><div className="wave-bar" style={{animationDelay:'0.1s'}}></div><div className="wave-bar" style={{animationDelay:'0.2s'}}></div>
           </div>
         </div>
 
-        {/* CHAT AREA: CENTRALLY ALLOCATED */}
-        <div className="chat-area-main" style={{ flex: 1, padding: '20px', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', overflow: 'hidden' }}>
-          <div style={{ flex: 1, background: '#ffffff', borderRadius: '25px', overflow: 'hidden', display: 'flex', flexDirection: 'column', width: '100%', maxWidth: '750px', boxShadow: '0 10px 30px rgba(0,0,0,0.3)' }}>
-            <div style={{ flex: 1, overflowY: 'auto', padding: '15px', display: 'flex', flexDirection: 'column', gap: '8px' }}>
-              {messages.map(m => (
-                <div key={m.id} style={{ alignSelf: m.sender === 'user' ? 'flex-end' : 'flex-start', background: m.sender === 'user' ? '#6366f1' : '#f1f5f9', color: m.sender === 'user' ? 'white' : '#1e293b', padding: '8px 14px', borderRadius: '15px', maxWidth: '85%', fontSize: '15px', boxShadow: '0 2px 5px rgba(0,0,0,0.05)' }}>{m.text}</div>
-              ))}
-              <div ref={chatEndRef} />
-            </div>
-            {isTyping && <div style={{ padding: '8px 15px', fontSize: '12px', color: '#94a3b8', fontStyle: 'italic' }}>Thinking...</div>}
+        <div style={{ flex: 1, padding: '15px', display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
+          <div style={{ flex: 1, background: 'white', borderRadius: '25px', overflowY: 'auto', padding: '15px', display: 'flex', flexDirection: 'column', gap: '10px' }}>
+            {messages.map(m => (
+              <div key={m.id} style={{ alignSelf: m.sender === 'user' ? 'flex-end' : 'flex-start', background: m.sender === 'user' ? '#6366f1' : '#f1f5f9', color: m.sender === 'user' ? 'white' : 'black', padding: '10px 15px', borderRadius: '18px', maxWidth: '85%', fontSize: '15px' }}>{m.text}</div>
+            ))}
+            <div ref={chatEndRef} />
           </div>
         </div>
       </div>
 
-      {/* Requirement 1 & 2: INPUT FOOTER (Center Bottom) */}
-      <footer className="input-footer" style={{ padding: '10px 15px 30px', display: 'flex', justifyContent: 'center' }}>
-        <div style={{ background: 'white', borderRadius: '50px', padding: '5px 10px', display: 'flex', alignItems: 'center', gap: '8px', width: '100%', maxWidth: '500px', boxShadow: '0 10px 25px rgba(0,0,0,0.2)' }}>
-          <button onClick={() => { initAudioContext(); setIsListening(!isListening); }} style={{ background: isListening ? '#ef4444' : '#f1f5f9', border: 'none', borderRadius: '50%', width: '38px', height: '38px', cursor: 'pointer' }}>
-            {isListening ? <MicOff size={18} color="white" /> : <Mic size={18} color="#4f46e5" />}
+      <footer style={{ padding: '10px 15px 25px', display: 'flex', justifyContent: 'center' }}>
+        <div style={{ background: 'white', borderRadius: '30px', display: 'flex', padding: '5px 10px', width: '100%', maxWidth: '500px', alignItems: 'center', gap: '10px', boxShadow: '0 4px 15px rgba(0,0,0,0.2)' }}>
+          <button onClick={() => { initAudioContext(); setIsListening(!isListening); }} style={{ background: isListening ? '#ef4444' : '#f1f5f9', border: 'none', borderRadius: '50%', width: '35px', height: '35px' }}>
+            <Mic size={18} color={isListening ? 'white' : '#6366f1'} />
           </button>
-          <input value={text} onChange={(e) => setText(e.target.value)} onKeyDown={(e) => e.key === 'Enter' && handleSend()} onFocus={initAudioContext} placeholder="Ask me..." style={{ flex: 1, border: 'none', outline: 'none', fontSize: '16px', height: '40px' }} />
-          <button onClick={handleSend} style={{ background: '#6366f1', color: 'white', border: 'none', borderRadius: '50%', width: '38px', height: '38px', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}><Send size={18}/></button>
+          <input value={text} onChange={e => setText(e.target.value)} onKeyDown={e => e.key === 'Enter' && handleSend()} placeholder="Ask me anything..." style={{ flex: 1, border: 'none', outline: 'none', fontSize: '16px' }} />
+          <button onClick={handleSend} style={{ background: '#6366f1', border: 'none', borderRadius: '50%', width: '35px', height: '35px', color: 'white', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+            <Send size={18} />
+          </button>
         </div>
       </footer>
 
-      {/* --- MODALS (Login and Disclaimer only) --- */}
+      {/* MODALS */}
       {activeModal === 'login' && (
-        <div style={overlayStyle}>
-          <div className="modal-content" style={modalStyle}>
-            <h2 style={{ fontWeight: '900', margin: 0, fontSize: '20px' }}>VibeAiLink</h2>
-            <input placeholder="Name" style={inputStyle} value={authForm.name} onChange={e => setAuthForm({...authForm, name: e.target.value})} />
-            <input placeholder="Email" style={inputStyle} value={authForm.email} onChange={e => setAuthForm({...authForm, email: e.target.value})} />
-            <button style={primaryButtonStyle} onClick={() => { initAudioContext(); setActiveModal('disclaimer'); }}>Start Vibe</button>
+        <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.85)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 100, backdropFilter: 'blur(5px)' }}>
+          <div style={{ background: 'white', padding: '30px', borderRadius: '25px', width: '300px', display: 'flex', flexDirection: 'column', gap: '15px' }}>
+            <h2 style={{ margin: 0, textAlign: 'center' }}>VibeAiLink</h2>
+            <input placeholder="Name" style={{ padding: '12px', borderRadius: '10px', border: '1px solid #ddd' }} value={authForm.name} onChange={e => setAuthForm({...authForm, name: e.target.value})} />
+            <input placeholder="Email" style={{ padding: '12px', borderRadius: '10px', border: '1px solid #ddd' }} value={authForm.email} onChange={e => setAuthForm({...authForm, email: e.target.value})} />
+            <button onClick={() => setActiveModal('disclaimer')} style={{ background: '#6366f1', color: 'white', padding: '12px', borderRadius: '10px', border: 'none', fontWeight: 'bold', cursor: 'pointer' }}>Next</button>
           </div>
         </div>
       )}
 
       {activeModal === 'disclaimer' && (
-        <div style={overlayStyle}>
-          <div className="modal-content" style={modalStyle}>
-            <h2 style={{ fontSize: '18px', fontWeight: '900', margin: 0 }}>Privacy & Disclaimer</h2>
-            <div style={{ height: '200px', overflowY: 'auto', textAlign: 'left', fontSize: '12px', background: '#f8fafc', padding: '12px', borderRadius: '12px', lineHeight: '1.6' }}>
-              <p><strong>[EN]</strong> AI platform. Users are responsible for content.</p>
-              <p><strong>[繁中]</strong> 人工智能平台。用戶需對內容負責。</p>
-            </div>
-            <button style={primaryButtonStyle} onClick={finalizeLogin}>I Agree</button>
+        <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.85)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 100 }}>
+          <div style={{ background: 'white', padding: '30px', borderRadius: '25px', width: '300px', display: 'flex', flexDirection: 'column', gap: '15px' }}>
+            <h3 style={{ margin: 0 }}>Terms</h3>
+            <p style={{ fontSize: '12px', color: '#64748b' }}>By entering, you agree to our AI interaction terms and privacy policy.</p>
+            <button onClick={finalizeLogin} style={{ background: '#6366f1', color: 'white', padding: '12px', borderRadius: '10px', border: 'none', fontWeight: 'bold' }}>I Agree</button>
           </div>
         </div>
       )}
 
       {tempActiveModal === 'captureConfirm' && (
-        <div style={overlayStyle}>
-          <div className="modal-content" style={modalStyle}>
-            <img src={tempCapturedImage!} style={{ width: '100px', height: '100px', borderRadius: '50%', objectFit: 'cover', border: '4px solid #6366f1' }} />
-            <input placeholder="Vibe Name..." style={inputStyle} value={newAvatarName} onChange={e => setNewAvatarName(e.target.value)} />
+        <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.85)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 100 }}>
+          <div style={{ background: 'white', padding: '25px', borderRadius: '25px', width: '300px', display: 'flex', flexDirection: 'column', gap: '15px', alignItems: 'center' }}>
+            <img src={tempCapturedImage!} style={{ width: '100px', height: '100px', borderRadius: '50%', objectFit: 'cover', border: '3px solid #6366f1' }} />
+            <input placeholder="Vibe Name..." style={{ padding: '10px', width: '100%', borderRadius: '10px', border: '1px solid #ddd' }} value={newAvatarName} onChange={e => setNewAvatarName(e.target.value)} />
             <div style={{ display: 'flex', gap: '10px', width: '100%' }}>
-              <button onClick={() => setNewAvatarGender('male')} style={{ ...genderButtonStyle, border: newAvatarGender === 'male' ? '2px solid #6366f1' : 'none' }}>Male</button>
-              <button onClick={() => setNewAvatarGender('female')} style={{ ...genderButtonStyle, border: newAvatarGender === 'female' ? '2px solid #6366f1' : 'none' }}>Female</button>
+              <button onClick={() => setNewAvatarGender('male')} style={{ flex: 1, padding: '10px', borderRadius: '10px', background: newAvatarGender === 'male' ? '#6366f1' : '#f1f5f9', color: newAvatarGender === 'male' ? 'white' : 'black', border: 'none' }}>Male</button>
+              <button onClick={() => setNewAvatarGender('female')} style={{ flex: 1, padding: '10px', borderRadius: '10px', background: newAvatarGender === 'female' ? '#6366f1' : '#f1f5f9', color: newAvatarGender === 'female' ? 'white' : 'black', border: 'none' }}>Female</button>
             </div>
-            <button style={primaryButtonStyle} onClick={() => {
-              const h: Host = { id: `u-${Date.now()}`, src: tempCapturedImage!, label: newAvatarName, gender: newAvatarGender, canDelete: true };
-              const updated = [...selectableHosts, h];
-              setSelectableHosts(updated);
-              localStorage.setItem('vibe_custom_hosts', JSON.stringify(updated.filter(x => x.canDelete)));
-              setTempCapturedImage(null); setNewAvatarName(''); setTempActiveModal('none'); setActiveHost(h);
+            <button style={{ background: '#22c55e', color: 'white', padding: '12px', width: '100%', borderRadius: '10px', border: 'none', fontWeight: 'bold' }} onClick={() => {
+              const h: Host = { id: `u-${Date.now()}`, src: tempCapturedImage!, label: newAvatarName || 'My Vibe', gender: newAvatarGender, canDelete: true };
+              setSelectableHosts([...selectableHosts, h]);
+              setTempActiveModal('none'); setActiveHost(h);
             }}>Save Vibe</button>
           </div>
         </div>
       )}
-
-      {/* Other modals (deletion, dashboard, logoutConfirm) remain same ... */}
     </main>
   );
 }
-
-// Modal Styles
-const overlayStyle: React.CSSProperties = { position: 'fixed', inset: 0, background: 'rgba(15, 23, 42, 0.95)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 10000, backdropFilter: 'blur(10px)' };
-const modalStyle: React.CSSProperties = { background: 'white', padding: '25px', borderRadius: '30px', width: '320px', display: 'flex', flexDirection: 'column', gap: '15px', alignItems: 'center' };
-const inputStyle: React.CSSProperties = { padding: '12px', width: '100%', borderRadius: '10px', border: '1px solid #e2e8f0', fontSize: '15px', outline: 'none' };
-const primaryButtonStyle: React.CSSProperties = { background: '#6366f1', color: 'white', padding: '14px', width: '100%', borderRadius: '12px', border: 'none', fontWeight: 'bold', fontSize: '16px', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '10px' };
-const menuItemStyle: React.CSSProperties = { width: '100%', border: 'none', background: 'none', padding: '10px', textAlign: 'left', fontSize: '15px', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '10px' };
-const genderButtonStyle: React.CSSProperties = { flex: 1, padding: '12px', borderRadius: '12px', background: '#f8fafc', fontWeight: 'bold', fontSize: '12px', cursor: 'pointer' };
