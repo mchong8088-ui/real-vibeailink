@@ -16,22 +16,20 @@ export async function POST(req: Request) {
     const instruction = langInstructions[language] || langInstructions['zh-HK'];
     const systemPrompt = `Your name is ${hostName}. You are a witty, humorous, and supportive companion for retirees. You are sharp, helpful, and never boring. NEVER mention you are an AI. ${instruction}`;
 
-    // --- TIER 1: GEMINI ---
+    // --- TIER 1: GEMINI 2.5 ---
     try {
       const geminiKey = process.env.GEMINI_API_KEY || process.env.NEXT_PUBLIC_GEMINI_API_KEY;
       const genAI = new GoogleGenerativeAI(geminiKey || "");
       
-      // Using the stable 2.5 version
-      const modelName = "gemini-2.5-flash";
+      // Updated to the precise Gemini 2.5 Flash string
+      const modelName = "gemini-2.5-flash"; 
       const model = genAI.getGenerativeModel({ model: modelName });
       
-      // --- TERMINAL LOG START ---
       console.log(`\n--- [VIBE CHECK] ---`);
       console.log(`Host: ${hostName}`);
       console.log(`Model: ${modelName}`);
       console.log(`Input: ${message.substring(0, 40)}...`);
       console.log(`--------------------\n`);
-      // --- TERMINAL LOG END ---
 
       const result = await model.generateContent(`${systemPrompt}\n\nUser: ${message}`);
       const text = result.response.text();
@@ -42,7 +40,7 @@ export async function POST(req: Request) {
       }
     } catch (err: any) {
       console.error(`❌ GEMINI FAILED: ${err.message}`);
-      // If Gemini fails, it will automatically move to Tier 2 (OpenAI) below
+      // Fallback kicks in if Gemini 2.5 is unavailable or key is restricted
     }
 
     // --- TIER 2: OPENAI (The Reliable Wingman) ---
