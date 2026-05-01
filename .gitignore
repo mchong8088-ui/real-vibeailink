@@ -1,6 +1,6 @@
 # --- VibeAiLink Ignore List ---
 
-# Next.js Build Output (REPLACED /xt/ with /.next/)
+# Next.js Build Output
 /.next/
 /out/
 /build/
@@ -21,8 +21,10 @@
 .env.development.local
 .env.test.local
 .env.production.local
+.env*
+*.env
 
-# macOS system files (Prevents those annoying .DS_Store files)
+# macOS system files
 .DS_Store
 
 # Debugging and Logs
