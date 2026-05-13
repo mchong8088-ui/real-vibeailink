@@ -1,146 +1,316 @@
 "use client";
-import React, { useState, useEffect } from 'react';
-import { Sparkles, Mic, Volume2, Square, Loader2, Send, Check } from 'lucide-react';
+import React, { useState, useEffect } from 'react'; 
+import { SourceMenu } from './components/features/controls/SourceMenu';
+import { SmartInputSystem } from './components/features/controls/SmartInputSystem';
+import { StockAnalysisModule } from './components/features/stock-analysis/StockAnalysisModule';
+import { useAuthFlow } from './hooks/useAuthFlow'; 
+import UserMenu from './components/auth/UserMenu';
+import { AuthModal } from './components/modals/AuthModal';
+import { LegalGate } from './components/auth/LegalGate';
+import { LanguageToggle } from './components/layout/LanguageToggle'; 
+import { AboutSection } from './components/sections/AboutSection';
+import { FeaturesSection } from './components/sections/FeaturesSection';
+import { PricingModal } from './components/features/pricing/PricingModal';
+import MobileLanding from './components/mobile/MobileLanding';
+import MobileAnalysis from './components/mobile/MobileAnalysis';
 import { supabase } from './lib/supabase';
-import { AuthModal } from './components/AuthModal';
-import { Dashboard } from './components/Dashboard';
-import { PriceChart } from './components/PriceChart';
 import { footerContent } from './constants/content';
-import { disclaimerData } from './constants/legal'; 
+import { useLanguage } from '@/context/LanguageContext';
 
-const navItems = [{ key: "關於我們", view: 'footer' }, { key: "功能介紹", view: 'footer' }, { key: "AI 分析", view: 'analysis' }, { key: "服務定價", view: 'pricing' }];
-const t = {
-  nav: { "關於我們": { "粵語 (繁體中文)": "關於我們", "简体中文": "关于我们", "English": "About Us" }, "功能介紹": { "粵語 (繁體中文)": "功能介紹", "简体中文": "关于介绍", "English": "Features" }, "服務定價": { "粵語 (繁體中文)": "服務定價", "简体中文": "服务定价", "English": "Pricing" }, "AI 分析": { "粵語 (繁體中文)": "AI 分析", "简体中文": "AI 分析", "English": "AI Analysis" } },
-  languages: ["粵語 (繁體中文)", "简体中文", "English"]
-};
+export default function VibeAiMaster() {
+  const { t, language, setLanguage } = useLanguage();
+  
+  const [systemState, setSystemState] = useState({ os: "Detecting...", isMobile: false });
+  const { user, profile, initializeNewUser } = useAuthFlow();
 
-export default function VibeAiMasterPage() {
-  const [view, setView] = useState<'analysis' | 'pricing' | 'footer'>('analysis');
-  const [activeFooterKey, setActiveFooterKey] = useState<string | null>(null);
-  const [language, setLanguage] = useState('粵語 (繁體中文)');
-  const [user, setUser] = useState<any>(null);
+  // UI States
+  const [isMenuOpen, setIsMenuOpen] = useState(false);
+  const [currentView, setCurrentView] = useState<"analysis" | "about" | "features" | "pricing">("analysis");
+  const [legalTitle, setLegalTitle] = useState<string | null>(null);
   const [isAuthOpen, setIsAuthOpen] = useState(false);
-  const [isTopUpModalOpen, setIsTopUpModalOpen] = useState(false);
-  const [technicalData, setTechnicalData] = useState<any>(null);
-  const [speakerActive, setSpeakerActive] = useState(true);
-  const [isProcessing, setIsProcessing] = useState(false);
-  const [input, setInput] = useState('');
-  const [analysisResult, setAnalysisResult] = useState('');
-  const [searchHistory, setSearchHistory] = useState<string[]>([]);
-  const [range, setRange] = useState('1mo');
-  const [billingCycle, setBillingCycle] = useState<'monthly' | 'yearly'>('monthly');
+  const [analysisData, setAnalysisData] = useState<any>(null);
+  const [isLoading, setIsLoading] = useState(false);
+  const [showPricingModal, setShowPricingModal] = useState(false);
+  const [pricingContext, setPricingContext] = useState<'normal' | 'retention'>('normal');
+  const [showUserMenu, setShowUserMenu] = useState(false);
+
+  // Mobile Navigation
+  const [mobilePage, setMobilePage] = useState<'landing' | 'analysis' | 'content'>('landing');
+  const [mobileView, setMobileView] = useState<string>('analysis');
+  const [mobileTopic, setMobileTopic] = useState<string | null>(null);
+  const [mobileLegal, setMobileLegal] = useState<string | null>(null);
+
+  const systemInfo = { system: `VibeAI-${systemState.os}`, voiceEngine: "Local Synthesis" };
 
   useEffect(() => {
-    supabase.auth.getSession().then(({ data: { session } }) => setUser(session?.user ?? null));
-    const saved = localStorage.getItem('searchHistory');
-    if (saved) setSearchHistory(JSON.parse(saved));
+    const ua = window.navigator.userAgent;
+    const isMobileDevice = /iPhone|iPad|iPod|Android/i.test(ua) || window.innerWidth < 1024;
+    let detectedOS = "Standard OS";
+    if (ua.indexOf("Win") !== -1) detectedOS = "Windows";
+    if (ua.indexOf("Mac") !== -1) detectedOS = "MacOS";
+    setSystemState({ os: detectedOS, isMobile: isMobileDevice });
   }, []);
 
-  const stopVoice = () => window.speechSynthesis.cancel();
-  const speak = (text: string) => {
-    if (!speakerActive || !text) return;
-    const synth = window.speechSynthesis; synth.cancel();
-    const u = new SpeechSynthesisUtterance(text);
-    u.lang = language === 'English' ? 'en-US' : (language === '简体中文' ? 'zh-CN' : 'zh-HK');
-    synth.speak(u);
+  const handleLogout = async () => {
+    await supabase.auth.signOut();
+    localStorage.clear();
+    sessionStorage.clear();
+    window.location.replace('/'); 
   };
 
-  const handleAnalyze = async (overrideRange = range, symbol = input) => {
-    if (!symbol.trim()) return; setIsProcessing(true);
+  // This function is called by SmartInputSystem and passes data to StockAnalysisModule
+  const handleAnalyzeRequest = async (ticker: string) => {
+  if (!user) {
+    setIsAuthOpen(true);
+    return;
+  }
+  
+  setIsLoading(true);
+  setLegalTitle(null);
+  
+  try {
+    console.log("🔵 Analyzing ticker:", ticker);
+    
+    const response = await fetch('/api/chat', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ 
+        message: ticker,
+        language: language
+      }),
+    });
+    
+    if (!response.ok) {
+      throw new Error(`API error: ${response.status}`);
+    }
+    
+    const data = await response.json();
+    console.log("✅ API Response:", data);
+    
+    // Direct mapping from API response to analysisData
+    setAnalysisData({
+      success: data.success,
+      symbol: data.symbol || ticker.toUpperCase(),
+      price: data.price || "N/A",
+      rsi: data.rsi || "N/A",
+      macd: data.macd || "N/A",
+      marketCap: data.marketCap || "N/A",
+      peRatio: data.peRatio || "N/A",
+      volume: data.volume || "N/A",
+      summary: data.summary || data.text || `Analysis for ${ticker.toUpperCase()} completed.`,
+      text: data.text || data.summary || `Analysis for ${ticker.toUpperCase()} completed.`,
+    });
+    
+    console.log("📊 analysisData set:", analysisData);
+    
+  } catch (error) {
+    console.error('❌ Error fetching analysis:', error);
+    setAnalysisData({
+      symbol: ticker.toUpperCase(),
+      price: "N/A",
+      rsi: "N/A",
+      macd: "N/A",
+      marketCap: "N/A",
+      peRatio: "N/A",
+      volume: "N/A",
+      summary: `Unable to fetch analysis for ${ticker.toUpperCase()}. Please try again.`,
+      text: `Unable to fetch analysis for ${ticker.toUpperCase()}. Please try again.`,
+    });
+  } finally {
+    setIsLoading(false);
+  }
+};
+
+  const handleSelectPlan = async (planId: string, priceId: string) => {
+    if (!user && planId !== 'explorer') {
+      setIsAuthOpen(true);
+      return;
+    }
     try {
-      const res = await fetch('/api/analyze', { method: 'POST', body: JSON.stringify({ symbol, lang: language, range: overrideRange }) });
-      const data = await res.json();
-      setAnalysisResult(data.summary); setTechnicalData(data.technicalCard); speak(data.summary);
-      const newHistory = [symbol, ...searchHistory.filter(s => s !== symbol)].slice(0, 5);
-      setSearchHistory(newHistory); localStorage.setItem('searchHistory', JSON.stringify(newHistory));
-    } finally { setIsProcessing(false); }
+      const response = await fetch('/api/billing/create-checkout', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ priceId, userId: user?.id, successUrl: `${window.location.origin}/success`, cancelUrl: window.location.href }),
+      });
+      const { url } = await response.json();
+      if (url) window.location.href = url;
+    } catch (error) {
+      console.error('Error:', error);
+      alert('Unable to process payment.');
+    }
   };
 
-  const handleCheckout = async (planName: string) => {
-    if (!user) { setIsAuthOpen(true); return; }
-    const planMapping: Record<string, string> = { 'Pro Elite': 'pro', 'Institutional': 'inst' };
-    const planKey = planMapping[planName];
-    try {
-      const res = await fetch('/api/checkout', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ planKey, billingCycle }) });
-      const data = await res.json();
-      if (data.url) window.location.href = data.url;
-    } catch (err) { console.error("Checkout error:", err); }
+  const handleSourceSelect = async (sourceType: string, sourceData?: any) => {
+    if (sourceType === 'url' && sourceData) {
+      try {
+        const response = await fetch('/api/chat', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ url: sourceData, language: language }),
+        });
+        const data = await response.json();
+        setAnalysisData((prev: any) => ({
+          ...prev,
+          summary: prev?.summary + "\n\n📎 " + (data.text || "URL analysis completed."),
+        }));
+      } catch (error) {
+        console.error('Error:', error);
+      }
+    }
+    setIsMenuOpen(false);
   };
 
+  const showLegalGate = user && profile && profile.has_accepted_legal === false;
+  const showMasterPopup = isAuthOpen || legalTitle || showLegalGate;
+
+  const getUserDisplayName = () => {
+    if (profile?.display_name) return profile.display_name.substring(0, 10);
+    if (user?.email) return user.email.split('@')[0].substring(0, 10);
+    return 'User';
+  };
+
+  // MOBILE VIEW
+  if (systemState.isMobile) {
+    if (mobilePage === 'landing') {
+      return (
+        <MobileLanding 
+          langKey={language} setLangKey={setLanguage} onAuthOpen={() => setIsAuthOpen(true)} user={user}
+          onNavigate={(page: string, params?: any) => {
+            if (page === 'analysis') { setMobilePage('analysis'); setMobileView('analysis'); }
+            else if (page === 'content') { setMobilePage('content'); setMobileTopic(params?.view); setMobileLegal(params?.view); }
+          }}
+        />
+      );
+    }
+    return (
+      <MobileAnalysis
+        langKey={language} setLangKey={setLanguage} user={user} onAuthOpen={() => setIsAuthOpen(true)}
+        viewType={mobileView} topicId={mobileTopic} legalTitle={mobileLegal}
+        onBack={() => { setMobilePage('landing'); setMobileView('analysis'); setMobileTopic(null); setMobileLegal(null); }}
+      />
+    );
+  }
+
+  // DESKTOP VIEW
   return (
-    <div style={{ height: '100vh', display: 'flex', flexDirection: 'column' }}>
-      <header style={{ height: '70px', padding: '0 30px', borderBottom: '1px solid #e0e0e0', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: '20px' }}>
-          <Sparkles size={24} color="#2563eb" /> <span style={{ fontWeight: 900, fontSize: '20px' }}>VibeAiLink</span>
-          <nav style={{ display: 'flex', gap: '20px', fontWeight: 600 }}>
-            {navItems.map(item => <button key={item.key} onClick={() => { setActiveFooterKey(item.key); setView(item.view as any); }}>{t.nav[item.key as keyof typeof t.nav][language as any]}</button>)}
-          </nav>
+    <div className="flex flex-col h-screen w-full overflow-hidden bg-white">
+      
+      {/* HEADER */}
+      <nav className="h-[8vh] bg-white flex items-center justify-between px-8 flex-shrink-0">
+        <div className="w-1/4"><h1 className="text-2xl font-black italic text-red-600">vibeAiLink</h1></div>
+        <div className="flex-1 flex justify-center gap-8">
+          {['analysis', 'about', 'features', 'pricing'].map((view) => (
+            <button key={view} onClick={() => { setCurrentView(view as any); setLegalTitle(null); const meatArea = document.getElementById('meat-scroll-area'); if (meatArea) meatArea.scrollTop = 0; }}
+              style={{ fontSize: '11px', fontWeight: currentView === view && !legalTitle ? '900' : '600', letterSpacing: '0.2em', color: currentView === view && !legalTitle ? '#2563EB' : '#94A3B8', textTransform: 'uppercase', background: 'none', border: 'none', cursor: 'pointer', paddingBottom: '4px' }}>
+              {view === 'analysis' ? t.aiStock : view.toUpperCase()}
+            </button>
+          ))}
         </div>
-        <div style={{display: 'flex', gap: '15px'}}>
-          <select value={language} onChange={(e) => setLanguage(e.target.value)}>{t.languages.map(l => <option key={l} value={l}>{l}</option>)}</select>
-          <button onClick={() => user ? supabase.auth.signOut() : setIsAuthOpen(true)}>{user ? '登出' : '登入'}</button>
+        <div className="w-1/4 flex items-center justify-end gap-3">
+          {user ? (
+            <button onClick={() => setShowUserMenu(!showUserMenu)} className="flex items-center gap-2 px-3 py-2 rounded-full bg-slate-100 hover:bg-slate-200 transition">
+              <div className="w-8 h-8 rounded-full bg-blue-500 flex items-center justify-center text-white font-bold">{getUserDisplayName().charAt(0).toUpperCase()}</div>
+              <span className="text-sm font-medium max-w-[100px] truncate">{getUserDisplayName()}</span>
+              <svg className={`w-4 h-4 transition-transform ${showUserMenu ? 'rotate-180' : ''}`} fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" /></svg>
+            </button>
+          ) : (
+            <button onClick={() => setIsAuthOpen(true)} style={{ color: '#2563EB', fontWeight: '700', fontSize: '12px', backgroundColor: 'transparent', padding: '6px 12px', borderRadius: '9999px', border: 'none', cursor: 'pointer' }}>{t.login}</button>
+          )}
+          <LanguageToggle currentLang={language} onLangChange={(lang: string) => setLanguage(lang as any)} />
         </div>
-      </header>
+      </nav>
 
-      <div style={{ flex: 1, display: 'flex', overflow: 'hidden' }}>
-        <aside style={{ width: '280px', padding: '24px', borderRight: '1px solid #e0e0e0', display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
-          <img src="/avatars/michael_teresa.jpg" style={{ width: '120px', borderRadius: '50%' }} />
-          <h3>Michael & Teresa</h3>
-          <div style={{ width: '100%', marginTop: '30px' }}>
-            {searchHistory.map(s => <button key={s} onClick={() => handleAnalyze('1mo', s)} style={{display:'block', width:'100%', background:'#fff9c4', padding:'8px', margin:'4px 0', border:'none', borderRadius:'4px', textAlign:'left'}}>{s}</button>)}
-          </div>
+      {/* MAIN CONTENT AREA */}
+      <div className="flex flex-1 overflow-hidden" style={{ height: '92vh' }}>
+        
+        {/* LEFT PANEL */}
+        <aside className="w-[20%] bg-[#FEF08A] flex flex-col items-center justify-center p-3">
+          <div className="w-32 h-32 rounded-full overflow-hidden mb-3 bg-white shadow-lg"><img src="/avatars/michael_teresa.jpg" className="w-full h-full object-cover" alt="Michael & Teresa" /></div>
+          <h3 className="font-black text-slate-900 text-xl uppercase text-center leading-tight">Michael & Teresa</h3>
+          <p className="text-[10px] font-black text-blue-700 tracking-[0.15em] mt-1 uppercase text-center">{t.financeMarketAnalysis}</p>
+          <p className="text-[9px] font-bold text-slate-500 tracking-wide mt-1 text-center">{systemState.os} {t.environmentActive}</p>
         </aside>
 
-        <main style={{ flex: 1, padding: '40px', overflowY: 'auto' }}>
-          {view === 'analysis' ? (
-            <div style={{ maxWidth: '800px', margin: '0 auto' }}>
-              {technicalData && (<><div style={{ marginBottom: '10px' }}>{['1mo', '3mo', '1y'].map(r => <button key={r} onClick={() => { setRange(r); handleAnalyze(r); }} style={{ marginRight: '10px', padding: '5px 10px', background: range === r ? '#e0e0e0' : 'none', borderRadius: '4px' }}>{r}</button>)}</div><PriceChart data={technicalData.history} /><Dashboard data={technicalData} /><div style={{ padding: '20px', background: '#f9f9f9', borderRadius: '10px', marginTop: '10px' }}>{analysisResult}</div></>)}
-              <div style={{ marginTop: '20px', background: '#f1f3f4', padding: '12px 20px', borderRadius: '24px', display: 'flex', alignItems:'center', gap:'12px' }}>
-                <button><Mic color="red" /></button><input value={input} onChange={(e) => setInput(e.target.value)} placeholder="Insert symbol: 0700.HK, 2330.TW or TSLA" style={{flex:1, border:'none', background:'none', outline:'none'}} />
-                <button onClick={() => setSpeakerActive(!speakerActive)}><Volume2 color="red" /></button><button onClick={stopVoice}><Square color="red" /></button><button onClick={() => handleAnalyze()} style={{ color: '#2563eb' }}>{isProcessing ? <Loader2 className="animate-spin" /> : <Send />}</button>
+        {/* RIGHT PANEL */}
+        <div className="w-[80%] bg-[#E0F2FE] flex flex-col overflow-hidden">
+          
+          {/* SCROLLABLE CONTENT AREA */}
+          <div id="meat-scroll-area" className="flex-1 overflow-y-auto px-[5%] pt-4 pb-4 scrollbar-hide min-h-0">
+            <div className="max-w-full mx-auto">
+              
+              {showUserMenu && (
+                <UserMenu user={user} profile={profile} onLogout={handleLogout} 
+                  onOpenPricingPage={() => { setCurrentView("pricing"); setPricingContext('normal'); setShowPricingModal(true); setShowUserMenu(false); }}
+                  onSelectPlan={handleSelectPlan} onClose={() => setShowUserMenu(false)} />
+              )}
+
+              {(showMasterPopup || legalTitle) && (
+                <div className="w-full max-w-4xl mx-auto bg-white rounded-2xl shadow-2xl p-8 mb-6">
+                  <button onClick={() => { setIsAuthOpen(false); setLegalTitle(null); setShowPricingModal(false); }} className="float-right text-red-500 font-bold text-sm uppercase hover:text-red-700 mb-3" style={{ background: 'none', border: 'none', cursor: 'pointer' }}>Close ✕</button>
+                  <div className="clear-both">
+                    {isAuthOpen && !user && <AuthModal isOpen={isAuthOpen} onClose={() => setIsAuthOpen(false)} />}
+                    {showLegalGate && <LegalGate language={language} onAccept={initializeNewUser} />}
+                    {legalTitle && (
+                      <div>
+                        <h2 className="text-2xl font-black mb-5 text-blue-600 uppercase tracking-wide">{legalTitle}</h2>
+                        <div className="text-base text-slate-700 whitespace-pre-wrap leading-relaxed">
+                          {footerContent[legalTitle]?.[language === "Cantonese" ? "粵語 (繁體中文)" : language] || "Content coming soon..."}
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                </div>
+              )}
+
+              <div className="w-full">
+                {currentView === "analysis" && (
+                  <StockAnalysisModule 
+                    data={analysisData} 
+                    isLoading={isLoading} 
+                    langKey={language}
+                    t={t}
+                  />
+                )}
+                {currentView === "pricing" && (
+                  <PricingModal isOpen={true} onClose={() => { setCurrentView("analysis"); setShowPricingModal(false); }}
+                    user={user} profile={profile} onSelectPlan={handleSelectPlan} showRetentionOnly={pricingContext === 'retention'} t={t} />
+                )}
+                {currentView === "about" && <AboutSection lang={language} t={t} />}
+                {currentView === "features" && <FeaturesSection lang={language} t={t} />}
               </div>
             </div>
-          ) : view === 'pricing' ? (
-            <div style={{textAlign:'center', padding:'40px'}}>
-               <h1>Choose Your Intelligence Engine</h1>
-               <div style={{display:'flex', justifyContent:'center', gap:'20px', margin:'20px 0'}}>
-                 <button onClick={() => setBillingCycle('monthly')} style={{fontWeight: billingCycle === 'monthly' ? 800 : 400}}>Monthly</button>
-                 <button onClick={() => setBillingCycle('yearly')} style={{fontWeight: billingCycle === 'yearly' ? 800 : 400}}>Yearly (Save 20%)</button>
-               </div>
-               <div style={{display:'grid', gridTemplateColumns:'repeat(3, 1fr)', gap:'20px'}}>
-                 {[ { n: 'Explorer', p: '0' }, { n: 'Pro Elite', p: billingCycle === 'monthly' ? '29' : '23' }, { n: 'Institutional', p: billingCycle === 'monthly' ? '99' : '79' } ].map(plan => (
-                   <div key={plan.n} style={{border:'1px solid #e0e0e0', padding:'30px', borderRadius:'16px'}}>
-                     <h2>{plan.n}</h2><h1 style={{fontSize:'32px'}}>${plan.p}<span style={{fontSize:'14px'}}>/mo</span></h1>
-                     <p style={{fontSize:'12px', color:'#666'}}>{plan.n === 'Explorer' ? 'Free 100 credits for new users' : 'AI驅動市場洞察，即時股票搜尋，多語音支援。'}</p>
-                     <button onClick={() => plan.n === 'Explorer' ? (user ? setIsTopUpModalOpen(true) : setIsAuthOpen(true)) : handleCheckout(plan.n)} style={{background:'#2563eb', color:'white', padding:'10px 30px', borderRadius:'8px', width:'100%'}}>
-                       {plan.n === 'Explorer' ? (user ? `Welcome Back, ${user.email.split('@')[0]}` : "Subscribe/Continue") : "Select Plan"}
-                     </button>
-                   </div>
-                 ))}
-               </div>
-             </div>
-          ) : (<div style={{whiteSpace:'pre-wrap', maxWidth: '800px', margin: '0 auto'}}>{activeFooterKey === "免責聲明" ? disclaimerData[language as any]?.content : footerContent[activeFooterKey as any]?.[language as any]}</div>)}
-        </main>
-      </div>
+          </div>
 
-      {isTopUpModalOpen && (
-        <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.5)', zIndex: 1000, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-          <div style={{ background: 'white', padding: '30px', borderRadius: '16px', maxWidth: '400px', textAlign: 'center' }}>
-            <h2>Coffee Plan - 輕鬆加值</h2>
-            <p style={{ margin: '20px 0' }}>補充 100 點數，讓您的 AI 分析旅程不中斷。</p>
-            <button onClick={async () => { const res = await fetch('/api/topup', { method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify({ email: user.email, amount: 5 }) }); const { url } = await res.json(); window.location.href = url; }} style={{ background: '#2563eb', color: 'white', padding: '12px 24px', borderRadius: '8px', width: '100%' }}>支付 $5 購買 Coffee Plan</button>
-            <button onClick={() => setIsTopUpModalOpen(false)} style={{ marginTop: '15px', background: 'none', border: 'none', color: '#666' }}>關閉視窗</button>
+          {/* INPUT AREA */}
+          <div className="bg-white shadow-lg flex-shrink-0" style={{ paddingTop: '16px', paddingBottom: '16px', paddingLeft: '5%', paddingRight: '5%' }}>
+            <div style={{ maxWidth: '900px', width: '100%', margin: '0 auto' }}>
+              <SmartInputSystem 
+                langKey={language}
+                onAnalyze={handleAnalyzeRequest}
+                onPlusClick={() => setIsMenuOpen(true)} 
+                systemInfo={systemInfo}
+                analysisText={analysisData?.summary}
+                t={t}
+              />
+            </div>
+          </div>
+
+          {/* FOOTER */}
+          <div className="bg-white flex-shrink-0 py-2">
+            <div className="px-[5%]">
+              <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', gap: '24px', flexWrap: 'wrap' }}>
+                <button onClick={() => { setLegalTitle('DISCLAIMER'); const meatArea = document.getElementById('meat-scroll-area'); if (meatArea) meatArea.scrollTop = 0; }} style={{ background: 'none', border: 'none', color: legalTitle === 'DISCLAIMER' ? '#2563EB' : '#3B82F6', fontWeight: legalTitle === 'DISCLAIMER' ? '900' : '500', fontSize: '11px', cursor: 'pointer', padding: '4px 8px' }}>{t.disclaimer}</button>
+                <button onClick={() => { setLegalTitle('服務條款'); const meatArea = document.getElementById('meat-scroll-area'); if (meatArea) meatArea.scrollTop = 0; }} style={{ background: 'none', border: 'none', color: legalTitle === '服務條款' ? '#2563EB' : '#3B82F6', fontWeight: legalTitle === '服務條款' ? '900' : '500', fontSize: '11px', cursor: 'pointer', padding: '4px 8px' }}>{t.termsOfService}</button>
+                <button onClick={() => { setLegalTitle('隱私政策'); const meatArea = document.getElementById('meat-scroll-area'); if (meatArea) meatArea.scrollTop = 0; }} style={{ background: 'none', border: 'none', color: legalTitle === '隱私政策' ? '#2563EB' : '#3B82F6', fontWeight: legalTitle === '隱私政策' ? '900' : '500', fontSize: '11px', cursor: 'pointer', padding: '4px 8px' }}>{t.privacyPolicy}</button>
+                <button onClick={() => { setLegalTitle('退款政策'); const meatArea = document.getElementById('meat-scroll-area'); if (meatArea) meatArea.scrollTop = 0; }} style={{ background: 'none', border: 'none', color: legalTitle === '退款政策' ? '#2563EB' : '#3B82F6', fontWeight: legalTitle === '退款政策' ? '900' : '500', fontSize: '11px', cursor: 'pointer', padding: '4px 8px' }}>{t.refundPolicy}</button>
+                <button onClick={() => { setLegalTitle('聯絡我們'); const meatArea = document.getElementById('meat-scroll-area'); if (meatArea) meatArea.scrollTop = 0; }} style={{ background: 'none', border: 'none', color: legalTitle === '聯絡我們' ? '#2563EB' : '#3B82F6', fontWeight: legalTitle === '聯絡我們' ? '900' : '500', fontSize: '11px', cursor: 'pointer', padding: '4px 8px' }}>{t.contactUs}</button>
+              </div>
+            </div>
           </div>
         </div>
-      )}
+      </div>
 
-      <footer style={{ padding: '20px', borderTop: '1px solid #e0e0e0', display: 'flex', justifyContent: 'center', gap: '15px' }}>
-        {Object.keys(footerContent).map((key) => (
-          <button key={key} onClick={() => { setActiveFooterKey(key); setView('footer'); }}>{t.nav[key as keyof typeof t.nav]?.[language as any] || key}</button>
-        ))}
-      </footer>
-
-      <AuthModal isOpen={isAuthOpen} onClose={() => setIsAuthOpen(false)} onGoogleSignIn={() => supabase.auth.signInWithOAuth({ provider: 'google' })} />
+      <SourceMenu isOpen={isMenuOpen} onClose={() => setIsMenuOpen(false)} onSelectSource={handleSourceSelect} langKey={language} t={t} />
     </div>
   );
 }

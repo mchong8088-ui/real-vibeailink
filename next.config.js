@@ -1,11 +1,6 @@
 /** @type {import('next').NextConfig} */
 const nextConfig = {
-  eslint: {
-    ignoreDuringBuilds: true,
-  },
-  typescript: {
-    ignoreBuildErrors: true,
-  },
+  // Ensure webpack is a sibling to eslint, not nested inside it
   webpack: (config) => {
     config.resolve.alias = {
       ...config.resolve.alias,

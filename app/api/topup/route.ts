@@ -31,7 +31,7 @@ export async function POST(req: Request) {
         },
       ],
       mode: 'payment',
-      success_url: `${process.env.NEXT_PUBLIC_BASE_URL}/success?credits=100`,
+      success_url: `${process.env.NEXT_PUBLIC_SITE_URL}/thank-you`,
       cancel_url: `${process.env.NEXT_PUBLIC_BASE_URL}/pricing`,
     });
 
