@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 
 // Import your SourceMenu component (adjust the path if it is located elsewhere)
-import { SourceMenu } from './SourceMenu'; 
+import { SourceMenu } from './features/controls/SourceMenu'; 
 
 interface SpecialUserInputProps {
   langKey: string;
