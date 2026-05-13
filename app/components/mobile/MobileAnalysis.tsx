@@ -41,6 +41,11 @@ const MobileAnalysis: React.FC<MobileAnalysisProps> = ({
   const [recognition, setRecognition] = useState<any>(null);
   const utteranceRef = useRef<SpeechSynthesisUtterance | null>(null);
 
+  // t object for translations
+  const t = {
+    analyzingMarket: langKey === 'Cantonese' ? '分析市場中...' : langKey === '简体中文' ? '分析市场中...' : 'Analyzing Market...',
+  };
+
   // Speech Recognition Setup
   useEffect(() => {
     if (typeof window !== 'undefined') {
@@ -96,6 +101,9 @@ const MobileAnalysis: React.FC<MobileAnalysisProps> = ({
       setAnalysisData({
         symbol: inputValue.trim().toUpperCase(),
         summary: data.text || data.summary || `Analysis for ${inputValue.trim().toUpperCase()} completed.`,
+        price: data.price || "N/A",
+        rsi: data.rsi || "N/A",
+        macd: data.macd || "N/A",
         technical: data.technical || { rsi: 52.5, macd: "Neutral", price: "---" }
       });
     } catch (error) {
@@ -103,6 +111,9 @@ const MobileAnalysis: React.FC<MobileAnalysisProps> = ({
       setAnalysisData({
         symbol: inputValue.trim().toUpperCase(),
         summary: `無法獲取 ${inputValue.trim().toUpperCase()} 的分析。請稍後再試。`,
+        price: "N/A",
+        rsi: "N/A",
+        macd: "N/A",
         technical: { rsi: "50.0", macd: "Neutral", price: "---" }
       });
     } finally {
@@ -169,7 +180,7 @@ const MobileAnalysis: React.FC<MobileAnalysisProps> = ({
       <div className="bg-white px-4 py-3 border-b border-gray-100 flex items-center justify-between flex-shrink-0">
         <button onClick={onBack} className="p-1 -ml-2">
           <svg className="w-6 h-6 text-gray-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7 7-7-7" />
           </svg>
         </button>
         <h2 className="text-lg font-semibold text-gray-800">{getTitle()}</h2>
@@ -216,9 +227,14 @@ const MobileAnalysis: React.FC<MobileAnalysisProps> = ({
         {/* Analysis Mode - With Input at bottom */}
         {isAnalysisMode && !legalTitle && (
           <>
-            {/* Analysis Dashboard - Scrollable */}
+            {/* Analysis Dashboard - Scrollable WITH t prop */}
             <div className="pb-4">
-              <AnalysisDashboard data={analysisData} isLoading={isLoading} langKey={langKey} />
+              <AnalysisDashboard 
+                data={analysisData} 
+                isLoading={isLoading} 
+                langKey={langKey}
+                t={t}
+              />
             </div>
             
             {/* Hidden spacer for input */}
