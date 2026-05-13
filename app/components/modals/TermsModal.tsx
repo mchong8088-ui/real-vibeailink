@@ -1,7 +1,7 @@
 // components/modals/TermsModal.tsx
 import React, { useState } from 'react';
-import { supabase } from '@/lib/supabase';
-import { disclaimerData } from '@/constants/legal';
+import { supabase } from '../../lib/supabase';
+import { disclaimerData } from '../../constants/legal';
 
 interface TermsModalProps {
   isOpen: boolean;
@@ -12,7 +12,7 @@ interface TermsModalProps {
   onAccept: () => void;
 }
 
-export const TermsModal: React.FC<TermsModalProps> = ({
+const TermsModal: React.FC<TermsModalProps> = ({
   isOpen,
   onClose,
   user,
@@ -37,7 +37,7 @@ export const TermsModal: React.FC<TermsModalProps> = ({
     const { error } = await supabase
       .from('profiles')
       .update({
-        display_name: displayName,
+        display_name: displayName || email.split('@')[0],
         email: email,
         has_accepted_legal: true,
         credits: 100,
@@ -53,70 +53,56 @@ export const TermsModal: React.FC<TermsModalProps> = ({
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm">
-      <div className="bg-white rounded-2xl shadow-2xl w-full max-w-2xl max-h-[80vh] flex flex-col">
-        <div className="p-6 border-b">
-          <h2 className="text-2xl font-bold text-center">Terms of Service & Legal Agreement</h2>
-          <p className="text-center text-gray-500 text-sm mt-1">
-            Please read carefully before accepting
-          </p>
+    <div className="fixed inset-0 z-[200] flex items-center justify-center bg-black/50 backdrop-blur-sm">
+      <div className="bg-white rounded-2xl shadow-2xl w-full max-w-2xl max-h-[80vh] flex flex-col mx-4">
+        <div className="p-5 border-b">
+          <h2 className="text-xl font-bold text-center">Terms of Service & Legal Agreement</h2>
         </div>
         
-        <div 
-          className="flex-1 overflow-y-auto p-6 space-y-6"
-          onScroll={handleScroll}
-        >
-          {/* Terms of Service */}
+        <div className="flex-1 overflow-y-auto p-5 space-y-5" onScroll={handleScroll}>
           <div>
-            <h3 className="text-lg font-bold text-blue-600 mb-3">1. Terms of Service</h3>
-            <div className="text-sm text-gray-700 space-y-2">
-              <p><strong>Eligibility:</strong> This website is for legal adults only (18+).</p>
+            <h3 className="text-base font-bold text-blue-600 mb-2">1. Terms of Service</h3>
+            <div className="text-sm text-gray-700 space-y-1">
+              <p><strong>Eligibility:</strong> For legal adults only (18+).</p>
               <p><strong>Service Nature:</strong> Market data summaries and AI analysis - NOT financial advice.</p>
-              <p><strong>User Responsibility:</strong> All actions are independent decisions. Consult licensed professionals.</p>
-              <p><strong>Subscription & Cancellation:</strong> Processed via Stripe. Fees are non-refundable after delivery.</p>
+              <p><strong>User Responsibility:</strong> All actions are independent decisions.</p>
             </div>
           </div>
           
-          {/* Disclaimer */}
           <div>
-            <h3 className="text-lg font-bold text-blue-600 mb-3">2. Disclaimer</h3>
-            <div className="text-sm text-gray-700 whitespace-pre-wrap">
-              {disclaimerData["粵語 (繁體中文)"].content}
+            <h3 className="text-base font-bold text-blue-600 mb-2">2. Disclaimer</h3>
+            <div className="text-sm text-gray-700">
+              <p>{disclaimerData?.["English"]?.content || "Data provided is based on 'Big Data Algorithms' and 'Mathematical Models' and does not constitute investment advice."}</p>
             </div>
           </div>
           
-          {/* Privacy Policy */}
           <div>
-            <h3 className="text-lg font-bold text-blue-600 mb-3">3. Privacy Policy</h3>
-            <div className="text-sm text-gray-700 space-y-2">
-              <p><strong>Data Collection:</strong> Only necessary account information is collected.</p>
-              <p><strong>Payment Security:</strong> All payments are securely processed by Stripe.</p>
-              <p><strong>Data Usage:</strong> Used only for verification and reporting. Never sold to third parties.</p>
-              <p><strong>Data Retention:</strong> Automatically deleted upon account deactivation.</p>
+            <h3 className="text-base font-bold text-blue-600 mb-2">3. Privacy Policy</h3>
+            <div className="text-sm text-gray-700 space-y-1">
+              <p><strong>Data Collection:</strong> Only necessary account information.</p>
+              <p><strong>Payment Security:</strong> Securely processed by Stripe.</p>
+              <p><strong>Data Retention:</strong> Deleted upon account deactivation.</p>
             </div>
           </div>
           
-          {/* Explorer Credits */}
-          <div className="bg-yellow-50 p-4 rounded-lg">
-            <h3 className="font-bold text-yellow-800 mb-2">🎁 Welcome Bonus!</h3>
-            <p className="text-sm text-yellow-700">
-              Upon accepting these terms, you will receive <strong>100 FREE credits</strong> as an Explorer member!
-            </p>
+          <div className="bg-yellow-50 p-3 rounded-lg">
+            <p className="text-sm font-semibold text-yellow-800">🎁 Welcome Bonus!</p>
+            <p className="text-xs text-yellow-700 mt-1">Accept to receive 100 FREE credits as an Explorer member!</p>
           </div>
         </div>
         
-        <div className="p-6 border-t bg-gray-50 rounded-b-2xl">
+        <div className="p-5 border-t bg-gray-50 rounded-b-2xl">
           <div className="flex gap-3">
             <button
               onClick={onClose}
-              className="flex-1 px-4 py-2 border border-gray-300 rounded-lg text-gray-700 hover:bg-gray-100 transition"
+              className="flex-1 px-4 py-2 border border-gray-300 rounded-lg text-gray-700 hover:bg-gray-100 transition text-sm"
             >
               Decline
             </button>
             <button
               onClick={handleAccept}
               disabled={!isScrolledToBottom || loading}
-              className={`flex-1 px-4 py-2 rounded-lg transition ${
+              className={`flex-1 px-4 py-2 rounded-lg transition text-sm ${
                 isScrolledToBottom && !loading
                   ? 'bg-green-600 hover:bg-green-700 text-white'
                   : 'bg-gray-300 text-gray-500 cursor-not-allowed'
@@ -126,12 +112,12 @@ export const TermsModal: React.FC<TermsModalProps> = ({
             </button>
           </div>
           {!isScrolledToBottom && (
-            <p className="text-xs text-gray-500 text-center mt-3">
-              Please scroll to the bottom to enable acceptance
-            </p>
+            <p className="text-xs text-gray-400 text-center mt-3">Please scroll to the bottom to accept</p>
           )}
         </div>
       </div>
     </div>
   );
 };
+
+export default TermsModal;
