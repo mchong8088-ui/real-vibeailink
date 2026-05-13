@@ -67,6 +67,18 @@ async function fetchRealStockData(symbol: string, range: string = '1mo') {
     if (sma20 && currentPrice > sma20 * 1.02) macdStatus = "Bullish";
     else if (sma20 && currentPrice < sma20 * 0.98) macdStatus = "Bearish";
     
+    // Calculate daily change
+    let change = 0;
+    let changePercent = 0;
+    if (prices.length >= 2) {
+      const prevClose = prices[prices.length - 2];
+      const lastClose = prices[prices.length - 1];
+      if (prevClose && lastClose) {
+        change = lastClose - prevClose;
+        changePercent = (change / prevClose) * 100;
+      }
+    }
+    
     // Build historical data for chart
     const historical = [];
     for (let i = 0; i < timestamps.length; i++) {
@@ -81,6 +93,8 @@ async function fetchRealStockData(symbol: string, range: string = '1mo') {
     return {
       symbol: yahooSymbol,
       price: currentPrice,
+      change: change,
+      changePercent: changePercent,
       volume: meta.regularMarketVolume || 0,
       rsi: rsi,
       rsiStatus: rsiStatus,
@@ -286,6 +300,7 @@ function buildAnalysisPrompt(
 
 【技术数据】
 - 当前股价：${currency}${stockData.price?.toFixed(2) || 'N/A'}
+- 日涨跌幅：${stockData.changePercent?.toFixed(2) || '0'}%
 - RSI (14)：${stockData.rsi?.toFixed(1) || 'N/A'} (${stockData.rsiStatus || '中性'})
 - MACD 信号：${stockData.macdStatus || '中性'}
 - 20天移动平均线：${currency}${stockData.sma20?.toFixed(2) || 'N/A'}
@@ -331,7 +346,89 @@ const formatPrice = (price: number, currency: string): string => {
 };
 
 // =====================================
-// MAIN API
+// GET HANDLER - Historical & Batch Data
+// =====================================
+
+export async function GET(req: Request) {
+  try {
+    const { searchParams } = new URL(req.url);
+    const symbol = searchParams.get("symbol");
+    const symbols = searchParams.get("symbols")?.split(",");
+    const range = searchParams.get("range") || "1mo";
+    const type = searchParams.get("type") || "single";
+
+    // Case 1: Batch fetch for multiple symbols
+    if (type === "batch" && symbols && symbols.length > 0) {
+      const results: Record<string, any> = {};
+      
+      for (const sym of symbols) {
+        const data = await fetchRealStockData(sym.trim(), "1d");
+        if (data) {
+          results[sym.trim()] = {
+            symbol: data.symbol,
+            price: data.price,
+            change: data.change,
+            changePercent: data.changePercent,
+            volume: data.volume,
+            fullName: data.fullName,
+            currency: data.currency,
+          };
+        } else {
+          results[sym.trim()] = { error: "Failed to fetch data" };
+        }
+      }
+      
+      return NextResponse.json({ success: true, data: results });
+    }
+
+    // Case 2: Single symbol with full historical data
+    if (symbol) {
+      const stockData = await fetchRealStockData(symbol, range);
+      
+      if (!stockData) {
+        return NextResponse.json(
+          { success: false, error: `No data found for symbol: ${symbol}` },
+          { status: 404 }
+        );
+      }
+      
+      return NextResponse.json({
+        success: true,
+        symbol: stockData.symbol,
+        fullName: stockData.fullName,
+        currency: stockData.currency,
+        currentPrice: stockData.price,
+        change: stockData.change,
+        changePercent: stockData.changePercent,
+        volume: stockData.volume,
+        technicals: {
+          rsi: stockData.rsi,
+          rsiStatus: stockData.rsiStatus,
+          macdStatus: stockData.macdStatus,
+          sma20: stockData.sma20,
+          sma50: stockData.sma50,
+        },
+        historical: stockData.historical,
+      });
+    }
+
+    // Case 3: No parameters provided
+    return NextResponse.json(
+      { success: false, error: "Please provide either 'symbol' or 'symbols' parameter" },
+      { status: 400 }
+    );
+    
+  } catch (error) {
+    console.error("GET Route Error:", error);
+    return NextResponse.json(
+      { success: false, error: "Failed to fetch stock data" },
+      { status: 500 }
+    );
+  }
+}
+
+// =====================================
+// POST HANDLER - Chat/Analysis
 // =====================================
 
 export async function POST(req: Request) {
@@ -392,6 +489,8 @@ export async function POST(req: Request) {
       success: true,
       symbol: symbol,
       price: formatPrice(stockData.price, stockData.currency),
+      change: stockData.change,
+      changePercent: stockData.changePercent,
       rsi: stockData.rsi?.toFixed(1) || "N/A",
       macd: stockData.macdStatus,
       sma20: stockData.sma20 ? formatPrice(stockData.sma20, stockData.currency) : "N/A",
