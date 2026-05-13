@@ -1,4 +1,3 @@
-// app/layout.tsx
 import { LanguageProvider } from '@/context/LanguageContext';
 import type { Metadata } from 'next';
 import './globals.css';
