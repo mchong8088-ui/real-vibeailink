@@ -175,7 +175,7 @@ const UserMenu: React.FC<UserMenuProps> = ({
       {/* Downgrade Plan Modal - For plan changes */}
       <DowngradePlanModal
         isOpen={showDowngrade}
-        onClose={() => setShowDownglide(false)}
+        onClose={() => setShowDowngrade(false)}
         user={user}
         profile={profile}
         onSelectPlan={onSelectPlan}
