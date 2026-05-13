@@ -15,7 +15,7 @@ import MobileLanding from './components/mobile/MobileLanding';
 import MobileAnalysis from './components/mobile/MobileAnalysis';
 import { supabase } from './lib/supabase';
 import { footerContent } from './constants/content';
-import { useLanguage } from '@/context/LanguageContext';
+import { useLanguage } from './context/LanguageContext';
 
 export default function VibeAiMaster() {
   const { t, language, setLanguage } = useLanguage();
@@ -202,7 +202,7 @@ export default function VibeAiMaster() {
           {['analysis', 'about', 'features', 'pricing'].map((view) => (
             <button key={view} onClick={() => { setCurrentView(view as any); setLegalTitle(null); const meatArea = document.getElementById('meat-scroll-area'); if (meatArea) meatArea.scrollTop = 0; }}
               style={{ fontSize: '11px', fontWeight: currentView === view && !legalTitle ? '900' : '600', letterSpacing: '0.2em', color: currentView === view && !legalTitle ? '#2563EB' : '#94A3B8', textTransform: 'uppercase', background: 'none', border: 'none', cursor: 'pointer', paddingBottom: '4px' }}>
-              {view === 'analysis' ? t.aiStock : view.toUpperCase()}
+              {view === 'analysis' ? t('aiStock') : view.toUpperCase()}
             </button>
           ))}
         </div>
@@ -214,7 +214,7 @@ export default function VibeAiMaster() {
               <svg className={`w-4 h-4 transition-transform ${showUserMenu ? 'rotate-180' : ''}`} fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" /></svg>
             </button>
           ) : (
-            <button onClick={() => setIsAuthOpen(true)} style={{ color: '#2563EB', fontWeight: '700', fontSize: '12px', backgroundColor: 'transparent', padding: '6px 12px', borderRadius: '9999px', border: 'none', cursor: 'pointer' }}>{t.login}</button>
+            <button onClick={() => setIsAuthOpen(true)} style={{ color: '#2563EB', fontWeight: '700', fontSize: '12px', backgroundColor: 'transparent', padding: '6px 12px', borderRadius: '9999px', border: 'none', cursor: 'pointer' }}>{t('login')}</button>
           )}
           <LanguageToggle currentLang={language} onLangChange={(lang: string) => setLanguage(lang as any)} />
         </div>
@@ -227,8 +227,8 @@ export default function VibeAiMaster() {
         <aside className="w-[20%] bg-[#FEF08A] flex flex-col items-center justify-center p-3">
           <div className="w-32 h-32 rounded-full overflow-hidden mb-3 bg-white shadow-lg"><img src="/avatars/michael_teresa.jpg" className="w-full h-full object-cover" alt="Michael & Teresa" /></div>
           <h3 className="font-black text-slate-900 text-xl uppercase text-center leading-tight">Michael & Teresa</h3>
-          <p className="text-[10px] font-black text-blue-700 tracking-[0.15em] mt-1 uppercase text-center">{t.financeMarketAnalysis}</p>
-          <p className="text-[9px] font-bold text-slate-500 tracking-wide mt-1 text-center">{systemState.os} {t.environmentActive}</p>
+          <p className="text-[10px] font-black text-blue-700 tracking-[0.15em] mt-1 uppercase text-center">{t('financeMarketAnalysis')}</p>
+          <p className="text-[9px] font-bold text-slate-500 tracking-wide mt-1 text-center">{systemState.os} {t('environmentActive')}</p>
         </aside>
 
         {/* RIGHT PANEL */}
@@ -249,7 +249,7 @@ export default function VibeAiMaster() {
                   <button onClick={() => { setIsAuthOpen(false); setLegalTitle(null); setShowPricingModal(false); }} className="float-right text-red-500 font-bold text-sm uppercase hover:text-red-700 mb-3" style={{ background: 'none', border: 'none', cursor: 'pointer' }}>Close ✕</button>
                   <div className="clear-both">
                     {isAuthOpen && !user && <AuthModal isOpen={isAuthOpen} onClose={() => setIsAuthOpen(false)} />}
-                    {showLegalGate && <LegalGate language={language} onAccept={initializeNewUser} />}
+                    {showLegalGate && <LegalGate language={language} onAccept={() => initializeNewUser("Guest", "guest@vibeailink.com")} />}
                     {legalTitle && (
                       <div>
                         <h2 className="text-2xl font-black mb-5 text-blue-600 uppercase tracking-wide">{legalTitle}</h2>
@@ -265,18 +265,19 @@ export default function VibeAiMaster() {
               <div className="w-full">
                 {currentView === "analysis" && (
                   <StockAnalysisModule 
+                    t={t}
                     data={analysisData} 
                     isLoading={isLoading} 
                     langKey={language}
-                    t={t}
+                   
                   />
                 )}
                 {currentView === "pricing" && (
                   <PricingModal isOpen={true} onClose={() => { setCurrentView("analysis"); setShowPricingModal(false); }}
-                    user={user} profile={profile} onSelectPlan={handleSelectPlan} showRetentionOnly={pricingContext === 'retention'} t={t} />
+                    user={user} profile={profile} onSelectPlan={handleSelectPlan} showRetentionOnly={pricingContext === 'retention'}/>
                 )}
-                {currentView === "about" && <AboutSection lang={language} t={t} />}
-                {currentView === "features" && <FeaturesSection lang={language} t={t} />}
+                {currentView === "about" && <AboutSection lang={language}/>}
+                {currentView === "features" && <FeaturesSection lang={language}/>}
               </div>
             </div>
           </div>
@@ -290,7 +291,7 @@ export default function VibeAiMaster() {
                 onPlusClick={() => setIsMenuOpen(true)} 
                 systemInfo={systemInfo}
                 analysisText={analysisData?.summary}
-                t={t}
+               
               />
             </div>
           </div>
@@ -299,18 +300,18 @@ export default function VibeAiMaster() {
           <div className="bg-white flex-shrink-0 py-2">
             <div className="px-[5%]">
               <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', gap: '24px', flexWrap: 'wrap' }}>
-                <button onClick={() => { setLegalTitle('DISCLAIMER'); const meatArea = document.getElementById('meat-scroll-area'); if (meatArea) meatArea.scrollTop = 0; }} style={{ background: 'none', border: 'none', color: legalTitle === 'DISCLAIMER' ? '#2563EB' : '#3B82F6', fontWeight: legalTitle === 'DISCLAIMER' ? '900' : '500', fontSize: '11px', cursor: 'pointer', padding: '4px 8px' }}>{t.disclaimer}</button>
-                <button onClick={() => { setLegalTitle('服務條款'); const meatArea = document.getElementById('meat-scroll-area'); if (meatArea) meatArea.scrollTop = 0; }} style={{ background: 'none', border: 'none', color: legalTitle === '服務條款' ? '#2563EB' : '#3B82F6', fontWeight: legalTitle === '服務條款' ? '900' : '500', fontSize: '11px', cursor: 'pointer', padding: '4px 8px' }}>{t.termsOfService}</button>
-                <button onClick={() => { setLegalTitle('隱私政策'); const meatArea = document.getElementById('meat-scroll-area'); if (meatArea) meatArea.scrollTop = 0; }} style={{ background: 'none', border: 'none', color: legalTitle === '隱私政策' ? '#2563EB' : '#3B82F6', fontWeight: legalTitle === '隱私政策' ? '900' : '500', fontSize: '11px', cursor: 'pointer', padding: '4px 8px' }}>{t.privacyPolicy}</button>
-                <button onClick={() => { setLegalTitle('退款政策'); const meatArea = document.getElementById('meat-scroll-area'); if (meatArea) meatArea.scrollTop = 0; }} style={{ background: 'none', border: 'none', color: legalTitle === '退款政策' ? '#2563EB' : '#3B82F6', fontWeight: legalTitle === '退款政策' ? '900' : '500', fontSize: '11px', cursor: 'pointer', padding: '4px 8px' }}>{t.refundPolicy}</button>
-                <button onClick={() => { setLegalTitle('聯絡我們'); const meatArea = document.getElementById('meat-scroll-area'); if (meatArea) meatArea.scrollTop = 0; }} style={{ background: 'none', border: 'none', color: legalTitle === '聯絡我們' ? '#2563EB' : '#3B82F6', fontWeight: legalTitle === '聯絡我們' ? '900' : '500', fontSize: '11px', cursor: 'pointer', padding: '4px 8px' }}>{t.contactUs}</button>
+                <button onClick={() => { setLegalTitle('DISCLAIMER'); const meatArea = document.getElementById('meat-scroll-area'); if (meatArea) meatArea.scrollTop = 0; }} style={{ background: 'none', border: 'none', color: legalTitle === 'DISCLAIMER' ? '#2563EB' : '#3B82F6', fontWeight: legalTitle === 'DISCLAIMER' ? '900' : '500', fontSize: '11px', cursor: 'pointer', padding: '4px 8px' }}>{t('disclaimer')}</button>
+                <button onClick={() => { setLegalTitle('服務條款'); const meatArea = document.getElementById('meat-scroll-area'); if (meatArea) meatArea.scrollTop = 0; }} style={{ background: 'none', border: 'none', color: legalTitle === '服務條款' ? '#2563EB' : '#3B82F6', fontWeight: legalTitle === '服務條款' ? '900' : '500', fontSize: '11px', cursor: 'pointer', padding: '4px 8px' }}>{t('termsOfService')}</button>
+                <button onClick={() => { setLegalTitle('隱私政策'); const meatArea = document.getElementById('meat-scroll-area'); if (meatArea) meatArea.scrollTop = 0; }} style={{ background: 'none', border: 'none', color: legalTitle === '隱私政策' ? '#2563EB' : '#3B82F6', fontWeight: legalTitle === '隱私政策' ? '900' : '500', fontSize: '11px', cursor: 'pointer', padding: '4px 8px' }}>{t('privacyPolicy')}</button>
+                <button onClick={() => { setLegalTitle('退款政策'); const meatArea = document.getElementById('meat-scroll-area'); if (meatArea) meatArea.scrollTop = 0; }} style={{ background: 'none', border: 'none', color: legalTitle === '退款政策' ? '#2563EB' : '#3B82F6', fontWeight: legalTitle === '退款政策' ? '900' : '500', fontSize: '11px', cursor: 'pointer', padding: '4px 8px' }}>{t('refundPolicy')}</button>
+                <button onClick={() => { setLegalTitle('聯絡我們'); const meatArea = document.getElementById('meat-scroll-area'); if (meatArea) meatArea.scrollTop = 0; }} style={{ background: 'none', border: 'none', color: legalTitle === '聯絡我們' ? '#2563EB' : '#3B82F6', fontWeight: legalTitle === '聯絡我們' ? '900' : '500', fontSize: '11px', cursor: 'pointer', padding: '4px 8px' }}>{t('contactUs')}</button>
               </div>
             </div>
           </div>
         </div>
       </div>
 
-      <SourceMenu isOpen={isMenuOpen} onClose={() => setIsMenuOpen(false)} onSelectSource={handleSourceSelect} langKey={language} t={t} />
+      <SourceMenu isOpen={isMenuOpen} onClose={() => setIsMenuOpen(false)} onSelectSource={handleSourceSelect} langKey={language}/>
     </div>
   );
 }

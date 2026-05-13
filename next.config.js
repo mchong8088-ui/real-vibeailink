@@ -1,14 +1,7 @@
 /** @type {import('next').NextConfig} */
 const nextConfig = {
-  // Ensure webpack is a sibling to eslint, not nested inside it
+  // Disable Turbopack
   webpack: (config) => {
-    config.resolve.alias = {
-      ...config.resolve.alias,
-      '@std/testing/mock': false,
-      '@std/testing/bdd': false,
-      '@gadicc/fetch-mock-cache/runtimes/deno.ts': false,
-      '@gadicc/fetch-mock-cache/stores/fs.ts': false,
-    };
     return config;
   },
 };

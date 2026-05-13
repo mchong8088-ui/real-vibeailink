@@ -1,38 +1,19 @@
-// app/constants/stripePrices.ts
-
-// Stripe price IDs for different subscription tiers
-export const STRIPE_PRICES = {
-  FREE: 'price_free',
-  PRO_MONTHLY: 'price_pro_monthly',
-  PRO_YEARLY: 'price_pro_yearly',
-  ENTERPRISE: 'price_enterprise',
+// Stripe price IDs - what your components expect
+export const STRIPE_PRICE_IDS = {
+  PRO_LITE_MONTHLY: 'price_1TNBwv2RTqNKntjqa32KcySy',
+  PRO_LITE_ANNUAL: 'price_1TNC212RTqNKntjq8Yuf1Cqb',
+  INSTITUTIONAL_MONTHLY: 'price_1TNC4V2RTqNKntjqBDqRlqG7',
+  INSTITUTIONAL_ANNUAL: 'price_1TNC7C2RTqNKntjqkXWqZumI',
+  COFFEE_MONTHLY: 'price_1TVLFX2RTqNKntjqdZZ0lKBj',
+  TOPUP_100_CREDITS: 'price_1TVLFX2RTqNKntjqdZZ0lKBj',
 };
 
-// Price amounts in USD (cents)
+// Also export the alternative naming for compatibility
+export const STRIPE_PRICES = STRIPE_PRICE_IDS;
+
+// Price amounts
 export const PRICE_AMOUNTS = {
-  PRO_MONTHLY: 2900, // $29.00
-  PRO_YEARLY: 29000, // $290.00
-  ENTERPRISE: 9900,  // $99.00 (custom)
-};
-
-// Feature flags for each tier
-export const TIER_FEATURES = {
-  FREE: {
-    maxStocks: 3,
-    refreshRate: 60, // minutes
-    historicalRange: '1mo',
-    aiAnalyses: 5, // per month
-  },
-  PRO: {
-    maxStocks: 50,
-    refreshRate: 5, // minutes
-    historicalRange: '1y',
-    aiAnalyses: 100, // per month
-  },
-  ENTERPRISE: {
-    maxStocks: 999,
-    refreshRate: 1, // minutes
-    historicalRange: '5y',
-    aiAnalyses: 9999, // per month
-  },
+  PRO_MONTHLY: 2900,
+  PRO_YEARLY: 29000,
+  ENTERPRISE: 9900,
 };

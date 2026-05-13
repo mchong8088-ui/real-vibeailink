@@ -1,6 +1,8 @@
-import { LanguageProvider } from '@/context/LanguageContext';
+import { LanguageProvider } from './context/LanguageContext';
 import type { Metadata } from 'next';
-import './globals.css';
+
+// Use require for CSS instead of import
+require('./globals.css');
 
 export const metadata: Metadata = {
   title: 'vibeAiLink',

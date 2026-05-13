@@ -1,7 +1,7 @@
 // components/features/pricing/PricingModal.tsx
 "use client";
 import React, { useState } from 'react';
-import { STRIPE_PRICE_IDS } from '@/constants/stripePrices';
+import { STRIPE_PRICE_IDS } from '../../../constants/stripePrices';
 
 interface PricingModalProps {
   isOpen: boolean;

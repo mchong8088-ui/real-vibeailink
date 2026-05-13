@@ -12,8 +12,9 @@ interface LanguageContextType {
 
 const LanguageContext = createContext<LanguageContextType | undefined>(undefined);
 
-const translations: Record<Language, Record<string, string>> = {
+export const translations: Record<Language, Record<string, string>> = {
   English: {
+    // Basic UI
     'welcome': 'Welcome',
     'analyze': 'Analyze',
     'portfolio': 'Portfolio',
@@ -28,8 +29,21 @@ const translations: Record<Language, Record<string, string>> = {
     'loading': 'Loading...',
     'error': 'Error occurred',
     'retry': 'Retry',
+    
+    // Stock analysis
+    'aiStock': 'AI Stock',
+    'financeMarketAnalysis': 'FINANCE & MARKET ANALYSIS',
+    'environmentActive': 'Environment Active',
+    
+    // Legal
+    'disclaimer': 'Disclaimer',
+    'termsOfService': 'Terms of Service',
+    'privacyPolicy': 'Privacy Policy',
+    'refundPolicy': 'Refund Policy',
+    'contactUs': 'Contact Us',
   },
   Cantonese: {
+    // Basic UI
     'welcome': '歡迎',
     'analyze': '分析',
     'portfolio': '投資組合',
@@ -44,8 +58,21 @@ const translations: Record<Language, Record<string, string>> = {
     'loading': '載入中...',
     'error': '發生錯誤',
     'retry': '再試一次',
+    
+    // Stock analysis
+    'aiStock': 'AI 股票',
+    'financeMarketAnalysis': '金融及市場分析',
+    'environmentActive': '環境運行中',
+    
+    // Legal
+    'disclaimer': '免責聲明',
+    'termsOfService': '服務條款',
+    'privacyPolicy': '隱私政策',
+    'refundPolicy': '退款政策',
+    'contactUs': '聯絡我們',
   },
   '简体中文': {
+    // Basic UI
     'welcome': '欢迎',
     'analyze': '分析',
     'portfolio': '投资组合',
@@ -60,6 +87,18 @@ const translations: Record<Language, Record<string, string>> = {
     'loading': '加载中...',
     'error': '发生错误',
     'retry': '重试',
+    
+    // Stock analysis
+    'aiStock': 'AI 股票',
+    'financeMarketAnalysis': '金融及市场分析',
+    'environmentActive': '环境运行中',
+    
+    // Legal
+    'disclaimer': '免责声明',
+    'termsOfService': '服务条款',
+    'privacyPolicy': '隐私政策',
+    'refundPolicy': '退款政策',
+    'contactUs': '联系我们',
   },
 };
 
