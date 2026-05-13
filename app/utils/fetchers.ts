@@ -1,75 +1,44 @@
-import yahooFinance from 'yahoo-finance2';
-import { TechData } from '../types';
+// app/utils/fetchers.ts
 
-/**
- * 計算 RSI (Relative Strength Index)
- * @param prices 最近的價格陣列
- * @param period 計算週期，預設為 14
- */
-function calculateRSI(prices: number[], period: number = 14): number {
-  if (prices.length <= period) return 50; // 數據不足時顯示中性
+// Mock data fetcher - no external dependencies
+export async function fetchStockQuote(symbol: string) {
+  // Return mock data
+  const mockQuotes: Record<string, any> = {
+    "AAPL": { price: 192.53, change: 1.25, changePercent: 0.65, volume: 45200000 },
+    "TSLA": { price: 248.42, change: -3.15, changePercent: -1.25, volume: 89100000 },
+    "NVDA": { price: 128.44, change: 2.85, changePercent: 2.27, volume: 123000000 },
+    "MSFT": { price: 428.72, change: 1.52, changePercent: 0.36, volume: 18900000 },
+    "GOOGL": { price: 152.65, change: 0.85, changePercent: 0.56, volume: 22300000 },
+    "AMZN": { price: 185.23, change: -0.92, changePercent: -0.49, volume: 34100000 },
+    "META": { price: 498.19, change: 3.42, changePercent: 0.69, volume: 15200000 },
+  };
   
-  let gains = 0;
-  let losses = 0;
-  
-  for (let i = 1; i <= period; i++) {
-    const diff = prices[i] - prices[i - 1];
-    if (diff >= 0) gains += diff;
-    else losses -= diff;
-  }
-  
-  const avgGain = gains / period;
-  const avgLoss = losses / period;
-  
-  if (avgLoss === 0) return 100;
-  const rs = avgGain / avgLoss;
-  return Math.round(100 - (100 / (1 + rs)));
+  const formattedSymbol = symbol.toUpperCase();
+  return mockQuotes[formattedSymbol] || { 
+    price: 100.00, 
+    change: 0, 
+    changePercent: 0, 
+    volume: 0 
+  };
 }
 
-// 統一的數據抓取器
-export async function fetchYahooData(symbol: string, market: 'HK' | 'TW' | 'US'): Promise<TechData> {
-  try {
-    // 1. 處理代號格式
-    let formattedSymbol = symbol.trim().toUpperCase();
-    if (market === 'HK' && !formattedSymbol.includes('.')) formattedSymbol = `${formattedSymbol}.HK`;
-    if (market === 'TW' && !formattedSymbol.includes('.')) formattedSymbol = `${formattedSymbol}.TW`;
-
-    // 2. 同時並行抓取報價與歷史數據 (提高速度)
-    const [quote, historyData] = await Promise.all([
-      yahooFinance.quote(formattedSymbol),
-      yahooFinance.chart(formattedSymbol, { period1: '2026-01-01' }) // 抓取今年以來的數據
-    ]);
-
-    // 3. 計算技術指標
-    const prices = historyData.quotes.map(q => q.close).filter(p => p !== null) as number[];
-    const currentRSI = calculateRSI(prices.slice(-15)); // 計算最後 14 天的 RSI
-
-    return {
-      price: quote.regularMarketPrice?.toString() || "0",
-      rsi: currentRSI.toString(),
-      macd: "0",
-      ma50: "0",
-      prevClose: quote.regularMarketPreviousClose?.toString() || "0",
-      volume: quote.regularMarketVolume?.toString() || "0",
-      currency: quote.currency || "HKD",
-      fullName: quote.longName || symbol,
-      history: historyData.quotes.map(q => ({ 
-        date: q.date.toISOString().split('T')[0], 
-        price: q.close || 0 
-      }))
-    };
-  } catch (e) {
-    console.error("Yahoo 數據獲取失敗:", e);
-    // 回傳預設結構，防止前端崩潰
-    return { 
-      price: "0", rsi: "50", macd: "0", ma50: "0", 
-      prevClose: "0", volume: "0", currency: "N/A", 
-      fullName: symbol, history: [] 
-    };
+export async function fetchStockChart(symbol: string) {
+  // Return mock chart data
+  const dates = [];
+  const prices = [];
+  const now = new Date();
+  
+  for (let i = 90; i >= 0; i--) {
+    const date = new Date(now);
+    date.setDate(now.getDate() - i);
+    dates.push(date.toISOString().split('T')[0]);
+    
+    // Generate random walk price
+    const basePrice = 100;
+    const trend = Math.sin(i / 15) * 10;
+    const noise = (Math.random() - 0.5) * 5;
+    prices.push(basePrice + trend + noise);
   }
-}
-
-// 為了兼容性，保留此函數但強制導向 Yahoo 邏輯
-export async function fetchHKStockData(symbol: string): Promise<TechData> {
-  return await fetchYahooData(symbol, 'HK');
+  
+  return { dates, prices };
 }

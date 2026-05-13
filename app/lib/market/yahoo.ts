@@ -1,85 +1,86 @@
 // app/lib/market/yahoo.ts
-import yahooFinance from 'yahoo-finance2';
 
-export interface YahooStockData {
-  price: number;
-  change: number;
-  changePercent: number;
-  volume: number;
-  avgVolume: number;
-  high: number;
-  low: number;
-  open: number;
-  previousClose: number;
-  marketCap: number;
-  pe: number | null;
-  eps: number | null;
-  dividendYield: number | null;
-  beta: number | null;
-  fiftyTwoWeekHigh: number;
-  fiftyTwoWeekLow: number;
-  historicalPrices: { date: Date; close: number; high: number; low: number; volume: number }[];
+// Mock Yahoo Finance data - no external dependencies
+export async function getStockQuote(symbol: string) {
+  const mockData: Record<string, any> = {
+    "AAPL": {
+      symbol: "AAPL",
+      price: 192.53,
+      change: 1.25,
+      changePercent: 0.65,
+      volume: 45200000,
+      marketCap: 2980000000000,
+      pe: 29.5,
+      high52Week: 199.62,
+      low52Week: 164.08,
+    },
+    "TSLA": {
+      symbol: "TSLA",
+      price: 248.42,
+      change: -3.15,
+      changePercent: -1.25,
+      volume: 89100000,
+      marketCap: 790000000000,
+      pe: 65.2,
+      high52Week: 299.29,
+      low52Week: 152.37,
+    },
+    "NVDA": {
+      symbol: "NVDA",
+      price: 128.44,
+      change: 2.85,
+      changePercent: 2.27,
+      volume: 123000000,
+      marketCap: 3160000000000,
+      pe: 72.5,
+      high52Week: 140.76,
+      low52Week: 39.23,
+    },
+  };
+  
+  const formattedSymbol = symbol.toUpperCase();
+  return mockData[formattedSymbol] || {
+    symbol: formattedSymbol,
+    price: 100.00,
+    change: 0,
+    changePercent: 0,
+    volume: 0,
+    marketCap: 0,
+    pe: 0,
+    high52Week: 0,
+    low52Week: 0,
+  };
 }
 
-export async function fetchYahooStockData(symbol: string): Promise<YahooStockData | null> {
-  try {
-    // Fetch current quote
-    const quote = await yahooFinance.quote(symbol);
+export async function getHistoricalData(symbol: string, period: string = '3mo') {
+  // Generate mock historical data
+  const data = [];
+  const now = new Date();
+  let days = 90; // 3 months default
+  
+  if (period === '1mo') days = 30;
+  if (period === '6mo') days = 180;
+  if (period === '1y') days = 365;
+  
+  let basePrice = 100;
+  
+  for (let i = days; i >= 0; i--) {
+    const date = new Date(now);
+    date.setDate(now.getDate() - i);
     
-    // Fetch historical data (100 days)
-    const endDate = new Date();
-    const startDate = new Date();
-    startDate.setDate(startDate.getDate() - 100);
+    // Random walk with slight upward trend
+    const change = (Math.random() - 0.48) * 3;
+    basePrice = Math.max(10, basePrice + change);
     
-    const historical = await yahooFinance.historical(symbol, {
-      period1: startDate,
-      period2: endDate,
-      interval: "1d",
+    data.push({
+      date: date.toISOString().split('T')[0],
+      open: basePrice,
+      high: basePrice + Math.random() * 5,
+      low: basePrice - Math.random() * 5,
+      close: basePrice,
+      volume: Math.floor(Math.random() * 10000000) + 1000000,
     });
-    
-    const closes = historical.map(h => h.close);
-    const avgVolume = closes.length > 0 
-      ? historical.slice(-20).reduce((sum, h) => sum + h.volume, 0) / 20 
-      : quote.regularMarketVolume || 0;
-    
-    return {
-      price: quote.regularMarketPrice || 0,
-      change: quote.regularMarketChange || 0,
-      changePercent: quote.regularMarketChangePercent || 0,
-      volume: quote.regularMarketVolume || 0,
-      avgVolume: avgVolume,
-      high: quote.regularMarketDayHigh || 0,
-      low: quote.regularMarketDayLow || 0,
-      open: quote.regularMarketOpen || 0,
-      previousClose: quote.regularMarketPreviousClose || 0,
-      marketCap: quote.marketCap || 0,
-      pe: quote.trailingPE || null,
-      eps: quote.epsTrailingTwelveMonths || null,
-      dividendYield: quote.dividendYield ? quote.dividendYield * 100 : null,
-      beta: quote.beta || null,
-      fiftyTwoWeekHigh: quote.fiftyTwoWeekHigh || 0,
-      fiftyTwoWeekLow: quote.fiftyTwoWeekLow || 0,
-      historicalPrices: historical.map(h => ({
-        date: h.date,
-        close: h.close,
-        high: h.high,
-        low: h.low,
-        volume: h.volume,
-      })),
-    };
-  } catch (error) {
-    console.error(`Error fetching Yahoo data for ${symbol}:`, error);
-    return null;
   }
-}
-
-export function formatPrice(price: number): string {
-  if (price >= 1000) return `$${price.toFixed(0)}`;
-  if (price >= 100) return `$${price.toFixed(2)}`;
-  return `$${price.toFixed(2)}`;
-}
-
-export function formatChange(change: number, changePercent: number): string {
-  const sign = change >= 0 ? '+' : '';
-  return `${sign}${change.toFixed(2)} (${sign}${changePercent.toFixed(2)}%)`;
+  
+  return data;
 }
