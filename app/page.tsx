@@ -52,74 +52,80 @@ export default function VibeAiMaster() {
   }, []);
 
   const handleLogout = async () => {
-    await supabase.auth.signOut();
+    try {
+      if (supabase && supabase.auth) {
+        await supabase.auth.signOut();
+      }
+    } catch (error) {
+      console.error('Logout error:', error);
+    }
     localStorage.clear();
     sessionStorage.clear();
-    window.location.replace('/'); 
+    window.location.replace('/');
   };
 
   // This function is called by SmartInputSystem and passes data to StockAnalysisModule
   const handleAnalyzeRequest = async (ticker: string) => {
-  if (!user) {
-    setIsAuthOpen(true);
-    return;
-  }
-  
-  setIsLoading(true);
-  setLegalTitle(null);
-  
-  try {
-    console.log("🔵 Analyzing ticker:", ticker);
-    
-    const response = await fetch('/api/chat', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ 
-        message: ticker,
-        language: language
-      }),
-    });
-    
-    if (!response.ok) {
-      throw new Error(`API error: ${response.status}`);
+    if (!user) {
+      setIsAuthOpen(true);
+      return;
     }
     
-    const data = await response.json();
-    console.log("✅ API Response:", data);
+    setIsLoading(true);
+    setLegalTitle(null);
     
-    // Direct mapping from API response to analysisData
-    setAnalysisData({
-      success: data.success,
-      symbol: data.symbol || ticker.toUpperCase(),
-      price: data.price || "N/A",
-      rsi: data.rsi || "N/A",
-      macd: data.macd || "N/A",
-      marketCap: data.marketCap || "N/A",
-      peRatio: data.peRatio || "N/A",
-      volume: data.volume || "N/A",
-      summary: data.summary || data.text || `Analysis for ${ticker.toUpperCase()} completed.`,
-      text: data.text || data.summary || `Analysis for ${ticker.toUpperCase()} completed.`,
-    });
-    
-    console.log("📊 analysisData set:", analysisData);
-    
-  } catch (error) {
-    console.error('❌ Error fetching analysis:', error);
-    setAnalysisData({
-      symbol: ticker.toUpperCase(),
-      price: "N/A",
-      rsi: "N/A",
-      macd: "N/A",
-      marketCap: "N/A",
-      peRatio: "N/A",
-      volume: "N/A",
-      summary: `Unable to fetch analysis for ${ticker.toUpperCase()}. Please try again.`,
-      text: `Unable to fetch analysis for ${ticker.toUpperCase()}. Please try again.`,
-    });
-  } finally {
-    setIsLoading(false);
-  }
-};
+    try {
+      console.log("🔵 Analyzing ticker:", ticker);
+      
+      const response = await fetch('/api/chat', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ 
+          message: ticker,
+          language: language
+        }),
+      });
+      
+      if (!response.ok) {
+        throw new Error(`API error: ${response.status}`);
+      }
+      
+      const data = await response.json();
+      console.log("✅ API Response:", data);
+      
+      // Direct mapping from API response to analysisData
+      setAnalysisData({
+        success: data.success,
+        symbol: data.symbol || ticker.toUpperCase(),
+        price: data.price || "N/A",
+        rsi: data.rsi || "N/A",
+        macd: data.macd || "N/A",
+        marketCap: data.marketCap || "N/A",
+        peRatio: data.peRatio || "N/A",
+        volume: data.volume || "N/A",
+        summary: data.summary || data.text || `Analysis for ${ticker.toUpperCase()} completed.`,
+        text: data.text || data.summary || `Analysis for ${ticker.toUpperCase()} completed.`,
+      });
+      
+      console.log("📊 analysisData set:", analysisData);
+      
+    } catch (error) {
+      console.error('❌ Error fetching analysis:', error);
+      setAnalysisData({
+        symbol: ticker.toUpperCase(),
+        price: "N/A",
+        rsi: "N/A",
+        macd: "N/A",
+        marketCap: "N/A",
+        peRatio: "N/A",
+        volume: "N/A",
+        summary: `Unable to fetch analysis for ${ticker.toUpperCase()}. Please try again.`,
+        text: `Unable to fetch analysis for ${ticker.toUpperCase()}. Please try again.`,
+      });
+    } finally {
+      setIsLoading(false);
+    }
+  };
 
   const handleSelectPlan = async (planId: string, priceId: string) => {
     if (!user && planId !== 'explorer') {
@@ -269,7 +275,6 @@ export default function VibeAiMaster() {
                     data={analysisData} 
                     isLoading={isLoading} 
                     langKey={language}
-                   
                   />
                 )}
                 {currentView === "pricing" && (
@@ -291,7 +296,6 @@ export default function VibeAiMaster() {
                 onPlusClick={() => setIsMenuOpen(true)} 
                 systemInfo={systemInfo}
                 analysisText={analysisData?.summary}
-               
               />
             </div>
           </div>
