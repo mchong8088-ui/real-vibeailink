@@ -1,27 +1,22 @@
 "use client";
 
 import React, { useEffect, useState } from 'react';
-// 使用最基礎的 supabase-js，這通常在您的專案初始化時就已經安裝了
-import { createClient } from '@supabase/supabase-js'; 
+import { supabase } from '../lib/supabase';
 
 export default function RefundPolicy() {
   const [userEmail, setUserEmail] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
 
-  // 直接初始化 Supabase 客戶端
-  const supabase = createClient(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
-  );
-
   useEffect(() => {
     const getUser = async () => {
       try {
-        // 獲取當前 Session
-        const { data: { session } } = await supabase.auth.getSession();
-        if (session?.user) {
-          setUserEmail(session.user.email ?? null);
-          console.log("登入成功:", session.user.email);
+        // Check if supabase is available (during build it might be null)
+        if (typeof window !== 'undefined' && supabase && supabase.auth) {
+          const { data: { session } } = await supabase.auth.getSession();
+          if (session?.user) {
+            setUserEmail(session.user.email ?? null);
+            console.log("登入成功:", session.user.email);
+          }
         }
       } catch (error) {
         console.error("獲取用戶失敗:", error);
@@ -30,7 +25,7 @@ export default function RefundPolicy() {
       }
     };
     getUser();
-  }, [supabase]);
+  }, []);
 
   const handlePortal = async (e: React.MouseEvent) => {
     e.preventDefault(); 
@@ -49,7 +44,6 @@ export default function RefundPolicy() {
 
       const data = await res.json();
       if (data.url) {
-        // 使用 assign 強制跳轉，解決 Router 初始化問題
         window.location.assign(data.url);
       } else {
         alert(data.error || "無法開啟管理頁面");
@@ -62,8 +56,6 @@ export default function RefundPolicy() {
 
   const handleDowngrade = (e: React.MouseEvent) => {
     e.preventDefault();
-    // 這裡必須填寫從 Stripe Dashboard 複製來的 "Payment Link"
-    // 不要填寫 http://localhost:3000/thank-you
     window.location.assign("https://buy.stripe.com/test_fZu28r2jeaJF9VTawy5wI01"); 
   };
 
