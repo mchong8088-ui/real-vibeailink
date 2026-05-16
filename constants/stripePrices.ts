@@ -4,10 +4,9 @@ export const STRIPE_PRICE_IDS = {
   PRO_LITE_ANNUAL: 'price_1TNC212RTqNKntjq8Yuf1Cqb',
   INSTITUTIONAL_MONTHLY: 'price_1TNC4V2RTqNKntjqBDqRlqG7',
   INSTITUTIONAL_ANNUAL: 'price_1TNC7C2RTqNKntjqkXWqZumI',
-  COFFEE_MONTHLY: 'price_1TVLFX2RTqNKntjqdZZ0lKBj',
-  TOPUP_100_CREDITS: 'price_1TVLFX2RTqNKntjqdZZ0lKBj',
+  COFFEE_MONTHLY: 'price_1TVLGm2RTqNKntjqe6zlFWfN',
+  TOPUP_100_CREDITS: 'price_1TVLFX2RTqNKntjqdZZOlKBj',
 };
-
 // Also export the alternative naming for compatibility
 export const STRIPE_PRICES = STRIPE_PRICE_IDS;
 

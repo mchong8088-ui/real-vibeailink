@@ -67,7 +67,6 @@ async function fetchRealStockData(symbol: string, range: string = '1mo') {
     if (sma20 && currentPrice > sma20 * 1.02) macdStatus = "Bullish";
     else if (sma20 && currentPrice < sma20 * 0.98) macdStatus = "Bearish";
     
-    // Calculate daily change
     let change = 0;
     let changePercent = 0;
     if (prices.length >= 2) {
@@ -79,7 +78,6 @@ async function fetchRealStockData(symbol: string, range: string = '1mo') {
       }
     }
     
-    // Build historical data for chart
     const historical = [];
     for (let i = 0; i < timestamps.length; i++) {
       if (closes[i] !== null && timestamps[i]) {
@@ -134,9 +132,9 @@ async function fetchFundamentals(symbol: string) {
 
 function getMockNews(symbol: string): string[] {
   return [
-    `${symbol} 近期交易表現強勁，投資者關注度提升。`,
-    `分析師更新對 ${symbol} 的評級和目標價。`,
-    `市場正在消化最新的經濟數據和行業趨勢。`,
+    `${symbol} recent trading activity shows strong momentum, investor attention increasing.`,
+    `Analysts update rating and price target for ${symbol}.`,
+    `Market digesting latest economic data and industry trends.`,
   ];
 }
 
@@ -158,12 +156,12 @@ function analyzeNewsSentiment(headlines: string[]): string {
   let positive = 0;
   let negative = 0;
   
-  const positiveWords = ['強勁', '增長', '盈利', '正面', '看漲', '升級', '創新高', '反彈'];
-  const negativeWords = ['下跌', '虧損', '負面', '看跌', '降級', '風險', '擔憂'];
+  const positiveWords = ['strong', 'growth', 'profit', 'positive', 'bullish', 'upgrade', 'high', 'rally'];
+  const negativeWords = ['decline', 'loss', 'negative', 'bearish', 'downgrade', 'risk', 'concern'];
   
   headlines.forEach(headline => {
-    positiveWords.forEach(w => { if (headline.includes(w)) positive++; });
-    negativeWords.forEach(w => { if (headline.includes(w)) negative++; });
+    positiveWords.forEach(w => { if (headline.toLowerCase().includes(w)) positive++; });
+    negativeWords.forEach(w => { if (headline.toLowerCase().includes(w)) negative++; });
   });
   
   if (positive > negative + 2) return "Positive";
@@ -210,52 +208,12 @@ function detectMarketRegime(rsi: number | null, macdStatus: string, newsSentimen
 }
 
 // =====================================
-// AI CALL WITH FALLBACK
-// =====================================
-
-async function callAI(systemPrompt: string, userPrompt: string): Promise<string> {
-  // Try OpenAI first
-  try {
-    const response = await fetch("https://api.openai.com/v1/chat/completions", {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        "Authorization": `Bearer ${process.env.OPENAI_API_KEY}`
-      },
-      body: JSON.stringify({
-        model: "gpt-3.5-turbo",
-        messages: [
-          { role: "system", content: systemPrompt },
-          { role: "user", content: userPrompt }
-        ],
-        temperature: 0.7,
-        max_tokens: 1500
-      })
-    });
-    
-    const data = await response.json();
-    if (data.choices && data.choices[0]) {
-      console.log("✅ OpenAI response successful");
-      return data.choices[0].message.content;
-    }
-    throw new Error("OpenAI returned no content");
-  } catch (error) {
-    console.warn("OpenAI failed, using fallback");
-  }
-  
-  // Fallback analysis
-  return generateFallbackAnalysis(systemPrompt, userPrompt);
-}
-
-function generateFallbackAnalysis(systemPrompt: string, userPrompt: string): string {
-  return "Analysis temporarily unavailable. Please try again later.";
-}
-
-// =====================================
 // BUILD PROMPTS
 // =====================================
 
 function buildSystemPrompt(language: string): string {
+  console.log("Building system prompt for language:", language);
+  
   if (language === "Cantonese") {
     return `【重要指示】你必須使用繁體中文（香港粵語）回覆。絕對不要使用英文。
 
@@ -273,11 +231,13 @@ function buildSystemPrompt(language: string): string {
 
 使用简体中文，专业、详细。`;
   } else {
-    return `You are a professional AI stock market analyst.
+    return `CRITICAL INSTRUCTION: You MUST respond in ENGLISH only. Do NOT use any Chinese characters at all.
 
-Provide a detailed stock analysis based on the provided data.
+You are a professional AI stock market analyst.
 
-Use English, be professional and detailed.`;
+Provide a detailed stock analysis in ENGLISH based on the provided data.
+
+Use professional, detailed English.`;
   }
 }
 
@@ -288,51 +248,100 @@ function buildAnalysisPrompt(
   fundamentals: any,
   headlines: string[],
   newsSentiment: string,
-  marketRegime: any
+  marketRegime: any,
+  language: string
 ): string {
   const currency = symbol.includes('HK') ? 'HK$' : (symbol.includes('TW') ? 'NT$' : '$');
   
-  return `
-请分析以下股票：
+  const languageInstruction = language === "English" 
+    ? "IMPORTANT: Respond in ENGLISH only. Do not use any Chinese characters.\n\n"
+    : language === "Cantonese" 
+    ? "重要：請用繁體中文（香港粵語）回覆。\n\n"
+    : "重要：请用简体中文回复。\n\n";
+  
+  return languageInstruction + `
+Analyze the following stock:
 
-股票名称：${displayName}
-股票代号：${symbol}
+Stock Name: ${displayName}
+Stock Symbol: ${symbol}
 
-【技术数据】
-- 当前股价：${currency}${stockData.price?.toFixed(2) || 'N/A'}
-- 日涨跌幅：${stockData.changePercent?.toFixed(2) || '0'}%
-- RSI (14)：${stockData.rsi?.toFixed(1) || 'N/A'} (${stockData.rsiStatus || '中性'})
-- MACD 信号：${stockData.macdStatus || '中性'}
-- 20天移动平均线：${currency}${stockData.sma20?.toFixed(2) || 'N/A'}
-- 50天移动平均线：${currency}${stockData.sma50?.toFixed(2) || 'N/A'}
-- 成交量：${stockData.volume?.toLocaleString() || 'N/A'}
+【Technical Data】
+- Current Price: ${currency}${stockData.price?.toFixed(2) || 'N/A'}
+- Daily Change: ${stockData.changePercent?.toFixed(2) || '0'}%
+- RSI (14): ${stockData.rsi?.toFixed(1) || 'N/A'} (${stockData.rsiStatus || 'Neutral'})
+- MACD Signal: ${stockData.macdStatus || 'Neutral'}
+- 20-day SMA: ${currency}${stockData.sma20?.toFixed(2) || 'N/A'}
+- 50-day SMA: ${currency}${stockData.sma50?.toFixed(2) || 'N/A'}
+- Volume: ${stockData.volume?.toLocaleString() || 'N/A'}
 
-【基本面数据】
-- 市值：${fundamentals?.marketCap || 'N/A'}
-- 市盈率：${fundamentals?.peRatio || 'N/A'}
-- 预测市盈率：${fundamentals?.forwardPE || 'N/A'}
-- 收入增长：${fundamentals?.revenueGrowth || 'N/A'}%
-- 利润率：${fundamentals?.profitMargins || 'N/A'}%
-- 分析师评级：${fundamentals?.analystRating || 'N/A'}
-- 目标价：${fundamentals?.targetPrice ? currency + fundamentals.targetPrice : 'N/A'}
+【Fundamental Data】
+- Market Cap: ${fundamentals?.marketCap || 'N/A'}
+- P/E Ratio: ${fundamentals?.peRatio || 'N/A'}
+- Forward P/E: ${fundamentals?.forwardPE || 'N/A'}
+- Revenue Growth: ${fundamentals?.revenueGrowth || 'N/A'}%
+- Profit Margins: ${fundamentals?.profitMargins || 'N/A'}%
+- Analyst Rating: ${fundamentals?.analystRating || 'N/A'}
+- Target Price: ${fundamentals?.targetPrice ? currency + fundamentals.targetPrice : 'N/A'}
 
-【市场状态】
-- 市场趋势：${marketRegime?.regime || '中性'}
-- 市场情绪：${marketRegime?.sentiment || '中性'}
+【Market Conditions】
+- Market Trend: ${marketRegime?.regime || 'Neutral'}
+- Market Sentiment: ${marketRegime?.sentiment || 'Neutral'}
 
-【近期新闻】
+【Recent News】
 ${headlines.map((h, i) => `${i + 1}. ${h}`).join('\n')}
-新闻情绪：${newsSentiment || '中性'}
+News Sentiment: ${newsSentiment || 'Neutral'}
 
-请提供详细的投资分析，包括：
-1. 市场总结
-2. 技术展望
-3. 基本面分析
-4. 新闻影响
-5. 看好理由
-6. 看淡理由
-7. 风险提示
-8. 投资建议`;
+Please provide a detailed investment analysis including:
+1. Market Summary
+2. Technical Outlook
+3. Fundamental Analysis
+4. News Impact
+5. Bullish Factors
+6. Bearish Factors
+7. Risk Warning
+8. Investment Recommendation`;
+}
+
+// =====================================
+// AI CALL WITH FALLBACK
+// =====================================
+
+async function callAI(systemPrompt: string, userPrompt: string): Promise<string> {
+  try {
+    const response = await fetch("https://api.openai.com/v1/chat/completions", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        "Authorization": `Bearer ${process.env.OPENAI_API_KEY}`
+      },
+      body: JSON.stringify({
+        model: "gpt-3.5-turbo",
+        messages: [
+          { role: "system", content: systemPrompt },
+          { role: "user", content: userPrompt },
+          { role: "user", content: "Remember to respond in the language specified in the system prompt. Use ONLY that language, do not mix languages." }
+        ],
+        temperature: 0.5,
+        max_tokens: 1500
+      })
+    });
+    
+    const data = await response.json();
+    if (data.choices && data.choices[0]) {
+      console.log("✅ OpenAI response successful");
+      console.log("Response preview:", data.choices[0].message.content.substring(0, 100));
+      return data.choices[0].message.content;
+    }
+    throw new Error("OpenAI returned no content");
+  } catch (error) {
+    console.warn("OpenAI failed, using fallback");
+  }
+  
+  return generateFallbackAnalysis(systemPrompt, userPrompt);
+}
+
+function generateFallbackAnalysis(systemPrompt: string, userPrompt: string): string {
+  return "Analysis temporarily unavailable. Please try again later.";
 }
 
 // =====================================
@@ -357,7 +366,6 @@ export async function GET(req: Request) {
     const range = searchParams.get("range") || "1mo";
     const type = searchParams.get("type") || "single";
 
-    // Case 1: Batch fetch for multiple symbols
     if (type === "batch" && symbols && symbols.length > 0) {
       const results: Record<string, any> = {};
       
@@ -381,7 +389,6 @@ export async function GET(req: Request) {
       return NextResponse.json({ success: true, data: results });
     }
 
-    // Case 2: Single symbol with full historical data
     if (symbol) {
       const stockData = await fetchRealStockData(symbol, range);
       
@@ -412,7 +419,6 @@ export async function GET(req: Request) {
       });
     }
 
-    // Case 3: No parameters provided
     return NextResponse.json(
       { success: false, error: "Please provide either 'symbol' or 'symbols' parameter" },
       { status: 400 }
@@ -449,7 +455,6 @@ export async function POST(req: Request) {
 
     console.log("Detected Symbol:", symbol);
 
-    // Fetch real data
     let stockData = await fetchRealStockData(symbol);
     
     if (!stockData) {
@@ -461,13 +466,11 @@ export async function POST(req: Request) {
 
     console.log(`✅ Real-time: ${symbol} - ${stockData.currency} $${stockData.price.toFixed(2)}`);
 
-    // Fetch additional data
     const fundamentals = await fetchFundamentals(symbol);
     const headlines = await fetchStockNews(symbol);
     const newsSentiment = analyzeNewsSentiment(headlines);
     const marketRegime = detectMarketRegime(stockData.rsi, stockData.macdStatus, newsSentiment);
 
-    // Build prompts
     const systemPrompt = buildSystemPrompt(selectedLanguage);
     const analysisPrompt = buildAnalysisPrompt(
       symbol, 
@@ -476,15 +479,14 @@ export async function POST(req: Request) {
       fundamentals, 
       headlines, 
       newsSentiment, 
-      marketRegime
+      marketRegime,
+      selectedLanguage
     );
 
     console.log("Calling AI...");
     
-    // Call AI
     const aiAnalysis = await callAI(systemPrompt, analysisPrompt);
 
-    // Format response for frontend
     const responseData = {
       success: true,
       symbol: symbol,

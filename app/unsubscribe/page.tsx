@@ -1,12 +1,27 @@
 "use client";
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { ArrowLeft, Coffee, AlertTriangle } from 'lucide-react';
+import { supabase } from '../lib/supabase';
 
 export default function UnsubscribePage() {
   const router = useRouter();
   const [reason, setReason] = useState("");
   const [isFinalStep, setIsFinalStep] = useState(false);
+  const [isLoading, setIsLoading] = useState(false);
+  const [userEmail, setUserEmail] = useState<string | null>(null);
+
+  useEffect(() => {
+    const getUser = async () => {
+      if (typeof window !== 'undefined' && supabase && supabase.auth) {
+        const { data: { session } } = await supabase.auth.getSession();
+        if (session?.user?.email) {
+          setUserEmail(session.user.email);
+        }
+      }
+    };
+    getUser();
+  }, []);
 
   const reasons = [
     "Too expensive",
@@ -16,11 +31,49 @@ export default function UnsubscribePage() {
     "Other"
   ];
 
-  const handleFinalCancel = () => {
-    // Logic to call Stripe API via your backend/edge function
-    console.log("Cancelling subscription for reason:", reason);
-    alert("Subscription cancelled. We hope to see you again!");
-    router.push('/');
+  const handleOpenStripePortal = async () => {
+    setIsLoading(true);
+    try {
+      const response = await fetch('/api/portal', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email: userEmail }),
+      });
+      const data = await response.json();
+      if (data.url) {
+        window.location.assign(data.url);
+      } else {
+        alert("Unable to open subscription portal. Please try again.");
+      }
+    } catch (error) {
+      console.error('Portal Error:', error);
+      alert("Connection failed. Please check your network.");
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const handleSwitchToCoffeePlan = async () => {
+    setIsLoading(true);
+    try {
+      const response = await fetch('/api/billing/create-checkout', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ 
+          priceId: 'price_1TVLFX2RTqNKntjqdZZ0lKBj', // Coffee Plan price ID
+          userId: userEmail,
+          successUrl: `${window.location.origin}/thank-you`,
+          cancelUrl: window.location.href,
+        }),
+      });
+      const { url } = await response.json();
+      if (url) window.location.href = url;
+    } catch (error) {
+      console.error('Error:', error);
+      alert('Unable to process payment.');
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   return (
@@ -45,8 +98,12 @@ export default function UnsubscribePage() {
                   <p className="text-sm text-orange-800 mt-1">
                     For only <strong>$10/month</strong>, you get 300 credits. Perfect if you only check stocks occasionally.
                   </p>
-                  <button className="mt-3 bg-orange-500 text-white px-4 py-2 rounded-lg text-sm font-bold shadow-sm">
-                    Switch to Coffee Plan
+                  <button 
+                    onClick={handleSwitchToCoffeePlan}
+                    disabled={isLoading}
+                    className="mt-3 bg-orange-500 text-white px-4 py-2 rounded-lg text-sm font-bold shadow-sm hover:bg-orange-600 transition"
+                  >
+                    {isLoading ? 'Processing...' : 'Switch to Coffee Plan'}
                   </button>
                 </div>
               </div>
@@ -68,13 +125,13 @@ export default function UnsubscribePage() {
               </div>
 
               <button 
-                disabled={!reason}
-                onClick={() => setIsFinalStep(true)}
+                disabled={!reason || isLoading}
+                onClick={handleOpenStripePortal}
                 className={`w-full py-4 rounded-2xl font-bold transition-all ${
-                  reason ? 'bg-slate-900 text-white' : 'bg-slate-100 text-slate-400 cursor-not-allowed'
+                  reason && !isLoading ? 'bg-red-600 text-white hover:bg-red-700' : 'bg-slate-100 text-slate-400 cursor-not-allowed'
                 }`}
               >
-                Continue to Unsubscribe
+                Continue to Stripe Portal to Cancel
               </button>
             </div>
           ) : (
@@ -90,14 +147,15 @@ export default function UnsubscribePage() {
               </div>
               <div className="flex flex-col gap-3">
                 <button 
-                  onClick={handleFinalCancel}
-                  className="w-full py-4 bg-red-600 text-white rounded-2xl font-bold hover:bg-red-700 transition-colors"
+                  onClick={handleOpenStripePortal}
+                  disabled={isLoading}
+                  className="w-full py-4 bg-red-600 text-white rounded-2xl font-bold hover:bg-red-700 transition-colors disabled:bg-red-300"
                 >
-                  Confirm Unsubscribe
+                  {isLoading ? 'Redirecting...' : 'Confirm & Go to Stripe'}
                 </button>
                 <button 
                   onClick={() => setIsFinalStep(false)}
-                  className="w-full py-4 bg-white text-slate-600 font-bold"
+                  className="w-full py-4 bg-white text-slate-600 font-bold hover:text-slate-900 transition"
                 >
                   Go Back
                 </button>

@@ -14,12 +14,29 @@ const LanguageContext = createContext<LanguageContextType | undefined>(undefined
 
 export const translations: Record<Language, Record<string, string>> = {
   English: {
+    // Header Navigation
+    'aiStock': 'AI Stock',
+    'about': 'ABOUT',
+    'features': 'FEATURES',
+    'pricing': 'PRICING',
+    'login': 'Login',
+    
+    // Left Panel
+    'financeMarketAnalysis': 'FINANCE & MARKET ANALYSIS',
+    'environmentActive': 'Environment Active',
+    
+    // Footer
+    'disclaimer': 'Disclaimer',
+    'termsOfService': 'Terms of Service',
+    'privacyPolicy': 'Privacy Policy',
+    'refundPolicy': 'Refund Policy',
+    'contactUs': 'Contact Us',
+    
     // Basic UI
     'welcome': 'Welcome',
     'analyze': 'Analyze',
     'portfolio': 'Portfolio',
     'settings': 'Settings',
-    'login': 'Login',
     'signup': 'Sign Up',
     'logout': 'Logout',
     'dashboard': 'Dashboard',
@@ -29,26 +46,31 @@ export const translations: Record<Language, Record<string, string>> = {
     'loading': 'Loading...',
     'error': 'Error occurred',
     'retry': 'Retry',
-    
-    // Stock analysis
-    'aiStock': 'AI Stock',
-    'financeMarketAnalysis': 'FINANCE & MARKET ANALYSIS',
-    'environmentActive': 'Environment Active',
-    
-    // Legal
-    'disclaimer': 'Disclaimer',
-    'termsOfService': 'Terms of Service',
-    'privacyPolicy': 'Privacy Policy',
-    'refundPolicy': 'Refund Policy',
-    'contactUs': 'Contact Us',
   },
   Cantonese: {
+    // Header Navigation
+    'aiStock': 'AI 股票',
+    'about': '關於我們',
+    'features': '功能介紹',
+    'pricing': '服務定價',
+    'login': '登入',
+    
+    // Left Panel
+    'financeMarketAnalysis': '金融及市場分析',
+    'environmentActive': '環境運行中',
+    
+    // Footer
+    'disclaimer': '免責聲明',
+    'termsOfService': '服務條款',
+    'privacyPolicy': '隱私政策',
+    'refundPolicy': '退款政策',
+    'contactUs': '聯絡我們',
+    
     // Basic UI
     'welcome': '歡迎',
     'analyze': '分析',
     'portfolio': '投資組合',
     'settings': '設定',
-    'login': '登入',
     'signup': '註冊',
     'logout': '登出',
     'dashboard': '儀表板',
@@ -58,26 +80,31 @@ export const translations: Record<Language, Record<string, string>> = {
     'loading': '載入中...',
     'error': '發生錯誤',
     'retry': '再試一次',
-    
-    // Stock analysis
-    'aiStock': 'AI 股票',
-    'financeMarketAnalysis': '金融及市場分析',
-    'environmentActive': '環境運行中',
-    
-    // Legal
-    'disclaimer': '免責聲明',
-    'termsOfService': '服務條款',
-    'privacyPolicy': '隱私政策',
-    'refundPolicy': '退款政策',
-    'contactUs': '聯絡我們',
   },
   '简体中文': {
+    // Header Navigation
+    'aiStock': 'AI 股票',
+    'about': '关于我们',
+    'features': '功能介绍',
+    'pricing': '服务定价',
+    'login': '登录',
+    
+    // Left Panel
+    'financeMarketAnalysis': '金融及市场分析',
+    'environmentActive': '环境运行中',
+    
+    // Footer
+    'disclaimer': '免责声明',
+    'termsOfService': '服务条款',
+    'privacyPolicy': '隐私政策',
+    'refundPolicy': '退款政策',
+    'contactUs': '联系我们',
+    
     // Basic UI
     'welcome': '欢迎',
     'analyze': '分析',
     'portfolio': '投资组合',
     'settings': '设置',
-    'login': '登录',
     'signup': '注册',
     'logout': '退出',
     'dashboard': '仪表板',
@@ -87,18 +114,6 @@ export const translations: Record<Language, Record<string, string>> = {
     'loading': '加载中...',
     'error': '发生错误',
     'retry': '重试',
-    
-    // Stock analysis
-    'aiStock': 'AI 股票',
-    'financeMarketAnalysis': '金融及市场分析',
-    'environmentActive': '环境运行中',
-    
-    // Legal
-    'disclaimer': '免责声明',
-    'termsOfService': '服务条款',
-    'privacyPolicy': '隐私政策',
-    'refundPolicy': '退款政策',
-    'contactUs': '联系我们',
   },
 };
 

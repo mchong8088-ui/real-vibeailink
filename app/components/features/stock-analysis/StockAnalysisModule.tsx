@@ -1,7 +1,7 @@
 // components/features/stock-analysis/StockAnalysisModule.tsx
 "use client";
 import React, { useState, useEffect, useRef } from 'react';
-import { Volume2, VolumeX, Activity, Zap, ShieldCheck, Globe, BarChart3, TrendingUp } from 'lucide-react';
+import { Volume2, VolumeX, Activity, Zap, ShieldCheck, Globe, BarChart3 } from 'lucide-react';
 import { LineChart, Line, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid } from 'recharts';
 
 interface StockAnalysisModuleProps {
@@ -32,7 +32,6 @@ export const StockAnalysisModule: React.FC<StockAnalysisModuleProps> = ({
       }));
     }
     
-    // Generate realistic sample data based on current price
     const currentPrice = parseFloat(data?.price?.replace(/[^0-9.-]/g, '') || 400);
     const sampleData = [];
     let price = currentPrice * 0.85;
@@ -94,7 +93,7 @@ export const StockAnalysisModule: React.FC<StockAnalysisModuleProps> = ({
     return (
       <div className="bg-white rounded-2xl p-8 text-center">
         <div className="animate-spin rounded-full h-8 w-8 border-3 border-blue-600 border-t-transparent mx-auto mb-3"></div>
-        <p className="text-sm text-slate-500">{t.analyzingMarket}</p>
+        <p className="text-sm text-slate-500">{t?.analyzingMarket || 'Analyzing market...'}</p>
       </div>
     );
   }
@@ -104,8 +103,8 @@ export const StockAnalysisModule: React.FC<StockAnalysisModuleProps> = ({
     return (
       <div className="bg-white rounded-2xl p-12 text-center">
         <Activity size={48} strokeWidth={1} className="text-slate-300 mx-auto mb-4" />
-        <p className="text-slate-400 text-base">请输入股票代码</p>
-        <p className="text-slate-300 text-sm mt-2">例如：0700.hk, TSLA, 2330.TW</p>
+        <p className="text-slate-400 text-base">{langKey === 'English' ? 'Please input stock symbol below' : langKey === 'Cantonese' ? '請輸入股票代號' : '请输入股票代码'}</p>
+        <p className="text-slate-300 text-sm mt-2">e.g.: 0700.hk, TSLA, 2330.TW</p>
       </div>
     );
   }
@@ -119,7 +118,6 @@ export const StockAnalysisModule: React.FC<StockAnalysisModuleProps> = ({
   const peRatio = data.peRatio || "N/A";
   const volume = data.volume || "N/A";
 
-  // Custom tooltip for chart
   const CustomTooltip = ({ active, payload, label }: any) => {
     if (active && payload && payload.length) {
       return (
@@ -139,7 +137,9 @@ export const StockAnalysisModule: React.FC<StockAnalysisModuleProps> = ({
       <div className="bg-white rounded-2xl shadow-sm p-4">
         <div className="flex items-center gap-2 mb-3">
           <Globe size={16} className="text-yellow-500" />
-          <h3 className="text-xs font-black text-yellow-600 uppercase tracking-wider">全球市场指数</h3>
+          <h3 className="text-xs font-black text-yellow-600 uppercase tracking-wider">
+            {langKey === 'English' ? 'Global Market Indices' : langKey === 'Cantonese' ? '全球市場指數' : '全球市场指数'}
+          </h3>
         </div>
         <div className="grid grid-cols-3 gap-2">
           {globalIndices.map((index, i) => (
@@ -166,12 +166,14 @@ export const StockAnalysisModule: React.FC<StockAnalysisModuleProps> = ({
             </div>
             <div className="flex gap-1 items-center">
               <div className="w-1.5 h-1.5 rounded-full bg-green-500 animate-pulse"></div>
-              <span className="text-[9px] font-bold text-slate-400">实时</span>
+              <span className="text-[9px] font-bold text-slate-400">
+                {langKey === 'English' ? 'Live' : langKey === 'Cantonese' ? '即時' : '实时'}
+              </span>
             </div>
           </div>
           
-          {/* Recharts Line Chart */}
-          <div className="w-full h-32">
+          {/* Recharts Line Chart - Fixed height */}
+          <div className="w-full" style={{ height: '160px', minHeight: '160px' }}>
             <ResponsiveContainer width="100%" height="100%">
               <LineChart data={chartData} margin={{ top: 5, right: 5, left: 5, bottom: 5 }}>
                 <CartesianGrid strokeDasharray="3 3" stroke="#e5e7eb" />
@@ -210,19 +212,18 @@ export const StockAnalysisModule: React.FC<StockAnalysisModuleProps> = ({
 
         {/* Technical Stats - YELLOW BOXES */}
         <div className="col-span-1 space-y-2">
-          {/* Current Price */}
           <div className="bg-yellow-100 rounded-xl p-3 text-center">
-            <p className="text-[9px] font-black text-slate-500 uppercase tracking-wider">现价</p>
+            <p className="text-[9px] font-black text-slate-500 uppercase tracking-wider">
+              {langKey === 'English' ? 'Price' : langKey === 'Cantonese' ? '現價' : '现价'}
+            </p>
             <p className="text-xl font-black text-slate-800">{currentPrice}</p>
           </div>
           
-          {/* RSI */}
           <div className="bg-yellow-100 rounded-xl p-3 text-center">
             <p className="text-[9px] font-black text-slate-500 uppercase tracking-wider">RSI (14)</p>
             <p className="text-xl font-black text-blue-600">{rsiValue}</p>
           </div>
           
-          {/* MACD */}
           <div className="bg-yellow-100 rounded-xl p-3 text-center">
             <p className="text-[9px] font-black text-slate-500 uppercase tracking-wider">MACD</p>
             <p className="text-xl font-black text-emerald-600">{macdValue}</p>
@@ -232,30 +233,44 @@ export const StockAnalysisModule: React.FC<StockAnalysisModuleProps> = ({
 
       {/* SECTION 3: STOCK INFORMATION */}
       <div className="bg-white rounded-2xl shadow-sm p-4">
-        <h3 className="text-xs font-black text-yellow-600 uppercase tracking-wider mb-3">股票信息</h3>
+        <h3 className="text-xs font-black text-yellow-600 uppercase tracking-wider mb-3">
+          {langKey === 'English' ? 'Stock Information' : langKey === 'Cantonese' ? '股票信息' : '股票信息'}
+        </h3>
         <div className="grid grid-cols-3 gap-2">
           <div className="bg-yellow-100 rounded-xl p-2.5 text-center">
-            <p className="text-[9px] font-bold text-slate-500 uppercase tracking-wider">市值</p>
+            <p className="text-[9px] font-bold text-slate-500 uppercase tracking-wider">
+              {langKey === 'English' ? 'Market Cap' : '市值'}
+            </p>
             <p className="text-sm font-black text-slate-800">{marketCap}</p>
           </div>
           <div className="bg-yellow-100 rounded-xl p-2.5 text-center">
-            <p className="text-[9px] font-bold text-slate-500 uppercase tracking-wider">市盈率</p>
+            <p className="text-[9px] font-bold text-slate-500 uppercase tracking-wider">
+              {langKey === 'English' ? 'P/E Ratio' : '市盈率'}
+            </p>
             <p className="text-sm font-black text-slate-800">{peRatio}</p>
           </div>
           <div className="bg-yellow-100 rounded-xl p-2.5 text-center">
-            <p className="text-[9px] font-bold text-slate-500 uppercase tracking-wider">52周高</p>
+            <p className="text-[9px] font-bold text-slate-500 uppercase tracking-wider">
+              {langKey === 'English' ? '52W High' : '52周高'}
+            </p>
             <p className="text-sm font-black text-slate-800">{data.high52w || "N/A"}</p>
           </div>
           <div className="bg-yellow-100 rounded-xl p-2.5 text-center">
-            <p className="text-[9px] font-bold text-slate-500 uppercase tracking-wider">52周低</p>
+            <p className="text-[9px] font-bold text-slate-500 uppercase tracking-wider">
+              {langKey === 'English' ? '52W Low' : '52周低'}
+            </p>
             <p className="text-sm font-black text-slate-800">{data.low52w || "N/A"}</p>
           </div>
           <div className="bg-yellow-100 rounded-xl p-2.5 text-center">
-            <p className="text-[9px] font-bold text-slate-500 uppercase tracking-wider">成交量</p>
+            <p className="text-[9px] font-bold text-slate-500 uppercase tracking-wider">
+              {langKey === 'English' ? 'Volume' : '成交量'}
+            </p>
             <p className="text-sm font-black text-slate-800">{volume}</p>
           </div>
           <div className="bg-yellow-100 rounded-xl p-2.5 text-center">
-            <p className="text-[9px] font-bold text-slate-500 uppercase tracking-wider">平均量</p>
+            <p className="text-[9px] font-bold text-slate-500 uppercase tracking-wider">
+              {langKey === 'English' ? 'Avg Volume' : '平均量'}
+            </p>
             <p className="text-sm font-black text-slate-800">{data.avgVolume || "N/A"}</p>
           </div>
         </div>
@@ -270,8 +285,12 @@ export const StockAnalysisModule: React.FC<StockAnalysisModuleProps> = ({
               <div className="w-10 h-10 rounded-full bg-gray-700 border-2 border-blue-600 flex items-center justify-center text-white font-black text-sm">T</div>
             </div>
             <div>
-              <h2 className="text-lg font-black leading-none text-white">市场策略报告</h2>
-              <p className="text-blue-400 font-bold uppercase tracking-[0.2em] text-[9px]">AI 验证洞察</p>
+              <h2 className="text-lg font-black leading-none text-white">
+                {langKey === 'English' ? 'Market Strategy Report' : langKey === 'Cantonese' ? '市場策略報告' : '市场策略报告'}
+              </h2>
+              <p className="text-blue-400 font-bold uppercase tracking-[0.2em] text-[9px]">
+                {langKey === 'English' ? 'AI VERIFIED INSIGHTS' : 'AI 驗證洞察'}
+              </p>
             </div>
           </div>
           
@@ -296,7 +315,9 @@ export const StockAnalysisModule: React.FC<StockAnalysisModuleProps> = ({
           ) : (
             <div className="text-center py-8">
               <Activity size={32} className="text-gray-500 mx-auto mb-2" />
-              <p className="text-sm text-gray-400 italic">等待分析结果...</p>
+              <p className="text-sm text-gray-400 italic">
+                {langKey === 'English' ? 'Waiting for analysis...' : langKey === 'Cantonese' ? '等待分析結果...' : '等待分析结果...'}
+              </p>
             </div>
           )}
         </div>

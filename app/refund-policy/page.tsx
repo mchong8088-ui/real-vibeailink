@@ -1,99 +1,57 @@
 "use client";
 
-import React, { useEffect, useState } from 'react';
-import { supabase } from '../lib/supabase';
+import React from 'react';
+import Link from 'next/link';
 
 export default function RefundPolicy() {
-  const [userEmail, setUserEmail] = useState<string | null>(null);
-  const [loading, setLoading] = useState(true);
-
-  useEffect(() => {
-    const getUser = async () => {
-      try {
-        // Check if supabase is available (during build it might be null)
-        if (typeof window !== 'undefined' && supabase && supabase.auth) {
-          const { data: { session } } = await supabase.auth.getSession();
-          if (session?.user) {
-            setUserEmail(session.user.email ?? null);
-            console.log("登入成功:", session.user.email);
-          }
-        }
-      } catch (error) {
-        console.error("獲取用戶失敗:", error);
-      } finally {
-        setLoading(false);
-      }
-    };
-    getUser();
-  }, []);
-
-  const handlePortal = async (e: React.MouseEvent) => {
-    e.preventDefault(); 
-    
-    if (!userEmail) {
-      alert("請先登入帳戶以管理訂閱");
-      return;
-    }
-
-    try {
-      const res = await fetch('/api/portal', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ email: userEmail }),
-      });
-
-      const data = await res.json();
-      if (data.url) {
-        window.location.assign(data.url);
-      } else {
-        alert(data.error || "無法開啟管理頁面");
-      }
-    } catch (err) {
-      console.error("Portal Error:", err);
-      alert("連線失敗，請檢查網路設定");
-    }
-  };
-
-  const handleDowngrade = (e: React.MouseEvent) => {
-    e.preventDefault();
-    window.location.assign("https://buy.stripe.com/test_fZu28r2jeaJF9VTawy5wI01"); 
-  };
-
   return (
-    <div style={{ padding: '40px', maxWidth: '800px', margin: '0 auto', fontFamily: 'sans-serif' }}>
-      <h1 style={{ fontSize: '24px', fontWeight: 'bold', marginBottom: '20px' }}>Refund and Unsubscribe Policy</h1>
-      
-      <section style={{ marginBottom: '30px' }}>
-        <h2 style={{ fontSize: '18px', fontWeight: 'bold' }}>Unsubscribe Policy</h2>
-        <p>You can cancel your subscription at any time. Once canceled, you will not be charged for the next billing cycle.</p>
+    <div className="min-h-screen bg-slate-50 py-12 px-4">
+      <div className="max-w-4xl mx-auto bg-white rounded-2xl shadow-lg p-8">
+        <div className="mb-6">
+          <Link href="/" className="text-blue-600 hover:text-blue-800">
+            ← Back to Home
+          </Link>
+        </div>
         
-        <button 
-          onClick={handlePortal}
-          disabled={loading}
-          style={{ 
-            padding: '10px 20px', 
-            backgroundColor: loading ? '#ccc' : '#ef4444', 
-            color: 'white', 
-            border: 'none', 
-            borderRadius: '8px', 
-            cursor: loading ? 'not-allowed' : 'pointer', 
-            marginTop: '10px' 
-          }}
-        >
-          {loading ? "載入中..." : "Manage / Cancel Subscription"}
-        </button>
-      </section>
+        <h1 className="text-3xl font-bold mb-6">Refund and Cancellation Policy</h1>
+        
+        <section className="mb-8">
+          <h2 className="text-xl font-semibold mb-3">Cancellation Policy</h2>
+          <p className="text-gray-700 mb-2">
+            You may cancel your subscription at any time. Upon cancellation, you will continue to have access 
+            to the service until the end of your current billing period.
+          </p>
+          <p className="text-gray-700">
+            To cancel your subscription, please go to your account settings and click "Unsubscribe", or visit 
+            the Stripe Customer Portal linked in your confirmation email.
+          </p>
+        </section>
 
-      <section style={{ marginBottom: '30px', padding: '20px', border: '1px solid #e5e7eb', borderRadius: '12px' }}>
-        <h2 style={{ fontSize: '18px', fontWeight: 'bold' }}>Wait! Want to stay for less?</h2>
-        <p>Switch to our Coffee Plan to keep the core features.</p>
-        <button 
-          onClick={handleDowngrade}
-          style={{ padding: '10px 20px', backgroundColor: '#3b82f6', color: 'white', border: 'none', borderRadius: '8px', cursor: 'pointer', marginTop: '10px' }}
-        >
-          Switch to Coffee Plan
-        </button>
-      </section>
+        <section className="mb-8">
+          <h2 className="text-xl font-semibold mb-3">Refund Policy</h2>
+          <p className="text-gray-700">
+            We do not offer refunds for partial subscription periods. However, if you experience technical issues 
+            that prevent you from using the service, please contact our support team for assistance.
+          </p>
+        </section>
+
+        <section className="mb-8">
+          <h2 className="text-xl font-semibold mb-3">Contact Us</h2>
+          <p className="text-gray-700">
+            If you have any questions about this Refund Policy, please contact us at:
+            <a href="mailto:support@vibeailink.com" className="text-blue-600 ml-1">support@vibeailink.com</a>
+          </p>
+        </section>
+
+        <div className="mt-8 pt-6 border-t">
+          <button
+            onClick={() => window.location.href = '/unsubscribe'}
+            className="px-6 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition"
+          >
+            Go to Unsubscribe Page
+          </button>
+        </div>
+      </div>
     </div>
   );
 }

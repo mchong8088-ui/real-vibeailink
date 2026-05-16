@@ -1,6 +1,6 @@
 // components/auth/DowngradePlanModal.tsx
 "use client";
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { STRIPE_PRICE_IDS } from '../../../constants/stripePrices';
 
 interface DowngradePlanModalProps {
@@ -18,27 +18,41 @@ export const DowngradePlanModal: React.FC<DowngradePlanModalProps> = ({
   profile,
   onSelectPlan,
 }) => {
+  const [mounted, setMounted] = useState(false);
   const [billingCycle, setBillingCycle] = useState<'monthly' | 'annual'>('monthly');
   const [selectedPlan, setSelectedPlan] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
 
+  useEffect(() => {
+    setMounted(true);
+  }, []);
+
+  if (!mounted) return null;
   if (!isOpen) return null;
 
   const handlePlanAction = async (planId: string) => {
+    console.log("🔵 Plan selected:", planId);
     setSelectedPlan(planId);
     setLoading(true);
     
     let priceId = '';
     if (planId === 'coffee') {
       priceId = STRIPE_PRICE_IDS.COFFEE_MONTHLY;
+      console.log("🟢 Coffee Plan priceId:", priceId);
     } else if (planId === 'prolite') {
       priceId = billingCycle === 'monthly' 
         ? STRIPE_PRICE_IDS.PRO_LITE_MONTHLY 
         : STRIPE_PRICE_IDS.PRO_LITE_ANNUAL;
+      console.log("🟢 Pro Lite Plan priceId:", priceId, "billing cycle:", billingCycle);
     }
     
-    onSelectPlan(planId, priceId);
-    setLoading(false);
+    if (priceId) {
+      console.log("🔵 Calling onSelectPlan with:", planId, priceId);
+      await onSelectPlan(planId, priceId);
+    } else {
+      console.error("❌ No priceId found for plan:", planId);
+      setLoading(false);
+    }
   };
 
   const plans = [
@@ -80,16 +94,17 @@ export const DowngradePlanModal: React.FC<DowngradePlanModalProps> = ({
   return (
     <div style={{
       position: 'fixed',
-      top: '8vh',
+      top: 0,
       left: 0,
       right: 0,
       bottom: 0,
-      zIndex: 200,
+      zIndex: 99999,
+      backgroundColor: 'rgba(0,0,0,0.5)',
+      backdropFilter: 'blur(4px)',
       display: 'flex',
       alignItems: 'flex-start',
       justifyContent: 'center',
-      backgroundColor: 'rgba(0,0,0,0.5)',
-      backdropFilter: 'blur(4px)',
+      paddingTop: '10vh',
     }}>
       <div style={{
         backgroundColor: 'white',
@@ -99,7 +114,6 @@ export const DowngradePlanModal: React.FC<DowngradePlanModalProps> = ({
         maxWidth: '650px',
         padding: '12px',
         position: 'relative',
-        marginTop: '10px',
         marginLeft: '16px',
         marginRight: '16px',
       }}>
@@ -162,7 +176,7 @@ export const DowngradePlanModal: React.FC<DowngradePlanModalProps> = ({
           </div>
         </div>
 
-        {/* 2 Plans Row - Compact */}
+        {/* 2 Plans Row */}
         <div style={{ display: 'flex', gap: '10px', justifyContent: 'center' }}>
           {plans.map((plan) => (
             <div
@@ -189,7 +203,7 @@ export const DowngradePlanModal: React.FC<DowngradePlanModalProps> = ({
                 <p style={{ fontSize: '10px', color: '#6B7280', marginTop: '2px' }}>{plan.credits} credits</p>
               </div>
 
-              {/* Features - Compact */}
+              {/* Features */}
               <div style={{ padding: '6px', flex: 1 }}>
                 {plan.features.map((feature, idx) => (
                   <p key={idx} style={{ fontSize: '9px', color: '#4B5563', marginBottom: '2px', lineHeight: '1.2' }}>• {feature}</p>
@@ -213,7 +227,7 @@ export const DowngradePlanModal: React.FC<DowngradePlanModalProps> = ({
                     fontSize: '10px',
                   }}
                 >
-                  {loading && selectedPlan === plan.id ? '...' : plan.buttonText}
+                  {loading && selectedPlan === plan.id ? 'Processing...' : plan.buttonText}
                 </button>
               </div>
             </div>
@@ -228,3 +242,5 @@ export const DowngradePlanModal: React.FC<DowngradePlanModalProps> = ({
     </div>
   );
 };
+
+export default DowngradePlanModal;

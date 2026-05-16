@@ -11,8 +11,6 @@ import { LanguageToggle } from './components/layout/LanguageToggle';
 import { AboutSection } from './components/sections/AboutSection';
 import { FeaturesSection } from './components/sections/FeaturesSection';
 import { PricingModal } from './components/features/pricing/PricingModal';
-import MobileLanding from './components/mobile/MobileLanding';
-import MobileAnalysis from './components/mobile/MobileAnalysis';
 import { supabase } from './lib/supabase';
 import { footerContent } from './constants/content';
 import { useLanguage } from './context/LanguageContext';
@@ -20,7 +18,8 @@ import { useLanguage } from './context/LanguageContext';
 export default function VibeAiMaster() {
   const { t, language, setLanguage } = useLanguage();
   
-  const [systemState, setSystemState] = useState({ os: "Detecting...", isMobile: false });
+  const [mounted, setMounted] = useState(false);
+  const [systemState, setSystemState] = useState({ os: "MacOS", isMobile: false });
   const { user, profile, initializeNewUser } = useAuthFlow();
 
   // UI States
@@ -34,15 +33,12 @@ export default function VibeAiMaster() {
   const [pricingContext, setPricingContext] = useState<'normal' | 'retention'>('normal');
   const [showUserMenu, setShowUserMenu] = useState(false);
 
-  // Mobile Navigation
-  const [mobilePage, setMobilePage] = useState<'landing' | 'analysis' | 'content'>('landing');
-  const [mobileView, setMobileView] = useState<string>('analysis');
-  const [mobileTopic, setMobileTopic] = useState<string | null>(null);
-  const [mobileLegal, setMobileLegal] = useState<string | null>(null);
-
   const systemInfo = { system: `VibeAI-${systemState.os}`, voiceEngine: "Local Synthesis" };
 
+  // Set mounted AFTER component mounts (prevents hydration mismatch)
   useEffect(() => {
+    setMounted(true);
+    // Detect mobile after mount
     const ua = window.navigator.userAgent;
     const isMobileDevice = /iPhone|iPad|iPod|Android/i.test(ua) || window.innerWidth < 1024;
     let detectedOS = "Standard OS";
@@ -52,19 +48,33 @@ export default function VibeAiMaster() {
   }, []);
 
   const handleLogout = async () => {
+    console.log("Logging out...");
     try {
       if (supabase && supabase.auth) {
-        await supabase.auth.signOut();
+        const { error } = await supabase.auth.signOut();
+        if (error) {
+          console.error('Supabase logout error:', error);
+        } else {
+          console.log("Successfully signed out from Supabase");
+        }
       }
     } catch (error) {
       console.error('Logout error:', error);
     }
+    
+    // Clear all storage
     localStorage.clear();
     sessionStorage.clear();
-    window.location.replace('/');
+    
+    // Clear cookies
+    document.cookie.split(";").forEach(function(c) {
+      document.cookie = c.replace(/^ +/, "").replace(/=.*/, "=;expires=" + new Date().toUTCString() + ";path=/");
+    });
+    
+    // Force reload to home page
+    window.location.href = '/';
   };
 
-  // This function is called by SmartInputSystem and passes data to StockAnalysisModule
   const handleAnalyzeRequest = async (ticker: string) => {
     if (!user) {
       setIsAuthOpen(true);
@@ -75,7 +85,7 @@ export default function VibeAiMaster() {
     setLegalTitle(null);
     
     try {
-      console.log("🔵 Analyzing ticker:", ticker);
+      console.log("🔵 Analyzing ticker:", ticker, "Current language:", language);
       
       const response = await fetch('/api/chat', {
         method: 'POST',
@@ -91,23 +101,26 @@ export default function VibeAiMaster() {
       }
       
       const data = await response.json();
-      console.log("✅ API Response:", data);
+      console.log("✅ API Response received, language requested:", language);
       
-      // Direct mapping from API response to analysisData
       setAnalysisData({
         success: data.success,
         symbol: data.symbol || ticker.toUpperCase(),
         price: data.price || "N/A",
+        change: data.change,
+        changePercent: data.changePercent,
         rsi: data.rsi || "N/A",
         macd: data.macd || "N/A",
         marketCap: data.marketCap || "N/A",
         peRatio: data.peRatio || "N/A",
         volume: data.volume || "N/A",
+        high52w: data.high52w || "N/A",
+        low52w: data.low52w || "N/A",
+        avgVolume: data.avgVolume || "N/A",
+        historical: data.historical || [],
         summary: data.summary || data.text || `Analysis for ${ticker.toUpperCase()} completed.`,
         text: data.text || data.summary || `Analysis for ${ticker.toUpperCase()} completed.`,
       });
-      
-      console.log("📊 analysisData set:", analysisData);
       
     } catch (error) {
       console.error('❌ Error fetching analysis:', error);
@@ -175,26 +188,9 @@ export default function VibeAiMaster() {
     return 'User';
   };
 
-  // MOBILE VIEW
-  if (systemState.isMobile) {
-    if (mobilePage === 'landing') {
-      return (
-        <MobileLanding 
-          langKey={language} setLangKey={setLanguage} onAuthOpen={() => setIsAuthOpen(true)} user={user}
-          onNavigate={(page: string, params?: any) => {
-            if (page === 'analysis') { setMobilePage('analysis'); setMobileView('analysis'); }
-            else if (page === 'content') { setMobilePage('content'); setMobileTopic(params?.view); setMobileLegal(params?.view); }
-          }}
-        />
-      );
-    }
-    return (
-      <MobileAnalysis
-        langKey={language} setLangKey={setLanguage} user={user} onAuthOpen={() => setIsAuthOpen(true)}
-        viewType={mobileView} topicId={mobileTopic} legalTitle={mobileLegal}
-        onBack={() => { setMobilePage('landing'); setMobileView('analysis'); setMobileTopic(null); setMobileLegal(null); }}
-      />
-    );
+  // Don't render anything until mounted - this prevents hydration mismatch
+  if (!mounted) {
+    return null;
   }
 
   // DESKTOP VIEW
@@ -203,24 +199,64 @@ export default function VibeAiMaster() {
       
       {/* HEADER */}
       <nav className="h-[8vh] bg-white flex items-center justify-between px-8 flex-shrink-0">
-        <div className="w-1/4"><h1 className="text-2xl font-black italic text-red-600">vibeAiLink</h1></div>
+        <div className="w-1/4">
+          <h1 className="text-2xl font-black italic text-red-600">vibeAiLink</h1>
+        </div>
         <div className="flex-1 flex justify-center gap-8">
           {['analysis', 'about', 'features', 'pricing'].map((view) => (
-            <button key={view} onClick={() => { setCurrentView(view as any); setLegalTitle(null); const meatArea = document.getElementById('meat-scroll-area'); if (meatArea) meatArea.scrollTop = 0; }}
-              style={{ fontSize: '11px', fontWeight: currentView === view && !legalTitle ? '900' : '600', letterSpacing: '0.2em', color: currentView === view && !legalTitle ? '#2563EB' : '#94A3B8', textTransform: 'uppercase', background: 'none', border: 'none', cursor: 'pointer', paddingBottom: '4px' }}>
-              {view === 'analysis' ? t('aiStock') : view.toUpperCase()}
+            <button
+              key={view}
+              onClick={() => { 
+                setCurrentView(view as any); 
+                setLegalTitle(null);
+                const meatArea = document.getElementById('meat-scroll-area');
+                if (meatArea) meatArea.scrollTop = 0;
+              }}
+              style={{
+                fontSize: '11px',
+                fontWeight: currentView === view && !legalTitle ? '900' : '600',
+                letterSpacing: '0.2em',
+                color: currentView === view && !legalTitle ? '#2563EB' : '#94A3B8',
+                background: 'transparent',
+                border: 'none',
+                cursor: 'pointer',
+                padding: '4px 12px',
+                textTransform: 'uppercase',
+              }}
+            >
+              {view === 'analysis' ? t('aiStock') : t(view)}
             </button>
           ))}
         </div>
         <div className="w-1/4 flex items-center justify-end gap-3">
           {user ? (
-            <button onClick={() => setShowUserMenu(!showUserMenu)} className="flex items-center gap-2 px-3 py-2 rounded-full bg-slate-100 hover:bg-slate-200 transition">
-              <div className="w-8 h-8 rounded-full bg-blue-500 flex items-center justify-center text-white font-bold">{getUserDisplayName().charAt(0).toUpperCase()}</div>
+            <button 
+              onClick={() => setShowUserMenu(!showUserMenu)} 
+              className="flex items-center gap-2 px-3 py-2 rounded-full bg-slate-100 hover:bg-slate-200 transition"
+            >
+              <div className="w-8 h-8 rounded-full bg-blue-500 flex items-center justify-center text-white font-bold">
+                {getUserDisplayName().charAt(0).toUpperCase()}
+              </div>
               <span className="text-sm font-medium max-w-[100px] truncate">{getUserDisplayName()}</span>
-              <svg className={`w-4 h-4 transition-transform ${showUserMenu ? 'rotate-180' : ''}`} fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" /></svg>
+              <svg className={`w-4 h-4 transition-transform ${showUserMenu ? 'rotate-180' : ''}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+              </svg>
             </button>
           ) : (
-            <button onClick={() => setIsAuthOpen(true)} style={{ color: '#2563EB', fontWeight: '700', fontSize: '12px', backgroundColor: 'transparent', padding: '6px 12px', borderRadius: '9999px', border: 'none', cursor: 'pointer' }}>{t('login')}</button>
+            <button 
+              onClick={() => setIsAuthOpen(true)} 
+              style={{
+                background: 'transparent',
+                border: 'none',
+                cursor: 'pointer',
+                padding: '6px 12px',
+                color: '#2563EB',
+                fontWeight: '700',
+                fontSize: '12px',
+              }}
+            >
+              {t('login')}
+            </button>
           )}
           <LanguageToggle currentLang={language} onLangChange={(lang: string) => setLanguage(lang as any)} />
         </div>
@@ -229,15 +265,21 @@ export default function VibeAiMaster() {
       {/* MAIN CONTENT AREA */}
       <div className="flex flex-1 overflow-hidden" style={{ height: '92vh' }}>
         
-        {/* LEFT PANEL */}
+        {/* LEFT PANEL - Yellow background */}
         <aside className="w-[20%] bg-[#FEF08A] flex flex-col items-center justify-center p-3">
-          <div className="w-32 h-32 rounded-full overflow-hidden mb-3 bg-white shadow-lg"><img src="/avatars/michael_teresa.jpg" className="w-full h-full object-cover" alt="Michael & Teresa" /></div>
+          <div className="w-32 h-32 rounded-full overflow-hidden mb-3 bg-white shadow-lg">
+            <img src="/avatars/michael_teresa.jpg" className="w-full h-full object-cover" alt="Michael & Teresa" />
+          </div>
           <h3 className="font-black text-slate-900 text-xl uppercase text-center leading-tight">Michael & Teresa</h3>
-          <p className="text-[10px] font-black text-blue-700 tracking-[0.15em] mt-1 uppercase text-center">{t('financeMarketAnalysis')}</p>
-          <p className="text-[9px] font-bold text-slate-500 tracking-wide mt-1 text-center">{systemState.os} {t('environmentActive')}</p>
+          <p className="text-[10px] font-black text-blue-700 tracking-[0.15em] mt-1 uppercase text-center">
+            {t('financeMarketAnalysis')}
+          </p>
+          <p className="text-[9px] font-bold text-slate-500 tracking-wide mt-1 text-center">
+            {systemState.os} {t('environmentActive')}
+          </p>
         </aside>
 
-        {/* RIGHT PANEL */}
+        {/* RIGHT PANEL - Light blue background */}
         <div className="w-[80%] bg-[#E0F2FE] flex flex-col overflow-hidden">
           
           {/* SCROLLABLE CONTENT AREA */}
@@ -245,14 +287,34 @@ export default function VibeAiMaster() {
             <div className="max-w-full mx-auto">
               
               {showUserMenu && (
-                <UserMenu user={user} profile={profile} onLogout={handleLogout} 
-                  onOpenPricingPage={() => { setCurrentView("pricing"); setPricingContext('normal'); setShowPricingModal(true); setShowUserMenu(false); }}
-                  onSelectPlan={handleSelectPlan} onClose={() => setShowUserMenu(false)} />
+                <UserMenu 
+                  user={user} 
+                  profile={profile} 
+                  onLogout={handleLogout} 
+                  onOpenPricingPage={() => { 
+                    setCurrentView("pricing"); 
+                    setPricingContext('normal'); 
+                    setShowPricingModal(true); 
+                    setShowUserMenu(false); 
+                  }}
+                  onSelectPlan={handleSelectPlan} 
+                  onClose={() => setShowUserMenu(false)} 
+                />
               )}
 
               {(showMasterPopup || legalTitle) && (
                 <div className="w-full max-w-4xl mx-auto bg-white rounded-2xl shadow-2xl p-8 mb-6">
-                  <button onClick={() => { setIsAuthOpen(false); setLegalTitle(null); setShowPricingModal(false); }} className="float-right text-red-500 font-bold text-sm uppercase hover:text-red-700 mb-3" style={{ background: 'none', border: 'none', cursor: 'pointer' }}>Close ✕</button>
+                  <button 
+                    onClick={() => { 
+                      setIsAuthOpen(false); 
+                      setLegalTitle(null); 
+                      setShowPricingModal(false); 
+                    }} 
+                    className="float-right text-red-500 font-bold text-sm uppercase hover:text-red-700 mb-3"
+                    style={{ background: 'none', border: 'none', cursor: 'pointer' }}
+                  >
+                    Close ✕
+                  </button>
                   <div className="clear-both">
                     {isAuthOpen && !user && <AuthModal isOpen={isAuthOpen} onClose={() => setIsAuthOpen(false)} />}
                     {showLegalGate && <LegalGate language={language} onAccept={() => initializeNewUser("Guest", "guest@vibeailink.com")} />}
@@ -278,11 +340,20 @@ export default function VibeAiMaster() {
                   />
                 )}
                 {currentView === "pricing" && (
-                  <PricingModal isOpen={true} onClose={() => { setCurrentView("analysis"); setShowPricingModal(false); }}
-                    user={user} profile={profile} onSelectPlan={handleSelectPlan} showRetentionOnly={pricingContext === 'retention'}/>
+                  <PricingModal 
+                    isOpen={true} 
+                    onClose={() => { 
+                      setCurrentView("analysis"); 
+                      setShowPricingModal(false); 
+                    }}
+                    user={user} 
+                    profile={profile} 
+                    onSelectPlan={handleSelectPlan} 
+                    showRetentionOnly={pricingContext === 'retention'}
+                  />
                 )}
-                {currentView === "about" && <AboutSection lang={language}/>}
-                {currentView === "features" && <FeaturesSection lang={language}/>}
+                {currentView === "about" && <AboutSection lang={language} />}
+                {currentView === "features" && <FeaturesSection lang={language} />}
               </div>
             </div>
           </div>
@@ -304,11 +375,96 @@ export default function VibeAiMaster() {
           <div className="bg-white flex-shrink-0 py-2">
             <div className="px-[5%]">
               <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', gap: '24px', flexWrap: 'wrap' }}>
-                <button onClick={() => { setLegalTitle('DISCLAIMER'); const meatArea = document.getElementById('meat-scroll-area'); if (meatArea) meatArea.scrollTop = 0; }} style={{ background: 'none', border: 'none', color: legalTitle === 'DISCLAIMER' ? '#2563EB' : '#3B82F6', fontWeight: legalTitle === 'DISCLAIMER' ? '900' : '500', fontSize: '11px', cursor: 'pointer', padding: '4px 8px' }}>{t('disclaimer')}</button>
-                <button onClick={() => { setLegalTitle('服務條款'); const meatArea = document.getElementById('meat-scroll-area'); if (meatArea) meatArea.scrollTop = 0; }} style={{ background: 'none', border: 'none', color: legalTitle === '服務條款' ? '#2563EB' : '#3B82F6', fontWeight: legalTitle === '服務條款' ? '900' : '500', fontSize: '11px', cursor: 'pointer', padding: '4px 8px' }}>{t('termsOfService')}</button>
-                <button onClick={() => { setLegalTitle('隱私政策'); const meatArea = document.getElementById('meat-scroll-area'); if (meatArea) meatArea.scrollTop = 0; }} style={{ background: 'none', border: 'none', color: legalTitle === '隱私政策' ? '#2563EB' : '#3B82F6', fontWeight: legalTitle === '隱私政策' ? '900' : '500', fontSize: '11px', cursor: 'pointer', padding: '4px 8px' }}>{t('privacyPolicy')}</button>
-                <button onClick={() => { setLegalTitle('退款政策'); const meatArea = document.getElementById('meat-scroll-area'); if (meatArea) meatArea.scrollTop = 0; }} style={{ background: 'none', border: 'none', color: legalTitle === '退款政策' ? '#2563EB' : '#3B82F6', fontWeight: legalTitle === '退款政策' ? '900' : '500', fontSize: '11px', cursor: 'pointer', padding: '4px 8px' }}>{t('refundPolicy')}</button>
-                <button onClick={() => { setLegalTitle('聯絡我們'); const meatArea = document.getElementById('meat-scroll-area'); if (meatArea) meatArea.scrollTop = 0; }} style={{ background: 'none', border: 'none', color: legalTitle === '聯絡我們' ? '#2563EB' : '#3B82F6', fontWeight: legalTitle === '聯絡我們' ? '900' : '500', fontSize: '11px', cursor: 'pointer', padding: '4px 8px' }}>{t('contactUs')}</button>
+                <button 
+                  onClick={() => { 
+                    setLegalTitle('DISCLAIMER'); 
+                    const meatArea = document.getElementById('meat-scroll-area'); 
+                    if (meatArea) meatArea.scrollTop = 0; 
+                  }} 
+                  style={{ 
+                    background: 'none', 
+                    border: 'none', 
+                    color: legalTitle === 'DISCLAIMER' ? '#2563EB' : '#3B82F6', 
+                    fontWeight: legalTitle === 'DISCLAIMER' ? '900' : '500', 
+                    fontSize: '11px', 
+                    cursor: 'pointer', 
+                    padding: '4px 8px' 
+                  }}
+                >
+                  {t('disclaimer')}
+                </button>
+                <button 
+                  onClick={() => { 
+                    setLegalTitle('服務條款'); 
+                    const meatArea = document.getElementById('meat-scroll-area'); 
+                    if (meatArea) meatArea.scrollTop = 0; 
+                  }} 
+                  style={{ 
+                    background: 'none', 
+                    border: 'none', 
+                    color: legalTitle === '服務條款' ? '#2563EB' : '#3B82F6', 
+                    fontWeight: legalTitle === '服務條款' ? '900' : '500', 
+                    fontSize: '11px', 
+                    cursor: 'pointer', 
+                    padding: '4px 8px' 
+                  }}
+                >
+                  {t('termsOfService')}
+                </button>
+                <button 
+                  onClick={() => { 
+                    setLegalTitle('隱私政策'); 
+                    const meatArea = document.getElementById('meat-scroll-area'); 
+                    if (meatArea) meatArea.scrollTop = 0; 
+                  }} 
+                  style={{ 
+                    background: 'none', 
+                    border: 'none', 
+                    color: legalTitle === '隱私政策' ? '#2563EB' : '#3B82F6', 
+                    fontWeight: legalTitle === '隱私政策' ? '900' : '500', 
+                    fontSize: '11px', 
+                    cursor: 'pointer', 
+                    padding: '4px 8px' 
+                  }}
+                >
+                  {t('privacyPolicy')}
+                </button>
+                <button 
+                  onClick={() => { 
+                    setLegalTitle('退款政策'); 
+                    const meatArea = document.getElementById('meat-scroll-area'); 
+                    if (meatArea) meatArea.scrollTop = 0; 
+                  }} 
+                  style={{ 
+                    background: 'none', 
+                    border: 'none', 
+                    color: legalTitle === '退款政策' ? '#2563EB' : '#3B82F6', 
+                    fontWeight: legalTitle === '退款政策' ? '900' : '500', 
+                    fontSize: '11px', 
+                    cursor: 'pointer', 
+                    padding: '4px 8px' 
+                  }}
+                >
+                  {t('refundPolicy')}
+                </button>
+                <button 
+                  onClick={() => { 
+                    setLegalTitle('聯絡我們'); 
+                    const meatArea = document.getElementById('meat-scroll-area'); 
+                    if (meatArea) meatArea.scrollTop = 0; 
+                  }} 
+                  style={{ 
+                    background: 'none', 
+                    border: 'none', 
+                    color: legalTitle === '聯絡我們' ? '#2563EB' : '#3B82F6', 
+                    fontWeight: legalTitle === '聯絡我們' ? '900' : '500', 
+                    fontSize: '11px', 
+                    cursor: 'pointer', 
+                    padding: '4px 8px' 
+                  }}
+                >
+                  {t('contactUs')}
+                </button>
               </div>
             </div>
           </div>

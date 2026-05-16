@@ -2,30 +2,68 @@ import { NextResponse } from 'next/server';
 import Stripe from 'stripe';
 
 const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!, {
-  apiVersion: '2023-10-16' as any,
+  apiVersion: '2025-02-24.acacia' as any,
 });
 
 export async function POST(req: Request) {
   try {
-    const { email } = await req.json();
-    if (!email) return NextResponse.json({ error: 'Email required' }, { status: 400 });
-
-    // 尋找客戶
-    const customers = await stripe.customers.list({ email, limit: 1 });
+    const { email, returnUrl } = await req.json();
     
-    if (customers.data.length === 0) {
-      return NextResponse.json({ error: '在 Stripe 找不到此用戶，請先完成一次購買。' }, { status: 404 });
+    console.log("Portal API called with email:", email);
+    
+    if (!email) {
+      return NextResponse.json({ error: 'Email required' }, { status: 400 });
     }
 
-    // 創建 Portal Session
+    // Find customer by email
+    const customers = await stripe.customers.list({ 
+      email: email, 
+      limit: 1 
+    });
+    
+    console.log("Customers found:", customers.data.length);
+    
+    if (customers.data.length === 0) {
+      return NextResponse.json({ 
+        error: 'No subscription found for this email. Please complete a purchase first.' 
+      }, { status: 404 });
+    }
+
+    const customer = customers.data[0];
+    
+    // Determine return URL
+    const baseUrl = process.env.NEXT_PUBLIC_BASE_URL || 
+                    process.env.NEXT_PUBLIC_SITE_URL || 
+                    process.env.VERCEL_URL || 
+                    'http://localhost:3000';
+    
+    const finalReturnUrl = returnUrl || `${baseUrl}/`;
+    
+    console.log("Return URL:", finalReturnUrl);
+    
+    // Create Stripe Customer Portal session
     const session = await stripe.billingPortal.sessions.create({
-      customer: customers.data[0].id,
-      return_url: `${process.env.NEXT_PUBLIC_SITE_URL}/`, // 回到首頁
+      customer: customer.id,
+      return_url: finalReturnUrl,
+      flow_data: {
+        type: 'subscription_cancel',
+        after_completion: {
+          type: 'redirect',
+          redirect: {
+            return_url: `${baseUrl}/thank-you`,
+          },
+        },
+      },
     });
 
+    console.log("Portal session created:", session.url);
+    
     return NextResponse.json({ url: session.url });
-  } catch (err: any) {
-    console.error("Portal API Error:", err);
-    return NextResponse.json({ error: err.message }, { status: 500 });
+    
+  } catch (error: any) {
+    console.error("Portal API Error:", error);
+    return NextResponse.json({ 
+      error: error.message || 'Failed to create portal session' 
+    }, { status: 500 });
   }
 }

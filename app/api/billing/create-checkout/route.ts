@@ -3,19 +3,17 @@ import { NextResponse } from 'next/server';
 import Stripe from 'stripe';
 
 const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!, {
-  // @ts-ignore
-  apiVersion: '2026-03-25.dahlia',
+  apiVersion: '2025-02-24.acacia',
 });
 
-export async function POST(request: Request) {
+export async function POST(req: Request) {
   try {
-    const { priceId, userId, successUrl, cancelUrl } = await request.json();
+    const { priceId, userId, successUrl, cancelUrl } = await req.json();
     
-    console.log('Creating checkout session for priceId:', priceId);
+    console.log("Creating checkout session for priceId:", priceId);
     
-    // Create checkout session
     const session = await stripe.checkout.sessions.create({
-      mode: 'subscription',
+      mode: 'subscription',  // Important: use 'subscription' for recurring payments
       payment_method_types: ['card'],
       line_items: [
         {
@@ -23,20 +21,24 @@ export async function POST(request: Request) {
           quantity: 1,
         },
       ],
-      success_url: successUrl || `${request.headers.get('origin')}/success`,
-      cancel_url: cancelUrl || `${request.headers.get('origin')}/`,
+      success_url: successUrl || `${process.env.NEXT_PUBLIC_BASE_URL}/success`,
+      cancel_url: cancelUrl || `${process.env.NEXT_PUBLIC_BASE_URL}/`,
+      client_reference_id: userId,
+      // Remove customer_creation if it's causing issues
+      // customer_creation: 'always',  // ← Remove or comment this line
       metadata: {
         userId: userId || '',
       },
-      customer_creation: 'always', // Creates a Stripe customer automatically
     });
+
+    console.log("Checkout session created:", session.id);
     
-    console.log('Checkout session created:', session.id);
     return NextResponse.json({ url: session.url });
-  } catch (error) {
-    console.error('Error creating checkout session:', error);
+    
+  } catch (error: any) {
+    console.error("Error creating checkout session:", error);
     return NextResponse.json(
-      { error: 'Internal server error', details: error instanceof Error ? error.message : 'Unknown error' },
+      { error: error.message || 'Failed to create checkout session' },
       { status: 500 }
     );
   }

@@ -1,5 +1,6 @@
 // components/auth/UnsubscribeModal.tsx
-import React, { useState } from 'react';
+"use client";
+import React, { useState, useEffect } from 'react';
 import { supabase } from '../../lib/supabase';
 import { DowngradePlanModal } from './DowngradePlanModal';
 
@@ -28,6 +29,7 @@ const UnsubscribeModal: React.FC<UnsubscribeModalProps> = ({
   profile,
   onSelectPlan,
 }) => {
+  const [mounted, setMounted] = useState(false);
   const [step, setStep] = useState<'reconsider' | 'reason' | 'confirm'>('reconsider');
   const [selectedReasons, setSelectedReasons] = useState<string[]>([]);
   const [customReason, setCustomReason] = useState('');
@@ -35,6 +37,11 @@ const UnsubscribeModal: React.FC<UnsubscribeModalProps> = ({
   const [showThankYou, setShowThankYou] = useState(false);
   const [showDowngradeModal, setShowDowngradeModal] = useState(false);
 
+  useEffect(() => {
+    setMounted(true);
+  }, []);
+
+  if (!mounted) return null;
   if (!isOpen) return null;
 
   const handleReasonToggle = (reason: string) => {
@@ -46,22 +53,25 @@ const UnsubscribeModal: React.FC<UnsubscribeModalProps> = ({
   };
 
   const handleReconsiderConfirm = () => {
+    console.log("🟢 No, cancel anyway clicked");
     setStep('reason');
   };
 
   const handleDowngradeInstead = () => {
-    // Close the current modal first, then open downgrade modal
+    console.log("🟢 Downgrade Instead clicked - opening downgrade modal");
+    // Close the unsubscribe modal
     onClose();
-    setTimeout(() => {
-      setShowDowngradeModal(true);
-    }, 100);
+    // Open the downgrade modal directly
+    setShowDowngradeModal(true);
   };
 
   const handleReturn = () => {
+    console.log("🟢 Return to Dashboard clicked");
     onClose();
   };
 
   const handleCloseDowngradeModal = () => {
+    console.log("🟢 Closing downgrade modal");
     setShowDowngradeModal(false);
   };
 
@@ -76,64 +86,93 @@ const UnsubscribeModal: React.FC<UnsubscribeModalProps> = ({
       : reasonsText;
     
     try {
-      await supabase.from('cancellation_feedback').insert({
-        user_id: user.id,
-        email: user.email,
-        plan: profile?.subscription_plan,
-        reason: finalReason,
-        cancelled_at: new Date().toISOString(),
-      });
+      if (supabase && supabase.from && user?.id) {
+        await supabase
+          .from('cancellation_feedback')
+          .insert({
+            user_id: user?.id,
+            email: user?.email,
+            plan: profile?.subscription_plan,
+            reason: finalReason,
+            cancelled_at: new Date().toISOString(),
+          });
+      }
     } catch (error) {
       console.error('Error saving feedback:', error);
     }
     
     try {
-      const response = await fetch('/api/billing/portal', {
+      const response = await fetch('/api/portal', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ 
-          userId: user.id,
-          returnUrl: window.location.href,
+          email: user?.email,
+          returnUrl: window.location.origin,
         }),
       });
       
-      const { url } = await response.json();
+      const data = await response.json();
       
-      if (url) {
-        window.open(url, '_blank');
-        setShowThankYou(true);
+      if (data.url) {
+        window.location.assign(data.url);
+      } else {
+        alert(data.error || "Unable to open subscription portal. Please contact support.");
+        setLoading(false);
       }
     } catch (error) {
       console.error('Error opening Stripe portal:', error);
+      alert("Connection failed. Please try again.");
+      setLoading(false);
     }
-    
-    setLoading(false);
-  };
-
-  const handleCloseFinal = () => {
-    supabase.auth.signOut();
-    localStorage.clear();
-    sessionStorage.clear();
-    onClose();
-    window.location.replace('/');
   };
 
   if (showThankYou) {
     return (
-      <div className="fixed top-[8vh] left-0 right-0 bottom-0 z-[200] flex items-start justify-center bg-black/50 backdrop-blur-sm">
-        <div className="bg-white rounded-2xl shadow-2xl w-full max-w-md p-8 text-center mt-20 mx-4">
-          <div className="w-16 h-16 bg-green-100 rounded-full flex items-center justify-center mx-auto mb-4">
-            <svg className="w-8 h-8 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+      <div style={{
+        position: 'fixed',
+        top: 0,
+        left: 0,
+        right: 0,
+        bottom: 0,
+        zIndex: 99999,
+        backgroundColor: 'rgba(0, 0, 0, 0.5)',
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'center',
+      }}>
+        <div style={{
+          backgroundColor: 'white',
+          borderRadius: '24px',
+          padding: '32px',
+          textAlign: 'center',
+          maxWidth: '400px',
+        }}>
+          <div style={{
+            width: '64px',
+            height: '64px',
+            backgroundColor: '#dcfce7',
+            borderRadius: '50%',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            margin: '0 auto 16px',
+          }}>
+            <svg style={{ width: '32px', height: '32px', color: '#16a34a' }} fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
             </svg>
           </div>
-          <h2 className="text-xl font-bold mb-3">Thank You for Visiting vibeAiLink</h2>
-          <p className="text-gray-600 text-sm mb-4">
-            Your credit balance will be honored until the end of your current billing period according to Stripe's regulations.
-          </p>
+          <h2 style={{ fontSize: '20px', fontWeight: 'bold', marginBottom: '12px' }}>Thank You for Visiting vibeAiLink</h2>
+          <p style={{ marginBottom: '16px' }}>Your credit balance will be honored until the end of your current billing period.</p>
           <button
-            onClick={handleCloseFinal}
-            className="w-full bg-blue-600 text-white py-2 rounded-lg hover:bg-blue-700 transition"
+            onClick={() => { onClose(); window.location.href = '/'; }}
+            style={{
+              padding: '10px 20px',
+              backgroundColor: '#2563eb',
+              color: 'white',
+              border: 'none',
+              borderRadius: '8px',
+              cursor: 'pointer',
+            }}
           >
             Close
           </button>
@@ -144,176 +183,149 @@ const UnsubscribeModal: React.FC<UnsubscribeModalProps> = ({
 
   return (
     <>
-      {/* Main Unsubscribe Modal */}
-      <div className="fixed top-[8vh] left-0 right-0 bottom-0 z-[200] flex items-start justify-center bg-black/50 backdrop-blur-sm">
-        <div className="bg-white rounded-2xl shadow-2xl w-full max-w-md p-6 relative mt-20 mx-4">
-          {/* Close button */}
+      <div style={{
+        position: 'fixed',
+        top: 0,
+        left: 0,
+        right: 0,
+        bottom: 0,
+        zIndex: 99999,
+        backgroundColor: 'rgba(0, 0, 0, 0.5)',
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'center',
+        padding: '16px',
+      }}>
+        <div style={{
+          backgroundColor: 'white',
+          borderRadius: '24px',
+          boxShadow: '0 20px 25px -5px rgba(0,0,0,0.2)',
+          width: '100%',
+          maxWidth: '420px',
+          position: 'relative',
+        }}>
           <button
             onClick={onClose}
-            className="absolute top-3 right-3 text-gray-400 hover:text-gray-600 text-lg"
+            style={{
+              position: 'absolute',
+              top: '12px',
+              right: '12px',
+              color: '#9CA3AF',
+              background: 'none',
+              border: 'none',
+              fontSize: '20px',
+              cursor: 'pointer',
+              zIndex: 10,
+            }}
           >
             ✕
           </button>
           
-          {step === 'reconsider' && (
-            <div>
-              <h2 className="text-xl font-bold text-center mb-2 mt-4">We're sad to see you go! 😢</h2>
-              <p className="text-center text-gray-600 mb-6">
-                Before you cancel, would you consider downgrading to a more affordable plan?
-              </p>
-              
-              <div className="bg-yellow-50 p-4 rounded-lg mb-6">
-                <p className="font-semibold text-yellow-800 text-center">☕ Monthly Coffee Plan</p>
-                <p className="text-sm text-yellow-700 text-center mt-1">
-                  Only $10/month for 300 credits
+          <div style={{ padding: '24px' }}>
+            {step === 'reconsider' && (
+              <div>
+                <h2 style={{ fontSize: '20px', fontWeight: 'bold', textAlign: 'center', marginBottom: '8px' }}>We're sad to see you go! 😢</h2>
+                <p style={{ textAlign: 'center', color: '#4b5563', marginBottom: '24px' }}>
+                  Before you cancel, would you consider downgrading to a more affordable plan?
                 </p>
-                <p className="text-xs text-yellow-600 text-center mt-1">
-                  Perfect for casual users
-                </p>
-              </div>
-              
-              <div className="flex gap-3">
-                <button
-                  onClick={handleReconsiderConfirm}
-                  className="flex-1 px-4 py-2 border border-red-300 rounded-lg text-red-600 hover:bg-red-50 transition"
-                >
-                  No, cancel anyway
-                </button>
-                <button
-                  onClick={handleDowngradeInstead}
-                  className="flex-1 px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition"
-                >
-                  Downgrade Instead
-                </button>
-              </div>
-              
-              <div className="flex justify-center mt-4">
-                <button
-                  onClick={handleReturn}
-                  className="text-gray-400 hover:text-gray-600 text-xs transition flex items-center gap-1"
-                >
-                  <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 19l-7-7m0 0l7-7m-7 7h18" />
-                  </svg>
-                  Return to Dashboard
-                </button>
-              </div>
-            </div>
-          )}
-          
-          {step === 'reason' && (
-            <div>
-              <h2 className="text-xl font-bold text-center mb-4 mt-4">Help us improve</h2>
-              <p className="text-center text-gray-600 mb-4 text-sm">
-                Please tell us why you're cancelling <span className="text-blue-600">(select all that apply)</span>
-              </p>
-              
-              <div className="space-y-2 mb-4 max-h-64 overflow-y-auto">
-                {cancelReasons.map((reason) => (
-                  <label key={reason} className="flex items-center gap-3 p-2 rounded-lg hover:bg-gray-50 cursor-pointer">
-                    <input
-                      type="checkbox"
-                      checked={selectedReasons.includes(reason)}
-                      onChange={() => handleReasonToggle(reason)}
-                      className="w-4 h-4 rounded border-gray-300 text-blue-600 focus:ring-blue-500"
-                    />
-                    <span className="text-sm">{reason}</span>
-                  </label>
-                ))}
-              </div>
-              
-              {selectedReasons.includes('Other') && (
-                <textarea
-                  value={customReason}
-                  onChange={(e) => setCustomReason(e.target.value)}
-                  placeholder="Please tell us more..."
-                  className="w-full p-3 border border-gray-300 rounded-lg text-sm mb-4"
-                  rows={3}
-                />
-              )}
-              
-              <div className="flex gap-3">
-                <button
-                  onClick={() => setStep('reconsider')}
-                  className="flex-1 px-4 py-2 border border-gray-300 rounded-lg text-gray-600 hover:bg-gray-50 transition"
-                >
-                  Back
-                </button>
-                <button
-                  onClick={handleSubmitReason}
-                  disabled={selectedReasons.length === 0 || loading}
-                  className={`flex-1 px-4 py-2 rounded-lg transition ${
-                    selectedReasons.length > 0 && !loading
-                      ? 'bg-green-600 hover:bg-green-700 text-white'
-                      : 'bg-gray-300 text-gray-500 cursor-not-allowed'
-                  }`}
-                >
-                  {loading ? 'Processing...' : 'Continue to Stripe'}
-                </button>
-              </div>
-              
-              <div className="flex justify-center mt-4">
-                <button
-                  onClick={handleReturn}
-                  className="text-gray-400 hover:text-gray-600 text-xs transition flex items-center gap-1"
-                >
-                  <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 19l-7-7m0 0l7-7m-7 7h18" />
-                  </svg>
-                  Return to Dashboard
-                </button>
-              </div>
-            </div>
-          )}
-          
-          {step === 'confirm' && (
-            <div>
-              <div className="text-center mb-6 mt-4">
-                <div className="w-16 h-16 bg-yellow-100 rounded-full flex items-center justify-center mx-auto mb-4">
-                  <svg className="w-8 h-8 text-yellow-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
-                  </svg>
+                
+                <div style={{ backgroundColor: '#fef3c7', padding: '16px', borderRadius: '12px', marginBottom: '24px' }}>
+                  <p style={{ fontWeight: '600', color: '#b45309', textAlign: 'center' }}>☕ Monthly Coffee Plan</p>
+                  <p style={{ fontSize: '14px', color: '#b45309', textAlign: 'center', marginTop: '4px' }}>
+                    Only $10/month for 300 credits
+                  </p>
+                  <p style={{ fontSize: '12px', color: '#b45309', textAlign: 'center', marginTop: '4px' }}>
+                    Perfect for casual users
+                  </p>
                 </div>
-                <h2 className="text-xl font-bold mb-2">Confirm Cancellation</h2>
-                <p className="text-gray-600 text-sm">
-                  Your subscription will end at the current billing period.
-                  You will not be charged again.
+                
+                <div style={{ display: 'flex', gap: '12px' }}>
+                  <button
+                    onClick={handleReconsiderConfirm}
+                    style={{ flex: 1, padding: '10px', border: '1px solid #fca5a5', borderRadius: '8px', backgroundColor: 'white', color: '#dc2626', cursor: 'pointer' }}
+                  >
+                    No, cancel anyway
+                  </button>
+                  <button
+                    onClick={handleDowngradeInstead}
+                    style={{ flex: 1, padding: '10px', backgroundColor: '#16a34a', color: 'white', borderRadius: '8px', border: 'none', cursor: 'pointer' }}
+                  >
+                    Downgrade Instead
+                  </button>
+                </div>
+                
+                <div style={{ display: 'flex', justifyContent: 'center', marginTop: '16px' }}>
+                  <button
+                    onClick={handleReturn}
+                    style={{ color: '#9CA3AF', fontSize: '12px', background: 'none', border: 'none', cursor: 'pointer' }}
+                  >
+                    Return to Dashboard
+                  </button>
+                </div>
+              </div>
+            )}
+            
+            {step === 'reason' && (
+              <div>
+                <h2 style={{ fontSize: '20px', fontWeight: 'bold', textAlign: 'center', marginBottom: '16px' }}>Help us improve</h2>
+                <p style={{ textAlign: 'center', color: '#4b5563', marginBottom: '16px', fontSize: '14px' }}>
+                  Please tell us why you're cancelling
                 </p>
+                
+                <div style={{ marginBottom: '16px', maxHeight: '256px', overflowY: 'auto' }}>
+                  {cancelReasons.map((reason) => (
+                    <label key={reason} style={{ display: 'flex', alignItems: 'center', gap: '12px', padding: '8px', borderRadius: '8px', cursor: 'pointer' }}>
+                      <input
+                        type="checkbox"
+                        checked={selectedReasons.includes(reason)}
+                        onChange={() => handleReasonToggle(reason)}
+                        style={{ width: '16px', height: '16px' }}
+                      />
+                      <span style={{ fontSize: '14px' }}>{reason}</span>
+                    </label>
+                  ))}
+                </div>
+                
+                {selectedReasons.includes('Other') && (
+                  <textarea
+                    value={customReason}
+                    onChange={(e) => setCustomReason(e.target.value)}
+                    placeholder="Please tell us more..."
+                    style={{ width: '100%', padding: '12px', border: '1px solid #d1d5db', borderRadius: '8px', fontSize: '14px', marginBottom: '16px' }}
+                    rows={3}
+                  />
+                )}
+                
+                <div style={{ display: 'flex', gap: '12px' }}>
+                  <button
+                    onClick={() => setStep('reconsider')}
+                    style={{ flex: 1, padding: '10px', border: '1px solid #d1d5db', borderRadius: '8px', backgroundColor: 'white', color: '#4b5563', cursor: 'pointer' }}
+                  >
+                    Back
+                  </button>
+                  <button
+                    onClick={handleSubmitReason}
+                    disabled={selectedReasons.length === 0 || loading}
+                    style={{
+                      flex: 1,
+                      padding: '10px',
+                      borderRadius: '8px',
+                      border: 'none',
+                      cursor: selectedReasons.length > 0 && !loading ? 'pointer' : 'not-allowed',
+                      backgroundColor: selectedReasons.length > 0 && !loading ? '#dc2626' : '#d1d5db',
+                      color: 'white',
+                    }}
+                  >
+                    {loading ? 'Redirecting...' : 'Cancel Subscription'}
+                  </button>
+                </div>
               </div>
-              
-              <div className="flex gap-3">
-                <button
-                  onClick={() => setStep('reason')}
-                  className="flex-1 px-4 py-2 border border-gray-300 rounded-lg text-gray-600 hover:bg-gray-50 transition"
-                >
-                  Back
-                </button>
-                <button
-                  onClick={handleSubmitReason}
-                  disabled={loading}
-                  className="flex-1 px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition disabled:opacity-50"
-                >
-                  {loading ? 'Processing...' : 'Confirm Cancellation'}
-                </button>
-              </div>
-              
-              <div className="flex justify-center mt-4">
-                <button
-                  onClick={handleReturn}
-                  className="text-gray-400 hover:text-gray-600 text-xs transition flex items-center gap-1"
-                >
-                  <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 19l-7-7m0 0l7-7m-7 7h18" />
-                  </svg>
-                  Return to Dashboard
-                </button>
-              </div>
-            </div>
-          )}
+            )}
+          </div>
         </div>
       </div>
 
-      {/* Downgrade Plan Modal */}
+      {/* Downgrade Plan Modal - Always rendered, controlled by isOpen */}
       <DowngradePlanModal
         isOpen={showDowngradeModal}
         onClose={handleCloseDowngradeModal}
