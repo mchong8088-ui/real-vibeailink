@@ -287,7 +287,7 @@ export default function VibeAiMaster() {
         
         {/* LEFT PANEL - Yellow background, fixed - Avatar properly sized */}
         <aside className="w-[20%] bg-[#FEF08A] flex flex-col items-center justify-center p-3">
-          <div className="w-24 h-24 rounded-full overflow-hidden mb-3 bg-white shadow-lg">
+          <div className="w-16 h-16 rounded-full overflow-hidden mb-3 bg-white shadow-lg">
             <img 
               src="/avatars/michael_teresa.jpg" 
               className="w-full h-full object-cover" 
