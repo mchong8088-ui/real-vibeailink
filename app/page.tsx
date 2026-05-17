@@ -46,7 +46,7 @@ export default function VibeAiMaster() {
   useEffect(() => {
     setMounted(true);
     const ua = window.navigator.userAgent;
-    const isMobileDevice = /iPhone|iPad|iPod|Android/i.test(ua) || window.innerWidth < 1024;
+    const isMobileDevice = /iPhone|iPad|iPod|Android/i.test(ua) || window.innerWidth < 768;
     let detectedOS = "Standard OS";
     if (ua.indexOf("Win") !== -1) detectedOS = "Windows";
     if (ua.indexOf("Mac") !== -1) detectedOS = "MacOS";
@@ -208,21 +208,21 @@ export default function VibeAiMaster() {
     );
   }
 
-  // DESKTOP VIEW
+  // DESKTOP VIEW - Compact (fits on one screen)
   return (
     <div className="flex flex-col h-screen w-full overflow-hidden">
       
-      {/* RESTRICTED AREA 1: TOP BAR - Fixed, 1/8 height, White background, No borders */}
-      <div className="h-[8vh] bg-white flex items-center justify-between px-8 flex-shrink-0">
+      {/* TOP BAR - Compact */}
+      <div className="h-[10vh] bg-white flex items-center justify-between px-6 flex-shrink-0">
         <div className="w-1/4">
-          <h1 className="text-xl font-black italic text-red-600">vibeAiLink</h1>
+          <h1 className="text-lg font-black italic text-red-600">vibeAiLink</h1>
         </div>
-        <div className="flex-1 flex justify-center gap-12">
+        <div className="flex-1 flex justify-center gap-6">
           {['analysis', 'about', 'features', 'pricing'].map((view) => (
             <button
               key={view}
               onClick={() => { setCurrentView(view as any); setLegalTitle(null); }}
-              className="uppercase tracking-wide text-sm font-semibold transition-colors"
+              className="uppercase tracking-wide text-xs font-semibold transition-colors"
               style={{
                 color: currentView === view && !legalTitle ? '#2563EB' : '#94A3B8',
                 background: 'none',
@@ -235,22 +235,22 @@ export default function VibeAiMaster() {
             </button>
           ))}
         </div>
-        <div className="w-1/4 flex items-center justify-end gap-4">
+        <div className="w-1/4 flex items-center justify-end gap-3">
           <LanguageToggle currentLang={language} onLangChange={(lang: string) => setLanguage(lang as any)} />
           {user ? (
             <button 
               onClick={() => setShowUserMenu(!showUserMenu)} 
-              className="flex items-center gap-2 px-3 py-1.5 rounded-full bg-slate-100 hover:bg-slate-200 transition"
+              className="flex items-center gap-2 px-2 py-1 rounded-full bg-slate-100 hover:bg-slate-200 transition"
             >
-              <div className="w-7 h-7 rounded-full bg-blue-500 flex items-center justify-center text-white font-bold text-sm">
+              <div className="w-6 h-6 rounded-full bg-blue-500 flex items-center justify-center text-white font-bold text-xs">
                 {getUserDisplayName().charAt(0).toUpperCase()}
               </div>
-              <span className="text-sm font-medium">{getUserDisplayName()}</span>
+              <span className="text-xs font-medium">{getUserDisplayName()}</span>
             </button>
           ) : (
             <button 
               onClick={() => setIsAuthOpen(true)} 
-              className="text-blue-600 font-semibold text-sm hover:text-blue-800 transition"
+              className="text-blue-600 font-semibold text-xs hover:text-blue-800 transition"
               style={{ background: 'none', border: 'none', cursor: 'pointer', padding: '4px 8px' }}
             >
               {t('login')}
@@ -259,32 +259,32 @@ export default function VibeAiMaster() {
         </div>
       </div>
 
-      {/* MAIN CONTENT AREA - Remaining height */}
+      {/* MAIN CONTENT AREA */}
       <div className="flex flex-1 overflow-hidden">
         
-        {/* RESTRICTED AREA 2: LEFT PANEL - 1/5 width, Light Yellow background */}
-        <aside className="w-[20%] bg-[#FEF08A] flex flex-col items-center justify-center p-4">
-          <div className="w-28 h-28 rounded-full overflow-hidden mb-3 bg-white shadow-md">
+        {/* LEFT PANEL - Compact Yellow */}
+        <aside className="w-[18%] bg-[#FEF08A] flex flex-col items-center justify-center p-2">
+          <div className="w-20 h-20 rounded-full overflow-hidden mb-2 bg-white shadow-md">
             <img src="/avatars/michael_teresa.jpg" className="w-full h-full object-cover" alt="Michael & Teresa" />
           </div>
-          <h3 className="font-black text-slate-800 text-base uppercase text-center">Michael & Teresa</h3>
-          <p className="text-[10px] font-black text-blue-700 uppercase text-center mt-1">
+          <h3 className="font-black text-slate-800 text-xs uppercase text-center">Michael & Teresa</h3>
+          <p className="text-[8px] font-black text-blue-700 uppercase text-center mt-1">
             {t('financeMarketAnalysis')}
           </p>
-          <p className="text-[9px] font-bold text-slate-500 text-center mt-1">
-            {systemState.os} {t('environmentActive')}
+          <p className="text-[7px] font-bold text-slate-500 text-center mt-1">
+            {systemState.os}
           </p>
         </aside>
 
-        {/* RESTRICTED AREA 3: RIGHT PANEL (MEAT) - 4/5 width, Light Blue background */}
-        <div className="w-[80%] bg-[#E0F2FE] flex flex-col overflow-hidden">
+        {/* RIGHT PANEL */}
+        <div className="w-[82%] bg-[#E0F2FE] flex flex-col overflow-hidden">
           
           {/* SCROLLABLE MEAT AREA */}
-          <div id="meat-scroll-area" className="flex-1 overflow-y-auto px-8 pt-4 pb-4 scrollbar-hide">
+          <div id="meat-scroll-area" className="flex-1 overflow-y-auto px-4 pt-2 pb-2 scrollbar-hide">
             <div className="max-w-full mx-auto">
               
               {showUserMenu && (
-                <div className="mb-4">
+                <div className="mb-2">
                   <UserMenu 
                     user={user} 
                     profile={profile} 
@@ -297,10 +297,10 @@ export default function VibeAiMaster() {
               )}
 
               {(showMasterPopup || legalTitle) && (
-                <div className="w-full bg-white rounded-xl shadow-lg p-6 mb-4">
+                <div className="w-full bg-white rounded-lg shadow p-3 mb-3">
                   <button 
                     onClick={() => { setIsAuthOpen(false); setLegalTitle(null); setShowPricingModal(false); }} 
-                    className="float-right text-red-500 font-bold text-sm hover:text-red-700"
+                    className="float-right text-red-500 font-bold text-xs hover:text-red-700"
                     style={{ background: 'none', border: 'none', cursor: 'pointer' }}
                   >
                     Close ✕
@@ -310,8 +310,8 @@ export default function VibeAiMaster() {
                     {showLegalGate && <LegalGate language={language} onAccept={() => initializeNewUser("Guest", "guest@vibeailink.com")} />}
                     {legalTitle && (
                       <div>
-                        <h2 className="text-xl font-black mb-4 text-blue-600">{legalTitle}</h2>
-                        <div className="text-sm text-slate-700 whitespace-pre-wrap">
+                        <h2 className="text-lg font-black mb-2 text-blue-600">{legalTitle}</h2>
+                        <div className="text-xs text-slate-700 whitespace-pre-wrap">
                           {footerContent[legalTitle]?.[language === "Cantonese" ? "粵語 (繁體中文)" : language] || "Content coming soon..."}
                         </div>
                       </div>
@@ -345,8 +345,8 @@ export default function VibeAiMaster() {
             </div>
           </div>
 
-          {/* FIXED INPUT AREA */}
-          <div className="bg-white flex-shrink-0 py-4 px-8">
+          {/* FIXED INPUT AREA - Compact */}
+          <div className="bg-white flex-shrink-0 py-2 px-4">
             <div style={{ maxWidth: '100%', width: '100%', margin: '0 auto' }}>
               <SmartInputSystem 
                 langKey={language}
@@ -358,22 +358,22 @@ export default function VibeAiMaster() {
             </div>
           </div>
 
-          {/* RESTRICTED AREA 4: FOOTER */}
-          <div className="bg-white flex-shrink-0 py-3 px-8">
-            <div className="flex justify-center items-center gap-6 flex-wrap">
-              <button onClick={() => { setLegalTitle('DISCLAIMER'); }} style={{ background: 'none', border: 'none', color: '#3B82F6', fontWeight: '500', fontSize: '11px', cursor: 'pointer' }}>
+          {/* FOOTER - Compact */}
+          <div className="bg-white flex-shrink-0 py-1 px-4">
+            <div className="flex justify-center items-center gap-4 flex-wrap">
+              <button onClick={() => { setLegalTitle('DISCLAIMER'); }} style={{ background: 'none', border: 'none', color: '#3B82F6', fontWeight: '500', fontSize: '9px', cursor: 'pointer' }}>
                 {t('disclaimer')}
               </button>
-              <button onClick={() => { setLegalTitle('服務條款'); }} style={{ background: 'none', border: 'none', color: '#3B82F6', fontWeight: '500', fontSize: '11px', cursor: 'pointer' }}>
+              <button onClick={() => { setLegalTitle('服務條款'); }} style={{ background: 'none', border: 'none', color: '#3B82F6', fontWeight: '500', fontSize: '9px', cursor: 'pointer' }}>
                 {t('termsOfService')}
               </button>
-              <button onClick={() => { setLegalTitle('隱私政策'); }} style={{ background: 'none', border: 'none', color: '#3B82F6', fontWeight: '500', fontSize: '11px', cursor: 'pointer' }}>
+              <button onClick={() => { setLegalTitle('隱私政策'); }} style={{ background: 'none', border: 'none', color: '#3B82F6', fontWeight: '500', fontSize: '9px', cursor: 'pointer' }}>
                 {t('privacyPolicy')}
               </button>
-              <button onClick={() => { setLegalTitle('退款政策'); }} style={{ background: 'none', border: 'none', color: '#3B82F6', fontWeight: '500', fontSize: '11px', cursor: 'pointer' }}>
+              <button onClick={() => { setLegalTitle('退款政策'); }} style={{ background: 'none', border: 'none', color: '#3B82F6', fontWeight: '500', fontSize: '9px', cursor: 'pointer' }}>
                 {t('refundPolicy')}
               </button>
-              <button onClick={() => { setLegalTitle('聯絡我們'); }} style={{ background: 'none', border: 'none', color: '#3B82F6', fontWeight: '500', fontSize: '11px', cursor: 'pointer' }}>
+              <button onClick={() => { setLegalTitle('聯絡我們'); }} style={{ background: 'none', border: 'none', color: '#3B82F6', fontWeight: '500', fontSize: '9px', cursor: 'pointer' }}>
                 {t('contactUs')}
               </button>
             </div>
