@@ -5,7 +5,7 @@ import { createClient } from '@supabase/supabase-js';
 export const dynamic = 'force-dynamic';
 
 const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!, {
-  apiVersion: '2023-10-16', // Match the same version
+  apiVersion: '2026-03-25.dahlia', // Same version as create-checkout
 });
 
 const supabase = createClient(
