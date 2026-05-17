@@ -84,7 +84,8 @@ export const PricingModal: React.FC<PricingModalProps> = ({
         setLoading(false);
         return;
       } else if (isTopUp) {
-        onSelectPlan('topup', STRIPE_PRICE_IDS.TOPUP_100_CREDITS);
+        // Use COFFEE_TOPUP which has the alias TOPUP_100_CREDITS
+        onSelectPlan('topup', STRIPE_PRICE_IDS.COFFEE_TOPUP);
       }
     } else if (planId === 'prolite') {
       const priceId = billingCycle === 'monthly' 
