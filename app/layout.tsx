@@ -1,6 +1,7 @@
+# Update layout.tsx - remove the problematic import
+cat > app/layout.tsx << 'EOF'
 import { LanguageProvider } from './context/LanguageContext';
 import type { Metadata } from 'next';
-import './globals.css';
 
 export const metadata: Metadata = {
   title: 'vibeAiLink',
@@ -22,3 +23,4 @@ export default function RootLayout({
     </html>
   );
 }
+EOF
