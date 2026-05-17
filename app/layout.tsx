@@ -1,5 +1,3 @@
-# Update layout.tsx - remove the problematic import
-cat > app/layout.tsx << 'EOF'
 import { LanguageProvider } from './context/LanguageContext';
 import type { Metadata } from 'next';
 
@@ -23,4 +21,3 @@ export default function RootLayout({
     </html>
   );
 }
-EOF
