@@ -62,24 +62,41 @@ export async function POST(req: Request) {
       console.log(`💰 Processing checkout for: ${email}, credits: ${creditsToAdd}`);
 
       if (email) {
-        const { error } = await supabase.rpc('increment_credits', {
+        // First try: Use the increment_credits RPC function
+        const { error: rpcError } = await supabase.rpc('increment_credits', {
           user_email_input: email,
           amount: creditsToAdd,
         });
         
-        if (error) {
-          console.error('❌ Supabase RPC error:', error);
+        if (rpcError) {
+          console.error('❌ Supabase RPC error:', rpcError);
           
-          // Fallback: Try direct update if RPC fails
+          // Fallback: Get current credits and update directly
+          const { data: profile, error: fetchError } = await supabase
+            .from('profiles')
+            .select('credits')
+            .eq('email', email)
+            .single();
+          
+          if (fetchError) {
+            console.error('❌ Failed to fetch profile:', fetchError);
+            return NextResponse.json({ error: 'Failed to fetch user profile' }, { status: 500 });
+          }
+          
+          const currentCredits = profile?.credits || 0;
+          const newCredits = currentCredits + creditsToAdd;
+          
           const { error: updateError } = await supabase
             .from('profiles')
-            .update({ credits: supabase.sql`credits + ${creditsToAdd}` })
+            .update({ credits: newCredits })
             .eq('email', email);
           
           if (updateError) {
-            console.error('❌ Fallback update also failed:', updateError);
+            console.error('❌ Fallback update failed:', updateError);
             return NextResponse.json({ error: 'Database update failed' }, { status: 500 });
           }
+          
+          console.log(`✅ Fallback: Added ${creditsToAdd} credits to ${email} (${currentCredits} -> ${newCredits})`);
         } else {
           console.log(`✅ Successfully added ${creditsToAdd} credits to ${email}`);
         }
