@@ -212,27 +212,20 @@ export default function VibeAiMaster() {
     );
   }
 
-  // DESKTOP VIEW - Using the working layout from your copy
+  // DESKTOP VIEW - Optimized to fit one screen
   return (
     <div className="flex flex-col h-screen w-full overflow-hidden bg-white">
       
-      {/* HEADER - Top fixed bar */}
-      <nav className="h-[8vh] bg-white flex items-center justify-between px-8 flex-shrink-0">
+      {/* RESTRICTED AREA 1: HEADER - 10% height */}
+      <nav className="h-[10vh] bg-white flex items-center justify-between px-6 flex-shrink-0">
         <div className="w-1/4">
-          <h1 className="text-2xl font-black italic text-red-600">
-            vibeAiLink
-          </h1>
+          <h1 className="text-xl font-black italic text-red-600">vibeAiLink</h1>
         </div>
-        <div className="flex-1 flex justify-center gap-8">
+        <div className="flex-1 flex justify-center gap-6">
           {['analysis', 'about', 'features', 'pricing'].map((view) => (
             <button
               key={view}
-              onClick={() => { 
-                setCurrentView(view as any); 
-                setLegalTitle(null);
-                const meatArea = document.getElementById('meat-scroll-area');
-                if (meatArea) meatArea.scrollTop = 0;
-              }}
+              onClick={() => { setCurrentView(view as any); setLegalTitle(null); }}
               style={{
                 fontSize: '11px',
                 fontWeight: currentView === view && !legalTitle ? '900' : '600',
@@ -242,7 +235,7 @@ export default function VibeAiMaster() {
                 background: 'none',
                 border: 'none',
                 cursor: 'pointer',
-                paddingBottom: '4px',
+                padding: '4px 8px',
               }}
             >
               {view === 'analysis' ? 'AI STOCK' : view.toUpperCase()}
@@ -250,81 +243,70 @@ export default function VibeAiMaster() {
           ))}
         </div>
         <div className="w-1/4 flex items-center justify-end gap-3">
+          <LanguageToggle currentLang={language} onLangChange={(lang: string) => setLanguage(lang as any)} />
           {user ? (
-            <UserMenu 
-              user={user} 
-              profile={profile} 
-              onLogout={handleLogout} 
-              onOpenPricingPage={() => {
-                setCurrentView("pricing");
-                setShowPricingModal(true);
-              }} 
-              onSelectPlan={handleSelectPlan}
-            />
+            <button 
+              onClick={() => setShowUserMenu(!showUserMenu)} 
+              className="flex items-center gap-2 px-2 py-1 rounded-full bg-slate-100"
+            >
+              <div className="w-7 h-7 rounded-full bg-blue-500 flex items-center justify-center text-white font-bold text-xs">
+                {getUserDisplayName().charAt(0).toUpperCase()}
+              </div>
+              <span className="text-xs">{getUserDisplayName()}</span>
+            </button>
           ) : (
             <button 
               onClick={() => setIsAuthOpen(true)} 
-              style={{
-                color: '#1e293b',
-                fontWeight: '700',
-                fontSize: '11px',
-                backgroundColor: '#F1F5F9',
-                padding: '6px 12px',
-                borderRadius: '9999px',
-                border: 'none',
-                cursor: 'pointer',
-              }}
+              style={{ color: '#2563EB', fontWeight: '600', fontSize: '11px', background: 'none', border: 'none', cursor: 'pointer' }}
             >
-              Login Portal
+              LOGIN
             </button>
           )}
-          <LanguageToggle currentLang={language} onLangChange={(lang: string) => setLanguage(lang as any)} />
         </div>
       </nav>
 
-      {/* MAIN CONTENT AREA */}
-      <div className="flex flex-1 overflow-hidden" style={{ height: '92vh' }}>
+      {/* MAIN CONTENT AREA - 90% height total */}
+      <div className="flex flex-1 overflow-hidden" style={{ height: '90vh' }}>
         
-        {/* LEFT PANEL - Yellow background, fixed - Avatar properly sized */}
-        <aside className="w-[20%] bg-[#FEF08A] flex flex-col items-center justify-center p-3">
-          <div className="w-16 h-16 rounded-full overflow-hidden mb-3 bg-white shadow-lg">
-            <img 
-              src="/avatars/michael_teresa.jpg" 
-              className="w-full h-full object-cover" 
-              alt="Michael & Teresa"
-            />
+        {/* RESTRICTED AREA 2: LEFT PANEL - 20% width, Yellow */}
+        <aside className="w-[20%] bg-[#FEF08A] flex flex-col items-center justify-center p-2">
+          <div className="w-16 h-16 rounded-full overflow-hidden mb-2 bg-white shadow">
+            <img src="/avatars/michael_teresa.jpg" className="w-full h-full object-cover" alt="Michael & Teresa" />
           </div>
-          <h3 className="font-black text-slate-900 text-base uppercase text-center leading-tight">
-            Michael & Teresa
-          </h3>
-          <p className="text-[9px] font-black text-blue-700 tracking-[0.15em] mt-1 uppercase text-center">
-            Finance & Market Analysis
+          <h3 className="font-black text-slate-800 text-xs uppercase text-center">Michael & Teresa</h3>
+          <p className="text-[8px] font-black text-blue-700 uppercase text-center mt-1">
+            FINANCE & MARKET
           </p>
-          <p className="text-[8px] font-bold text-slate-500 tracking-wide mt-1 text-center">
-            {systemState.os} Environment Active
+          <p className="text-[7px] font-bold text-slate-500 text-center mt-1">
+            {systemState.os}
           </p>
         </aside>
 
-        {/* RIGHT PANEL - Light Blue background */}
+        {/* RESTRICTED AREA 3: RIGHT PANEL - 80% width, Light Blue */}
         <div className="w-[80%] bg-[#E0F2FE] flex flex-col overflow-hidden">
           
-          {/* SCROLLABLE CONTENT AREA */}
-          <div 
-            id="meat-scroll-area"
-            className="flex-1 overflow-y-auto px-[5%] pt-4 pb-2 scrollbar-hide min-h-0"
-          >
+          {/* SCROLLABLE MEAT AREA - Takes remaining space */}
+          <div id="meat-scroll-area" className="flex-1 overflow-y-auto px-4 pt-2 pb-1 scrollbar-hide">
             <div className="max-w-full mx-auto">
               
-              {/* POPUP WINDOWS */}
+              {showUserMenu && (
+                <div className="mb-2">
+                  <UserMenu 
+                    user={user} 
+                    profile={profile} 
+                    onLogout={handleLogout} 
+                    onOpenPricingPage={() => { setCurrentView("pricing"); setShowPricingModal(true); setShowUserMenu(false); }}
+                    onSelectPlan={handleSelectPlan} 
+                    onClose={() => setShowUserMenu(false)} 
+                  />
+                </div>
+              )}
+
               {(showMasterPopup || legalTitle) && (
-                <div className="w-full bg-white rounded-xl shadow-lg p-5 mb-4">
+                <div className="w-full bg-white rounded-lg shadow p-3 mb-2">
                   <button 
-                    onClick={() => { 
-                      setIsAuthOpen(false); 
-                      setLegalTitle(null);
-                      setShowPricingModal(false);
-                    }} 
-                    className="float-right text-red-500 font-black text-xs uppercase hover:text-red-700 mb-2"
+                    onClick={() => { setIsAuthOpen(false); setLegalTitle(null); setShowPricingModal(false); }} 
+                    className="float-right text-red-500 font-bold text-xs"
                     style={{ background: 'none', border: 'none', cursor: 'pointer' }}
                   >
                     Close ✕
@@ -334,10 +316,8 @@ export default function VibeAiMaster() {
                     {showLegalGate && <LegalGate language={language} onAccept={() => initializeNewUser("Guest", "guest@vibeailink.com")} />}
                     {legalTitle && (
                       <div>
-                        <h2 className="text-lg font-black mb-3 text-blue-600 uppercase tracking-wide">
-                          {legalTitle}
-                        </h2>
-                        <div className="text-sm text-slate-700 whitespace-pre-wrap">
+                        <h2 className="text-base font-black mb-2 text-blue-600">{legalTitle}</h2>
+                        <div className="text-xs text-slate-700">
                           {footerContent[legalTitle]?.[language === "Cantonese" ? "粵語 (繁體中文)" : language] || "Content coming soon..."}
                         </div>
                       </div>
@@ -346,7 +326,6 @@ export default function VibeAiMaster() {
                 </div>
               )}
 
-              {/* MAIN CONTENT VIEWS */}
               <div className="w-full">
                 {currentView === "analysis" && (
                   <StockAnalysisModule 
@@ -359,10 +338,7 @@ export default function VibeAiMaster() {
                 {currentView === "pricing" && (
                   <PricingModal 
                     isOpen={true} 
-                    onClose={() => {
-                      setCurrentView("analysis");
-                      setShowPricingModal(false);
-                    }} 
+                    onClose={() => { setCurrentView("analysis"); setShowPricingModal(false); }}
                     user={user} 
                     profile={profile} 
                     onSelectPlan={handleSelectPlan} 
@@ -375,76 +351,31 @@ export default function VibeAiMaster() {
             </div>
           </div>
 
-          {/* INPUT AREA - Centered */}
-          <div 
-            className="bg-white rounded-t-3xl shadow-lg flex-shrink-0"
-            style={{ 
-              paddingTop: '16px',
-              paddingBottom: '16px',
-              paddingLeft: '5%',
-              paddingRight: '5%',
-              minHeight: '120px',
-              display: 'flex',
-              justifyContent: 'center',
-              alignItems: 'center',
-            }}
-          >
-            <div style={{ maxWidth: '900px', width: '100%', margin: '0 auto' }}>
-              <SmartInputSystem 
-                langKey={language} 
-                onAnalyze={handleAnalyzeRequest} 
-                onPlusClick={() => setIsMenuOpen(true)} 
-                systemInfo={systemInfo}
-                analysisText={analysisData?.summary}
-              />
-            </div>
+          {/* RESTRICTED AREA: FIXED INPUT BAR */}
+          <div className="bg-white flex-shrink-0 py-2 px-4">
+            <SmartInputSystem 
+              langKey={language}
+              onAnalyze={handleAnalyzeRequest}
+              onPlusClick={() => setIsMenuOpen(true)} 
+              systemInfo={systemInfo}
+              analysisText={analysisData?.summary}
+            />
           </div>
 
-          {/* FOOTER */}
-          <div className="bg-white flex-shrink-0 py-3">
-            <div className="px-[5%]">
-              <div style={{ 
-                display: 'flex', 
-                justifyContent: 'center', 
-                alignItems: 'center', 
-                gap: '24px',
-                flexWrap: 'wrap',
-              }}>
-                {['DISCLAIMER', '服務條款', '隱私政策', '退款政策', '聯絡我們'].map((tab) => (
-                  <button
-                    key={tab}
-                    onClick={() => {
-                      setLegalTitle(tab);
-                      const meatArea = document.getElementById('meat-scroll-area');
-                      if (meatArea) meatArea.scrollTop = 0;
-                    }}
-                    style={{
-                      background: 'none',
-                      border: 'none',
-                      color: legalTitle === tab ? '#2563EB' : '#3B82F6',
-                      fontWeight: legalTitle === tab ? '900' : '500',
-                      fontSize: '11px',
-                      letterSpacing: '0.05em',
-                      cursor: 'pointer',
-                      padding: '4px 8px',
-                    }}
-                  >
-                    {tab}
-                  </button>
-                ))}
-              </div>
+          {/* RESTRICTED AREA 4: FOOTER */}
+          <div className="bg-white flex-shrink-0 py-1 px-4">
+            <div className="flex justify-center items-center gap-3 flex-wrap">
+              <button onClick={() => { setLegalTitle('DISCLAIMER'); }} style={{ fontSize: '8px', color: '#3B82F6', background: 'none', border: 'none', cursor: 'pointer' }}>DISCLAIMER</button>
+              <button onClick={() => { setLegalTitle('服務條款'); }} style={{ fontSize: '8px', color: '#3B82F6', background: 'none', border: 'none', cursor: 'pointer' }}>TERMS</button>
+              <button onClick={() => { setLegalTitle('隱私政策'); }} style={{ fontSize: '8px', color: '#3B82F6', background: 'none', border: 'none', cursor: 'pointer' }}>PRIVACY</button>
+              <button onClick={() => { setLegalTitle('退款政策'); }} style={{ fontSize: '8px', color: '#3B82F6', background: 'none', border: 'none', cursor: 'pointer' }}>REFUND</button>
+              <button onClick={() => { setLegalTitle('聯絡我們'); }} style={{ fontSize: '8px', color: '#3B82F6', background: 'none', border: 'none', cursor: 'pointer' }}>CONTACT</button>
             </div>
           </div>
         </div>
       </div>
 
-      {/* Professional Input Popup (+ button) */}
-      <SourceMenu 
-        isOpen={isMenuOpen} 
-        onClose={() => setIsMenuOpen(false)} 
-        onSelectSource={handleSourceSelect} 
-        langKey={language} 
-      />
+      <SourceMenu isOpen={isMenuOpen} onClose={() => setIsMenuOpen(false)} onSelectSource={handleSourceSelect} langKey={language}/>
     </div>
   );
 }
