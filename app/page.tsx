@@ -219,7 +219,7 @@ export default function VibeAiMaster() {
       {/* RESTRICTED AREA 1: HEADER - 10% height */}
       <nav className="h-[10vh] bg-white flex items-center justify-between px-6 flex-shrink-0">
         <div className="w-1/4">
-          <h1 className="text-xl font-black italic text-red-600">vibeAiLink</h1>
+          <h1 className="text-xl font-black italic text-blue-600">vibeAiLink</h1>
         </div>
         <div className="flex-1 flex justify-center gap-6">
           {['analysis', 'about', 'features', 'pricing'].map((view) => (
