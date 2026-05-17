@@ -11,6 +11,8 @@ import { LanguageToggle } from './components/layout/LanguageToggle';
 import { AboutSection } from './components/sections/AboutSection';
 import { FeaturesSection } from './components/sections/FeaturesSection';
 import { PricingModal } from './components/features/pricing/PricingModal';
+import MobileLanding from './components/mobile/MobileLanding';
+import MobileAnalysis from './components/mobile/MobileAnalysis';
 import { supabase } from './lib/supabase';
 import { footerContent } from './constants/content';
 import { useLanguage } from './context/LanguageContext';
@@ -32,6 +34,12 @@ export default function VibeAiMaster() {
   const [showPricingModal, setShowPricingModal] = useState(false);
   const [pricingContext, setPricingContext] = useState<'normal' | 'retention'>('normal');
   const [showUserMenu, setShowUserMenu] = useState(false);
+
+  // Mobile Navigation States
+  const [mobilePage, setMobilePage] = useState<'landing' | 'analysis' | 'content'>('landing');
+  const [mobileView, setMobileView] = useState<string>('analysis');
+  const [mobileTopic, setMobileTopic] = useState<string | null>(null);
+  const [mobileLegal, setMobileLegal] = useState<string | null>(null);
 
   const systemInfo = { system: `VibeAI-${systemState.os}`, voiceEngine: "Local Synthesis" };
 
@@ -144,6 +152,24 @@ export default function VibeAiMaster() {
     setIsMenuOpen(false);
   };
 
+  const handleMobileNavigate = (page: string, params?: any) => {
+    if (page === 'analysis') {
+      setMobilePage('analysis');
+      setMobileView('analysis');
+    } else if (page === 'content') {
+      setMobilePage('content');
+      setMobileTopic(params?.view);
+      setMobileLegal(params?.view);
+    }
+  };
+
+  const handleMobileBack = () => {
+    setMobilePage('landing');
+    setMobileView('analysis');
+    setMobileTopic(null);
+    setMobileLegal(null);
+  };
+
   const showLegalGate = user && profile && profile.has_accepted_legal === false;
   const showMasterPopup = isAuthOpen || legalTitle || showLegalGate;
 
@@ -157,17 +183,32 @@ export default function VibeAiMaster() {
 
   // MOBILE VIEW
   if (systemState.isMobile) {
+    if (mobilePage === 'landing') {
+      return (
+        <MobileLanding 
+          langKey={language} 
+          setLangKey={setLanguage} 
+          onAuthOpen={() => setIsAuthOpen(true)} 
+          user={user}
+          onNavigate={handleMobileNavigate}
+        />
+      );
+    }
     return (
-      <div className="flex flex-col h-screen w-full bg-white overflow-hidden">
-        {/* Mobile content would go here - using existing MobileLanding and MobileAnalysis components */}
-        <div className="flex-1 flex items-center justify-center">
-          <p className="text-gray-500">Loading mobile view...</p>
-        </div>
-      </div>
+      <MobileAnalysis
+        langKey={language} 
+        setLangKey={setLanguage} 
+        user={user} 
+        onAuthOpen={() => setIsAuthOpen(true)}
+        viewType={mobileView} 
+        topicId={mobileTopic} 
+        legalTitle={mobileLegal}
+        onBack={handleMobileBack}
+      />
     );
   }
 
-  // DESKTOP VIEW - Following your specifications
+  // DESKTOP VIEW
   return (
     <div className="flex flex-col h-screen w-full overflow-hidden">
       
@@ -238,11 +279,10 @@ export default function VibeAiMaster() {
         {/* RESTRICTED AREA 3: RIGHT PANEL (MEAT) - 4/5 width, Light Blue background */}
         <div className="w-[80%] bg-[#E0F2FE] flex flex-col overflow-hidden">
           
-          {/* SCROLLABLE MEAT AREA - Pop-ups and content appear here */}
+          {/* SCROLLABLE MEAT AREA */}
           <div id="meat-scroll-area" className="flex-1 overflow-y-auto px-8 pt-4 pb-4 scrollbar-hide">
             <div className="max-w-full mx-auto">
               
-              {/* User Menu Popup */}
               {showUserMenu && (
                 <div className="mb-4">
                   <UserMenu 
@@ -256,7 +296,6 @@ export default function VibeAiMaster() {
                 </div>
               )}
 
-              {/* Auth/Popup Windows */}
               {(showMasterPopup || legalTitle) && (
                 <div className="w-full bg-white rounded-xl shadow-lg p-6 mb-4">
                   <button 
@@ -281,7 +320,6 @@ export default function VibeAiMaster() {
                 </div>
               )}
 
-              {/* Main Content Views */}
               <div className="w-full">
                 {currentView === "analysis" && (
                   <StockAnalysisModule 
@@ -307,7 +345,7 @@ export default function VibeAiMaster() {
             </div>
           </div>
 
-          {/* FIXED INPUT AREA - White background, with +, MIC, input, Speaker, Pause, Send */}
+          {/* FIXED INPUT AREA */}
           <div className="bg-white flex-shrink-0 py-4 px-8">
             <div style={{ maxWidth: '100%', width: '100%', margin: '0 auto' }}>
               <SmartInputSystem 
@@ -320,7 +358,7 @@ export default function VibeAiMaster() {
             </div>
           </div>
 
-          {/* RESTRICTED AREA 4: FOOTER - White background, below Meat area */}
+          {/* RESTRICTED AREA 4: FOOTER */}
           <div className="bg-white flex-shrink-0 py-3 px-8">
             <div className="flex justify-center items-center gap-6 flex-wrap">
               <button onClick={() => { setLegalTitle('DISCLAIMER'); }} style={{ background: 'none', border: 'none', color: '#3B82F6', fontWeight: '500', fontSize: '11px', cursor: 'pointer' }}>
@@ -343,7 +381,6 @@ export default function VibeAiMaster() {
         </div>
       </div>
 
-      {/* Professional Input Popup (+ button) */}
       <SourceMenu isOpen={isMenuOpen} onClose={() => setIsMenuOpen(false)} onSelectSource={handleSourceSelect} langKey={language}/>
     </div>
   );
