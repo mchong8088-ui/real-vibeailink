@@ -46,10 +46,16 @@ export default function VibeAiMaster() {
   useEffect(() => {
     setMounted(true);
     const ua = window.navigator.userAgent;
-    const isMobileDevice = /iPhone|iPad|iPod|Android/i.test(ua) || window.innerWidth < 768;
+    const isMobileUA = /iPhone|iPad|iPod|Android|Mobile/i.test(ua);
+    const isSmallScreen = window.innerWidth <= 768;
+    const isMobileDevice = isMobileUA || isSmallScreen;
+    
     let detectedOS = "Standard OS";
     if (ua.indexOf("Win") !== -1) detectedOS = "Windows";
     if (ua.indexOf("Mac") !== -1) detectedOS = "MacOS";
+    if (/iPhone|iPad|iPod/i.test(ua)) detectedOS = "iOS";
+    if (/Android/i.test(ua)) detectedOS = "Android";
+    
     setSystemState({ os: detectedOS, isMobile: isMobileDevice });
   }, []);
 
@@ -212,46 +218,46 @@ export default function VibeAiMaster() {
   return (
     <div className="flex flex-col h-screen w-full overflow-hidden">
       
-      {/* RESTRICTED AREA 1: TOP BAR - Fixed, 1/8 height, No borders */}
+      {/* RESTRICTED AREA 1: TOP BAR - 1/8 height, No borders */}
       <div className="h-[12.5vh] bg-white flex items-center justify-between px-8 flex-shrink-0">
         <div className="w-1/4">
-          <h1 className="text-2xl font-black italic text-red-600">vibeAiLink</h1>
+          <h1 className="text-xl font-black italic text-red-600">vibeAiLink</h1>
         </div>
         <div className="flex-1 flex justify-center gap-8">
           {['analysis', 'about', 'features', 'pricing'].map((view) => (
             <button
               key={view}
               onClick={() => { setCurrentView(view as any); setLegalTitle(null); }}
-              className="uppercase tracking-wide text-sm font-semibold transition-colors"
+              className="uppercase tracking-wide text-xs font-semibold"
               style={{
                 color: currentView === view && !legalTitle ? '#2563EB' : '#94A3B8',
                 background: 'none',
                 border: 'none',
                 cursor: 'pointer',
-                padding: '8px 16px',
+                padding: '8px 12px',
               }}
             >
-              {view === 'analysis' ? 'AI STOCK' : t(view).toUpperCase()}
+              {view === 'analysis' ? 'AI STOCK' : view.toUpperCase()}
             </button>
           ))}
         </div>
-        <div className="w-1/4 flex items-center justify-end gap-4">
+        <div className="w-1/4 flex items-center justify-end gap-3">
           <LanguageToggle currentLang={language} onLangChange={(lang: string) => setLanguage(lang as any)} />
           {user ? (
             <button 
               onClick={() => setShowUserMenu(!showUserMenu)} 
-              className="flex items-center gap-2 px-3 py-2 rounded-full bg-slate-100 hover:bg-slate-200 transition"
+              className="flex items-center gap-2 px-2 py-1 rounded-full bg-slate-100 hover:bg-slate-200 transition"
             >
-              <div className="w-8 h-8 rounded-full bg-blue-500 flex items-center justify-center text-white font-bold text-sm">
+              <div className="w-6 h-6 rounded-full bg-blue-500 flex items-center justify-center text-white font-bold text-xs">
                 {getUserDisplayName().charAt(0).toUpperCase()}
               </div>
-              <span className="text-sm font-medium">{getUserDisplayName()}</span>
+              <span className="text-xs font-medium">{getUserDisplayName()}</span>
             </button>
           ) : (
             <button 
               onClick={() => setIsAuthOpen(true)} 
-              className="text-blue-600 font-semibold text-sm hover:text-blue-800 transition"
-              style={{ background: 'none', border: 'none', cursor: 'pointer', padding: '8px 16px' }}
+              className="text-blue-600 font-semibold text-xs hover:text-blue-800 transition"
+              style={{ background: 'none', border: 'none', cursor: 'pointer', padding: '6px 12px' }}
             >
               LOGIN
             </button>
@@ -259,19 +265,20 @@ export default function VibeAiMaster() {
         </div>
       </div>
 
-      {/* MAIN CONTENT AREA - Remaining height */}
+      {/* MAIN CONTENT AREA */}
       <div className="flex flex-1 overflow-hidden">
         
-        {/* RESTRICTED AREA 2: LEFT PANEL - 1/5 width, Light Yellow background */}
-        <aside className="w-[20%] bg-[#FEF08A] flex flex-col items-center justify-center p-4">
-          <div className="w-32 h-32 rounded-full overflow-hidden mb-4 bg-white shadow-lg">
+        {/* RESTRICTED AREA 2: LEFT PANEL - 1/5 width, Yellow background */}
+        <aside className="w-[20%] bg-[#FEF08A] flex flex-col items-center justify-center p-3">
+          {/* Avatar - Appropriate size for left panel */}
+          <div className="w-20 h-20 rounded-full overflow-hidden mb-2 bg-white shadow-md">
             <img src="/avatars/michael_teresa.jpg" className="w-full h-full object-cover" alt="Michael & Teresa" />
           </div>
-          <h3 className="font-black text-slate-800 text-lg uppercase text-center">Michael & Teresa</h3>
-          <p className="text-xs font-black text-blue-700 uppercase text-center mt-2">
+          <h3 className="font-black text-slate-800 text-sm uppercase text-center">Michael & Teresa</h3>
+          <p className="text-[9px] font-black text-blue-700 uppercase text-center mt-1">
             FINANCE & MARKET ANALYSIS
           </p>
-          <p className="text-[10px] font-bold text-slate-500 text-center mt-2">
+          <p className="text-[8px] font-bold text-slate-500 text-center mt-1">
             {systemState.os} ENVIRONMENT ACTIVE
           </p>
         </aside>
@@ -279,11 +286,10 @@ export default function VibeAiMaster() {
         {/* RESTRICTED AREA 3: RIGHT PANEL (MEAT) - 4/5 width, Light Blue background */}
         <div className="w-[80%] bg-[#E0F2FE] flex flex-col overflow-hidden">
           
-          {/* SCROLLABLE MEAT AREA - Pop-ups and content appear here */}
-          <div id="meat-scroll-area" className="flex-1 overflow-y-auto px-8 pt-4 pb-2 scrollbar-hide">
+          {/* SCROLLABLE MEAT AREA - 1/10 margin on left/right */}
+          <div id="meat-scroll-area" className="flex-1 overflow-y-auto px-[5%] pt-4 pb-2 scrollbar-hide">
             <div className="max-w-full mx-auto">
               
-              {/* User Menu Popup */}
               {showUserMenu && (
                 <div className="mb-4">
                   <UserMenu 
@@ -297,9 +303,8 @@ export default function VibeAiMaster() {
                 </div>
               )}
 
-              {/* Auth/Popup Windows */}
               {(showMasterPopup || legalTitle) && (
-                <div className="w-full bg-white rounded-xl shadow-lg p-6 mb-4">
+                <div className="w-full bg-white rounded-xl shadow-lg p-5 mb-4">
                   <button 
                     onClick={() => { setIsAuthOpen(false); setLegalTitle(null); setShowPricingModal(false); }} 
                     className="float-right text-red-500 font-bold text-sm hover:text-red-700"
@@ -312,7 +317,7 @@ export default function VibeAiMaster() {
                     {showLegalGate && <LegalGate language={language} onAccept={() => initializeNewUser("Guest", "guest@vibeailink.com")} />}
                     {legalTitle && (
                       <div>
-                        <h2 className="text-xl font-black mb-4 text-blue-600">{legalTitle}</h2>
+                        <h2 className="text-lg font-black mb-3 text-blue-600">{legalTitle}</h2>
                         <div className="text-sm text-slate-700 whitespace-pre-wrap">
                           {footerContent[legalTitle]?.[language === "Cantonese" ? "粵語 (繁體中文)" : language] || "Content coming soon..."}
                         </div>
@@ -322,7 +327,6 @@ export default function VibeAiMaster() {
                 </div>
               )}
 
-              {/* Main Content Views */}
               <div className="w-full">
                 {currentView === "analysis" && (
                   <StockAnalysisModule 
@@ -349,7 +353,7 @@ export default function VibeAiMaster() {
           </div>
 
           {/* FIXED INPUT AREA - With +, MIC, input, Speaker, Pause, Send */}
-          <div className="bg-white flex-shrink-0 py-4 px-8">
+          <div className="bg-white flex-shrink-0 py-3 px-[5%]">
             <div style={{ maxWidth: '100%', width: '100%', margin: '0 auto' }}>
               <SmartInputSystem 
                 langKey={language}
@@ -361,22 +365,22 @@ export default function VibeAiMaster() {
             </div>
           </div>
 
-          {/* RESTRICTED AREA 4: FOOTER - White background, below Meat area */}
-          <div className="bg-white flex-shrink-0 py-3 px-8">
-            <div className="flex justify-center items-center gap-6 flex-wrap">
-              <button onClick={() => { setLegalTitle('DISCLAIMER'); }} style={{ background: 'none', border: 'none', color: '#3B82F6', fontWeight: '500', fontSize: '11px', cursor: 'pointer' }}>
+          {/* RESTRICTED AREA 4: FOOTER - Below Meat area, center */}
+          <div className="bg-white flex-shrink-0 py-2 px-[5%]">
+            <div className="flex justify-center items-center gap-4 flex-wrap">
+              <button onClick={() => { setLegalTitle('DISCLAIMER'); }} style={{ background: 'none', border: 'none', color: '#3B82F6', fontWeight: '500', fontSize: '10px', cursor: 'pointer' }}>
                 DISCLAIMER
               </button>
-              <button onClick={() => { setLegalTitle('服務條款'); }} style={{ background: 'none', border: 'none', color: '#3B82F6', fontWeight: '500', fontSize: '11px', cursor: 'pointer' }}>
+              <button onClick={() => { setLegalTitle('服務條款'); }} style={{ background: 'none', border: 'none', color: '#3B82F6', fontWeight: '500', fontSize: '10px', cursor: 'pointer' }}>
                 TERMS OF SERVICE
               </button>
-              <button onClick={() => { setLegalTitle('隱私政策'); }} style={{ background: 'none', border: 'none', color: '#3B82F6', fontWeight: '500', fontSize: '11px', cursor: 'pointer' }}>
+              <button onClick={() => { setLegalTitle('隱私政策'); }} style={{ background: 'none', border: 'none', color: '#3B82F6', fontWeight: '500', fontSize: '10px', cursor: 'pointer' }}>
                 PRIVACY POLICY
               </button>
-              <button onClick={() => { setLegalTitle('退款政策'); }} style={{ background: 'none', border: 'none', color: '#3B82F6', fontWeight: '500', fontSize: '11px', cursor: 'pointer' }}>
+              <button onClick={() => { setLegalTitle('退款政策'); }} style={{ background: 'none', border: 'none', color: '#3B82F6', fontWeight: '500', fontSize: '10px', cursor: 'pointer' }}>
                 REFUND POLICY
               </button>
-              <button onClick={() => { setLegalTitle('聯絡我們'); }} style={{ background: 'none', border: 'none', color: '#3B82F6', fontWeight: '500', fontSize: '11px', cursor: 'pointer' }}>
+              <button onClick={() => { setLegalTitle('聯絡我們'); }} style={{ background: 'none', border: 'none', color: '#3B82F6', fontWeight: '500', fontSize: '10px', cursor: 'pointer' }}>
                 CONTACT US
               </button>
             </div>
@@ -384,7 +388,6 @@ export default function VibeAiMaster() {
         </div>
       </div>
 
-      {/* Professional Input Popup (+ button) */}
       <SourceMenu isOpen={isMenuOpen} onClose={() => setIsMenuOpen(false)} onSelectSource={handleSourceSelect} langKey={language}/>
     </div>
   );
