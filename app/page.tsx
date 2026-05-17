@@ -271,7 +271,7 @@ export default function VibeAiMaster() {
         {/* RESTRICTED AREA 2: LEFT PANEL - 20% width, Yellow */}
         <aside className="w-[20%] bg-[#FEF08A] flex flex-col items-center justify-center p-2">
           <div className="w-16 h-16 rounded-full overflow-hidden mb-2 bg-white shadow">
-            <img src="/avatars/michael_teresa.jpg" className="w-full h-full object-cover" alt="Michael & Teresa" />
+            <img src="/avatars/michael_teresa.jpg" className="w-full h-full object-contain" alt="Michael & Teresa" />
           </div>
           <h3 className="font-black text-slate-800 text-xs uppercase text-center">Michael & Teresa</h3>
           <p className="text-[8px] font-black text-blue-700 uppercase text-center mt-1">
