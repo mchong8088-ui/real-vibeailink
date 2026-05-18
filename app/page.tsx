@@ -73,62 +73,62 @@ export default function VibeAiMaster() {
   };
 
   const handleAnalyzeRequest = async (ticker: string) => {
-  // Check if user is logged in
-  if (!user) {
-    setIsAuthOpen(true);
-    return;
-  }
-  
-  setIsLoading(true);
-  setLegalTitle(null);
-  
-  try {
-    console.log("🔵 Analyzing ticker:", ticker, "Language:", language);
-    
-    const response = await fetch('/api/chat', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ 
-        message: ticker,
-        language: language
-      }),
-    });
-    
-    if (!response.ok) {
-      throw new Error(`API error: ${response.status}`);
+    // Check if user is logged in
+    if (!user) {
+      setIsAuthOpen(true);
+      return;
     }
     
-    const data = await response.json();
+    setIsLoading(true);
+    setLegalTitle(null);
     
-    setAnalysisData({
-      success: data.success,
-      symbol: data.symbol || ticker.toUpperCase(),
-      price: data.price || "N/A",
-      rsi: data.rsi || "N/A",
-      macd: data.macd || "N/A",
-      marketCap: data.marketCap || "N/A",
-      peRatio: data.peRatio || "N/A",
-      volume: data.volume || "N/A",
-      historical: data.historical || [],
-      summary: data.summary || data.text || `Analysis for ${ticker.toUpperCase()} completed.`,
-    });
-    
-  } catch (error) {
-    console.error('❌ Error fetching analysis:', error);
-    setAnalysisData({
-      symbol: ticker.toUpperCase(),
-      price: "N/A",
-      rsi: "N/A",
-      macd: "N/A",
-      marketCap: "N/A",
-      peRatio: "N/A",
-      volume: "N/A",
-      summary: `Unable to fetch analysis for ${ticker.toUpperCase()}. Please try again.`,
-    });
-  } finally {
-    setIsLoading(false);
-  }
-};
+    try {
+      console.log("🔵 Analyzing ticker:", ticker, "Language:", language);
+      
+      const response = await fetch('/api/chat', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ 
+          message: ticker,
+          language: language
+        }),
+      });
+      
+      if (!response.ok) {
+        throw new Error(`API error: ${response.status}`);
+      }
+      
+      const data = await response.json();
+      
+      setAnalysisData({
+        success: data.success,
+        symbol: data.symbol || ticker.toUpperCase(),
+        price: data.price || "N/A",
+        rsi: data.rsi || "N/A",
+        macd: data.macd || "N/A",
+        marketCap: data.marketCap || "N/A",
+        peRatio: data.peRatio || "N/A",
+        volume: data.volume || "N/A",
+        historical: data.historical || [],
+        summary: data.summary || data.text || `Analysis for ${ticker.toUpperCase()} completed.`,
+      });
+      
+    } catch (error) {
+      console.error('❌ Error fetching analysis:', error);
+      setAnalysisData({
+        symbol: ticker.toUpperCase(),
+        price: "N/A",
+        rsi: "N/A",
+        macd: "N/A",
+        marketCap: "N/A",
+        peRatio: "N/A",
+        volume: "N/A",
+        summary: `Unable to fetch analysis for ${ticker.toUpperCase()}. Please try again.`,
+      });
+    } finally {
+      setIsLoading(false);
+    }
+  };
 
   const handleSelectPlan = async (planId: string, priceId: string) => {
     if (!user && planId !== 'explorer') {
@@ -343,14 +343,11 @@ export default function VibeAiMaster() {
             overflow: 'hidden'
           }}>
             
-            {/* Instruction Text - Above input area */}
-            
-
             {/* SCROLLABLE MEAT AREA */}
             <div id="meat-scroll-area" style={{ 
               flex: 1, 
               overflowY: 'auto', 
-              padding: '0 5% 16px 5%',
+              padding: '16px 5% 16px 5%',
               minHeight: '200px'
             }}>
               
@@ -414,23 +411,23 @@ export default function VibeAiMaster() {
               </div>
             </div>
 
-            {/* FIXED INPUT AREA */}
-            {/* Instruction Text - Above input area */}
-<div style={{ 
-  padding: '16px 5% 8px 5%',
-  textAlign: 'center',
-  flexShrink: 0
-}}>
-  <p style={{ fontSize: '12px', color: '#4B5563', margin: 0 }}>
-    Please input stock symbol below
-  </p>
-</div>
+            {/* FIXED INPUT AREA - With instruction text above */}
             <div style={{ 
               backgroundColor: 'white', 
               padding: '12px 5%',
               borderTop: '1px solid #E5E7EB',
               flexShrink: 0
             }}>
+              {/* Instruction text above input field */}
+              <p style={{ 
+                fontSize: '13px', 
+                color: '#4B5563', 
+                textAlign: 'center', 
+                marginBottom: '12px',
+                fontWeight: '500'
+              }}>
+                Please input stock symbol below
+              </p>
               <SmartInputSystem 
                 langKey={language}
                 onAnalyze={handleAnalyzeRequest}
