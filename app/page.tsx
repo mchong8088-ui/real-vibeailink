@@ -73,51 +73,62 @@ export default function VibeAiMaster() {
   };
 
   const handleAnalyzeRequest = async (ticker: string) => {
-    if (!user) {
-      setIsAuthOpen(true);
-      return;
+  // Check if user is logged in
+  if (!user) {
+    setIsAuthOpen(true);
+    return;
+  }
+  
+  setIsLoading(true);
+  setLegalTitle(null);
+  
+  try {
+    console.log("🔵 Analyzing ticker:", ticker, "Language:", language);
+    
+    const response = await fetch('/api/chat', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ 
+        message: ticker,
+        language: language
+      }),
+    });
+    
+    if (!response.ok) {
+      throw new Error(`API error: ${response.status}`);
     }
     
-    setIsLoading(true);
-    setLegalTitle(null);
+    const data = await response.json();
     
-    try {
-      const response = await fetch('/api/chat', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ message: ticker, language: language }),
-      });
-      
-      const data = await response.json();
-      
-      setAnalysisData({
-        success: data.success,
-        symbol: data.symbol || ticker.toUpperCase(),
-        price: data.price || "N/A",
-        rsi: data.rsi || "N/A",
-        macd: data.macd || "N/A",
-        marketCap: data.marketCap || "N/A",
-        peRatio: data.peRatio || "N/A",
-        volume: data.volume || "N/A",
-        historical: data.historical || [],
-        summary: data.summary || data.text || `Analysis for ${ticker.toUpperCase()} completed.`,
-      });
-    } catch (error) {
-      console.error('Error:', error);
-      setAnalysisData({
-        symbol: ticker.toUpperCase(),
-        price: "N/A",
-        rsi: "N/A",
-        macd: "N/A",
-        marketCap: "N/A",
-        peRatio: "N/A",
-        volume: "N/A",
-        summary: `Unable to fetch analysis for ${ticker.toUpperCase()}. Please try again.`,
-      });
-    } finally {
-      setIsLoading(false);
-    }
-  };
+    setAnalysisData({
+      success: data.success,
+      symbol: data.symbol || ticker.toUpperCase(),
+      price: data.price || "N/A",
+      rsi: data.rsi || "N/A",
+      macd: data.macd || "N/A",
+      marketCap: data.marketCap || "N/A",
+      peRatio: data.peRatio || "N/A",
+      volume: data.volume || "N/A",
+      historical: data.historical || [],
+      summary: data.summary || data.text || `Analysis for ${ticker.toUpperCase()} completed.`,
+    });
+    
+  } catch (error) {
+    console.error('❌ Error fetching analysis:', error);
+    setAnalysisData({
+      symbol: ticker.toUpperCase(),
+      price: "N/A",
+      rsi: "N/A",
+      macd: "N/A",
+      marketCap: "N/A",
+      peRatio: "N/A",
+      volume: "N/A",
+      summary: `Unable to fetch analysis for ${ticker.toUpperCase()}. Please try again.`,
+    });
+  } finally {
+    setIsLoading(false);
+  }
+};
 
   const handleSelectPlan = async (planId: string, priceId: string) => {
     if (!user && planId !== 'explorer') {
@@ -333,15 +344,7 @@ export default function VibeAiMaster() {
           }}>
             
             {/* Instruction Text - Above input area */}
-            <div style={{ 
-              padding: '16px 5% 8px 5%',
-              textAlign: 'center',
-              flexShrink: 0
-            }}>
-              <p style={{ fontSize: '12px', color: '#4B5563', margin: 0 }}>
-                Please input stock symbol below
-              </p>
-            </div>
+            
 
             {/* SCROLLABLE MEAT AREA */}
             <div id="meat-scroll-area" style={{ 
@@ -412,6 +415,16 @@ export default function VibeAiMaster() {
             </div>
 
             {/* FIXED INPUT AREA */}
+            {/* Instruction Text - Above input area */}
+<div style={{ 
+  padding: '16px 5% 8px 5%',
+  textAlign: 'center',
+  flexShrink: 0
+}}>
+  <p style={{ fontSize: '12px', color: '#4B5563', margin: 0 }}>
+    Please input stock symbol below
+  </p>
+</div>
             <div style={{ 
               backgroundColor: 'white', 
               padding: '12px 5%',
