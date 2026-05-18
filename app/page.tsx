@@ -46,14 +46,10 @@ export default function VibeAiMaster() {
   useEffect(() => {
     setMounted(true);
     
-    // Check if running on localhost for debugging
     const isLocalhost = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1';
-    
     const ua = window.navigator.userAgent;
     const isMobileUA = /iPhone|iPad|iPod|Android/i.test(ua);
     const isSmallScreen = window.innerWidth < 1024;
-    
-    // On localhost, force desktop view to see desktop layout
     const isMobileDevice = isLocalhost ? false : (isMobileUA || isSmallScreen);
     
     let detectedOS = "Standard OS";
@@ -218,49 +214,47 @@ export default function VibeAiMaster() {
     );
   }
 
-  // DESKTOP VIEW - Centered pop-up window layout with 100px avatar
+  // DESKTOP VIEW - Full width with proper layout
   return (
     <div style={{ 
       display: 'flex', 
       flexDirection: 'column', 
-      alignItems: 'center', 
-      justifyContent: 'center',
-      minHeight: '100vh',
+      height: '100vh',
+      width: '100%',
       backgroundColor: '#f0f0f0',
-      padding: '20px'
+      overflow: 'hidden'
     }}>
       
-      {/* Main Pop-up Window - Centered, 70% width */}
+      {/* Main Content Container - Full width */}
       <div style={{ 
-        width: '70%', 
-        maxWidth: '1200px',
+        width: '100%',
+        height: '100%',
         backgroundColor: 'white',
-        borderRadius: '16px',
-        boxShadow: '0 20px 25px -5px rgba(0,0,0,0.1)',
-        overflow: 'hidden',
         display: 'flex',
-        flexDirection: 'column'
+        flexDirection: 'column',
+        overflow: 'hidden'
       }}>
         
-        {/* RESTRICTED AREA 1: TOP BAR */}
+        {/* RESTRICTED AREA 1: TOP BAR - Fixed header */}
         <div style={{ 
           backgroundColor: 'white', 
-          padding: '12px 20px', 
+          padding: '12px 24px', 
           borderBottom: '1px solid #E5E7EB',
           display: 'flex',
           alignItems: 'center',
-          justifyContent: 'space-between'
+          justifyContent: 'space-between',
+          flexShrink: 0
         }}>
-          <div style={{ width: '150px' }}>
-            <h1 style={{ fontSize: '18px', fontWeight: '900', fontStyle: 'italic', color: '#DC2626', margin: 0 }}>vibeAiLink</h1>
+          <div style={{ width: '180px' }}>
+            <h1 style={{ fontSize: '20px', fontWeight: '900', fontStyle: 'italic', color: '#DC2626', margin: 0 }}>vibeAiLink</h1>
           </div>
-          <div style={{ display: 'flex', gap: '32px' }}>
+          <div style={{ display: 'flex', gap: '48px' }}>
             {['analysis', 'about', 'features', 'pricing'].map((view) => (
               <button
                 key={view}
                 onClick={() => { setCurrentView(view as any); setLegalTitle(null); }}
                 style={{
-                  fontSize: '12px',
+                  fontSize: '13px',
                   fontWeight: currentView === view && !legalTitle ? '900' : '500',
                   letterSpacing: '0.1em',
                   color: currentView === view && !legalTitle ? '#2563EB' : '#94A3B8',
@@ -275,7 +269,7 @@ export default function VibeAiMaster() {
               </button>
             ))}
           </div>
-          <div style={{ display: 'flex', gap: '16px', alignItems: 'center', width: '150px', justifyContent: 'flex-end' }}>
+          <div style={{ display: 'flex', gap: '16px', alignItems: 'center', width: '180px', justifyContent: 'flex-end' }}>
             <LanguageToggle currentLang={language} onLangChange={(lang: string) => setLanguage(lang as any)} />
             {user ? (
               <button 
@@ -298,10 +292,10 @@ export default function VibeAiMaster() {
           </div>
         </div>
 
-        {/* MAIN CONTENT AREA */}
-        <div style={{ display: 'flex', minHeight: '500px' }}>
+        {/* MAIN CONTENT AREA - Split into Left and Right */}
+        <div style={{ display: 'flex', flex: 1, overflow: 'hidden' }}>
           
-          {/* RESTRICTED AREA 2: LEFT PANEL - Yellow background, 20% width, 100px avatar */}
+          {/* RESTRICTED AREA 2: LEFT PANEL - 20% width, Yellow background */}
           <div style={{ 
             width: '20%', 
             backgroundColor: '#FEF08A', 
@@ -309,7 +303,8 @@ export default function VibeAiMaster() {
             flexDirection: 'column', 
             alignItems: 'center', 
             justifyContent: 'center', 
-            padding: '20px'
+            padding: '24px',
+            overflow: 'auto'
           }}>
             {/* Avatar - 100px */}
             <div style={{ width: '100px', height: '100px', borderRadius: '50%', overflow: 'hidden', marginBottom: '16px', backgroundColor: 'white', boxShadow: '0 2px 4px rgba(0,0,0,0.1)' }}>
@@ -328,7 +323,7 @@ export default function VibeAiMaster() {
             </p>
           </div>
 
-          {/* RESTRICTED AREA 3: RIGHT PANEL - Light Blue background */}
+          {/* RESTRICTED AREA 3: RIGHT PANEL - 80% width, Light Blue background */}
           <div style={{ 
             width: '80%', 
             backgroundColor: '#E0F2FE', 
@@ -337,12 +332,23 @@ export default function VibeAiMaster() {
             overflow: 'hidden'
           }}>
             
+            {/* Instruction Text - Above input area */}
+            <div style={{ 
+              padding: '16px 5% 8px 5%',
+              textAlign: 'center',
+              flexShrink: 0
+            }}>
+              <p style={{ fontSize: '12px', color: '#4B5563', margin: 0 }}>
+                Please input stock symbol below
+              </p>
+            </div>
+
             {/* SCROLLABLE MEAT AREA */}
             <div id="meat-scroll-area" style={{ 
               flex: 1, 
               overflowY: 'auto', 
-              padding: '16px 5%',
-              minHeight: '300px'
+              padding: '0 5% 16px 5%',
+              minHeight: '200px'
             }}>
               
               {showUserMenu && (
@@ -429,7 +435,8 @@ export default function VibeAiMaster() {
               display: 'flex',
               justifyContent: 'center',
               gap: '24px',
-              flexWrap: 'wrap'
+              flexWrap: 'wrap',
+              flexShrink: 0
             }}>
               <button onClick={() => { setLegalTitle('DISCLAIMER'); }} style={{ fontSize: '10px', color: '#3B82F6', background: 'none', border: 'none', cursor: 'pointer' }}>DISCLAIMER</button>
               <button onClick={() => { setLegalTitle('服務條款'); }} style={{ fontSize: '10px', color: '#3B82F6', background: 'none', border: 'none', cursor: 'pointer' }}>TERMS</button>
