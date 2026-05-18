@@ -163,43 +163,42 @@ const MobileAnalysis: React.FC<MobileAnalysisProps> = ({
     return langKey === 'Cantonese' ? 'AI 分析' : langKey === '简体中文' ? 'AI 分析' : 'AI Analysis';
   };
 
-  // Compact analysis display for mobile
   const CompactAnalysis = () => {
     if (isLoading) {
       return (
-        <div className="bg-white rounded-xl p-4 text-center">
-          <div className="animate-spin rounded-full h-6 w-6 border-2 border-blue-600 border-t-transparent mx-auto mb-2"></div>
-          <p className="text-xs text-gray-500">{t.analyzingMarket}</p>
+        <div style={{ backgroundColor: 'white', borderRadius: '12px', padding: '16px', textAlign: 'center' }}>
+          <div style={{ width: '24px', height: '24px', border: '2px solid #2563EB', borderTopColor: 'transparent', borderRadius: '50%', animation: 'spin 1s linear infinite', margin: '0 auto 8px' }}></div>
+          <p style={{ fontSize: '12px', color: '#6B7280' }}>{t.analyzingMarket}</p>
         </div>
       );
     }
 
     if (!analysisData || !analysisData.symbol) {
       return (
-        <div className="bg-white rounded-xl p-6 text-center">
-          <p className="text-gray-400 text-sm">{langKey === 'Cantonese' ? '請輸入股票代號' : 'Please enter stock symbol'}</p>
-          <p className="text-gray-300 text-xs mt-1">e.g.: 0700.hk, TSLA</p>
+        <div style={{ backgroundColor: 'white', borderRadius: '12px', padding: '24px', textAlign: 'center' }}>
+          <p style={{ color: '#9CA3AF', fontSize: '14px' }}>{langKey === 'Cantonese' ? '請輸入股票代號' : 'Please enter stock symbol'}</p>
+          <p style={{ color: '#D1D5DB', fontSize: '11px', marginTop: '4px' }}>e.g.: 0700.hk, TSLA</p>
         </div>
       );
     }
 
     return (
-      <div className="bg-white rounded-xl p-3 space-y-3">
-        <div className="text-center">
-          <h2 className="text-lg font-bold text-gray-800">{analysisData.symbol}</h2>
+      <div style={{ backgroundColor: 'white', borderRadius: '12px', padding: '12px' }}>
+        <div style={{ textAlign: 'center' }}>
+          <h2 style={{ fontSize: '18px', fontWeight: 'bold', color: '#1F2937' }}>{analysisData.symbol}</h2>
         </div>
-        <div className="flex gap-2">
-          <div className="flex-1 bg-gray-50 rounded-lg p-2 text-center">
-            <p className="text-[9px] text-gray-400">{langKey === 'Cantonese' ? '價格' : 'Price'}</p>
-            <p className="text-sm font-bold text-gray-800">{analysisData.price}</p>
+        <div style={{ display: 'flex', gap: '8px', marginTop: '12px' }}>
+          <div style={{ flex: 1, backgroundColor: '#F9FAFB', borderRadius: '8px', padding: '8px', textAlign: 'center' }}>
+            <p style={{ fontSize: '9px', color: '#9CA3AF' }}>{langKey === 'Cantonese' ? '價格' : 'Price'}</p>
+            <p style={{ fontSize: '14px', fontWeight: 'bold', color: '#1F2937' }}>{analysisData.price}</p>
           </div>
-          <div className="flex-1 bg-gray-50 rounded-lg p-2 text-center">
-            <p className="text-[9px] text-gray-400">RSI</p>
-            <p className="text-sm font-bold text-blue-600">{analysisData.rsi}</p>
+          <div style={{ flex: 1, backgroundColor: '#F9FAFB', borderRadius: '8px', padding: '8px', textAlign: 'center' }}>
+            <p style={{ fontSize: '9px', color: '#9CA3AF' }}>RSI</p>
+            <p style={{ fontSize: '14px', fontWeight: 'bold', color: '#2563EB' }}>{analysisData.rsi}</p>
           </div>
-          <div className="flex-1 bg-gray-50 rounded-lg p-2 text-center">
-            <p className="text-[9px] text-gray-400">MACD</p>
-            <p className="text-sm font-bold text-emerald-600">{analysisData.macd}</p>
+          <div style={{ flex: 1, backgroundColor: '#F9FAFB', borderRadius: '8px', padding: '8px', textAlign: 'center' }}>
+            <p style={{ fontSize: '9px', color: '#9CA3AF' }}>MACD</p>
+            <p style={{ fontSize: '14px', fontWeight: 'bold', color: '#059669' }}>{analysisData.macd}</p>
           </div>
         </div>
       </div>
@@ -207,38 +206,38 @@ const MobileAnalysis: React.FC<MobileAnalysisProps> = ({
   };
 
   return (
-    <div className="flex flex-col h-screen w-full bg-white overflow-hidden">
+    <div style={{ display: 'flex', flexDirection: 'column', height: '100vh', width: '100%', backgroundColor: 'white', overflow: 'hidden' }}>
       
-      {/* TOP BAR - Return Arrow clearly visible, Title, Language/Login in one row */}
-      <div className="bg-white px-4 py-3 border-b border-gray-100 flex items-center justify-between flex-shrink-0">
-        <button onClick={onBack} className="flex items-center gap-1 text-gray-600">
-          <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={2}>
+      {/* TOP BAR - Return Arrow with text, Title, Language/Login in one row */}
+      <div style={{ backgroundColor: 'white', padding: '12px 16px', borderBottom: '1px solid #F3F4F6', display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexShrink: 0 }}>
+        <button onClick={onBack} style={{ display: 'flex', alignItems: 'center', gap: '4px', color: '#4B5563', background: 'none', border: 'none', cursor: 'pointer' }}>
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2}>
             <path strokeLinecap="round" strokeLinejoin="round" d="M15 19l-7-7 7-7" />
           </svg>
-          <span className="text-xs font-medium">Back</span>
+          <span style={{ fontSize: '11px', fontWeight: '500' }}>Back</span>
         </button>
-        <h2 className="text-base font-semibold text-gray-800">{getTitle()}</h2>
-        <div className="flex gap-2 items-center">
+        <h2 style={{ fontSize: '14px', fontWeight: '600', color: '#1F2937' }}>{getTitle()}</h2>
+        <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
           <LanguageToggle currentLang={langKey} onLangChange={setLangKey} />
-          <button onClick={onAuthOpen} className="text-blue-600 font-semibold text-sm">
+          <button onClick={onAuthOpen} style={{ color: '#2563EB', fontWeight: '600', fontSize: '12px', background: 'none', border: 'none', cursor: 'pointer' }}>
             {user ? 'Welcome' : (langKey === 'Cantonese' ? '登入' : langKey === '简体中文' ? '登录' : 'Login')}
           </button>
         </div>
       </div>
 
       {/* SCROLLABLE MEAT AREA */}
-      <div className="flex-1 overflow-y-auto bg-gray-50 p-3" style={{ minHeight: 0 }}>
+      <div style={{ flex: 1, overflowY: 'auto', backgroundColor: '#F9FAFB', padding: '12px' }}>
         
         {legalTitle && (
-          <div className="bg-white rounded-xl p-4 mb-3">
-            <div className="text-sm text-gray-700">
+          <div style={{ backgroundColor: 'white', borderRadius: '12px', padding: '16px', marginBottom: '12px' }}>
+            <div style={{ fontSize: '13px', color: '#4B5563' }}>
               {footerContent[legalTitle]?.[langKey === "Cantonese" ? "粵語 (繁體中文)" : langKey] || "Content coming soon..."}
             </div>
           </div>
         )}
 
         {topicId === 'pricing' && (
-          <div className="bg-white rounded-xl p-3">
+          <div style={{ backgroundColor: 'white', borderRadius: '12px', padding: '12px' }}>
             <PricingModal isOpen={true} onClose={onBack} user={user} profile={null} onSelectPlan={handleSelectPlan} showRetentionOnly={false} />
           </div>
         )}
@@ -250,82 +249,72 @@ const MobileAnalysis: React.FC<MobileAnalysisProps> = ({
           <>
             <CompactAnalysis />
             {analysisData?.summary && (
-              <div className="bg-white rounded-xl p-3 mt-3 max-h-40 overflow-y-auto">
-                <p className="text-xs text-gray-700 leading-relaxed whitespace-pre-wrap">{analysisData.summary}</p>
+              <div style={{ backgroundColor: 'white', borderRadius: '12px', padding: '12px', marginTop: '12px', maxHeight: '160px', overflowY: 'auto' }}>
+                <p style={{ fontSize: '12px', color: '#4B5563', lineHeight: '1.5', whiteSpace: 'pre-wrap' }}>{analysisData.summary}</p>
               </div>
             )}
-            <div className="h-24"></div>
+            <div style={{ height: '80px' }}></div>
           </>
         )}
       </div>
 
-      {/* FIXED INPUT BAR - Bottom of screen, clear colors and sizes */}
+      {/* FIXED INPUT BAR - Bottom of screen */}
       {isAnalysisMode && !legalTitle && (
-        <div className="bg-white border-t border-gray-200 px-3 py-3 flex-shrink-0">
-          {/* Input Field Row - Full width */}
-          <div className="mb-2">
-            <input
-              type="text"
-              value={inputValue}
-              onChange={(e) => setInputValue(e.target.value)}
-              placeholder={isListening ? (langKey === 'Cantonese' ? '聆聽中...' : 'Listening...') : exampleText}
-              className="w-full px-4 py-3 text-sm text-gray-700 bg-gray-100 rounded-xl focus:bg-white transition outline-none border border-gray-200"
-            />
-          </div>
+        <div style={{ backgroundColor: 'white', borderTop: '1px solid #E5E7EB', padding: '12px', flexShrink: 0 }}>
+          {/* Input Field - Full width */}
+          <input
+            type="text"
+            value={inputValue}
+            onChange={(e) => setInputValue(e.target.value)}
+            placeholder={isListening ? (langKey === 'Cantonese' ? '聆聽中...' : 'Listening...') : exampleText}
+            style={{ width: '100%', padding: '12px', fontSize: '14px', color: '#1F2937', backgroundColor: '#F3F4F6', borderRadius: '12px', border: '1px solid #E5E7EB', outline: 'none', marginBottom: '12px' }}
+          />
           
-          {/* Control Buttons Row - All buttons clearly visible */}
-          <div className="flex items-center justify-around gap-2">
-            {/* MIC Button - Red */}
+          {/* Control Buttons Row - 4 buttons */}
+          <div style={{ display: 'flex', gap: '8px' }}>
+            {/* MIC Button */}
             <button
               onClick={handleMicToggle}
-              className={`flex-1 py-2 rounded-xl font-medium transition flex items-center justify-center gap-2 ${
-                isListening ? 'bg-blue-500' : 'bg-red-500'
-              } text-white`}
+              style={{ flex: 1, padding: '10px', borderRadius: '10px', fontWeight: '500', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '6px', backgroundColor: isListening ? '#3B82F6' : '#EF4444', color: 'white', border: 'none', cursor: 'pointer' }}
             >
-              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 11a7 7 0 01-7 7m0 0a7 7 0 01-7-7m7 7v4m0 0H8m4 0h4m-4-8a3 3 0 01-3-3V5a3 3 0 116 0v6a3 3 0 01-3 3z" />
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2}>
+                <path strokeLinecap="round" strokeLinejoin="round" d="M19 11a7 7 0 01-7 7m0 0a7 7 0 01-7-7m7 7v4m0 0H8m4 0h4m-4-8a3 3 0 01-3-3V5a3 3 0 116 0v6a3 3 0 01-3 3z" />
               </svg>
-              <span className="text-xs font-medium">MIC</span>
+              <span style={{ fontSize: '11px' }}>MIC</span>
             </button>
 
-            {/* Speaker Button - Red */}
+            {/* Speaker Button */}
             <button
               onClick={handleSpeakerToggle}
-              className={`flex-1 py-2 rounded-xl font-medium transition flex items-center justify-center gap-2 ${
-                isSpeakerActive ? 'bg-red-500' : 'bg-gray-400'
-              } text-white`}
+              style={{ flex: 1, padding: '10px', borderRadius: '10px', fontWeight: '500', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '6px', backgroundColor: isSpeakerActive ? '#EF4444' : '#9CA3AF', color: 'white', border: 'none', cursor: 'pointer' }}
             >
-              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15.536 8.464a5 5 0 010 7.072m2.828-9.9a9 9 0 010 12.728M5.586 15H4a1 1 0 01-1-1v-4a1 1 0 011-1h1.586l4.707-4.707C10.923 3.663 12 4.109 12 5v14c0 .891-1.077 1.337-1.707.707L5.586 15z" />
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2}>
+                <path strokeLinecap="round" strokeLinejoin="round" d="M15.536 8.464a5 5 0 010 7.072m2.828-9.9a9 9 0 010 12.728M5.586 15H4a1 1 0 01-1-1v-4a1 1 0 011-1h1.586l4.707-4.707C10.923 3.663 12 4.109 12 5v14c0 .891-1.077 1.337-1.707.707L5.586 15z" />
               </svg>
-              <span className="text-xs font-medium">Speaker</span>
+              <span style={{ fontSize: '11px' }}>Speaker</span>
             </button>
 
-            {/* Pause Button - Red when active */}
+            {/* Pause Button */}
             <button
               onClick={handlePauseToggle}
-              className={`flex-1 py-2 rounded-xl font-medium transition flex items-center justify-center gap-2 ${
-                isPaused ? 'bg-gray-400' : 'bg-red-500'
-              } text-white`}
+              style={{ flex: 1, padding: '10px', borderRadius: '10px', fontWeight: '500', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '6px', backgroundColor: isPaused ? '#9CA3AF' : '#EF4444', color: 'white', border: 'none', cursor: 'pointer' }}
             >
-              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 9v6m4-6v6m7-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2}>
+                <path strokeLinecap="round" strokeLinejoin="round" d="M10 9v6m4-6v6m7-3a9 9 0 11-18 0 9 9 0 0118 0z" />
               </svg>
-              <span className="text-xs font-medium">Pause</span>
+              <span style={{ fontSize: '11px' }}>Pause</span>
             </button>
 
-            {/* Send Button - Green */}
+            {/* Send Button */}
             <button
               onClick={handleAnalyze}
               disabled={!inputValue.trim()}
-              className={`flex-1 py-2 rounded-xl font-medium transition flex items-center justify-center gap-2 ${
-                inputValue.trim() ? 'bg-green-500' : 'bg-gray-300'
-              } text-white`}
+              style={{ flex: 1, padding: '10px', borderRadius: '10px', fontWeight: '500', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '6px', backgroundColor: inputValue.trim() ? '#22C55E' : '#D1D5DB', color: 'white', border: 'none', cursor: inputValue.trim() ? 'pointer' : 'not-allowed' }}
             >
-              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 7h10v10M17 7L7 17" />
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2}>
+                <path strokeLinecap="round" strokeLinejoin="round" d="M7 7h10v10M17 7L7 17" />
               </svg>
-              <span className="text-xs font-medium">Send</span>
+              <span style={{ fontSize: '11px' }}>Send</span>
             </button>
           </div>
         </div>
