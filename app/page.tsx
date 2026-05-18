@@ -46,6 +46,24 @@ export default function VibeAiMaster() {
   useEffect(() => {
     setMounted(true);
     
+    // Handle OAuth callback - check for hash fragment
+    const handleOAuthRedirect = async () => {
+      // Check if we have an access_token in the URL hash (OAuth redirect)
+      const hash = window.location.hash;
+      if (hash && hash.includes('access_token')) {
+        console.log("🔄 OAuth redirect detected, session will be handled by Supabase");
+        // Remove the hash from URL to clean it up
+        window.history.replaceState({}, document.title, window.location.pathname);
+        
+        // Wait a moment for Supabase to process the session
+        setTimeout(() => {
+          window.location.reload();
+        }, 500);
+      }
+    };
+    
+    handleOAuthRedirect();
+    
     const isLocalhost = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1';
     const ua = window.navigator.userAgent;
     const isMobileUA = /iPhone|iPad|iPod|Android/i.test(ua);
@@ -225,7 +243,7 @@ export default function VibeAiMaster() {
     );
   }
 
-  // DESKTOP VIEW - Full width with proper layout
+  // DESKTOP VIEW
   return (
     <div style={{ 
       display: 'flex', 
@@ -236,7 +254,6 @@ export default function VibeAiMaster() {
       overflow: 'hidden'
     }}>
       
-      {/* Main Content Container - Full width */}
       <div style={{ 
         width: '100%',
         height: '100%',
@@ -246,7 +263,7 @@ export default function VibeAiMaster() {
         overflow: 'hidden'
       }}>
         
-        {/* RESTRICTED AREA 1: TOP BAR - Fixed header */}
+        {/* RESTRICTED AREA 1: TOP BAR */}
         <div style={{ 
           backgroundColor: 'white', 
           padding: '12px 24px', 
@@ -303,10 +320,10 @@ export default function VibeAiMaster() {
           </div>
         </div>
 
-        {/* MAIN CONTENT AREA - Split into Left and Right */}
+        {/* MAIN CONTENT AREA */}
         <div style={{ display: 'flex', flex: 1, overflow: 'hidden' }}>
           
-          {/* RESTRICTED AREA 2: LEFT PANEL - 20% width, Yellow background */}
+          {/* RESTRICTED AREA 2: LEFT PANEL */}
           <div style={{ 
             width: '20%', 
             backgroundColor: '#FEF08A', 
@@ -317,7 +334,6 @@ export default function VibeAiMaster() {
             padding: '24px',
             overflow: 'auto'
           }}>
-            {/* Avatar - 100px */}
             <div style={{ width: '100px', height: '100px', borderRadius: '50%', overflow: 'hidden', marginBottom: '16px', backgroundColor: 'white', boxShadow: '0 2px 4px rgba(0,0,0,0.1)' }}>
               <img 
                 src="/avatars/michael_teresa.jpg" 
@@ -334,7 +350,7 @@ export default function VibeAiMaster() {
             </p>
           </div>
 
-          {/* RESTRICTED AREA 3: RIGHT PANEL - 80% width, Light Blue background */}
+          {/* RESTRICTED AREA 3: RIGHT PANEL */}
           <div style={{ 
             width: '80%', 
             backgroundColor: '#E0F2FE', 
@@ -411,14 +427,13 @@ export default function VibeAiMaster() {
               </div>
             </div>
 
-            {/* FIXED INPUT AREA - With instruction text above */}
+            {/* FIXED INPUT AREA */}
             <div style={{ 
               backgroundColor: 'white', 
               padding: '12px 5%',
               borderTop: '1px solid #E5E7EB',
               flexShrink: 0
             }}>
-              {/* Instruction text above input field */}
               <p style={{ 
                 fontSize: '13px', 
                 color: '#4B5563', 
