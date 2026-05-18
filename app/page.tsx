@@ -212,14 +212,14 @@ export default function VibeAiMaster() {
     );
   }
 
-  // DESKTOP VIEW - Optimized to fit one screen
+  // DESKTOP VIEW - Optimized to fit one screen with small avatar
   return (
     <div className="flex flex-col h-screen w-full overflow-hidden bg-white">
       
       {/* RESTRICTED AREA 1: HEADER - 10% height */}
       <nav className="h-[10vh] bg-white flex items-center justify-between px-6 flex-shrink-0">
         <div className="w-1/4">
-          <h1 className="text-xl font-black italic text-blue-600">vibeAiLink</h1>
+          <h1 className="text-xl font-black italic text-red-600">vibeAiLink</h1>
         </div>
         <div className="flex-1 flex justify-center gap-6">
           {['analysis', 'about', 'features', 'pricing'].map((view) => (
@@ -268,10 +268,15 @@ export default function VibeAiMaster() {
       {/* MAIN CONTENT AREA - 90% height total */}
       <div className="flex flex-1 overflow-hidden" style={{ height: '90vh' }}>
         
-        {/* RESTRICTED AREA 2: LEFT PANEL - 20% width, Yellow */}
+        {/* RESTRICTED AREA 2: LEFT PANEL - 20% width, Yellow, Small Avatar */}
         <aside className="w-[20%] bg-[#FEF08A] flex flex-col items-center justify-center p-2">
-          <div className="w-16 h-16 rounded-full overflow-hidden mb-2 bg-white shadow">
-            <img src="/avatars/michael_teresa.jpg" className="w-full h-full object-contain" alt="Michael & Teresa" />
+          {/* AVATAR - FORCED SMALL SIZE with inline styles */}
+          <div style={{ width: '56px', height: '56px', borderRadius: '50%', overflow: 'hidden', marginBottom: '8px', backgroundColor: 'white', boxShadow: '0 1px 3px rgba(0,0,0,0.1)' }}>
+            <img 
+              src="/avatars/michael_teresa.jpg" 
+              style={{ width: '100%', height: '100%', objectFit: 'cover' }}
+              alt="Michael & Teresa" 
+            />
           </div>
           <h3 className="font-black text-slate-800 text-xs uppercase text-center">Michael & Teresa</h3>
           <p className="text-[8px] font-black text-blue-700 uppercase text-center mt-1">
