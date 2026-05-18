@@ -41,7 +41,6 @@ const MobileAnalysis: React.FC<MobileAnalysisProps> = ({
     analyzingMarket: langKey === 'Cantonese' ? '分析市場中...' : langKey === '简体中文' ? '分析市场中...' : 'Analyzing Market...',
   };
 
-  // Speech Recognition Setup
   useEffect(() => {
     if (typeof window !== 'undefined') {
       const SpeechRecognition = (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition;
@@ -63,7 +62,6 @@ const MobileAnalysis: React.FC<MobileAnalysisProps> = ({
     }
   }, [langKey]);
 
-  // Text-to-Speech
   useEffect(() => {
     if (analysisData?.summary && isSpeakerActive && !isPaused) {
       if (utteranceRef.current) window.speechSynthesis.cancel();
@@ -166,39 +164,39 @@ const MobileAnalysis: React.FC<MobileAnalysisProps> = ({
   const CompactAnalysis = () => {
     if (isLoading) {
       return (
-        <div style={{ backgroundColor: 'white', borderRadius: '12px', padding: '16px', textAlign: 'center' }}>
-          <div style={{ width: '24px', height: '24px', border: '2px solid #2563EB', borderTopColor: 'transparent', borderRadius: '50%', animation: 'spin 1s linear infinite', margin: '0 auto 8px' }}></div>
-          <p style={{ fontSize: '12px', color: '#6B7280' }}>{t.analyzingMarket}</p>
+        <div style={{ backgroundColor: 'white', borderRadius: '12px', padding: '12px', textAlign: 'center' }}>
+          <div style={{ width: '24px', height: '24px', border: '2px solid #3B82F6', borderTopColor: 'transparent', borderRadius: '50%', animation: 'spin 1s linear infinite', margin: '0 auto 8px' }}></div>
+          <p style={{ fontSize: '11px', color: '#6B7280' }}>{t.analyzingMarket}</p>
         </div>
       );
     }
 
     if (!analysisData || !analysisData.symbol) {
       return (
-        <div style={{ backgroundColor: 'white', borderRadius: '12px', padding: '24px', textAlign: 'center' }}>
-          <p style={{ color: '#9CA3AF', fontSize: '14px' }}>{langKey === 'Cantonese' ? '請輸入股票代號' : 'Please enter stock symbol'}</p>
-          <p style={{ color: '#D1D5DB', fontSize: '11px', marginTop: '4px' }}>e.g.: 0700.hk, TSLA</p>
+        <div style={{ backgroundColor: 'white', borderRadius: '12px', padding: '16px', textAlign: 'center' }}>
+          <p style={{ color: '#9CA3AF', fontSize: '12px' }}>{langKey === 'Cantonese' ? '請輸入股票代號' : 'Please enter stock symbol'}</p>
+          <p style={{ color: '#D1D5DB', fontSize: '10px', marginTop: '4px' }}>e.g.: 0700.hk, TSLA</p>
         </div>
       );
     }
 
     return (
-      <div style={{ backgroundColor: 'white', borderRadius: '12px', padding: '12px' }}>
+      <div style={{ backgroundColor: 'white', borderRadius: '12px', padding: '10px' }}>
         <div style={{ textAlign: 'center' }}>
-          <h2 style={{ fontSize: '18px', fontWeight: 'bold', color: '#1F2937' }}>{analysisData.symbol}</h2>
+          <h2 style={{ fontSize: '16px', fontWeight: 'bold', color: '#1F2937' }}>{analysisData.symbol}</h2>
         </div>
-        <div style={{ display: 'flex', gap: '8px', marginTop: '12px' }}>
-          <div style={{ flex: 1, backgroundColor: '#F9FAFB', borderRadius: '8px', padding: '8px', textAlign: 'center' }}>
-            <p style={{ fontSize: '9px', color: '#9CA3AF' }}>{langKey === 'Cantonese' ? '價格' : 'Price'}</p>
-            <p style={{ fontSize: '14px', fontWeight: 'bold', color: '#1F2937' }}>{analysisData.price}</p>
+        <div style={{ display: 'flex', gap: '8px', marginTop: '10px' }}>
+          <div style={{ flex: 1, backgroundColor: '#F9FAFB', borderRadius: '8px', padding: '6px', textAlign: 'center' }}>
+            <p style={{ fontSize: '8px', color: '#9CA3AF' }}>{langKey === 'Cantonese' ? '價格' : 'Price'}</p>
+            <p style={{ fontSize: '13px', fontWeight: 'bold', color: '#1F2937' }}>{analysisData.price}</p>
           </div>
-          <div style={{ flex: 1, backgroundColor: '#F9FAFB', borderRadius: '8px', padding: '8px', textAlign: 'center' }}>
-            <p style={{ fontSize: '9px', color: '#9CA3AF' }}>RSI</p>
-            <p style={{ fontSize: '14px', fontWeight: 'bold', color: '#2563EB' }}>{analysisData.rsi}</p>
+          <div style={{ flex: 1, backgroundColor: '#F9FAFB', borderRadius: '8px', padding: '6px', textAlign: 'center' }}>
+            <p style={{ fontSize: '8px', color: '#9CA3AF' }}>RSI</p>
+            <p style={{ fontSize: '13px', fontWeight: 'bold', color: '#3B82F6' }}>{analysisData.rsi}</p>
           </div>
-          <div style={{ flex: 1, backgroundColor: '#F9FAFB', borderRadius: '8px', padding: '8px', textAlign: 'center' }}>
-            <p style={{ fontSize: '9px', color: '#9CA3AF' }}>MACD</p>
-            <p style={{ fontSize: '14px', fontWeight: 'bold', color: '#059669' }}>{analysisData.macd}</p>
+          <div style={{ flex: 1, backgroundColor: '#F9FAFB', borderRadius: '8px', padding: '6px', textAlign: 'center' }}>
+            <p style={{ fontSize: '8px', color: '#9CA3AF' }}>MACD</p>
+            <p style={{ fontSize: '13px', fontWeight: 'bold', color: '#10B981' }}>{analysisData.macd}</p>
           </div>
         </div>
       </div>
@@ -208,8 +206,8 @@ const MobileAnalysis: React.FC<MobileAnalysisProps> = ({
   return (
     <div style={{ display: 'flex', flexDirection: 'column', height: '100vh', width: '100%', backgroundColor: 'white', overflow: 'hidden' }}>
       
-      {/* TOP BAR - Return Arrow with text, Title, Language/Login in one row */}
-      <div style={{ backgroundColor: 'white', padding: '12px 16px', borderBottom: '1px solid #F3F4F6', display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexShrink: 0 }}>
+      {/* TOP BAR */}
+      <div style={{ backgroundColor: 'white', padding: '10px 16px', borderBottom: '1px solid #F3F4F6', display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexShrink: 0 }}>
         <button onClick={onBack} style={{ display: 'flex', alignItems: 'center', gap: '4px', color: '#4B5563', background: 'none', border: 'none', cursor: 'pointer' }}>
           <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2}>
             <path strokeLinecap="round" strokeLinejoin="round" d="M15 19l-7-7 7-7" />
@@ -219,25 +217,25 @@ const MobileAnalysis: React.FC<MobileAnalysisProps> = ({
         <h2 style={{ fontSize: '14px', fontWeight: '600', color: '#1F2937' }}>{getTitle()}</h2>
         <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
           <LanguageToggle currentLang={langKey} onLangChange={setLangKey} />
-          <button onClick={onAuthOpen} style={{ color: '#2563EB', fontWeight: '600', fontSize: '12px', background: 'none', border: 'none', cursor: 'pointer' }}>
+          <button onClick={onAuthOpen} style={{ color: '#2563EB', fontWeight: '600', fontSize: '11px', background: 'none', border: 'none', cursor: 'pointer' }}>
             {user ? 'Welcome' : (langKey === 'Cantonese' ? '登入' : langKey === '简体中文' ? '登录' : 'Login')}
           </button>
         </div>
       </div>
 
-      {/* SCROLLABLE MEAT AREA */}
-      <div style={{ flex: 1, overflowY: 'auto', backgroundColor: '#F9FAFB', padding: '12px' }}>
+      {/* SCROLLABLE MIDDLE AREA - Takes remaining space */}
+      <div style={{ flex: 1, overflowY: 'auto', backgroundColor: '#F9FAFB', padding: '10px' }}>
         
         {legalTitle && (
-          <div style={{ backgroundColor: 'white', borderRadius: '12px', padding: '16px', marginBottom: '12px' }}>
-            <div style={{ fontSize: '13px', color: '#4B5563' }}>
+          <div style={{ backgroundColor: 'white', borderRadius: '12px', padding: '12px', marginBottom: '10px' }}>
+            <div style={{ fontSize: '12px', color: '#4B5563' }}>
               {footerContent[legalTitle]?.[langKey === "Cantonese" ? "粵語 (繁體中文)" : langKey] || "Content coming soon..."}
             </div>
           </div>
         )}
 
         {topicId === 'pricing' && (
-          <div style={{ backgroundColor: 'white', borderRadius: '12px', padding: '12px' }}>
+          <div style={{ backgroundColor: 'white', borderRadius: '12px', padding: '10px' }}>
             <PricingModal isOpen={true} onClose={onBack} user={user} profile={null} onSelectPlan={handleSelectPlan} showRetentionOnly={false} />
           </div>
         )}
@@ -249,25 +247,24 @@ const MobileAnalysis: React.FC<MobileAnalysisProps> = ({
           <>
             <CompactAnalysis />
             {analysisData?.summary && (
-              <div style={{ backgroundColor: 'white', borderRadius: '12px', padding: '12px', marginTop: '12px', maxHeight: '160px', overflowY: 'auto' }}>
-                <p style={{ fontSize: '12px', color: '#4B5563', lineHeight: '1.5', whiteSpace: 'pre-wrap' }}>{analysisData.summary}</p>
+              <div style={{ backgroundColor: 'white', borderRadius: '12px', padding: '10px', marginTop: '10px', maxHeight: '120px', overflowY: 'auto' }}>
+                <p style={{ fontSize: '11px', color: '#4B5563', lineHeight: '1.4' }}>{analysisData.summary}</p>
               </div>
             )}
-            <div style={{ height: '80px' }}></div>
           </>
         )}
       </div>
 
-      {/* FIXED INPUT BAR - Bottom of screen */}
+      {/* FIXED INPUT BAR - Always at bottom, never scrolls */}
       {isAnalysisMode && !legalTitle && (
         <div style={{ backgroundColor: 'white', borderTop: '1px solid #E5E7EB', padding: '12px', flexShrink: 0 }}>
-          {/* Input Field - Full width */}
+          {/* Input Field */}
           <input
             type="text"
             value={inputValue}
             onChange={(e) => setInputValue(e.target.value)}
             placeholder={isListening ? (langKey === 'Cantonese' ? '聆聽中...' : 'Listening...') : exampleText}
-            style={{ width: '100%', padding: '12px', fontSize: '14px', color: '#1F2937', backgroundColor: '#F3F4F6', borderRadius: '12px', border: '1px solid #E5E7EB', outline: 'none', marginBottom: '12px' }}
+            style={{ width: '100%', padding: '10px 12px', fontSize: '13px', color: '#1F2937', backgroundColor: '#F3F4F6', borderRadius: '10px', border: '1px solid #E5E7EB', outline: 'none', marginBottom: '10px', boxSizing: 'border-box' }}
           />
           
           {/* Control Buttons Row - 4 buttons */}
@@ -275,46 +272,46 @@ const MobileAnalysis: React.FC<MobileAnalysisProps> = ({
             {/* MIC Button */}
             <button
               onClick={handleMicToggle}
-              style={{ flex: 1, padding: '10px', borderRadius: '10px', fontWeight: '500', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '6px', backgroundColor: isListening ? '#3B82F6' : '#EF4444', color: 'white', border: 'none', cursor: 'pointer' }}
+              style={{ flex: 1, padding: '8px', borderRadius: '10px', fontWeight: '500', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '6px', backgroundColor: isListening ? '#3B82F6' : '#EF4444', color: 'white', border: 'none', cursor: 'pointer' }}
             >
-              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2}>
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2}>
                 <path strokeLinecap="round" strokeLinejoin="round" d="M19 11a7 7 0 01-7 7m0 0a7 7 0 01-7-7m7 7v4m0 0H8m4 0h4m-4-8a3 3 0 01-3-3V5a3 3 0 116 0v6a3 3 0 01-3 3z" />
               </svg>
-              <span style={{ fontSize: '11px' }}>MIC</span>
+              <span style={{ fontSize: '10px' }}>MIC</span>
             </button>
 
             {/* Speaker Button */}
             <button
               onClick={handleSpeakerToggle}
-              style={{ flex: 1, padding: '10px', borderRadius: '10px', fontWeight: '500', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '6px', backgroundColor: isSpeakerActive ? '#EF4444' : '#9CA3AF', color: 'white', border: 'none', cursor: 'pointer' }}
+              style={{ flex: 1, padding: '8px', borderRadius: '10px', fontWeight: '500', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '6px', backgroundColor: isSpeakerActive ? '#EF4444' : '#9CA3AF', color: 'white', border: 'none', cursor: 'pointer' }}
             >
-              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2}>
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2}>
                 <path strokeLinecap="round" strokeLinejoin="round" d="M15.536 8.464a5 5 0 010 7.072m2.828-9.9a9 9 0 010 12.728M5.586 15H4a1 1 0 01-1-1v-4a1 1 0 011-1h1.586l4.707-4.707C10.923 3.663 12 4.109 12 5v14c0 .891-1.077 1.337-1.707.707L5.586 15z" />
               </svg>
-              <span style={{ fontSize: '11px' }}>Speaker</span>
+              <span style={{ fontSize: '10px' }}>SPK</span>
             </button>
 
             {/* Pause Button */}
             <button
               onClick={handlePauseToggle}
-              style={{ flex: 1, padding: '10px', borderRadius: '10px', fontWeight: '500', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '6px', backgroundColor: isPaused ? '#9CA3AF' : '#EF4444', color: 'white', border: 'none', cursor: 'pointer' }}
+              style={{ flex: 1, padding: '8px', borderRadius: '10px', fontWeight: '500', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '6px', backgroundColor: isPaused ? '#9CA3AF' : '#EF4444', color: 'white', border: 'none', cursor: 'pointer' }}
             >
-              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2}>
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2}>
                 <path strokeLinecap="round" strokeLinejoin="round" d="M10 9v6m4-6v6m7-3a9 9 0 11-18 0 9 9 0 0118 0z" />
               </svg>
-              <span style={{ fontSize: '11px' }}>Pause</span>
+              <span style={{ fontSize: '10px' }}>Pause</span>
             </button>
 
             {/* Send Button */}
             <button
               onClick={handleAnalyze}
               disabled={!inputValue.trim()}
-              style={{ flex: 1, padding: '10px', borderRadius: '10px', fontWeight: '500', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '6px', backgroundColor: inputValue.trim() ? '#22C55E' : '#D1D5DB', color: 'white', border: 'none', cursor: inputValue.trim() ? 'pointer' : 'not-allowed' }}
+              style={{ flex: 1, padding: '8px', borderRadius: '10px', fontWeight: '500', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '6px', backgroundColor: inputValue.trim() ? '#22C55E' : '#D1D5DB', color: 'white', border: 'none', cursor: inputValue.trim() ? 'pointer' : 'not-allowed' }}
             >
-              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2}>
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2}>
                 <path strokeLinecap="round" strokeLinejoin="round" d="M7 7h10v10M17 7L7 17" />
               </svg>
-              <span style={{ fontSize: '11px' }}>Send</span>
+              <span style={{ fontSize: '10px' }}>Send</span>
             </button>
           </div>
         </div>
