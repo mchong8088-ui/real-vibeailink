@@ -45,14 +45,40 @@ export default function VibeAiMaster() {
 
   useEffect(() => {
     setMounted(true);
-    const ua = window.navigator.userAgent;
-    const isMobileUA = /iPhone|iPad|iPod|Android|Mobile/i.test(ua);
-    const isSmallScreen = window.innerWidth <= 768;
-    const isMobileDevice = isMobileUA || isSmallScreen;
     
+    // IMPROVED MOBILE DETECTION - Works on Safari, Chrome, all devices
+    const ua = window.navigator.userAgent;
+    
+    // Check User Agent for mobile devices
+    const isMobileUA = /iPhone|iPad|iPod|Android|BlackBerry|Opera Mini|IEMobile|WPDesktop|Mobile|webOS|Windows Phone/i.test(ua);
+    
+    // Check screen size
+    const isSmallScreen = window.innerWidth <= 1024;
+    
+    // Check for touch support (tablets and phones)
+    const isTouchDevice = 'ontouchstart' in window || navigator.maxTouchPoints > 0;
+    
+    // Check if it's an iPad (iPadOS 13+ disguises as Mac)
+    const isIPad = /iPad|Macintosh/.test(ua) && navigator.maxTouchPoints > 0;
+    
+    // Final mobile detection
+    const isMobileDevice = isMobileUA || isSmallScreen || (isTouchDevice && !isIPad);
+    
+    // Detect OS
     let detectedOS = "Standard OS";
     if (ua.indexOf("Win") !== -1) detectedOS = "Windows";
-    if (ua.indexOf("Mac") !== -1) detectedOS = "MacOS";
+    if (ua.indexOf("Mac") !== -1 && !isIPad) detectedOS = "MacOS";
+    if (/iPhone|iPad|iPod/i.test(ua) || isIPad) detectedOS = "iOS";
+    if (/Android/i.test(ua)) detectedOS = "Android";
+    
+    console.log("🔍 Device Detection:", { 
+      isMobileDevice, 
+      detectedOS, 
+      screenWidth: window.innerWidth,
+      isTouchDevice,
+      isMobileUA,
+      userAgent: ua.substring(0, 150)
+    });
     
     setSystemState({ os: detectedOS, isMobile: isMobileDevice });
   }, []);
@@ -185,7 +211,7 @@ export default function VibeAiMaster() {
 
   if (!mounted) return null;
 
-  // MOBILE VIEW
+  // MOBILE VIEW - Auto-detected based on device
   if (systemState.isMobile) {
     if (mobilePage === 'landing') {
       return (
@@ -212,7 +238,7 @@ export default function VibeAiMaster() {
     );
   }
 
-  // DESKTOP VIEW - Optimized to fit one screen with small avatar
+  // DESKTOP VIEW - For desktop browsers
   return (
     <div className="flex flex-col h-screen w-full overflow-hidden bg-white">
       
@@ -270,7 +296,7 @@ export default function VibeAiMaster() {
         
         {/* RESTRICTED AREA 2: LEFT PANEL - 20% width, Yellow, Small Avatar */}
         <aside className="w-[20%] bg-[#FEF08A] flex flex-col items-center justify-center p-2">
-          {/* AVATAR - FORCED SMALL SIZE with inline styles */}
+          {/* AVATAR - Small size with inline styles */}
           <div style={{ width: '56px', height: '56px', borderRadius: '50%', overflow: 'hidden', marginBottom: '8px', backgroundColor: 'white', boxShadow: '0 1px 3px rgba(0,0,0,0.1)' }}>
             <img 
               src="/avatars/michael_teresa.jpg" 
