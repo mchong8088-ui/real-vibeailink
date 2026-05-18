@@ -46,21 +46,19 @@ export default function VibeAiMaster() {
   useEffect(() => {
     setMounted(true);
     
-    // FORCE MOBILE VIEW ON LOCALHOST FOR DEBUGGING
+    // Check if running on localhost for debugging
     const isLocalhost = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1';
     
     const ua = window.navigator.userAgent;
     const isMobileUA = /iPhone|iPad|iPod|Android/i.test(ua);
     const isSmallScreen = window.innerWidth < 1024;
     
-    // Force mobile view on localhost for debugging
-    const isMobileDevice = isLocalhost ? true : (isMobileUA || isSmallScreen);
+    // On localhost, force desktop view to see desktop layout
+    const isMobileDevice = isLocalhost ? false : (isMobileUA || isSmallScreen);
     
     let detectedOS = "Standard OS";
     if (ua.indexOf("Win") !== -1) detectedOS = "Windows";
     if (ua.indexOf("Mac") !== -1) detectedOS = "MacOS";
-    
-    console.log("Device detection:", { isMobileDevice, detectedOS, isLocalhost, screenWidth: window.innerWidth });
     
     setSystemState({ os: detectedOS, isMobile: isMobileDevice });
   }, []);
@@ -220,109 +218,135 @@ export default function VibeAiMaster() {
     );
   }
 
-  // DESKTOP VIEW
+  // DESKTOP VIEW - Centered pop-up window layout
   return (
-    <div className="flex flex-col h-screen w-full overflow-hidden bg-white">
+    <div style={{ 
+      display: 'flex', 
+      flexDirection: 'column', 
+      alignItems: 'center', 
+      justifyContent: 'center',
+      minHeight: '100vh',
+      backgroundColor: '#f0f0f0',
+      padding: '20px'
+    }}>
       
-      {/* HEADER - Top fixed bar */}
-      <nav className="h-[8vh] bg-white flex items-center justify-between px-8 flex-shrink-0">
-        <div className="w-1/4">
-          <h1 className="text-2xl font-black italic text-red-600">vibeAiLink</h1>
-        </div>
-        <div className="flex-1 flex justify-center gap-8">
-          {['analysis', 'about', 'features', 'pricing'].map((view) => (
-            <button
-              key={view}
-              onClick={() => { 
-                setCurrentView(view as any); 
-                setLegalTitle(null);
-                const meatArea = document.getElementById('meat-scroll-area');
-                if (meatArea) meatArea.scrollTop = 0;
-              }}
-              style={{
-                fontSize: '11px',
-                fontWeight: currentView === view && !legalTitle ? '900' : '600',
-                letterSpacing: '0.2em',
-                color: currentView === view && !legalTitle ? '#2563EB' : '#94A3B8',
-                textTransform: 'uppercase',
-                background: 'none',
-                border: 'none',
-                cursor: 'pointer',
-                paddingBottom: '4px',
-              }}
-            >
-              {view === 'analysis' ? 'AI STOCK' : view.toUpperCase()}
-            </button>
-          ))}
-        </div>
-        <div className="w-1/4 flex items-center justify-end gap-3">
-          {user ? (
-            <UserMenu 
-              user={user} 
-              profile={profile} 
-              onLogout={handleLogout} 
-              onOpenPricingPage={() => {
-                setCurrentView("pricing");
-                setShowPricingModal(true);
-              }} 
-              onSelectPlan={handleSelectPlan}
-            />
-          ) : (
-            <button 
-              onClick={() => setIsAuthOpen(true)} 
-              style={{
-                color: '#1e293b',
-                fontWeight: '700',
-                fontSize: '11px',
-                backgroundColor: '#F1F5F9',
-                padding: '6px 12px',
-                borderRadius: '9999px',
-                border: 'none',
-                cursor: 'pointer',
-              }}
-            >
-              Login Portal
-            </button>
-          )}
-          <LanguageToggle currentLang={language} onLangChange={(lang: string) => setLanguage(lang as any)} />
-        </div>
-      </nav>
-
-      {/* MAIN CONTENT AREA */}
-      <div className="flex flex-1 overflow-hidden" style={{ height: '92vh' }}>
+      {/* Main Pop-up Window - Centered, 60% width */}
+      <div style={{ 
+        width: '70%', 
+        maxWidth: '1200px',
+        backgroundColor: 'white',
+        borderRadius: '16px',
+        boxShadow: '0 20px 25px -5px rgba(0,0,0,0.1)',
+        overflow: 'hidden',
+        display: 'flex',
+        flexDirection: 'column'
+      }}>
         
-        {/* LEFT PANEL - Yellow background - Avatar with inline styles (64px) */}
-        <aside className="w-[20%] bg-[#FEF08A] flex flex-col items-center justify-center p-3">
-          <div style={{ width: '64px', height: '64px', borderRadius: '50%', overflow: 'hidden', marginBottom: '12px', backgroundColor: 'white', boxShadow: '0 1px 3px rgba(0,0,0,0.1)' }}>
-            <img 
-              src="/avatars/michael_teresa.jpg" 
-              style={{ width: '100%', height: '100%', objectFit: 'cover' }}
-              alt="Michael & Teresa"
-            />
+        {/* RESTRICTED AREA 1: TOP BAR - Logo left, Header center, Language/Login right */}
+        <div style={{ 
+          backgroundColor: 'white', 
+          padding: '12px 20px', 
+          borderBottom: '1px solid #E5E7EB',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'space-between'
+        }}>
+          <div style={{ width: '150px' }}>
+            <h1 style={{ fontSize: '18px', fontWeight: '900', fontStyle: 'italic', color: '#DC2626', margin: 0 }}>vibeAiLink</h1>
           </div>
-          <h3 className="font-black text-slate-900 text-sm uppercase text-center leading-tight">
-            Michael & Teresa
-          </h3>
-          <p className="text-[9px] font-black text-blue-700 tracking-[0.15em] mt-1 uppercase text-center">
-            Finance & Market Analysis
-          </p>
-          <p className="text-[8px] font-bold text-slate-500 tracking-wide mt-1 text-center">
-            {systemState.os} Environment Active
-          </p>
-        </aside>
+          <div style={{ display: 'flex', gap: '32px' }}>
+            {['analysis', 'about', 'features', 'pricing'].map((view) => (
+              <button
+                key={view}
+                onClick={() => { setCurrentView(view as any); setLegalTitle(null); }}
+                style={{
+                  fontSize: '12px',
+                  fontWeight: currentView === view && !legalTitle ? '900' : '500',
+                  letterSpacing: '0.1em',
+                  color: currentView === view && !legalTitle ? '#2563EB' : '#94A3B8',
+                  textTransform: 'uppercase',
+                  background: 'none',
+                  border: 'none',
+                  cursor: 'pointer',
+                  padding: '8px 0',
+                }}
+              >
+                {view === 'analysis' ? 'AI STOCK' : view.toUpperCase()}
+              </button>
+            ))}
+          </div>
+          <div style={{ display: 'flex', gap: '16px', alignItems: 'center', width: '150px', justifyContent: 'flex-end' }}>
+            <LanguageToggle currentLang={language} onLangChange={(lang: string) => setLanguage(lang as any)} />
+            {user ? (
+              <button 
+                onClick={() => setShowUserMenu(!showUserMenu)} 
+                style={{ display: 'flex', alignItems: 'center', gap: '8px', padding: '4px 8px', borderRadius: '20px', backgroundColor: '#F3F4F6', border: 'none', cursor: 'pointer' }}
+              >
+                <div style={{ width: '28px', height: '28px', borderRadius: '50%', backgroundColor: '#3B82F6', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'white', fontWeight: 'bold', fontSize: '12px' }}>
+                  {getUserDisplayName().charAt(0).toUpperCase()}
+                </div>
+                <span style={{ fontSize: '12px' }}>{getUserDisplayName()}</span>
+              </button>
+            ) : (
+              <button 
+                onClick={() => setIsAuthOpen(true)} 
+                style={{ color: '#2563EB', fontWeight: '600', fontSize: '12px', background: 'none', border: 'none', cursor: 'pointer' }}
+              >
+                LOGIN
+              </button>
+            )}
+          </div>
+        </div>
 
-        {/* RIGHT PANEL - Light Blue background */}
-        <div className="w-[80%] bg-[#E0F2FE] flex flex-col overflow-hidden">
+        {/* MAIN CONTENT AREA - Split into Left (1/5) and Right (4/5) */}
+        <div style={{ display: 'flex', minHeight: '500px' }}>
           
-          {/* SCROLLABLE CONTENT AREA */}
-          <div 
-            id="meat-scroll-area"
-            className="flex-1 overflow-y-auto px-[5%] pt-4 pb-2 scrollbar-hide min-h-0"
-          >
-            <div className="max-w-full mx-auto">
+          {/* RESTRICTED AREA 2: LEFT PANEL - 20% width, Yellow background */}
+          <div style={{ 
+            width: '20%', 
+            backgroundColor: '#FEF08A', 
+            display: 'flex', 
+            flexDirection: 'column', 
+            alignItems: 'center', 
+            justifyContent: 'center', 
+            padding: '20px'
+          }}>
+            {/* Avatar - Fixed size 80px */}
+            <div style={{ width: '80px', height: '80px', borderRadius: '50%', overflow: 'hidden', marginBottom: '12px', backgroundColor: 'white', boxShadow: '0 1px 3px rgba(0,0,0,0.1)' }}>
+              <img 
+                src="/avatars/michael_teresa.jpg" 
+                style={{ width: '100%', height: '100%', objectFit: 'cover' }}
+                alt="Michael & Teresa"
+              />
+            </div>
+            <h3 style={{ fontWeight: 'bold', color: '#1F2937', fontSize: '12px', textAlign: 'center', margin: '0' }}>Michael & Teresa</h3>
+            <p style={{ fontSize: '9px', fontWeight: 'bold', color: '#2563EB', textAlign: 'center', marginTop: '8px' }}>
+              Finance & Market Analysis
+            </p>
+            <p style={{ fontSize: '8px', fontWeight: 'bold', color: '#6B7280', textAlign: 'center', marginTop: '8px' }}>
+              {systemState.os} Environment
+            </p>
+          </div>
+
+          {/* RESTRICTED AREA 3: RIGHT PANEL - 80% width, Light Blue background */}
+          <div style={{ 
+            width: '80%', 
+            backgroundColor: '#E0F2FE', 
+            display: 'flex', 
+            flexDirection: 'column',
+            overflow: 'hidden'
+          }}>
+            
+            {/* SCROLLABLE MEAT AREA */}
+            <div id="meat-scroll-area" style={{ 
+              flex: 1, 
+              overflowY: 'auto', 
+              padding: '16px 5%',
+              minHeight: '300px'
+            }}>
               
               {showUserMenu && (
-                <div className="mb-4">
+                <div style={{ marginBottom: '16px' }}>
                   <UserMenu 
                     user={user} 
                     profile={profile} 
@@ -335,27 +359,20 @@ export default function VibeAiMaster() {
               )}
 
               {(showMasterPopup || legalTitle) && (
-                <div className="w-full bg-white rounded-xl shadow-lg p-5 mb-4">
+                <div style={{ backgroundColor: 'white', borderRadius: '12px', padding: '16px', marginBottom: '16px', boxShadow: '0 1px 3px rgba(0,0,0,0.1)' }}>
                   <button 
-                    onClick={() => { 
-                      setIsAuthOpen(false); 
-                      setLegalTitle(null);
-                      setShowPricingModal(false);
-                    }} 
-                    className="float-right text-red-500 font-black text-xs uppercase hover:text-red-700 mb-2"
-                    style={{ background: 'none', border: 'none', cursor: 'pointer' }}
+                    onClick={() => { setIsAuthOpen(false); setLegalTitle(null); setShowPricingModal(false); }} 
+                    style={{ float: 'right', color: '#EF4444', fontSize: '12px', fontWeight: 'bold', background: 'none', border: 'none', cursor: 'pointer' }}
                   >
                     Close ✕
                   </button>
-                  <div className="clear-both">
+                  <div style={{ clear: 'both' }}>
                     {isAuthOpen && !user && <AuthModal isOpen={isAuthOpen} onClose={() => setIsAuthOpen(false)} />}
                     {showLegalGate && <LegalGate language={language} onAccept={() => initializeNewUser("Guest", "guest@vibeailink.com")} />}
                     {legalTitle && (
                       <div>
-                        <h2 className="text-lg font-black mb-3 text-blue-600 uppercase tracking-wide">
-                          {legalTitle}
-                        </h2>
-                        <div className="text-sm text-slate-700 whitespace-pre-wrap">
+                        <h2 style={{ fontSize: '16px', fontWeight: 'bold', marginBottom: '12px', color: '#2563EB' }}>{legalTitle}</h2>
+                        <div style={{ fontSize: '13px', color: '#4B5563' }}>
                           {footerContent[legalTitle]?.[language === "Cantonese" ? "粵語 (繁體中文)" : language] || "Content coming soon..."}
                         </div>
                       </div>
@@ -364,7 +381,7 @@ export default function VibeAiMaster() {
                 </div>
               )}
 
-              <div className="w-full">
+              <div>
                 {currentView === "analysis" && (
                   <StockAnalysisModule 
                     t={t}
@@ -376,10 +393,7 @@ export default function VibeAiMaster() {
                 {currentView === "pricing" && (
                   <PricingModal 
                     isOpen={true} 
-                    onClose={() => {
-                      setCurrentView("analysis");
-                      setShowPricingModal(false);
-                    }} 
+                    onClose={() => { setCurrentView("analysis"); setShowPricingModal(false); }}
                     user={user} 
                     profile={profile} 
                     onSelectPlan={handleSelectPlan} 
@@ -390,77 +404,44 @@ export default function VibeAiMaster() {
                 {currentView === "features" && <FeaturesSection lang={language} />}
               </div>
             </div>
-          </div>
 
-          {/* INPUT AREA - Centered */}
-          <div 
-            className="bg-white rounded-t-3xl shadow-lg flex-shrink-0"
-            style={{ 
-              paddingTop: '16px',
-              paddingBottom: '16px',
-              paddingLeft: '5%',
-              paddingRight: '5%',
-              minHeight: '120px',
-              display: 'flex',
-              justifyContent: 'center',
-              alignItems: 'center',
-            }}
-          >
-            <div style={{ maxWidth: '900px', width: '100%', margin: '0 auto' }}>
+            {/* FIXED INPUT AREA */}
+            <div style={{ 
+              backgroundColor: 'white', 
+              padding: '12px 5%',
+              borderTop: '1px solid #E5E7EB',
+              flexShrink: 0
+            }}>
               <SmartInputSystem 
-                langKey={language} 
-                onAnalyze={handleAnalyzeRequest} 
+                langKey={language}
+                onAnalyze={handleAnalyzeRequest}
                 onPlusClick={() => setIsMenuOpen(true)} 
                 systemInfo={systemInfo}
                 analysisText={analysisData?.summary}
               />
             </div>
-          </div>
 
-          {/* FOOTER */}
-          <div className="bg-white flex-shrink-0 py-3">
-            <div className="px-[5%]">
-              <div style={{ 
-                display: 'flex', 
-                justifyContent: 'center', 
-                alignItems: 'center', 
-                gap: '24px',
-                flexWrap: 'wrap',
-              }}>
-                {['DISCLAIMER', '服務條款', '隱私政策', '退款政策', '聯絡我們'].map((tab) => (
-                  <button
-                    key={tab}
-                    onClick={() => {
-                      setLegalTitle(tab);
-                      const meatArea = document.getElementById('meat-scroll-area');
-                      if (meatArea) meatArea.scrollTop = 0;
-                    }}
-                    style={{
-                      background: 'none',
-                      border: 'none',
-                      color: legalTitle === tab ? '#2563EB' : '#3B82F6',
-                      fontWeight: legalTitle === tab ? '900' : '500',
-                      fontSize: '11px',
-                      letterSpacing: '0.05em',
-                      cursor: 'pointer',
-                      padding: '4px 8px',
-                    }}
-                  >
-                    {tab}
-                  </button>
-                ))}
-              </div>
+            {/* RESTRICTED AREA 4: FOOTER */}
+            <div style={{ 
+              backgroundColor: 'white', 
+              padding: '8px 5%',
+              borderTop: '1px solid #E5E7EB',
+              display: 'flex',
+              justifyContent: 'center',
+              gap: '24px',
+              flexWrap: 'wrap'
+            }}>
+              <button onClick={() => { setLegalTitle('DISCLAIMER'); }} style={{ fontSize: '10px', color: '#3B82F6', background: 'none', border: 'none', cursor: 'pointer' }}>DISCLAIMER</button>
+              <button onClick={() => { setLegalTitle('服務條款'); }} style={{ fontSize: '10px', color: '#3B82F6', background: 'none', border: 'none', cursor: 'pointer' }}>TERMS</button>
+              <button onClick={() => { setLegalTitle('隱私政策'); }} style={{ fontSize: '10px', color: '#3B82F6', background: 'none', border: 'none', cursor: 'pointer' }}>PRIVACY</button>
+              <button onClick={() => { setLegalTitle('退款政策'); }} style={{ fontSize: '10px', color: '#3B82F6', background: 'none', border: 'none', cursor: 'pointer' }}>REFUND</button>
+              <button onClick={() => { setLegalTitle('聯絡我們'); }} style={{ fontSize: '10px', color: '#3B82F6', background: 'none', border: 'none', cursor: 'pointer' }}>CONTACT</button>
             </div>
           </div>
         </div>
       </div>
 
-      <SourceMenu 
-        isOpen={isMenuOpen} 
-        onClose={() => setIsMenuOpen(false)} 
-        onSelectSource={handleSourceSelect} 
-        langKey={language} 
-      />
+      <SourceMenu isOpen={isMenuOpen} onClose={() => setIsMenuOpen(false)} onSelectSource={handleSourceSelect} langKey={language}/>
     </div>
   );
 }
