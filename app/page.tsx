@@ -218,7 +218,7 @@ export default function VibeAiMaster() {
     );
   }
 
-  // DESKTOP VIEW - Centered pop-up window layout
+  // DESKTOP VIEW - Centered pop-up window layout with 100px avatar
   return (
     <div style={{ 
       display: 'flex', 
@@ -230,7 +230,7 @@ export default function VibeAiMaster() {
       padding: '20px'
     }}>
       
-      {/* Main Pop-up Window - Centered, 60% width */}
+      {/* Main Pop-up Window - Centered, 70% width */}
       <div style={{ 
         width: '70%', 
         maxWidth: '1200px',
@@ -242,7 +242,7 @@ export default function VibeAiMaster() {
         flexDirection: 'column'
       }}>
         
-        {/* RESTRICTED AREA 1: TOP BAR - Logo left, Header center, Language/Login right */}
+        {/* RESTRICTED AREA 1: TOP BAR */}
         <div style={{ 
           backgroundColor: 'white', 
           padding: '12px 20px', 
@@ -298,10 +298,10 @@ export default function VibeAiMaster() {
           </div>
         </div>
 
-        {/* MAIN CONTENT AREA - Split into Left (1/5) and Right (4/5) */}
+        {/* MAIN CONTENT AREA */}
         <div style={{ display: 'flex', minHeight: '500px' }}>
           
-          {/* RESTRICTED AREA 2: LEFT PANEL - 20% width, Yellow background */}
+          {/* RESTRICTED AREA 2: LEFT PANEL - Yellow background, 20% width, 100px avatar */}
           <div style={{ 
             width: '20%', 
             backgroundColor: '#FEF08A', 
@@ -311,24 +311,24 @@ export default function VibeAiMaster() {
             justifyContent: 'center', 
             padding: '20px'
           }}>
-            {/* Avatar - Fixed size 80px */}
-            <div style={{ width: '80px', height: '80px', borderRadius: '50%', overflow: 'hidden', marginBottom: '12px', backgroundColor: 'white', boxShadow: '0 1px 3px rgba(0,0,0,0.1)' }}>
+            {/* Avatar - 100px */}
+            <div style={{ width: '100px', height: '100px', borderRadius: '50%', overflow: 'hidden', marginBottom: '16px', backgroundColor: 'white', boxShadow: '0 2px 4px rgba(0,0,0,0.1)' }}>
               <img 
                 src="/avatars/michael_teresa.jpg" 
                 style={{ width: '100%', height: '100%', objectFit: 'cover' }}
                 alt="Michael & Teresa"
               />
             </div>
-            <h3 style={{ fontWeight: 'bold', color: '#1F2937', fontSize: '12px', textAlign: 'center', margin: '0' }}>Michael & Teresa</h3>
-            <p style={{ fontSize: '9px', fontWeight: 'bold', color: '#2563EB', textAlign: 'center', marginTop: '8px' }}>
+            <h3 style={{ fontWeight: 'bold', color: '#1F2937', fontSize: '14px', textAlign: 'center', margin: '0' }}>Michael & Teresa</h3>
+            <p style={{ fontSize: '10px', fontWeight: 'bold', color: '#2563EB', textAlign: 'center', marginTop: '8px' }}>
               Finance & Market Analysis
             </p>
-            <p style={{ fontSize: '8px', fontWeight: 'bold', color: '#6B7280', textAlign: 'center', marginTop: '8px' }}>
+            <p style={{ fontSize: '9px', fontWeight: 'bold', color: '#6B7280', textAlign: 'center', marginTop: '8px' }}>
               {systemState.os} Environment
             </p>
           </div>
 
-          {/* RESTRICTED AREA 3: RIGHT PANEL - 80% width, Light Blue background */}
+          {/* RESTRICTED AREA 3: RIGHT PANEL - Light Blue background */}
           <div style={{ 
             width: '80%', 
             backgroundColor: '#E0F2FE', 

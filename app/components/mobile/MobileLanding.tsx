@@ -49,83 +49,82 @@ const MobileLanding: React.FC<MobileLandingProps> = ({
   };
 
   return (
-    <div className="flex flex-col h-screen w-full bg-white overflow-hidden">
+    <div style={{ display: 'flex', flexDirection: 'column', height: '100vh', width: '100%', backgroundColor: 'white', overflow: 'hidden' }}>
       
-      {/* Page 1: Landing Page */}
-      
-      {/* RESTRICTED REGION 1: Top Header */}
-      <div className="bg-white pt-3 pb-2 px-4 flex-shrink-0">
-        <div className="flex justify-between items-center">
-          <h1 className="text-lg font-black italic text-red-600">vibeAiLink</h1>
-          <div className="flex gap-3 items-center">
+      {/* Top Header */}
+      <div style={{ backgroundColor: 'white', padding: '12px 16px 8px 16px', flexShrink: 0 }}>
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+          <h1 style={{ fontSize: '14px', fontWeight: '900', fontStyle: 'italic', color: '#DC2626', margin: 0 }}>vibeAiLink</h1>
+          <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
             <LanguageToggle currentLang={langKey} onLangChange={setLangKey} />
-            <button onClick={onAuthOpen} className="text-blue-600 font-semibold text-sm">
+            <button onClick={onAuthOpen} style={{ color: '#2563EB', fontWeight: '600', fontSize: '11px', background: 'none', border: 'none', cursor: 'pointer' }}>
               {user ? 'Welcome' : '登入'}
             </button>
           </div>
         </div>
         
-        {/* Header Topics - 4 items */}
-        <div className="flex justify-around mt-3">
+        {/* Header Topics */}
+        <div style={{ display: 'flex', justifyContent: 'space-around', marginTop: '12px' }}>
           {headerTopics.map((topic) => (
             <button
               key={topic.id}
               onClick={() => handleNavigate(topic.id, topic.id)}
-              className="flex flex-col items-center gap-0.5 py-1"
+              style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '2px', padding: '4px 8px', background: 'none', border: 'none', cursor: 'pointer' }}
             >
-              <span className="text-xl">{topic.icon}</span>
-              <span className="text-[10px] font-medium text-gray-600">{topic.label}</span>
+              <span style={{ fontSize: '20px' }}>{topic.icon}</span>
+              <span style={{ fontSize: '9px', fontWeight: '500', color: '#4B5563' }}>{topic.label}</span>
             </button>
           ))}
         </div>
       </div>
 
-      {/* RESTRICTED REGION 2: Main Content with Welcome Message */}
-      <div className="flex-1 bg-[#FEF08A] flex flex-col items-center justify-center px-4 py-2">
-        {/* Small Avatar */}
-        <div className="w-14 h-14 rounded-full overflow-hidden bg-white shadow-md">
-          <img src="/avatars/michael_teresa.jpg" className="w-full h-full object-cover" alt="Michael & Teresa" />
+      {/* Main Content - Yellow background */}
+      <div style={{ flex: 1, backgroundColor: '#FEF08A', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', padding: '16px' }}>
+        {/* Avatar - 56px (slightly larger but still contained) */}
+        <div style={{ width: '56px', height: '56px', borderRadius: '50%', overflow: 'hidden', backgroundColor: 'white', boxShadow: '0 4px 6px -1px rgba(0,0,0,0.1)', marginBottom: '8px' }}>
+          <img src="/avatars/michael_teresa.jpg" style={{ width: '100%', height: '100%', objectFit: 'cover' }} alt="Michael & Teresa" />
         </div>
         
-        <h3 className="font-bold text-gray-800 text-sm mt-1">Michael & Teresa</h3>
-        <p className="text-[9px] text-gray-600">金融與市場分析</p>
+        <h3 style={{ fontWeight: 'bold', color: '#1F2937', fontSize: '11px', margin: '4px 0 0 0' }}>Michael & Teresa</h3>
+        <p style={{ fontSize: '9px', color: '#4B5563', margin: '2px 0 0 0' }}>金融與市場分析</p>
         
         {/* Welcome Message */}
-        <p className="text-[10px] text-gray-700 text-center mt-3 px-4 leading-relaxed">
-          Hi，我哋係 Michael 同 Teresa，金融專員同數據分析助手。<br />
-          歡迎一齊探索全球 AI 新聞同股票分析。
+        <p style={{ fontSize: '10px', color: '#374151', textAlign: 'center', marginTop: '12px', padding: '0 8px', lineHeight: '1.4' }}>
+          我哋係 Michael 同 Teresa，金融專員同數據分析助手。
         </p>
         
-        {/* Start Button - Navigates to Page 2 */}
+        {/* Start Button */}
         <button
           onClick={() => handleNavigate('analysis', 'analysis')}
-          className="mt-4 px-6 py-2 bg-yellow-400 rounded-full shadow-md flex items-center gap-2 active:scale-95"
+          style={{ marginTop: '16px', padding: '8px 20px', backgroundColor: '#FBBF24', borderRadius: '9999px', boxShadow: '0 4px 6px -1px rgba(0,0,0,0.1)', display: 'flex', alignItems: 'center', gap: '8px', border: 'none', cursor: 'pointer' }}
         >
-          <span className="text-lg">⭐</span>
-          <span className="text-sm font-bold text-gray-800">開始分析</span>
+          <span style={{ fontSize: '14px' }}>⭐</span>
+          <span style={{ fontSize: '12px', fontWeight: 'bold', color: '#1F2937' }}>開始分析</span>
         </button>
       </div>
 
-      {/* RESTRICTED REGION 4: Footer - 3-line icon only */}
-      <div className="bg-white py-2 px-4 border-t border-gray-100 flex justify-end flex-shrink-0">
+      {/* Footer - 3-line icon */}
+      <div style={{ backgroundColor: 'white', padding: '8px 16px', borderTop: '1px solid #F3F4F6', display: 'flex', justifyContent: 'flex-end', flexShrink: 0 }}>
         <button
           onClick={() => setShowFooterMenu(!showFooterMenu)}
-          className="p-2 rounded-full bg-gray-100 active:bg-gray-200"
+          style={{ padding: '6px', borderRadius: '50%', backgroundColor: '#F3F4F6', border: 'none', cursor: 'pointer' }}
         >
-          <svg className="w-5 h-5 text-gray-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16M4 18h16" />
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round">
+            <line x1="4" y1="6" x2="20" y2="6" />
+            <line x1="4" y1="12" x2="20" y2="12" />
+            <line x1="4" y1="18" x2="20" y2="18" />
           </svg>
         </button>
       </div>
 
       {/* Footer Popup Menu */}
       {showFooterMenu && (
-        <div className="fixed bottom-14 right-3 bg-white rounded-xl shadow-xl border z-50 w-40">
+        <div style={{ position: 'fixed', bottom: '48px', right: '12px', backgroundColor: 'white', borderRadius: '12px', boxShadow: '0 10px 15px -3px rgba(0,0,0,0.1)', border: '1px solid #E5E7EB', zIndex: 50, width: '160px' }}>
           {footerTopics.map((topic) => (
             <button
               key={topic.id}
               onClick={() => handleFooterSelect(topic.id)}
-              className="w-full text-left px-3 py-2 text-xs text-blue-600 hover:bg-gray-50 border-b border-gray-100 last:border-0"
+              style={{ width: '100%', textAlign: 'left', padding: '8px 12px', fontSize: '11px', color: '#2563EB', background: 'none', border: 'none', borderBottom: '1px solid #F3F4F6', cursor: 'pointer' }}
             >
               {topic.label}
             </button>
