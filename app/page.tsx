@@ -46,39 +46,19 @@ export default function VibeAiMaster() {
   useEffect(() => {
     setMounted(true);
     
-    // IMPROVED MOBILE DETECTION - Works on Safari, Chrome, all devices
+    // IMPROVED MOBILE DETECTION
     const ua = window.navigator.userAgent;
-    
-    // Check User Agent for mobile devices
-    const isMobileUA = /iPhone|iPad|iPod|Android|BlackBerry|Opera Mini|IEMobile|WPDesktop|Mobile|webOS|Windows Phone/i.test(ua);
-    
-    // Check screen size
+    const isMobileUA = /iPhone|iPad|iPod|Android|BlackBerry|Opera Mini|IEMobile|Mobile|webOS|Windows Phone/i.test(ua);
     const isSmallScreen = window.innerWidth <= 1024;
-    
-    // Check for touch support (tablets and phones)
     const isTouchDevice = 'ontouchstart' in window || navigator.maxTouchPoints > 0;
-    
-    // Check if it's an iPad (iPadOS 13+ disguises as Mac)
     const isIPad = /iPad|Macintosh/.test(ua) && navigator.maxTouchPoints > 0;
-    
-    // Final mobile detection
     const isMobileDevice = isMobileUA || isSmallScreen || (isTouchDevice && !isIPad);
     
-    // Detect OS
     let detectedOS = "Standard OS";
     if (ua.indexOf("Win") !== -1) detectedOS = "Windows";
     if (ua.indexOf("Mac") !== -1 && !isIPad) detectedOS = "MacOS";
     if (/iPhone|iPad|iPod/i.test(ua) || isIPad) detectedOS = "iOS";
     if (/Android/i.test(ua)) detectedOS = "Android";
-    
-    console.log("🔍 Device Detection:", { 
-      isMobileDevice, 
-      detectedOS, 
-      screenWidth: window.innerWidth,
-      isTouchDevice,
-      isMobileUA,
-      userAgent: ua.substring(0, 150)
-    });
     
     setSystemState({ os: detectedOS, isMobile: isMobileDevice });
   }, []);
@@ -211,7 +191,7 @@ export default function VibeAiMaster() {
 
   if (!mounted) return null;
 
-  // MOBILE VIEW - Auto-detected based on device
+  // MOBILE VIEW - For phones and tablets
   if (systemState.isMobile) {
     if (mobilePage === 'landing') {
       return (
@@ -238,16 +218,16 @@ export default function VibeAiMaster() {
     );
   }
 
-  // DESKTOP VIEW - For desktop browsers
+  // DESKTOP VIEW - Full layout with left panel (yellow) and right panel (blue)
   return (
     <div className="flex flex-col h-screen w-full overflow-hidden bg-white">
       
-      {/* RESTRICTED AREA 1: HEADER - 10% height */}
-      <nav className="h-[10vh] bg-white flex items-center justify-between px-6 flex-shrink-0">
+      {/* HEADER - Top bar */}
+      <nav className="h-[8vh] bg-white flex items-center justify-between px-8 flex-shrink-0">
         <div className="w-1/4">
-          <h1 className="text-xl font-black italic text-red-600">vibeAiLink</h1>
+          <h1 className="text-2xl font-black italic text-red-600">vibeAiLink</h1>
         </div>
-        <div className="flex-1 flex justify-center gap-6">
+        <div className="flex-1 flex justify-center gap-8">
           {['analysis', 'about', 'features', 'pricing'].map((view) => (
             <button
               key={view}
@@ -273,7 +253,7 @@ export default function VibeAiMaster() {
           {user ? (
             <button 
               onClick={() => setShowUserMenu(!showUserMenu)} 
-              className="flex items-center gap-2 px-2 py-1 rounded-full bg-slate-100"
+              className="flex items-center gap-2 px-3 py-1 rounded-full bg-slate-100"
             >
               <div className="w-7 h-7 rounded-full bg-blue-500 flex items-center justify-center text-white font-bold text-xs">
                 {getUserDisplayName().charAt(0).toUpperCase()}
@@ -291,37 +271,32 @@ export default function VibeAiMaster() {
         </div>
       </nav>
 
-      {/* MAIN CONTENT AREA - 90% height total */}
-      <div className="flex flex-1 overflow-hidden" style={{ height: '90vh' }}>
+      {/* MAIN CONTENT AREA */}
+      <div className="flex flex-1 overflow-hidden" style={{ height: '92vh' }}>
         
-        {/* RESTRICTED AREA 2: LEFT PANEL - 20% width, Yellow, Small Avatar */}
-        <aside className="w-[20%] bg-[#FEF08A] flex flex-col items-center justify-center p-2">
-          {/* AVATAR - Small size with inline styles */}
-          <div style={{ width: '56px', height: '56px', borderRadius: '50%', overflow: 'hidden', marginBottom: '8px', backgroundColor: 'white', boxShadow: '0 1px 3px rgba(0,0,0,0.1)' }}>
-            <img 
-              src="/avatars/michael_teresa.jpg" 
-              style={{ width: '100%', height: '100%', objectFit: 'cover' }}
-              alt="Michael & Teresa" 
-            />
+        {/* LEFT PANEL - Yellow background, 20% width */}
+        <aside className="w-[20%] bg-[#FEF08A] flex flex-col items-center justify-center p-3">
+          <div className="w-24 h-24 rounded-full overflow-hidden mb-3 bg-white shadow">
+            <img src="/avatars/michael_teresa.jpg" className="w-full h-full object-cover" alt="Michael & Teresa" />
           </div>
-          <h3 className="font-black text-slate-800 text-xs uppercase text-center">Michael & Teresa</h3>
-          <p className="text-[8px] font-black text-blue-700 uppercase text-center mt-1">
+          <h3 className="font-black text-slate-800 text-sm uppercase text-center">Michael & Teresa</h3>
+          <p className="text-[9px] font-black text-blue-700 uppercase text-center mt-1">
             FINANCE & MARKET
           </p>
-          <p className="text-[7px] font-bold text-slate-500 text-center mt-1">
+          <p className="text-[8px] font-bold text-slate-500 text-center mt-1">
             {systemState.os}
           </p>
         </aside>
 
-        {/* RESTRICTED AREA 3: RIGHT PANEL - 80% width, Light Blue */}
+        {/* RIGHT PANEL - Light Blue background, 80% width */}
         <div className="w-[80%] bg-[#E0F2FE] flex flex-col overflow-hidden">
           
-          {/* SCROLLABLE MEAT AREA - Takes remaining space */}
-          <div id="meat-scroll-area" className="flex-1 overflow-y-auto px-4 pt-2 pb-1 scrollbar-hide">
+          {/* SCROLLABLE CONTENT AREA */}
+          <div id="meat-scroll-area" className="flex-1 overflow-y-auto px-6 pt-4 pb-2 scrollbar-hide">
             <div className="max-w-full mx-auto">
               
               {showUserMenu && (
-                <div className="mb-2">
+                <div className="mb-3">
                   <UserMenu 
                     user={user} 
                     profile={profile} 
@@ -334,10 +309,10 @@ export default function VibeAiMaster() {
               )}
 
               {(showMasterPopup || legalTitle) && (
-                <div className="w-full bg-white rounded-lg shadow p-3 mb-2">
+                <div className="w-full bg-white rounded-xl shadow p-5 mb-4">
                   <button 
                     onClick={() => { setIsAuthOpen(false); setLegalTitle(null); setShowPricingModal(false); }} 
-                    className="float-right text-red-500 font-bold text-xs"
+                    className="float-right text-red-500 font-bold text-sm"
                     style={{ background: 'none', border: 'none', cursor: 'pointer' }}
                   >
                     Close ✕
@@ -347,8 +322,8 @@ export default function VibeAiMaster() {
                     {showLegalGate && <LegalGate language={language} onAccept={() => initializeNewUser("Guest", "guest@vibeailink.com")} />}
                     {legalTitle && (
                       <div>
-                        <h2 className="text-base font-black mb-2 text-blue-600">{legalTitle}</h2>
-                        <div className="text-xs text-slate-700">
+                        <h2 className="text-lg font-black mb-3 text-blue-600">{legalTitle}</h2>
+                        <div className="text-sm text-slate-700">
                           {footerContent[legalTitle]?.[language === "Cantonese" ? "粵語 (繁體中文)" : language] || "Content coming soon..."}
                         </div>
                       </div>
@@ -382,8 +357,8 @@ export default function VibeAiMaster() {
             </div>
           </div>
 
-          {/* RESTRICTED AREA: FIXED INPUT BAR */}
-          <div className="bg-white flex-shrink-0 py-2 px-4">
+          {/* FIXED INPUT AREA */}
+          <div className="bg-white shadow-lg flex-shrink-0 py-3 px-6">
             <SmartInputSystem 
               langKey={language}
               onAnalyze={handleAnalyzeRequest}
@@ -393,14 +368,14 @@ export default function VibeAiMaster() {
             />
           </div>
 
-          {/* RESTRICTED AREA 4: FOOTER */}
-          <div className="bg-white flex-shrink-0 py-1 px-4">
-            <div className="flex justify-center items-center gap-3 flex-wrap">
-              <button onClick={() => { setLegalTitle('DISCLAIMER'); }} style={{ fontSize: '8px', color: '#3B82F6', background: 'none', border: 'none', cursor: 'pointer' }}>DISCLAIMER</button>
-              <button onClick={() => { setLegalTitle('服務條款'); }} style={{ fontSize: '8px', color: '#3B82F6', background: 'none', border: 'none', cursor: 'pointer' }}>TERMS</button>
-              <button onClick={() => { setLegalTitle('隱私政策'); }} style={{ fontSize: '8px', color: '#3B82F6', background: 'none', border: 'none', cursor: 'pointer' }}>PRIVACY</button>
-              <button onClick={() => { setLegalTitle('退款政策'); }} style={{ fontSize: '8px', color: '#3B82F6', background: 'none', border: 'none', cursor: 'pointer' }}>REFUND</button>
-              <button onClick={() => { setLegalTitle('聯絡我們'); }} style={{ fontSize: '8px', color: '#3B82F6', background: 'none', border: 'none', cursor: 'pointer' }}>CONTACT</button>
+          {/* FOOTER */}
+          <div className="bg-white flex-shrink-0 py-2 px-6">
+            <div className="flex justify-center items-center gap-4 flex-wrap">
+              <button onClick={() => { setLegalTitle('DISCLAIMER'); }} className="text-[10px] text-blue-600 hover:text-blue-800">DISCLAIMER</button>
+              <button onClick={() => { setLegalTitle('服務條款'); }} className="text-[10px] text-blue-600 hover:text-blue-800">TERMS</button>
+              <button onClick={() => { setLegalTitle('隱私政策'); }} className="text-[10px] text-blue-600 hover:text-blue-800">PRIVACY</button>
+              <button onClick={() => { setLegalTitle('退款政策'); }} className="text-[10px] text-blue-600 hover:text-blue-800">REFUND</button>
+              <button onClick={() => { setLegalTitle('聯絡我們'); }} className="text-[10px] text-blue-600 hover:text-blue-800">CONTACT</button>
             </div>
           </div>
         </div>
