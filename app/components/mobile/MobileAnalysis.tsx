@@ -163,7 +163,7 @@ const MobileAnalysis: React.FC<MobileAnalysisProps> = ({
     return langKey === 'Cantonese' ? 'AI 分析' : langKey === '简体中文' ? 'AI 分析' : 'AI Analysis';
   };
 
-  // Compact analysis display for mobile - takes 1/3 of meat area
+  // Compact analysis display for mobile
   const CompactAnalysis = () => {
     if (isLoading) {
       return (
@@ -185,12 +185,9 @@ const MobileAnalysis: React.FC<MobileAnalysisProps> = ({
 
     return (
       <div className="bg-white rounded-xl p-3 space-y-3">
-        {/* Stock Symbol */}
         <div className="text-center">
           <h2 className="text-lg font-bold text-gray-800">{analysisData.symbol}</h2>
         </div>
-
-        {/* Quick Stats Row - 1/3 of meat area */}
         <div className="flex gap-2">
           <div className="flex-1 bg-gray-50 rounded-lg p-2 text-center">
             <p className="text-[9px] text-gray-400">{langKey === 'Cantonese' ? '價格' : 'Price'}</p>
@@ -212,15 +209,16 @@ const MobileAnalysis: React.FC<MobileAnalysisProps> = ({
   return (
     <div className="flex flex-col h-screen w-full bg-white overflow-hidden">
       
-      {/* TOP BAR - Return Arrow, Title, Language/Login */}
+      {/* TOP BAR - Return Arrow clearly visible, Title, Language/Login in one row */}
       <div className="bg-white px-4 py-3 border-b border-gray-100 flex items-center justify-between flex-shrink-0">
-        <button onClick={onBack} className="p-1 -ml-2">
-          <svg className="w-6 h-6 text-gray-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
+        <button onClick={onBack} className="flex items-center gap-1 text-gray-600">
+          <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={2}>
+            <path strokeLinecap="round" strokeLinejoin="round" d="M15 19l-7-7 7-7" />
           </svg>
+          <span className="text-xs font-medium">Back</span>
         </button>
         <h2 className="text-base font-semibold text-gray-800">{getTitle()}</h2>
-        <div className="flex gap-2">
+        <div className="flex gap-2 items-center">
           <LanguageToggle currentLang={langKey} onLangChange={setLangKey} />
           <button onClick={onAuthOpen} className="text-blue-600 font-semibold text-sm">
             {user ? 'Welcome' : (langKey === 'Cantonese' ? '登入' : langKey === '简体中文' ? '登录' : 'Login')}
@@ -228,10 +226,9 @@ const MobileAnalysis: React.FC<MobileAnalysisProps> = ({
         </div>
       </div>
 
-      {/* SCROLLABLE MEAT AREA - Analysis output and popups */}
+      {/* SCROLLABLE MEAT AREA */}
       <div className="flex-1 overflow-y-auto bg-gray-50 p-3" style={{ minHeight: 0 }}>
         
-        {/* Legal Content Popup */}
         {legalTitle && (
           <div className="bg-white rounded-xl p-4 mb-3">
             <div className="text-sm text-gray-700">
@@ -240,87 +237,95 @@ const MobileAnalysis: React.FC<MobileAnalysisProps> = ({
           </div>
         )}
 
-        {/* Pricing Modal */}
         {topicId === 'pricing' && (
           <div className="bg-white rounded-xl p-3">
             <PricingModal isOpen={true} onClose={onBack} user={user} profile={null} onSelectPlan={handleSelectPlan} showRetentionOnly={false} />
           </div>
         )}
 
-        {/* About/Features Sections */}
         {topicId === 'about' && <AboutSection lang={langKey} />}
         {topicId === 'features' && <FeaturesSection lang={langKey} />}
 
-        {/* Analysis Mode - Stock analysis output in scrollable area */}
         {isAnalysisMode && !legalTitle && (
           <>
             <CompactAnalysis />
-            {/* Analysis text output - scrollable */}
             {analysisData?.summary && (
               <div className="bg-white rounded-xl p-3 mt-3 max-h-40 overflow-y-auto">
                 <p className="text-xs text-gray-700 leading-relaxed whitespace-pre-wrap">{analysisData.summary}</p>
               </div>
             )}
-            {/* Spacer for bottom input bar */}
-            <div className="h-20"></div>
+            <div className="h-24"></div>
           </>
         )}
       </div>
 
-      {/* FIXED INPUT BAR - Locked at bottom, never scrolls */}
+      {/* FIXED INPUT BAR - Bottom of screen, clear colors and sizes */}
       {isAnalysisMode && !legalTitle && (
-        <div className="bg-white border-t border-gray-100 px-3 py-2 flex-shrink-0">
-          <div className="flex items-center gap-2">
-            {/* RED MIC Toggle */}
+        <div className="bg-white border-t border-gray-200 px-3 py-3 flex-shrink-0">
+          {/* Input Field Row - Full width */}
+          <div className="mb-2">
+            <input
+              type="text"
+              value={inputValue}
+              onChange={(e) => setInputValue(e.target.value)}
+              placeholder={isListening ? (langKey === 'Cantonese' ? '聆聽中...' : 'Listening...') : exampleText}
+              className="w-full px-4 py-3 text-sm text-gray-700 bg-gray-100 rounded-xl focus:bg-white transition outline-none border border-gray-200"
+            />
+          </div>
+          
+          {/* Control Buttons Row - All buttons clearly visible */}
+          <div className="flex items-center justify-around gap-2">
+            {/* MIC Button - Red */}
             <button
               onClick={handleMicToggle}
-              className={`p-2 rounded-full ${isListening ? 'bg-blue-500' : 'bg-red-500'} text-white w-9 h-9 flex items-center justify-center`}
+              className={`flex-1 py-2 rounded-xl font-medium transition flex items-center justify-center gap-2 ${
+                isListening ? 'bg-blue-500' : 'bg-red-500'
+              } text-white`}
             >
-              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 11a7 7 0 01-7 7m0 0a7 7 0 01-7-7m7 7v4m0 0H8m4 0h4m-4-8a3 3 0 01-3-3V5a3 3 0 116 0v6a3 3 0 01-3 3z" />
               </svg>
+              <span className="text-xs font-medium">MIC</span>
             </button>
 
-            {/* Input Field */}
-            <div className="flex-1">
-              <input
-                type="text"
-                value={inputValue}
-                onChange={(e) => setInputValue(e.target.value)}
-                placeholder={isListening ? (langKey === 'Cantonese' ? '聆聽中...' : 'Listening...') : exampleText}
-                className="w-full px-3 py-2 text-sm text-gray-700 bg-gray-100 rounded-full focus:bg-white transition outline-none"
-              />
-            </div>
-
-            {/* RED Speaker Toggle */}
+            {/* Speaker Button - Red */}
             <button
               onClick={handleSpeakerToggle}
-              className={`p-2 rounded-full ${isSpeakerActive ? 'bg-red-500' : 'bg-gray-400'} text-white w-9 h-9 flex items-center justify-center`}
+              className={`flex-1 py-2 rounded-xl font-medium transition flex items-center justify-center gap-2 ${
+                isSpeakerActive ? 'bg-red-500' : 'bg-gray-400'
+              } text-white`}
             >
-              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15.536 8.464a5 5 0 010 7.072m2.828-9.9a9 9 0 010 12.728M5.586 15H4a1 1 0 01-1-1v-4a1 1 0 011-1h1.586l4.707-4.707C10.923 3.663 12 4.109 12 5v14c0 .891-1.077 1.337-1.707.707L5.586 15z" />
               </svg>
+              <span className="text-xs font-medium">Speaker</span>
             </button>
 
-            {/* Pause Toggle */}
+            {/* Pause Button - Red when active */}
             <button
               onClick={handlePauseToggle}
-              className={`p-2 rounded-full ${isPaused ? 'bg-gray-400' : 'bg-red-500'} text-white w-9 h-9 flex items-center justify-center`}
+              className={`flex-1 py-2 rounded-xl font-medium transition flex items-center justify-center gap-2 ${
+                isPaused ? 'bg-gray-400' : 'bg-red-500'
+              } text-white`}
             >
-              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 9v6m4-6v6m7-3a9 9 0 11-18 0 9 9 0 0118 0z" />
               </svg>
+              <span className="text-xs font-medium">Pause</span>
             </button>
 
-            {/* GREEN Send Button */}
+            {/* Send Button - Green */}
             <button
               onClick={handleAnalyze}
               disabled={!inputValue.trim()}
-              className={`p-2 rounded-full ${inputValue.trim() ? 'bg-green-500' : 'bg-gray-300'} text-white w-9 h-9 flex items-center justify-center`}
+              className={`flex-1 py-2 rounded-xl font-medium transition flex items-center justify-center gap-2 ${
+                inputValue.trim() ? 'bg-green-500' : 'bg-gray-300'
+              } text-white`}
             >
-              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 7h10v10M17 7L7 17" />
               </svg>
+              <span className="text-xs font-medium">Send</span>
             </button>
           </div>
         </div>
