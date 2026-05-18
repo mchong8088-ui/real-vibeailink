@@ -41,6 +41,7 @@ const MobileAnalysis: React.FC<MobileAnalysisProps> = ({
     analyzingMarket: langKey === 'Cantonese' ? '分析市場中...' : langKey === '简体中文' ? '分析市场中...' : 'Analyzing Market...',
   };
 
+  // Speech Recognition Setup
   useEffect(() => {
     if (typeof window !== 'undefined') {
       const SpeechRecognition = (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition;
@@ -62,6 +63,7 @@ const MobileAnalysis: React.FC<MobileAnalysisProps> = ({
     }
   }, [langKey]);
 
+  // Text-to-Speech
   useEffect(() => {
     if (analysisData?.summary && isSpeakerActive && !isPaused) {
       if (utteranceRef.current) window.speechSynthesis.cancel();
@@ -181,7 +183,7 @@ const MobileAnalysis: React.FC<MobileAnalysisProps> = ({
         </div>
       </div>
 
-      {/* SCROLLABLE ANALYSIS AREA - Takes most of the screen (2/3) */}
+      {/* SCROLLABLE ANALYSIS AREA - Takes most of the screen */}
       <div style={{ flex: 2, overflowY: 'auto', backgroundColor: '#F9FAFB', padding: '12px' }}>
         
         {legalTitle && (
@@ -245,9 +247,15 @@ const MobileAnalysis: React.FC<MobileAnalysisProps> = ({
         )}
       </div>
 
-      {/* FIXED INPUT BAR - Always at bottom, no gap */}
+      {/* FIXED INPUT BAR - Always at bottom with safe area padding for mobile */}
       {isAnalysisMode && !legalTitle && (
-        <div style={{ backgroundColor: 'white', borderTop: '1px solid #E5E7EB', padding: '10px 12px', flexShrink: 0 }}>
+        <div style={{ 
+          backgroundColor: 'white', 
+          borderTop: '1px solid #E5E7EB', 
+          padding: '10px 12px', 
+          paddingBottom: 'calc(12px + env(safe-area-inset-bottom, 12px))',
+          flexShrink: 0 
+        }}>
           {/* Input Field */}
           <input
             type="text"
