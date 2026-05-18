@@ -164,41 +164,41 @@ const MobileAnalysis: React.FC<MobileAnalysisProps> = ({
   const CompactAnalysis = () => {
     if (isLoading) {
       return (
-        <div style={{ backgroundColor: 'white', borderRadius: '12px', padding: '12px', textAlign: 'center' }}>
-          <div style={{ width: '24px', height: '24px', border: '2px solid #3B82F6', borderTopColor: 'transparent', borderRadius: '50%', animation: 'spin 1s linear infinite', margin: '0 auto 8px' }}></div>
-          <p style={{ fontSize: '11px', color: '#6B7280' }}>{t.analyzingMarket}</p>
+        <div style={{ backgroundColor: 'white', borderRadius: '12px', padding: '10px', textAlign: 'center', marginBottom: '8px' }}>
+          <div style={{ width: '20px', height: '20px', border: '2px solid #3B82F6', borderTopColor: 'transparent', borderRadius: '50%', animation: 'spin 1s linear infinite', margin: '0 auto 6px' }}></div>
+          <p style={{ fontSize: '10px', color: '#6B7280' }}>{t.analyzingMarket}</p>
         </div>
       );
     }
 
     if (!analysisData || !analysisData.symbol) {
-      return (
-        <div style={{ backgroundColor: 'white', borderRadius: '12px', padding: '16px', textAlign: 'center' }}>
-          <p style={{ color: '#9CA3AF', fontSize: '12px' }}>{langKey === 'Cantonese' ? '請輸入股票代號' : 'Please enter stock symbol'}</p>
-          <p style={{ color: '#D1D5DB', fontSize: '10px', marginTop: '4px' }}>e.g.: 0700.hk, TSLA</p>
-        </div>
-      );
+      return null; // Don't show anything when no data
     }
 
     return (
-      <div style={{ backgroundColor: 'white', borderRadius: '12px', padding: '10px' }}>
+      <div style={{ backgroundColor: 'white', borderRadius: '12px', padding: '10px', marginBottom: '8px' }}>
         <div style={{ textAlign: 'center' }}>
-          <h2 style={{ fontSize: '16px', fontWeight: 'bold', color: '#1F2937' }}>{analysisData.symbol}</h2>
+          <h2 style={{ fontSize: '15px', fontWeight: 'bold', color: '#1F2937' }}>{analysisData.symbol}</h2>
         </div>
-        <div style={{ display: 'flex', gap: '8px', marginTop: '10px' }}>
+        <div style={{ display: 'flex', gap: '8px', marginTop: '8px' }}>
           <div style={{ flex: 1, backgroundColor: '#F9FAFB', borderRadius: '8px', padding: '6px', textAlign: 'center' }}>
             <p style={{ fontSize: '8px', color: '#9CA3AF' }}>{langKey === 'Cantonese' ? '價格' : 'Price'}</p>
-            <p style={{ fontSize: '13px', fontWeight: 'bold', color: '#1F2937' }}>{analysisData.price}</p>
+            <p style={{ fontSize: '12px', fontWeight: 'bold', color: '#1F2937' }}>{analysisData.price}</p>
           </div>
           <div style={{ flex: 1, backgroundColor: '#F9FAFB', borderRadius: '8px', padding: '6px', textAlign: 'center' }}>
             <p style={{ fontSize: '8px', color: '#9CA3AF' }}>RSI</p>
-            <p style={{ fontSize: '13px', fontWeight: 'bold', color: '#3B82F6' }}>{analysisData.rsi}</p>
+            <p style={{ fontSize: '12px', fontWeight: 'bold', color: '#3B82F6' }}>{analysisData.rsi}</p>
           </div>
           <div style={{ flex: 1, backgroundColor: '#F9FAFB', borderRadius: '8px', padding: '6px', textAlign: 'center' }}>
             <p style={{ fontSize: '8px', color: '#9CA3AF' }}>MACD</p>
-            <p style={{ fontSize: '13px', fontWeight: 'bold', color: '#10B981' }}>{analysisData.macd}</p>
+            <p style={{ fontSize: '12px', fontWeight: 'bold', color: '#10B981' }}>{analysisData.macd}</p>
           </div>
         </div>
+        {analysisData?.summary && (
+          <div style={{ marginTop: '8px', paddingTop: '6px', borderTop: '1px solid #F3F4F6', maxHeight: '80px', overflowY: 'auto' }}>
+            <p style={{ fontSize: '10px', color: '#4B5563', lineHeight: '1.4' }}>{analysisData.summary}</p>
+          </div>
+        )}
       </div>
     );
   };
@@ -223,19 +223,19 @@ const MobileAnalysis: React.FC<MobileAnalysisProps> = ({
         </div>
       </div>
 
-      {/* SCROLLABLE MIDDLE AREA - Takes remaining space */}
-      <div style={{ flex: 1, overflowY: 'auto', backgroundColor: '#F9FAFB', padding: '10px' }}>
+      {/* SCROLLABLE MIDDLE AREA - Compact */}
+      <div style={{ flex: 1, overflowY: 'auto', backgroundColor: '#F9FAFB', padding: '8px' }}>
         
         {legalTitle && (
-          <div style={{ backgroundColor: 'white', borderRadius: '12px', padding: '12px', marginBottom: '10px' }}>
-            <div style={{ fontSize: '12px', color: '#4B5563' }}>
+          <div style={{ backgroundColor: 'white', borderRadius: '12px', padding: '10px', marginBottom: '8px' }}>
+            <div style={{ fontSize: '11px', color: '#4B5563' }}>
               {footerContent[legalTitle]?.[langKey === "Cantonese" ? "粵語 (繁體中文)" : langKey] || "Content coming soon..."}
             </div>
           </div>
         )}
 
         {topicId === 'pricing' && (
-          <div style={{ backgroundColor: 'white', borderRadius: '12px', padding: '10px' }}>
+          <div style={{ backgroundColor: 'white', borderRadius: '12px', padding: '8px', marginBottom: '8px' }}>
             <PricingModal isOpen={true} onClose={onBack} user={user} profile={null} onSelectPlan={handleSelectPlan} showRetentionOnly={false} />
           </div>
         )}
@@ -244,32 +244,24 @@ const MobileAnalysis: React.FC<MobileAnalysisProps> = ({
         {topicId === 'features' && <FeaturesSection lang={langKey} />}
 
         {isAnalysisMode && !legalTitle && (
-          <>
-            <CompactAnalysis />
-            {analysisData?.summary && (
-              <div style={{ backgroundColor: 'white', borderRadius: '12px', padding: '10px', marginTop: '10px', maxHeight: '120px', overflowY: 'auto' }}>
-                <p style={{ fontSize: '11px', color: '#4B5563', lineHeight: '1.4' }}>{analysisData.summary}</p>
-              </div>
-            )}
-          </>
+          <CompactAnalysis />
         )}
       </div>
 
-      {/* FIXED INPUT BAR - Always at bottom, never scrolls */}
+      {/* FIXED INPUT BAR - Always at bottom */}
       {isAnalysisMode && !legalTitle && (
-        <div style={{ backgroundColor: 'white', borderTop: '1px solid #E5E7EB', padding: '12px', flexShrink: 0 }}>
-          {/* Input Field */}
+        <div style={{ backgroundColor: 'white', borderTop: '1px solid #E5E7EB', padding: '10px 12px', flexShrink: 0 }}>
+          {/* Input Field - Single line placeholder */}
           <input
             type="text"
             value={inputValue}
             onChange={(e) => setInputValue(e.target.value)}
             placeholder={isListening ? (langKey === 'Cantonese' ? '聆聽中...' : 'Listening...') : exampleText}
-            style={{ width: '100%', padding: '10px 12px', fontSize: '13px', color: '#1F2937', backgroundColor: '#F3F4F6', borderRadius: '10px', border: '1px solid #E5E7EB', outline: 'none', marginBottom: '10px', boxSizing: 'border-box' }}
+            style={{ width: '100%', padding: '10px 12px', fontSize: '13px', color: '#1F2937', backgroundColor: '#F3F4F6', borderRadius: '10px', border: '1px solid #E5E7EB', outline: 'none', marginBottom: '8px', boxSizing: 'border-box' }}
           />
           
-          {/* Control Buttons Row - 4 buttons */}
+          {/* Control Buttons Row */}
           <div style={{ display: 'flex', gap: '8px' }}>
-            {/* MIC Button */}
             <button
               onClick={handleMicToggle}
               style={{ flex: 1, padding: '8px', borderRadius: '10px', fontWeight: '500', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '6px', backgroundColor: isListening ? '#3B82F6' : '#EF4444', color: 'white', border: 'none', cursor: 'pointer' }}
@@ -280,7 +272,6 @@ const MobileAnalysis: React.FC<MobileAnalysisProps> = ({
               <span style={{ fontSize: '10px' }}>MIC</span>
             </button>
 
-            {/* Speaker Button */}
             <button
               onClick={handleSpeakerToggle}
               style={{ flex: 1, padding: '8px', borderRadius: '10px', fontWeight: '500', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '6px', backgroundColor: isSpeakerActive ? '#EF4444' : '#9CA3AF', color: 'white', border: 'none', cursor: 'pointer' }}
@@ -291,7 +282,6 @@ const MobileAnalysis: React.FC<MobileAnalysisProps> = ({
               <span style={{ fontSize: '10px' }}>SPK</span>
             </button>
 
-            {/* Pause Button */}
             <button
               onClick={handlePauseToggle}
               style={{ flex: 1, padding: '8px', borderRadius: '10px', fontWeight: '500', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '6px', backgroundColor: isPaused ? '#9CA3AF' : '#EF4444', color: 'white', border: 'none', cursor: 'pointer' }}
@@ -302,7 +292,6 @@ const MobileAnalysis: React.FC<MobileAnalysisProps> = ({
               <span style={{ fontSize: '10px' }}>Pause</span>
             </button>
 
-            {/* Send Button */}
             <button
               onClick={handleAnalyze}
               disabled={!inputValue.trim()}
