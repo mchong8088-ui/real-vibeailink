@@ -45,15 +45,22 @@ export default function VibeAiMaster() {
 
   useEffect(() => {
     setMounted(true);
+    
+    // FORCE MOBILE VIEW ON LOCALHOST FOR DEBUGGING
+    const isLocalhost = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1';
+    
     const ua = window.navigator.userAgent;
-    // Improved mobile detection
     const isMobileUA = /iPhone|iPad|iPod|Android/i.test(ua);
     const isSmallScreen = window.innerWidth < 1024;
-    const isMobileDevice = isMobileUA || isSmallScreen;
+    
+    // Force mobile view on localhost for debugging
+    const isMobileDevice = isLocalhost ? true : (isMobileUA || isSmallScreen);
     
     let detectedOS = "Standard OS";
     if (ua.indexOf("Win") !== -1) detectedOS = "Windows";
     if (ua.indexOf("Mac") !== -1) detectedOS = "MacOS";
+    
+    console.log("Device detection:", { isMobileDevice, detectedOS, isLocalhost, screenWidth: window.innerWidth });
     
     setSystemState({ os: detectedOS, isMobile: isMobileDevice });
   }, []);
@@ -213,7 +220,7 @@ export default function VibeAiMaster() {
     );
   }
 
-  // DESKTOP VIEW - Based on working copy with proper left panel
+  // DESKTOP VIEW
   return (
     <div className="flex flex-col h-screen w-full overflow-hidden bg-white">
       
@@ -284,16 +291,16 @@ export default function VibeAiMaster() {
       {/* MAIN CONTENT AREA */}
       <div className="flex flex-1 overflow-hidden" style={{ height: '92vh' }}>
         
-        {/* LEFT PANEL - Yellow background, fixed */}
+        {/* LEFT PANEL - Yellow background - Avatar with inline styles (64px) */}
         <aside className="w-[20%] bg-[#FEF08A] flex flex-col items-center justify-center p-3">
-          <div className="w-24 h-24 rounded-full overflow-hidden mb-3 bg-white shadow-lg">
+          <div style={{ width: '64px', height: '64px', borderRadius: '50%', overflow: 'hidden', marginBottom: '12px', backgroundColor: 'white', boxShadow: '0 1px 3px rgba(0,0,0,0.1)' }}>
             <img 
               src="/avatars/michael_teresa.jpg" 
-              className="w-full h-full object-cover" 
+              style={{ width: '100%', height: '100%', objectFit: 'cover' }}
               alt="Michael & Teresa"
             />
           </div>
-          <h3 className="font-black text-slate-900 text-base uppercase text-center leading-tight">
+          <h3 className="font-black text-slate-900 text-sm uppercase text-center leading-tight">
             Michael & Teresa
           </h3>
           <p className="text-[9px] font-black text-blue-700 tracking-[0.15em] mt-1 uppercase text-center">
@@ -314,7 +321,19 @@ export default function VibeAiMaster() {
           >
             <div className="max-w-full mx-auto">
               
-              {/* POPUP WINDOWS */}
+              {showUserMenu && (
+                <div className="mb-4">
+                  <UserMenu 
+                    user={user} 
+                    profile={profile} 
+                    onLogout={handleLogout} 
+                    onOpenPricingPage={() => { setCurrentView("pricing"); setShowPricingModal(true); setShowUserMenu(false); }}
+                    onSelectPlan={handleSelectPlan} 
+                    onClose={() => setShowUserMenu(false)} 
+                  />
+                </div>
+              )}
+
               {(showMasterPopup || legalTitle) && (
                 <div className="w-full bg-white rounded-xl shadow-lg p-5 mb-4">
                   <button 
@@ -345,7 +364,6 @@ export default function VibeAiMaster() {
                 </div>
               )}
 
-              {/* MAIN CONTENT VIEWS */}
               <div className="w-full">
                 {currentView === "analysis" && (
                   <StockAnalysisModule 
@@ -437,7 +455,6 @@ export default function VibeAiMaster() {
         </div>
       </div>
 
-      {/* Professional Input Popup (+ button) */}
       <SourceMenu 
         isOpen={isMenuOpen} 
         onClose={() => setIsMenuOpen(false)} 
