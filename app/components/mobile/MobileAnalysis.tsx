@@ -203,7 +203,7 @@ const MobileAnalysis: React.FC<MobileAnalysisProps> = ({
       overflow: 'hidden' 
     }}>
       
-      {/* TOP BAR - Compact */}
+      {/* TOP BAR */}
       <div style={{ 
         backgroundColor: 'white', 
         padding: '8px 12px', 
@@ -228,7 +228,7 @@ const MobileAnalysis: React.FC<MobileAnalysisProps> = ({
         </div>
       </div>
 
-      {/* OUTPUT AREA - Compact with less bottom padding */}
+      {/* OUTPUT AREA - No instruction text, just the analysis module */}
       <div style={{ 
         flex: 1, 
         overflowY: 'auto', 
@@ -263,12 +263,12 @@ const MobileAnalysis: React.FC<MobileAnalysisProps> = ({
         )}
       </div>
 
-      {/* FIXED INPUT BAR - Higher position with less padding */}
+      {/* FIXED INPUT BAR - Now the only place with instruction text */}
       {isAnalysisMode && !legalTitle && (
         <div style={{ 
           backgroundColor: 'white', 
           borderTop: '1px solid #E5E7EB', 
-          padding: '6px 10px', 
+          padding: '8px 10px', 
           paddingBottom: 'max(8px, env(safe-area-inset-bottom))',
           flexShrink: 0
         }}>
@@ -299,7 +299,7 @@ const MobileAnalysis: React.FC<MobileAnalysisProps> = ({
               type="text"
               value={inputValue}
               onChange={(e) => setInputValue(e.target.value)}
-              placeholder={isListening ? (langKey === 'Cantonese' ? '聆聽中...' : 'Listening...') : exampleText}
+              placeholder={exampleText}
               style={{ 
                 flex: 1, 
                 padding: '8px 10px', 
@@ -314,7 +314,7 @@ const MobileAnalysis: React.FC<MobileAnalysisProps> = ({
             />
           </div>
           
-          {/* Control Buttons Row - Smaller buttons */}
+          {/* Control Buttons Row */}
           <div style={{ display: 'flex', gap: '6px', justifyContent: 'space-between' }}>
             <button
               onClick={handleMicToggle}

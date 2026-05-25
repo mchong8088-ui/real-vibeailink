@@ -106,14 +106,12 @@ export const StockAnalysisModule: React.FC<StockAnalysisModuleProps> = ({
   }
 
   if (!data || !data.symbol) {
-    return (
-      <div style={{ backgroundColor: 'white', borderRadius: '12px', padding: '20px', textAlign: 'center' }}>
-        <Activity size={32} strokeWidth={1} style={{ color: '#D1D5DB', margin: '0 auto 8px' }} />
-        <p style={{ color: '#9CA3AF', fontSize: '12px' }}>{langKey === 'English' ? 'Please input stock symbol below' : langKey === 'Cantonese' ? '請輸入股票代號' : '请输入股票代码'}</p>
-        <p style={{ color: '#D1D5DB', fontSize: '10px', marginTop: '4px' }}>e.g.: 0700.hk, TSLA, 2330.TW</p>
-      </div>
-    );
-  }
+  return (
+    <div style={{ backgroundColor: 'white', borderRadius: '12px', padding: '12px', textAlign: 'center' }}>
+      <Activity size={24} strokeWidth={1} style={{ color: '#D1D5DB', margin: '0 auto 4px' }} />
+    </div>
+  );
+}
 
   const stockSymbol = data.symbol || "Stock";
   const currentPrice = data.price || "N/A";
