@@ -122,16 +122,23 @@ export const StockAnalysisModule: React.FC<StockAnalysisModuleProps> = ({
   const changePercent = data.changePercent;
 
   const CustomTooltip = ({ active, payload, label }: any) => {
-    if (active && payload && payload.length) {
-      return (
-        <div style={{ backgroundColor: '#1F2937', border: '1px solid #374151', borderRadius: '8px', padding: '6px 10px', boxShadow: '0 2px 4px rgba(0,0,0,0.1)' }}>
-          <p style={{ fontSize: '10px', color: '#9CA3AF' }}>{label}</p>
-          <p style={{ fontSize: '12px', fontWeight: 'bold', color: 'white' }}>${payload[0].value.toFixed(2)}</p>
-        </div>
-      );
-    }
-    return null;
-  };
+  if (active && payload && payload.length) {
+    return (
+      <div style={{ 
+        backgroundColor: 'rgba(255, 255, 255, 0.95)', 
+        border: '1px solid #E5E7EB', 
+        borderRadius: '8px', 
+        padding: '6px 10px', 
+        boxShadow: '0 2px 8px rgba(0,0,0,0.15)',
+        backdropFilter: 'blur(4px)'
+      }}>
+        <p style={{ fontSize: '9px', color: '#6B7280', margin: 0 }}>{label}</p>
+        <p style={{ fontSize: '12px', fontWeight: 'bold', color: '#1F2937', margin: '4px 0 0 0' }}>${payload[0].value.toFixed(2)}</p>
+      </div>
+    );
+  }
+  return null;
+};
 
   const isPositive = changePercent && parseFloat(changePercent) > 0;
 
