@@ -19,18 +19,14 @@ export const StockAnalysisModule: React.FC<StockAnalysisModuleProps> = ({
 }) => {
   const [isSpeaking, setIsSpeaking] = useState(false);
   const utteranceRef = useRef<SpeechSynthesisUtterance | null>(null);
-  
-  // Detect if on mobile for responsive adjustments
   const [isMobile, setIsMobile] = useState(false);
   
   useEffect(() => {
     setIsMobile(window.innerWidth <= 768);
   }, []);
 
-  // Get the summary text from data
   const summaryText = data?.summary || data?.text || "";
 
-  // Generate chart data
   const generateChartData = () => {
     if (data?.historical && data.historical.length > 0) {
       return data.historical.slice(-30).map((item: any) => ({
@@ -58,7 +54,6 @@ export const StockAnalysisModule: React.FC<StockAnalysisModuleProps> = ({
   const priceRange = maxPrice - minPrice;
   const yAxisDomain = [minPrice - priceRange * 0.1, maxPrice + priceRange * 0.1];
 
-  // Text-to-Speech
   useEffect(() => {
     if (summaryText && isSpeaking) {
       if (utteranceRef.current) window.speechSynthesis.cancel();
@@ -84,7 +79,7 @@ export const StockAnalysisModule: React.FC<StockAnalysisModuleProps> = ({
     }
   };
 
-  // Global Market Indices - 2 rows for mobile
+  // Global Market Indices - 2 rows of 3 columns (3 items per row)
   const globalIndices = [
     { name: "S&P 500", value: "5,234.18", change: "+0.8%", positive: true },
     { name: "NASDAQ", value: "16,428.82", change: "+1.2%", positive: true },
@@ -94,11 +89,10 @@ export const StockAnalysisModule: React.FC<StockAnalysisModuleProps> = ({
     { name: "FTSE 100", value: "7,845.67", change: "+0.2%", positive: true },
   ];
 
-  // Split into two rows for mobile
+  // Split into 2 rows of 3 columns each
   const row1Indices = globalIndices.slice(0, 3);
   const row2Indices = globalIndices.slice(3, 6);
 
-  // Loading state
   if (isLoading) {
     return (
       <div style={{ backgroundColor: 'white', borderRadius: '16px', padding: '24px', textAlign: 'center' }}>
@@ -108,7 +102,6 @@ export const StockAnalysisModule: React.FC<StockAnalysisModuleProps> = ({
     );
   }
 
-  // No data state
   if (!data || !data.symbol) {
     return (
       <div style={{ backgroundColor: 'white', borderRadius: '16px', padding: '32px', textAlign: 'center' }}>
@@ -145,7 +138,7 @@ export const StockAnalysisModule: React.FC<StockAnalysisModuleProps> = ({
   return (
     <div style={{ maxWidth: '100%', overflowX: 'hidden' }}>
       
-      {/* SECTION 1: GLOBAL MARKET INDICES - Yellow background, 2 rows on mobile */}
+      {/* SECTION 1: GLOBAL MARKET INDICES - Yellow background, 2 rows of 3 columns */}
       <div style={{ backgroundColor: '#FEF08A', borderRadius: '12px', padding: '10px', marginBottom: '12px' }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: '6px', marginBottom: '8px' }}>
           <Globe size={14} style={{ color: '#B45309' }} />
@@ -153,20 +146,20 @@ export const StockAnalysisModule: React.FC<StockAnalysisModuleProps> = ({
             {langKey === 'English' ? 'Global Market Indices' : langKey === 'Cantonese' ? '全球市場指數' : '全球市场指数'}
           </h3>
         </div>
-        {/* Row 1 */}
-        <div style={{ display: 'flex', flexWrap: 'wrap', gap: '6px', marginBottom: '6px' }}>
+        {/* Row 1 - 3 columns */}
+        <div style={{ display: 'flex', gap: '8px', marginBottom: '8px' }}>
           {row1Indices.map((index, i) => (
-            <div key={i} style={{ flex: '1 1 calc(33% - 6px)', backgroundColor: 'white', borderRadius: '8px', padding: '6px', textAlign: 'center', minWidth: '90px' }}>
+            <div key={i} style={{ flex: 1, backgroundColor: 'white', borderRadius: '8px', padding: '6px', textAlign: 'center' }}>
               <p style={{ fontSize: '9px', fontWeight: 'bold', color: '#4B5563' }}>{index.name}</p>
               <p style={{ fontSize: '11px', fontWeight: 'bold', color: '#1F2937' }}>{index.value}</p>
               <p style={{ fontSize: '8px', fontWeight: 'bold', color: index.positive ? '#10B981' : '#EF4444' }}>{index.change}</p>
             </div>
           ))}
         </div>
-        {/* Row 2 */}
-        <div style={{ display: 'flex', flexWrap: 'wrap', gap: '6px' }}>
+        {/* Row 2 - 3 columns */}
+        <div style={{ display: 'flex', gap: '8px' }}>
           {row2Indices.map((index, i) => (
-            <div key={i} style={{ flex: '1 1 calc(33% - 6px)', backgroundColor: 'white', borderRadius: '8px', padding: '6px', textAlign: 'center', minWidth: '90px' }}>
+            <div key={i} style={{ flex: 1, backgroundColor: 'white', borderRadius: '8px', padding: '6px', textAlign: 'center' }}>
               <p style={{ fontSize: '9px', fontWeight: 'bold', color: '#4B5563' }}>{index.name}</p>
               <p style={{ fontSize: '11px', fontWeight: 'bold', color: '#1F2937' }}>{index.value}</p>
               <p style={{ fontSize: '8px', fontWeight: 'bold', color: index.positive ? '#10B981' : '#EF4444' }}>{index.change}</p>
@@ -175,10 +168,10 @@ export const StockAnalysisModule: React.FC<StockAnalysisModuleProps> = ({
         </div>
       </div>
 
-      {/* SECTION 2: CHART + LOCAL STOCK INFO - Horizontal row on mobile */}
+      {/* SECTION 2: CHART + LOCAL STOCK INFO - Yellow background */}
       <div style={{ backgroundColor: '#FEF08A', borderRadius: '12px', padding: '10px', marginBottom: '12px' }}>
         
-        {/* Local Stock Info - Horizontal row */}
+        {/* Local Stock Info - 1 row of 3 columns (Price, RSI, MACD) */}
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '10px', flexWrap: 'wrap', gap: '8px' }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
             <div style={{ backgroundColor: '#3B82F6', padding: '4px', borderRadius: '8px', display: 'inline-flex', alignItems: 'center', justifyContent: 'center' }}>
@@ -191,7 +184,8 @@ export const StockAnalysisModule: React.FC<StockAnalysisModuleProps> = ({
               </span>
             )}
           </div>
-          <div style={{ display: 'flex', gap: '8px' }}>
+          {/* 3 values in 1 row */}
+          <div style={{ display: 'flex', gap: '12px' }}>
             <div style={{ textAlign: 'center' }}>
               <p style={{ fontSize: '8px', color: '#6B7280' }}>Price</p>
               <p style={{ fontSize: '13px', fontWeight: 'bold', color: '#1F2937' }}>{currentPrice}</p>
@@ -207,7 +201,7 @@ export const StockAnalysisModule: React.FC<StockAnalysisModuleProps> = ({
           </div>
         </div>
         
-        {/* Chart - Smaller on mobile */}
+        {/* Chart */}
         <div style={{ width: '100%', height: isMobile ? '140px' : '180px' }}>
           <ResponsiveContainer width="100%" height="100%">
             <LineChart data={chartData} margin={{ top: 5, right: 5, left: 5, bottom: 5 }}>
@@ -244,21 +238,21 @@ export const StockAnalysisModule: React.FC<StockAnalysisModuleProps> = ({
         </div>
       </div>
 
-      {/* SECTION 3: STOCK INFORMATION - Compact grid */}
+      {/* SECTION 3: STOCK INFORMATION - 1 row of 3 columns */}
       <div style={{ backgroundColor: '#FEF08A', borderRadius: '12px', padding: '10px', marginBottom: '12px' }}>
         <h3 style={{ fontSize: '10px', fontWeight: 'bold', color: '#B45309', marginBottom: '8px' }}>
           {langKey === 'English' ? 'Stock Information' : langKey === 'Cantonese' ? '股票信息' : '股票信息'}
         </h3>
-        <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px' }}>
-          <div style={{ flex: '1 1 calc(33% - 6px)', backgroundColor: 'white', borderRadius: '8px', padding: '6px', textAlign: 'center', minWidth: '80px' }}>
+        <div style={{ display: 'flex', gap: '8px' }}>
+          <div style={{ flex: 1, backgroundColor: 'white', borderRadius: '8px', padding: '6px', textAlign: 'center' }}>
             <p style={{ fontSize: '7px', color: '#6B7280' }}>{langKey === 'English' ? 'Market Cap' : '市值'}</p>
             <p style={{ fontSize: '10px', fontWeight: 'bold', color: '#1F2937' }}>{marketCap}</p>
           </div>
-          <div style={{ flex: '1 1 calc(33% - 6px)', backgroundColor: 'white', borderRadius: '8px', padding: '6px', textAlign: 'center', minWidth: '80px' }}>
+          <div style={{ flex: 1, backgroundColor: 'white', borderRadius: '8px', padding: '6px', textAlign: 'center' }}>
             <p style={{ fontSize: '7px', color: '#6B7280' }}>{langKey === 'English' ? 'P/E Ratio' : '市盈率'}</p>
             <p style={{ fontSize: '10px', fontWeight: 'bold', color: '#1F2937' }}>{peRatio}</p>
           </div>
-          <div style={{ flex: '1 1 calc(33% - 6px)', backgroundColor: 'white', borderRadius: '8px', padding: '6px', textAlign: 'center', minWidth: '80px' }}>
+          <div style={{ flex: 1, backgroundColor: 'white', borderRadius: '8px', padding: '6px', textAlign: 'center' }}>
             <p style={{ fontSize: '7px', color: '#6B7280' }}>{langKey === 'English' ? 'Volume' : '成交量'}</p>
             <p style={{ fontSize: '10px', fontWeight: 'bold', color: '#1F2937' }}>{typeof volume === 'number' ? volume.toLocaleString() : volume}</p>
           </div>
@@ -266,7 +260,7 @@ export const StockAnalysisModule: React.FC<StockAnalysisModuleProps> = ({
       </div>
 
       {/* SECTION 4: AI ANALYSIS TEXT */}
-      <div style={{ backgroundColor: '#1F2937', borderRadius: '12px', padding: '12px', marginBottom: '12px' }}>
+      <div style={{ backgroundColor: '#1F2937', borderRadius: '12px', padding: '12px' }}>
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '10px' }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
             <div style={{ display: 'flex', gap: '-8px' }}>
