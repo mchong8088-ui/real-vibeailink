@@ -276,16 +276,20 @@ return (
       </div>
       
       {/* 关键：maxHeight 从 100px 减到 70px */}
-      <div style={{ backgroundColor: '#374151', borderRadius: '8px', padding: '6px', maxHeight: '70px', overflowY: 'auto' }}>
-        {summaryText ? (
-          <p style={{ fontSize: '9px', color: '#E5E7EB', lineHeight: '1.35', margin: 0, whiteSpace: 'pre-wrap' }}>{summaryText}</p>
-        ) : (
-          <div style={{ textAlign: 'center', padding: '8px' }}>
-            <Activity size={14} style={{ color: '#6B7280', margin: '0 auto 4px' }} />
-            <p style={{ fontSize: '9px', color: '#9CA3AF' }}>等待分析...</p>
-          </div>
-        )}
-      </div>
+      <div style={{ backgroundColor: '#374151', borderRadius: '8px', padding: '8px' }}>
+  {summaryText ? (
+    <p style={{ fontSize: '10px', color: '#E5E7EB', lineHeight: '1.4', margin: 0, whiteSpace: 'pre-wrap' }}>
+      {summaryText}
+    </p>
+  ) : (
+    <div style={{ textAlign: 'center', padding: '12px' }}>
+      <Activity size={18} style={{ color: '#6B7280', margin: '0 auto 6px' }} />
+      <p style={{ fontSize: '10px', color: '#9CA3AF' }}>
+        {langKey === 'English' ? 'Waiting for analysis...' : langKey === 'Cantonese' ? '等待分析結果...' : '等待分析结果...'}
+      </p>
+    </div>
+  )}
+</div>
       
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: '4px', paddingTop: '3px', borderTop: '1px solid #4B5563' }}>
         <div style={{ display: 'flex', gap: '6px' }}>
