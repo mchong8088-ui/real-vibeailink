@@ -295,24 +295,24 @@ const MobileAnalysis: React.FC<MobileAnalysisProps> = ({
         )}
       </div>
 
-      {/* BOTTOM INPUT BAR - More compact, buttons fit */}
+      {/* BOTTOM INPUT BAR - Icons only, equal spacing */}
       {isAnalysisMode && !legalTitle && (
         <div style={{ 
           backgroundColor: 'white', 
           borderTop: '1px solid #E5E7EB', 
-          padding: '6px 10px', 
-          paddingBottom: 'max(6px, env(safe-area-inset-bottom))',
+          padding: '8px 12px', 
+          paddingBottom: 'max(8px, env(safe-area-inset-bottom))',
           flexShrink: 0,
           zIndex: 10
         }}>
           {/* Input Row */}
-          <div style={{ display: 'flex', gap: '6px', alignItems: 'center', marginBottom: '5px' }}>
+          <div style={{ display: 'flex', gap: '8px', alignItems: 'center', marginBottom: '8px' }}>
             <button
               onClick={() => setIsMenuOpen(true)}
               style={{
-                width: '32px',
-                height: '32px',
-                borderRadius: '8px',
+                width: '36px',
+                height: '36px',
+                borderRadius: '10px',
                 backgroundColor: '#EF4444',
                 color: 'white',
                 border: 'none',
@@ -320,7 +320,7 @@ const MobileAnalysis: React.FC<MobileAnalysisProps> = ({
                 display: 'flex',
                 alignItems: 'center',
                 justifyContent: 'center',
-                fontSize: '16px',
+                fontSize: '18px',
                 fontWeight: 'bold',
                 flexShrink: 0
               }}
@@ -336,11 +336,11 @@ const MobileAnalysis: React.FC<MobileAnalysisProps> = ({
               onKeyPress={(e) => e.key === 'Enter' && handleAnalyze()}
               style={{ 
                 flex: 1, 
-                padding: '7px 10px', 
-                fontSize: '12px', 
+                padding: '8px 12px', 
+                fontSize: '13px', 
                 color: '#1F2937', 
                 backgroundColor: '#F3F4F6', 
-                borderRadius: '18px', 
+                borderRadius: '20px', 
                 border: '1px solid #E5E7EB', 
                 outline: 'none',
                 minWidth: 0
@@ -348,14 +348,14 @@ const MobileAnalysis: React.FC<MobileAnalysisProps> = ({
             />
           </div>
           
-          {/* Control Buttons Row - Shorter buttons, equal spacing */}
-          <div style={{ display: 'flex', gap: '5px', justifyContent: 'space-between' }}>
+          {/* Control Buttons Row - Equal width icons only */}
+          <div style={{ display: 'flex', gap: '12px', justifyContent: 'space-around' }}>
             <button
               onClick={handleMicToggle}
               style={{ 
-                flex: 1,
-                padding: '5px',
-                borderRadius: '6px',
+                width: '44px',
+                height: '44px',
+                borderRadius: '22px',
                 display: 'flex',
                 alignItems: 'center',
                 justifyContent: 'center',
@@ -365,7 +365,7 @@ const MobileAnalysis: React.FC<MobileAnalysisProps> = ({
                 cursor: 'pointer'
               }}
             >
-              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2}>
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2}>
                 <path strokeLinecap="round" strokeLinejoin="round" d="M19 11a7 7 0 01-7 7m0 0a7 7 0 01-7-7m7 7v4m0 0H8m4 0h4m-4-8a3 3 0 01-3-3V5a3 3 0 116 0v6a3 3 0 01-3 3z" />
               </svg>
             </button>
@@ -373,9 +373,9 @@ const MobileAnalysis: React.FC<MobileAnalysisProps> = ({
             <button
               onClick={handleSpeakerToggle}
               style={{ 
-                flex: 1,
-                padding: '5px',
-                borderRadius: '6px',
+                width: '44px',
+                height: '44px',
+                borderRadius: '22px',
                 display: 'flex',
                 alignItems: 'center',
                 justifyContent: 'center',
@@ -385,7 +385,7 @@ const MobileAnalysis: React.FC<MobileAnalysisProps> = ({
                 cursor: 'pointer'
               }}
             >
-              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2}>
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2}>
                 <path strokeLinecap="round" strokeLinejoin="round" d="M15.536 8.464a5 5 0 010 7.072m2.828-9.9a9 9 0 010 12.728M5.586 15H4a1 1 0 01-1-1v-4a1 1 0 011-1h1.586l4.707-4.707C10.923 3.663 12 4.109 12 5v14c0 .891-1.077 1.337-1.707.707L5.586 15z" />
               </svg>
             </button>
@@ -393,9 +393,9 @@ const MobileAnalysis: React.FC<MobileAnalysisProps> = ({
             <button
               onClick={handlePauseToggle}
               style={{ 
-                flex: 1,
-                padding: '5px',
-                borderRadius: '6px',
+                width: '44px',
+                height: '44px',
+                borderRadius: '22px',
                 display: 'flex',
                 alignItems: 'center',
                 justifyContent: 'center',
@@ -405,7 +405,7 @@ const MobileAnalysis: React.FC<MobileAnalysisProps> = ({
                 cursor: 'pointer'
               }}
             >
-              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2}>
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2}>
                 <path strokeLinecap="round" strokeLinejoin="round" d="M10 9v6m4-6v6m7-3a9 9 0 11-18 0 9 9 0 0118 0z" />
               </svg>
             </button>
@@ -414,9 +414,9 @@ const MobileAnalysis: React.FC<MobileAnalysisProps> = ({
               onClick={handleAnalyze}
               disabled={!inputValue.trim()}
               style={{ 
-                flex: 1,
-                padding: '5px',
-                borderRadius: '6px',
+                width: '44px',
+                height: '44px',
+                borderRadius: '22px',
                 display: 'flex',
                 alignItems: 'center',
                 justifyContent: 'center',
@@ -426,7 +426,7 @@ const MobileAnalysis: React.FC<MobileAnalysisProps> = ({
                 cursor: inputValue.trim() ? 'pointer' : 'not-allowed'
               }}
             >
-              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2}>
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2}>
                 <path strokeLinecap="round" strokeLinejoin="round" d="M7 7h10v10M17 7L7 17" />
               </svg>
             </button>
