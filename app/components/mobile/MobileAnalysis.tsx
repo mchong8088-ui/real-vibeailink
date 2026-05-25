@@ -6,6 +6,7 @@ import { SourceMenu } from '../features/controls/SourceMenu';
 import { AboutSection } from '../sections/AboutSection';
 import { FeaturesSection } from '../sections/FeaturesSection';
 import { PricingModal } from '../features/pricing/PricingModal';
+import { StockAnalysisModule } from '../features/stock-analysis/StockAnalysisModule';
 import { footerContent } from '../../constants/content';
 
 interface MobileAnalysisProps {
@@ -99,6 +100,12 @@ const MobileAnalysis: React.FC<MobileAnalysisProps> = ({
         price: data.price || "N/A",
         rsi: data.rsi || "N/A",
         macd: data.macd || "N/A",
+        marketCap: data.marketCap || "N/A",
+        peRatio: data.peRatio || "N/A",
+        volume: data.volume || "N/A",
+        historical: data.historical || [],
+        change: data.change,
+        changePercent: data.changePercent,
       });
     } catch (error) {
       console.error('Error:', error);
@@ -108,6 +115,10 @@ const MobileAnalysis: React.FC<MobileAnalysisProps> = ({
         price: "N/A",
         rsi: "N/A",
         macd: "N/A",
+        marketCap: "N/A",
+        peRatio: "N/A",
+        volume: "N/A",
+        historical: [],
       });
     } finally {
       setIsLoading(false);
@@ -155,40 +166,36 @@ const MobileAnalysis: React.FC<MobileAnalysisProps> = ({
   };
 
   const handleSourceSelect = (sourceType: string, sourceData?: any) => {
-  if (sourceType === 'url') {
-    // Handle URL analysis
-    fetch('/api/chat', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ url: sourceData, language: langKey }),
-    }).then(response => response.json())
-      .then(data => {
-        setAnalysisData(prev => ({
-          ...prev,
-          summary: prev?.summary + "\n\n📎 URL Analysis:\n" + (data.text || "URL analysis completed.")
-        }));
-      });
-  } else if (sourceType === 'file_image') {
-    // Handle uploaded image
-    setAnalysisData(prev => ({
-      ...prev,
-      summary: prev?.summary + `\n\n📷 Image (${sourceData.name}) uploaded for analysis.`
-    }));
-  } else if (sourceType === 'file_document') {
-    // Handle uploaded document
-    setAnalysisData(prev => ({
-      ...prev,
-      summary: prev?.summary + `\n\n📄 Document (${sourceData.name}) uploaded for analysis.`
-    }));
-  } else if (sourceType === 'camera_photo') {
-    // Handle camera photo
-    setAnalysisData(prev => ({
-      ...prev,
-      summary: prev?.summary + "\n\n📷 Photo captured for analysis."
-    }));
-  }
-  setIsMenuOpen(false);
-};
+    if (sourceType === 'url' && sourceData) {
+      fetch('/api/chat', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ url: sourceData, language: langKey }),
+      }).then(response => response.json())
+        .then(data => {
+          setAnalysisData(prev => ({
+            ...prev,
+            summary: prev?.summary + "\n\n📎 URL Analysis:\n" + (data.text || "URL analysis completed.")
+          }));
+        });
+    } else if (sourceType === 'file_image') {
+      setAnalysisData(prev => ({
+        ...prev,
+        summary: prev?.summary + `\n\n📷 Image uploaded for analysis.`
+      }));
+    } else if (sourceType === 'file_document') {
+      setAnalysisData(prev => ({
+        ...prev,
+        summary: prev?.summary + `\n\n📄 Document uploaded for analysis.`
+      }));
+    } else if (sourceType === 'camera_photo') {
+      setAnalysisData(prev => ({
+        ...prev,
+        summary: prev?.summary + "\n\n📷 Photo captured for analysis."
+      }));
+    }
+    setIsMenuOpen(false);
+  };
 
   const exampleText = langKey === 'Cantonese' ? '輸入股票代號 e.g.: 0700.hk, TSLA' : langKey === '简体中文' ? '输入股票代码 e.g.: 0700.hk, TSLA' : 'Enter stock symbol e.g.: 0700.hk, TSLA';
   const isAnalysisMode = viewType === 'analysis';
@@ -236,7 +243,7 @@ const MobileAnalysis: React.FC<MobileAnalysisProps> = ({
         </div>
       </div>
 
-      {/* OUTPUT AREA - Scrollable */}
+      {/* OUTPUT AREA - Scrollable with FULL StockAnalysisModule (includes chart) */}
       <div style={{ 
         flex: 1, 
         overflowY: 'auto', 
@@ -262,49 +269,16 @@ const MobileAnalysis: React.FC<MobileAnalysisProps> = ({
         {topicId === 'features' && <FeaturesSection lang={langKey} />}
 
         {isAnalysisMode && !legalTitle && (
-          <>
-            {isLoading ? (
-              <div style={{ backgroundColor: 'white', borderRadius: '12px', padding: '32px', textAlign: 'center' }}>
-                <div style={{ width: '28px', height: '28px', border: '2px solid #3B82F6', borderTopColor: 'transparent', borderRadius: '50%', animation: 'spin 1s linear infinite', margin: '0 auto 12px' }}></div>
-                <p style={{ fontSize: '13px', color: '#6B7280' }}>{t.analyzingMarket}</p>
-              </div>
-            ) : !analysisData || !analysisData.symbol ? (
-              <div style={{ backgroundColor: 'white', borderRadius: '12px', padding: '40px', textAlign: 'center' }}>
-                <p style={{ color: '#9CA3AF', fontSize: '14px' }}>{langKey === 'Cantonese' ? '請輸入股票代號' : 'Please enter stock symbol'}</p>
-              </div>
-            ) : (
-              <>
-                <div style={{ backgroundColor: 'white', borderRadius: '12px', padding: '12px', marginBottom: '12px' }}>
-                  <h2 style={{ fontSize: '18px', fontWeight: 'bold', color: '#1F2937', textAlign: 'center' }}>{analysisData.symbol}</h2>
-                </div>
-                
-                <div style={{ display: 'flex', gap: '12px', marginBottom: '12px' }}>
-                  <div style={{ flex: 1, backgroundColor: 'white', borderRadius: '10px', padding: '10px', textAlign: 'center' }}>
-                    <p style={{ fontSize: '10px', color: '#9CA3AF' }}>{langKey === 'Cantonese' ? '價格' : 'Price'}</p>
-                    <p style={{ fontSize: '16px', fontWeight: 'bold', color: '#1F2937' }}>{analysisData.price}</p>
-                  </div>
-                  <div style={{ flex: 1, backgroundColor: 'white', borderRadius: '10px', padding: '10px', textAlign: 'center' }}>
-                    <p style={{ fontSize: '10px', color: '#9CA3AF' }}>RSI</p>
-                    <p style={{ fontSize: '16px', fontWeight: 'bold', color: '#3B82F6' }}>{analysisData.rsi}</p>
-                  </div>
-                  <div style={{ flex: 1, backgroundColor: 'white', borderRadius: '10px', padding: '10px', textAlign: 'center' }}>
-                    <p style={{ fontSize: '10px', color: '#9CA3AF' }}>MACD</p>
-                    <p style={{ fontSize: '16px', fontWeight: 'bold', color: '#10B981' }}>{analysisData.macd}</p>
-                  </div>
-                </div>
-                
-                {analysisData.summary && (
-                  <div style={{ backgroundColor: 'white', borderRadius: '12px', padding: '14px' }}>
-                    <p style={{ fontSize: '13px', color: '#4B5563', lineHeight: '1.6', whiteSpace: 'pre-wrap' }}>{analysisData.summary}</p>
-                  </div>
-                )}
-              </>
-            )}
-          </>
+          <StockAnalysisModule 
+            t={t}
+            data={analysisData} 
+            isLoading={isLoading} 
+            langKey={langKey}
+          />
         )}
       </div>
 
-      {/* FIXED INPUT BAR - Icons only, no text */}
+      {/* FIXED INPUT BAR */}
       {isAnalysisMode && !legalTitle && (
         <div style={{ 
           backgroundColor: 'white', 
@@ -315,7 +289,6 @@ const MobileAnalysis: React.FC<MobileAnalysisProps> = ({
         }}>
           {/* Input Row with + button */}
           <div style={{ display: 'flex', gap: '8px', alignItems: 'center', marginBottom: '8px' }}>
-            {/* + Button - RED */}
             <button
               onClick={() => setIsMenuOpen(true)}
               style={{
@@ -337,7 +310,6 @@ const MobileAnalysis: React.FC<MobileAnalysisProps> = ({
               +
             </button>
             
-            {/* Input Field */}
             <input
               type="text"
               value={inputValue}
@@ -357,9 +329,8 @@ const MobileAnalysis: React.FC<MobileAnalysisProps> = ({
             />
           </div>
           
-          {/* Control Buttons Row - Icons only, no text labels */}
+          {/* Control Buttons Row - Icons only */}
           <div style={{ display: 'flex', gap: '8px', justifyContent: 'space-between' }}>
-            {/* MIC Button - Red */}
             <button
               onClick={handleMicToggle}
               style={{ 
@@ -381,7 +352,6 @@ const MobileAnalysis: React.FC<MobileAnalysisProps> = ({
               </svg>
             </button>
 
-            {/* Speaker Button - Red when active */}
             <button
               onClick={handleSpeakerToggle}
               style={{ 
@@ -403,7 +373,6 @@ const MobileAnalysis: React.FC<MobileAnalysisProps> = ({
               </svg>
             </button>
 
-            {/* Pause Button - Red */}
             <button
               onClick={handlePauseToggle}
               style={{ 
@@ -425,7 +394,6 @@ const MobileAnalysis: React.FC<MobileAnalysisProps> = ({
               </svg>
             </button>
 
-            {/* Send Button - Green */}
             <button
               onClick={handleAnalyze}
               disabled={!inputValue.trim()}
