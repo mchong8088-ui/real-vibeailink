@@ -155,23 +155,40 @@ const MobileAnalysis: React.FC<MobileAnalysisProps> = ({
   };
 
   const handleSourceSelect = (sourceType: string, sourceData?: any) => {
-    if (sourceType === 'url' && sourceData) {
-      fetch('/api/chat', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ url: sourceData, language: langKey }),
-      }).then(response => response.json())
-        .then(data => {
-          setAnalysisData(prev => ({
-            ...prev,
-            summary: prev?.summary + "\n\n📎 URL Analysis:\n" + (data.text || "URL analysis completed.")
-          }));
-        });
-    } else if (sourceType === 'camera' || sourceType === 'file') {
-      alert(`${sourceType} feature coming soon!`);
-    }
-    setIsMenuOpen(false);
-  };
+  if (sourceType === 'url') {
+    // Handle URL analysis
+    fetch('/api/chat', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ url: sourceData, language: langKey }),
+    }).then(response => response.json())
+      .then(data => {
+        setAnalysisData(prev => ({
+          ...prev,
+          summary: prev?.summary + "\n\n📎 URL Analysis:\n" + (data.text || "URL analysis completed.")
+        }));
+      });
+  } else if (sourceType === 'file_image') {
+    // Handle uploaded image
+    setAnalysisData(prev => ({
+      ...prev,
+      summary: prev?.summary + `\n\n📷 Image (${sourceData.name}) uploaded for analysis.`
+    }));
+  } else if (sourceType === 'file_document') {
+    // Handle uploaded document
+    setAnalysisData(prev => ({
+      ...prev,
+      summary: prev?.summary + `\n\n📄 Document (${sourceData.name}) uploaded for analysis.`
+    }));
+  } else if (sourceType === 'camera_photo') {
+    // Handle camera photo
+    setAnalysisData(prev => ({
+      ...prev,
+      summary: prev?.summary + "\n\n📷 Photo captured for analysis."
+    }));
+  }
+  setIsMenuOpen(false);
+};
 
   const exampleText = langKey === 'Cantonese' ? '輸入股票代號 e.g.: 0700.hk, TSLA' : langKey === '简体中文' ? '输入股票代码 e.g.: 0700.hk, TSLA' : 'Enter stock symbol e.g.: 0700.hk, TSLA';
   const isAnalysisMode = viewType === 'analysis';
