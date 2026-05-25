@@ -8,7 +8,6 @@ import { FeaturesSection } from '../sections/FeaturesSection';
 import { PricingModal } from '../features/pricing/PricingModal';
 import { StockAnalysisModule } from '../features/stock-analysis/StockAnalysisModule';
 import { footerContent } from '../../constants/content';
-import { speakWithLanguage, stopSpeaking } from '../../utils/tts';
 
 interface MobileAnalysisProps {
   langKey: string;

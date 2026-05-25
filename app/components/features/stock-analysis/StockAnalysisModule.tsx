@@ -3,7 +3,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { Volume2, VolumeX, Activity, Zap, ShieldCheck, Globe, BarChart3 } from 'lucide-react';
 import { LineChart, Line, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid } from 'recharts';
-import { speakWithLanguage, stopSpeaking } from '../../utils/tts';
 
 interface StockAnalysisModuleProps {
   data: any;
