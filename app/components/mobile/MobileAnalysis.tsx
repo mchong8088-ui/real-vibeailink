@@ -257,27 +257,27 @@ const MobileAnalysis: React.FC<MobileAnalysisProps> = ({
         </div>
       </div>
 
-      {/* SCROLLABLE CONTENT AREA - Reduced padding */}
+      {/* SCROLLABLE CONTENT AREA */}
       <div style={{ 
         flex: 1, 
         overflowY: 'auto', 
         overflowX: 'hidden',
         WebkitOverflowScrolling: 'touch',
-        padding: '8px 12px 4px 12px',
+        padding: '6px 10px 4px 10px',
         backgroundColor: '#F9FAFB',
         minHeight: 0
       }}>
         
         {legalTitle && (
-          <div style={{ backgroundColor: 'white', borderRadius: '12px', padding: '12px', marginBottom: '10px' }}>
-            <div style={{ fontSize: '13px', color: '#4B5563', lineHeight: 1.5 }}>
+          <div style={{ backgroundColor: 'white', borderRadius: '10px', padding: '10px', marginBottom: '8px' }}>
+            <div style={{ fontSize: '12px', color: '#4B5563', lineHeight: 1.4 }}>
               {footerContent[legalTitle]?.[langKey === "Cantonese" ? "粵語 (繁體中文)" : langKey] || "Content coming soon..."}
             </div>
           </div>
         )}
 
         {topicId === 'pricing' && (
-          <div style={{ backgroundColor: 'white', borderRadius: '12px', padding: '12px', marginBottom: '10px' }}>
+          <div style={{ backgroundColor: 'white', borderRadius: '10px', padding: '10px', marginBottom: '8px' }}>
             <PricingModal isOpen={true} onClose={onBack} user={user} profile={null} onSelectPlan={handleSelectPlan} showRetentionOnly={false} />
           </div>
         )}
@@ -295,24 +295,23 @@ const MobileAnalysis: React.FC<MobileAnalysisProps> = ({
         )}
       </div>
 
-      {/* BOTTOM INPUT BAR - More compact */}
+      {/* BOTTOM INPUT BAR - More compact, buttons fit */}
       {isAnalysisMode && !legalTitle && (
         <div style={{ 
           backgroundColor: 'white', 
           borderTop: '1px solid #E5E7EB', 
-          padding: '8px 12px', 
-          paddingBottom: 'max(8px, env(safe-area-inset-bottom))',
+          padding: '6px 10px', 
+          paddingBottom: 'max(6px, env(safe-area-inset-bottom))',
           flexShrink: 0,
-          zIndex: 10,
-          boxShadow: '0 -2px 8px rgba(0,0,0,0.05)'
+          zIndex: 10
         }}>
-          {/* Input Row - Reduced height */}
-          <div style={{ display: 'flex', gap: '8px', alignItems: 'center', marginBottom: '6px' }}>
+          {/* Input Row */}
+          <div style={{ display: 'flex', gap: '6px', alignItems: 'center', marginBottom: '5px' }}>
             <button
               onClick={() => setIsMenuOpen(true)}
               style={{
-                width: '36px',
-                height: '36px',
+                width: '32px',
+                height: '32px',
                 borderRadius: '8px',
                 backgroundColor: '#EF4444',
                 color: 'white',
@@ -337,11 +336,11 @@ const MobileAnalysis: React.FC<MobileAnalysisProps> = ({
               onKeyPress={(e) => e.key === 'Enter' && handleAnalyze()}
               style={{ 
                 flex: 1, 
-                padding: '8px 12px', 
-                fontSize: '13px', 
+                padding: '7px 10px', 
+                fontSize: '12px', 
                 color: '#1F2937', 
                 backgroundColor: '#F3F4F6', 
-                borderRadius: '20px', 
+                borderRadius: '18px', 
                 border: '1px solid #E5E7EB', 
                 outline: 'none',
                 minWidth: 0
@@ -349,14 +348,14 @@ const MobileAnalysis: React.FC<MobileAnalysisProps> = ({
             />
           </div>
           
-          {/* Control Buttons Row - Reduced height */}
-          <div style={{ display: 'flex', gap: '6px', justifyContent: 'space-between' }}>
+          {/* Control Buttons Row - Shorter buttons, equal spacing */}
+          <div style={{ display: 'flex', gap: '5px', justifyContent: 'space-between' }}>
             <button
               onClick={handleMicToggle}
               style={{ 
                 flex: 1,
-                padding: '6px',
-                borderRadius: '8px',
+                padding: '5px',
+                borderRadius: '6px',
                 display: 'flex',
                 alignItems: 'center',
                 justifyContent: 'center',
@@ -366,7 +365,7 @@ const MobileAnalysis: React.FC<MobileAnalysisProps> = ({
                 cursor: 'pointer'
               }}
             >
-              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2}>
+              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2}>
                 <path strokeLinecap="round" strokeLinejoin="round" d="M19 11a7 7 0 01-7 7m0 0a7 7 0 01-7-7m7 7v4m0 0H8m4 0h4m-4-8a3 3 0 01-3-3V5a3 3 0 116 0v6a3 3 0 01-3 3z" />
               </svg>
             </button>
@@ -375,8 +374,8 @@ const MobileAnalysis: React.FC<MobileAnalysisProps> = ({
               onClick={handleSpeakerToggle}
               style={{ 
                 flex: 1,
-                padding: '6px',
-                borderRadius: '8px',
+                padding: '5px',
+                borderRadius: '6px',
                 display: 'flex',
                 alignItems: 'center',
                 justifyContent: 'center',
@@ -386,7 +385,7 @@ const MobileAnalysis: React.FC<MobileAnalysisProps> = ({
                 cursor: 'pointer'
               }}
             >
-              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2}>
+              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2}>
                 <path strokeLinecap="round" strokeLinejoin="round" d="M15.536 8.464a5 5 0 010 7.072m2.828-9.9a9 9 0 010 12.728M5.586 15H4a1 1 0 01-1-1v-4a1 1 0 011-1h1.586l4.707-4.707C10.923 3.663 12 4.109 12 5v14c0 .891-1.077 1.337-1.707.707L5.586 15z" />
               </svg>
             </button>
@@ -395,8 +394,8 @@ const MobileAnalysis: React.FC<MobileAnalysisProps> = ({
               onClick={handlePauseToggle}
               style={{ 
                 flex: 1,
-                padding: '6px',
-                borderRadius: '8px',
+                padding: '5px',
+                borderRadius: '6px',
                 display: 'flex',
                 alignItems: 'center',
                 justifyContent: 'center',
@@ -406,7 +405,7 @@ const MobileAnalysis: React.FC<MobileAnalysisProps> = ({
                 cursor: 'pointer'
               }}
             >
-              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2}>
+              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2}>
                 <path strokeLinecap="round" strokeLinejoin="round" d="M10 9v6m4-6v6m7-3a9 9 0 11-18 0 9 9 0 0118 0z" />
               </svg>
             </button>
@@ -416,8 +415,8 @@ const MobileAnalysis: React.FC<MobileAnalysisProps> = ({
               disabled={!inputValue.trim()}
               style={{ 
                 flex: 1,
-                padding: '6px',
-                borderRadius: '8px',
+                padding: '5px',
+                borderRadius: '6px',
                 display: 'flex',
                 alignItems: 'center',
                 justifyContent: 'center',
@@ -427,7 +426,7 @@ const MobileAnalysis: React.FC<MobileAnalysisProps> = ({
                 cursor: inputValue.trim() ? 'pointer' : 'not-allowed'
               }}
             >
-              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2}>
+              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2}>
                 <path strokeLinecap="round" strokeLinejoin="round" d="M7 7h10v10M17 7L7 17" />
               </svg>
             </button>
