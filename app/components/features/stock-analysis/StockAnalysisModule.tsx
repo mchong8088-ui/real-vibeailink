@@ -34,7 +34,7 @@ export const StockAnalysisModule: React.FC<StockAnalysisModuleProps> = ({
         price: item.close,
       }));
     }
-    const currentPrice = parseFloat(data?.price?.replace(/[^0-9.-]/g, '') || 400);
+    const currentPrice = parseFloat(data?.price?.replace(/[^0-9.-]/g, '') || '400');
     const sampleData = [];
     let price = currentPrice * 0.85;
     for (let i = 30; i >= 0; i--) {
@@ -83,7 +83,6 @@ export const StockAnalysisModule: React.FC<StockAnalysisModuleProps> = ({
     }
   };
 
-  // Global Market Indices - 2 rows of 3 columns
   const globalIndices = [
     { name: "S&P 500", value: "5,234.18", change: "+0.8%", positive: true },
     { name: "NASDAQ", value: "16,428.82", change: "+1.2%", positive: true },
@@ -106,12 +105,12 @@ export const StockAnalysisModule: React.FC<StockAnalysisModuleProps> = ({
   }
 
   if (!data || !data.symbol) {
-  return (
-    <div style={{ backgroundColor: 'white', borderRadius: '12px', padding: '12px', textAlign: 'center' }}>
-      <Activity size={24} strokeWidth={1} style={{ color: '#D1D5DB', margin: '0 auto 4px' }} />
-    </div>
-  );
-}
+    return (
+      <div style={{ backgroundColor: 'white', borderRadius: '12px', padding: '12px', textAlign: 'center' }}>
+        <Activity size={24} strokeWidth={1} style={{ color: '#D1D5DB', margin: '0 auto 4px' }} />
+      </div>
+    );
+  }
 
   const stockSymbol = data.symbol || "Stock";
   const currentPrice = data.price || "N/A";
@@ -143,171 +142,171 @@ export const StockAnalysisModule: React.FC<StockAnalysisModuleProps> = ({
 
   const isPositive = changePercent && parseFloat(changePercent) > 0;
 
-  // StockAnalysisModule.tsx 中的 return 部分
+  return (
+    <div style={{ maxWidth: '100%', overflowX: 'hidden' }}>
+      
+      {/* SECTION 1: GLOBAL MARKET INDICES */}
+      <div style={{ backgroundColor: '#FEF08A', borderRadius: '10px', padding: '8px', marginBottom: '8px' }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '6px', marginBottom: '6px' }}>
+          <Globe size={12} style={{ color: '#B45309' }} />
+          <h3 style={{ fontSize: '10px', fontWeight: 'bold', color: '#B45309', margin: 0 }}>
+            {langKey === 'English' ? 'Global Market Indices' : langKey === 'Cantonese' ? '全球市場指數' : '全球市场指数'}
+          </h3>
+        </div>
+        <div style={{ display: 'flex', gap: '6px', marginBottom: '6px' }}>
+          {row1Indices.map((index, i) => (
+            <div key={i} style={{ flex: 1, backgroundColor: 'white', borderRadius: '6px', padding: '4px', textAlign: 'center' }}>
+              <p style={{ fontSize: '8px', fontWeight: 'bold', color: '#4B5563' }}>{index.name}</p>
+              <p style={{ fontSize: '10px', fontWeight: 'bold', color: '#1F2937' }}>{index.value}</p>
+              <p style={{ fontSize: '7px', fontWeight: 'bold', color: index.positive ? '#10B981' : '#EF4444' }}>{index.change}</p>
+            </div>
+          ))}
+        </div>
+        <div style={{ display: 'flex', gap: '6px' }}>
+          {row2Indices.map((index, i) => (
+            <div key={i} style={{ flex: 1, backgroundColor: 'white', borderRadius: '6px', padding: '4px', textAlign: 'center' }}>
+              <p style={{ fontSize: '8px', fontWeight: 'bold', color: '#4B5563' }}>{index.name}</p>
+              <p style={{ fontSize: '10px', fontWeight: 'bold', color: '#1F2937' }}>{index.value}</p>
+              <p style={{ fontSize: '7px', fontWeight: 'bold', color: index.positive ? '#10B981' : '#EF4444' }}>{index.change}</p>
+            </div>
+          ))}
+        </div>
+      </div>
 
-return (
-  <div style={{ maxWidth: '100%', overflowX: 'hidden' }}>
-    
-    {/* SECTION 1: GLOBAL MARKET INDICES */}
-    <div style={{ backgroundColor: '#FEF08A', borderRadius: '10px', padding: '6px', marginBottom: '4px' }}>   {/* 改小 marginBottom 和 padding */}
-      <div style={{ display: 'flex', alignItems: 'center', gap: '6px', marginBottom: '4px' }}>   {/* marginBottom 改小 */}
-        <Globe size={10} style={{ color: '#B45309' }} />
-        <h3 style={{ fontSize: '9px', fontWeight: 'bold', color: '#B45309', margin: 0 }}>
-          {langKey === 'English' ? 'Global Market Indices' : langKey === 'Cantonese' ? '全球市場指數' : '全球市场指数'}
+      {/* SECTION 2: CHART + LOCAL STOCK INFO */}
+      <div style={{ backgroundColor: '#FEF08A', borderRadius: '10px', padding: '8px', marginBottom: '8px' }}>
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '8px', flexWrap: 'wrap', gap: '6px' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
+            <div style={{ backgroundColor: '#3B82F6', padding: '3px', borderRadius: '6px', display: 'inline-flex', alignItems: 'center', justifyContent: 'center' }}>
+              <BarChart3 size={10} style={{ color: 'white' }} />
+            </div>
+            <h3 style={{ fontSize: '10px', fontWeight: 'bold', color: '#1F2937', margin: 0 }}>{stockSymbol}</h3>
+            {changePercent && (
+              <span style={{ fontSize: '9px', fontWeight: 'bold', color: isPositive ? '#10B981' : '#EF4444' }}>
+                {isPositive ? `+${changePercent}%` : `${changePercent}%`}
+              </span>
+            )}
+          </div>
+          <div style={{ display: 'flex', gap: '10px' }}>
+            <div style={{ textAlign: 'center' }}>
+              <p style={{ fontSize: '7px', color: '#6B7280' }}>Price</p>
+              <p style={{ fontSize: '11px', fontWeight: 'bold', color: '#1F2937' }}>{currentPrice}</p>
+            </div>
+            <div style={{ textAlign: 'center' }}>
+              <p style={{ fontSize: '7px', color: '#6B7280' }}>RSI</p>
+              <p style={{ fontSize: '11px', fontWeight: 'bold', color: '#3B82F6' }}>{rsiValue}</p>
+            </div>
+            <div style={{ textAlign: 'center' }}>
+              <p style={{ fontSize: '7px', color: '#6B7280' }}>MACD</p>
+              <p style={{ fontSize: '11px', fontWeight: 'bold', color: '#10B981' }}>{macdValue}</p>
+            </div>
+          </div>
+        </div>
+        
+        <div style={{ width: '100%', height: isMobile ? '120px' : '180px' }}>
+          <ResponsiveContainer width="100%" height="100%">
+            <LineChart data={chartData} margin={{ top: 5, right: 5, left: 5, bottom: 5 }}>
+              <CartesianGrid strokeDasharray="3 3" stroke="#E5E7EB" />
+              <XAxis dataKey="date" hide={true} />
+              <YAxis domain={yAxisDomain} hide={true} />
+              <Tooltip content={<CustomTooltip />} />
+              <Line 
+                type="monotone" 
+                dataKey="price" 
+                stroke="#3B82F6" 
+                strokeWidth={1.5}
+                dot={false}
+                activeDot={{ r: 3, fill: '#3B82F6' }}
+                isAnimationActive={true}
+                animationDuration={500}
+              />
+            </LineChart>
+          </ResponsiveContainer>
+        </div>
+        
+        <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '7px', color: '#9CA3AF', marginTop: '2px' }}>
+          <span>${minPrice.toFixed(2)}</span>
+          <span style={{ color: '#3B82F6' }}>${currentPrice}</span>
+          <span>${maxPrice.toFixed(2)}</span>
+        </div>
+        
+        <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '6px', marginTop: '4px' }}>
+          {['1D', '1W', '1M', '3M', '1Y'].map((period) => (
+            <span key={period} style={{ fontSize: '7px', color: period === '1M' ? '#3B82F6' : '#9CA3AF', cursor: 'pointer' }}>{period}</span>
+          ))}
+        </div>
+      </div>
+
+      {/* SECTION 3: STOCK INFORMATION */}
+      <div style={{ backgroundColor: '#FEF08A', borderRadius: '10px', padding: '8px', marginBottom: '8px' }}>
+        <h3 style={{ fontSize: '9px', fontWeight: 'bold', color: '#B45309', marginBottom: '6px' }}>
+          {langKey === 'English' ? 'Stock Information' : langKey === 'Cantonese' ? '股票信息' : '股票信息'}
         </h3>
-      </div>
-      {/* Row 1 */}
-      <div style={{ display: 'flex', gap: '4px', marginBottom: '4px' }}>   {/* gap 和 marginBottom 改小 */}
-        {row1Indices.map((index, i) => (
-          <div key={i} style={{ flex: 1, backgroundColor: 'white', borderRadius: '6px', padding: '3px', textAlign: 'center' }}>   {/* padding 改小 */}
-            <p style={{ fontSize: '7px', fontWeight: 'bold', color: '#4B5563', margin: '2px 0' }}>{index.name}</p>
-            <p style={{ fontSize: '9px', fontWeight: 'bold', color: '#1F2937', margin: '2px 0' }}>{index.value}</p>
-            <p style={{ fontSize: '6px', fontWeight: 'bold', color: index.positive ? '#10B981' : '#EF4444', margin: '2px 0' }}>{index.change}</p>
+        <div style={{ display: 'flex', gap: '6px' }}>
+          <div style={{ flex: 1, backgroundColor: 'white', borderRadius: '6px', padding: '5px', textAlign: 'center' }}>
+            <p style={{ fontSize: '6px', color: '#6B7280' }}>{langKey === 'English' ? 'Market Cap' : '市值'}</p>
+            <p style={{ fontSize: '9px', fontWeight: 'bold', color: '#1F2937' }}>{marketCap}</p>
           </div>
-        ))}
-      </div>
-      {/* Row 2 */}
-      <div style={{ display: 'flex', gap: '4px' }}>
-        {row2Indices.map((index, i) => (
-          <div key={i} style={{ flex: 1, backgroundColor: 'white', borderRadius: '6px', padding: '3px', textAlign: 'center' }}>
-            <p style={{ fontSize: '7px', fontWeight: 'bold', color: '#4B5563', margin: '2px 0' }}>{index.name}</p>
-            <p style={{ fontSize: '9px', fontWeight: 'bold', color: '#1F2937', margin: '2px 0' }}>{index.value}</p>
-            <p style={{ fontSize: '6px', fontWeight: 'bold', color: index.positive ? '#10B981' : '#EF4444', margin: '2px 0' }}>{index.change}</p>
+          <div style={{ flex: 1, backgroundColor: 'white', borderRadius: '6px', padding: '5px', textAlign: 'center' }}>
+            <p style={{ fontSize: '6px', color: '#6B7280' }}>{langKey === 'English' ? 'P/E Ratio' : '市盈率'}</p>
+            <p style={{ fontSize: '9px', fontWeight: 'bold', color: '#1F2937' }}>{peRatio}</p>
           </div>
-        ))}
+          <div style={{ flex: 1, backgroundColor: 'white', borderRadius: '6px', padding: '5px', textAlign: 'center' }}>
+            <p style={{ fontSize: '6px', color: '#6B7280' }}>{langKey === 'English' ? 'Volume' : '成交量'}</p>
+            <p style={{ fontSize: '9px', fontWeight: 'bold', color: '#1F2937' }}>{typeof volume === 'number' ? (volume / 1000000).toFixed(1) + 'M' : volume}</p>
+          </div>
+        </div>
       </div>
-    </div>
 
-    {/* SECTION 2: CHART + LOCAL STOCK INFO */}
-    <div style={{ backgroundColor: '#FEF08A', borderRadius: '10px', padding: '6px', marginBottom: '4px' }}>
-      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '4px', flexWrap: 'wrap', gap: '4px' }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
-          <div style={{ backgroundColor: '#3B82F6', padding: '2px', borderRadius: '4px', display: 'inline-flex', alignItems: 'center', justifyContent: 'center' }}>
-            <BarChart3 size={8} style={{ color: 'white' }} />
+      {/* SECTION 4: AI ANALYSIS TEXT */}
+      <div style={{ backgroundColor: '#1F2937', borderRadius: '10px', padding: '8px' }}>
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '6px' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+            <div style={{ display: 'flex', gap: '-8px' }}>
+              <div style={{ width: '24px', height: '24px', borderRadius: '50%', backgroundColor: 'white', border: '2px solid #3B82F6', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 'bold', fontSize: '10px', color: '#3B82F6' }}>M</div>
+              <div style={{ width: '24px', height: '24px', borderRadius: '50%', backgroundColor: '#374151', border: '2px solid #3B82F6', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 'bold', fontSize: '10px', color: 'white' }}>T</div>
+            </div>
+            <div>
+              <h2 style={{ fontSize: '12px', fontWeight: 'bold', color: 'white', margin: 0 }}>{langKey === 'English' ? 'Market Strategy Report' : langKey === 'Cantonese' ? '市場策略報告' : '市场策略报告'}</h2>
+              <p style={{ fontSize: '7px', color: '#60A5FA', fontWeight: 'bold', margin: 0 }}>AI VERIFIED INSIGHTS</p>
+            </div>
           </div>
-          <h3 style={{ fontSize: '9px', fontWeight: 'bold', color: '#1F2937', margin: 0 }}>{stockSymbol}</h3>
-          {changePercent && (
-            <span style={{ fontSize: '8px', fontWeight: 'bold', color: isPositive ? '#10B981' : '#EF4444' }}>
-              {isPositive ? `+${changePercent}%` : `${changePercent}%`}
-            </span>
+          {summaryText && (
+            <button onClick={toggleSpeak} style={{ padding: '4px', borderRadius: '50%', backgroundColor: isSpeaking ? '#DC2626' : '#4B5563', border: 'none', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+              {isSpeaking ? <VolumeX size={12} color="white" /> : <Volume2 size={12} color="white" />}
+            </button>
           )}
         </div>
-        <div style={{ display: 'flex', gap: '8px' }}>
-          <div style={{ textAlign: 'center' }}>
-            <p style={{ fontSize: '6px', color: '#6B7280', margin: 0 }}>Price</p>
-            <p style={{ fontSize: '10px', fontWeight: 'bold', color: '#1F2937', margin: 0 }}>{currentPrice}</p>
+        
+        <div style={{ backgroundColor: '#374151', borderRadius: '8px', padding: '8px' }}>
+          {summaryText ? (
+            <p style={{ fontSize: '10px', color: '#E5E7EB', lineHeight: '1.4', margin: 0, whiteSpace: 'pre-wrap' }}>{summaryText}</p>
+          ) : (
+            <div style={{ textAlign: 'center', padding: '12px' }}>
+              <Activity size={18} style={{ color: '#6B7280', margin: '0 auto 6px' }} />
+              <p style={{ fontSize: '10px', color: '#9CA3AF' }}>{langKey === 'English' ? 'Waiting for analysis...' : langKey === 'Cantonese' ? '等待分析結果...' : '等待分析结果...'}</p>
+            </div>
+          )}
+        </div>
+        
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: '6px', paddingTop: '4px', borderTop: '1px solid #4B5563' }}>
+          <div style={{ display: 'flex', gap: '8px' }}>
+            <Zap size={10} style={{ color: '#FBBF24' }} />
+            <ShieldCheck size={10} style={{ color: '#60A5FA' }} />
+            <Activity size={10} style={{ color: '#34D399' }} />
           </div>
-          <div style={{ textAlign: 'center' }}>
-            <p style={{ fontSize: '6px', color: '#6B7280', margin: 0 }}>RSI</p>
-            <p style={{ fontSize: '10px', fontWeight: 'bold', color: '#3B82F6', margin: 0 }}>{rsiValue}</p>
-          </div>
-          <div style={{ textAlign: 'center' }}>
-            <p style={{ fontSize: '6px', color: '#6B7280', margin: 0 }}>MACD</p>
-            <p style={{ fontSize: '10px', fontWeight: 'bold', color: '#10B981', margin: 0 }}>{macdValue}</p>
-          </div>
+          <p style={{ fontSize: '6px', fontWeight: 'bold', color: '#6B7280', margin: 0 }}>
+            {data.symbol ? `STR-${data.symbol}` : 'READY'} • {new Date().toLocaleTimeString()}
+          </p>
         </div>
       </div>
-      
-      {/* 图表高度减小 */}
-      <div style={{ width: '100%', height: isMobile ? '80px' : '140px' }}>   {/* 关键：100px → 80px */}
-        <ResponsiveContainer width="100%" height="100%">
-          <LineChart data={chartData} margin={{ top: 2, right: 2, left: 2, bottom: 2 }}>
-            <CartesianGrid strokeDasharray="3 3" stroke="#E5E7EB" />
-            <XAxis dataKey="date" hide={true} />
-            <YAxis domain={yAxisDomain} hide={true} />
-            <Tooltip content={<CustomTooltip />} />
-            <Line type="monotone" dataKey="price" stroke="#3B82F6" strokeWidth={1.5} dot={false} activeDot={{ r: 2, fill: '#3B82F6' }} />
-          </LineChart>
-        </ResponsiveContainer>
-      </div>
-      
-      <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '6px', color: '#9CA3AF', marginTop: '2px' }}>
-        <span>${minPrice.toFixed(2)}</span>
-        <span style={{ color: '#3B82F6' }}>${currentPrice}</span>
-        <span>${maxPrice.toFixed(2)}</span>
-      </div>
-      
-      <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '4px', marginTop: '2px' }}>
-        {['1D', '1W', '1M', '3M', '1Y'].map((period) => (
-          <span key={period} style={{ fontSize: '6px', color: period === '1M' ? '#3B82F6' : '#9CA3AF', cursor: 'pointer' }}>{period}</span>
-        ))}
-      </div>
-    </div>
 
-    {/* SECTION 3: STOCK INFORMATION */}
-    <div style={{ backgroundColor: '#FEF08A', borderRadius: '10px', padding: '6px', marginBottom: '4px' }}>
-      <h3 style={{ fontSize: '8px', fontWeight: 'bold', color: '#B45309', marginBottom: '4px' }}>
-        {langKey === 'English' ? 'Stock Information' : langKey === 'Cantonese' ? '股票信息' : '股票信息'}
-      </h3>
-      <div style={{ display: 'flex', gap: '4px' }}>
-        <div style={{ flex: 1, backgroundColor: 'white', borderRadius: '6px', padding: '3px', textAlign: 'center' }}>
-          <p style={{ fontSize: '5px', color: '#6B7280', margin: '2px 0' }}>{langKey === 'English' ? 'Market Cap' : '市值'}</p>
-          <p style={{ fontSize: '8px', fontWeight: 'bold', color: '#1F2937', margin: '2px 0' }}>{marketCap}</p>
-        </div>
-        <div style={{ flex: 1, backgroundColor: 'white', borderRadius: '6px', padding: '3px', textAlign: 'center' }}>
-          <p style={{ fontSize: '5px', color: '#6B7280', margin: '2px 0' }}>{langKey === 'English' ? 'P/E Ratio' : '市盈率'}</p>
-          <p style={{ fontSize: '8px', fontWeight: 'bold', color: '#1F2937', margin: '2px 0' }}>{peRatio}</p>
-        </div>
-        <div style={{ flex: 1, backgroundColor: 'white', borderRadius: '6px', padding: '3px', textAlign: 'center' }}>
-          <p style={{ fontSize: '5px', color: '#6B7280', margin: '2px 0' }}>{langKey === 'English' ? 'Volume' : '成交量'}</p>
-          <p style={{ fontSize: '8px', fontWeight: 'bold', color: '#1F2937', margin: '2px 0' }}>{typeof volume === 'number' ? (volume / 1000000).toFixed(1) + 'M' : volume}</p>
-        </div>
-      </div>
+      <style>{`
+        @keyframes spin {
+          from { transform: rotate(0deg); }
+          to { transform: rotate(360deg); }
+        }
+      `}</style>
     </div>
-
-    {/* SECTION 4: AI ANALYSIS TEXT - 高度减小 */}
-    <div style={{ backgroundColor: '#1F2937', borderRadius: '10px', padding: '6px' }}>
-      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '4px' }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
-          <div style={{ display: 'flex', gap: '-8px' }}>
-            <div style={{ width: '20px', height: '20px', borderRadius: '50%', backgroundColor: 'white', border: '2px solid #3B82F6', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 'bold', fontSize: '8px', color: '#3B82F6' }}>M</div>
-            <div style={{ width: '20px', height: '20px', borderRadius: '50%', backgroundColor: '#374151', border: '2px solid #3B82F6', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 'bold', fontSize: '8px', color: 'white' }}>T</div>
-          </div>
-          <div>
-            <h2 style={{ fontSize: '10px', fontWeight: 'bold', color: 'white', margin: 0 }}>{langKey === 'English' ? 'Market Strategy Report' : langKey === 'Cantonese' ? '市場策略報告' : '市场策略报告'}</h2>
-            <p style={{ fontSize: '6px', color: '#60A5FA', fontWeight: 'bold', margin: 0 }}>AI VERIFIED INSIGHTS</p>
-          </div>
-        </div>
-        {summaryText && (
-          <button onClick={toggleSpeak} style={{ padding: '3px', borderRadius: '50%', backgroundColor: isSpeaking ? '#DC2626' : '#4B5563', border: 'none', cursor: 'pointer' }}>
-            {isSpeaking ? <VolumeX size={10} color="white" /> : <Volume2 size={10} color="white" />}
-          </button>
-        )}
-      </div>
-      
-      {/* 关键：maxHeight 从 100px 减到 70px */}
-      <div style={{ backgroundColor: '#374151', borderRadius: '8px', padding: '8px' }}>
-  {summaryText ? (
-    <p style={{ fontSize: '10px', color: '#E5E7EB', lineHeight: '1.4', margin: 0, whiteSpace: 'pre-wrap' }}>
-      {summaryText}
-    </p>
-  ) : (
-    <div style={{ textAlign: 'center', padding: '12px' }}>
-      <Activity size={18} style={{ color: '#6B7280', margin: '0 auto 6px' }} />
-      <p style={{ fontSize: '10px', color: '#9CA3AF' }}>
-        {langKey === 'English' ? 'Waiting for analysis...' : langKey === 'Cantonese' ? '等待分析結果...' : '等待分析结果...'}
-      </p>
-    </div>
-  )}
-</div>
-      
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: '4px', paddingTop: '3px', borderTop: '1px solid #4B5563' }}>
-        <div style={{ display: 'flex', gap: '6px' }}>
-          <Zap size={8} style={{ color: '#FBBF24' }} />
-          <ShieldCheck size={8} style={{ color: '#60A5FA' }} />
-          <Activity size={8} style={{ color: '#34D399' }} />
-        </div>
-        <p style={{ fontSize: '5px', fontWeight: 'bold', color: '#6B7280', margin: 0 }}>
-          {data.symbol ? `STR-${data.symbol}` : 'READY'} • {new Date().toLocaleTimeString()}
-        </p>
-      </div>
-    </div>
-
-    <style>{`
-      @keyframes spin {
-        from { transform: rotate(0deg); }
-        to { transform: rotate(360deg); }
-      }
-    `}</style>
-  </div>
-);
+  );
+};
