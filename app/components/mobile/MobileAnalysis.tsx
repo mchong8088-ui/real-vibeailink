@@ -245,11 +245,11 @@ const MobileAnalysis: React.FC<MobileAnalysisProps> = ({
 
       {/* OUTPUT AREA - Scrollable with FULL StockAnalysisModule (includes chart) */}
       <div style={{ 
-        flex: 1, 
-        overflowY: 'auto', 
-        padding: '12px',
-        backgroundColor: '#F9FAFB'
-      }}>
+  flex: 1, 
+  overflowY: 'auto', 
+  padding: '12px 8px',  // Added horizontal padding
+  backgroundColor: '#F9FAFB'
+}}>
         
         {legalTitle && (
           <div style={{ backgroundColor: 'white', borderRadius: '12px', padding: '12px', marginBottom: '12px' }}>
