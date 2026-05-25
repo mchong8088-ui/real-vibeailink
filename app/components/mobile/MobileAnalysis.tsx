@@ -287,7 +287,7 @@ const MobileAnalysis: React.FC<MobileAnalysisProps> = ({
         )}
       </div>
 
-      {/* FIXED INPUT BAR - All control buttons visible */}
+      {/* FIXED INPUT BAR - Icons only, no text */}
       {isAnalysisMode && !legalTitle && (
         <div style={{ 
           backgroundColor: 'white', 
@@ -340,7 +340,7 @@ const MobileAnalysis: React.FC<MobileAnalysisProps> = ({
             />
           </div>
           
-          {/* Control Buttons Row - All 4 buttons visible */}
+          {/* Control Buttons Row - Icons only, no text labels */}
           <div style={{ display: 'flex', gap: '8px', justifyContent: 'space-between' }}>
             {/* MIC Button - Red */}
             <button
@@ -352,17 +352,16 @@ const MobileAnalysis: React.FC<MobileAnalysisProps> = ({
                 display: 'flex',
                 alignItems: 'center',
                 justifyContent: 'center',
-                gap: '4px',
                 backgroundColor: isListening ? '#3B82F6' : '#EF4444', 
                 color: 'white', 
                 border: 'none', 
                 cursor: 'pointer'
               }}
+              title="Microphone"
             >
-              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2}>
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2}>
                 <path strokeLinecap="round" strokeLinejoin="round" d="M19 11a7 7 0 01-7 7m0 0a7 7 0 01-7-7m7 7v4m0 0H8m4 0h4m-4-8a3 3 0 01-3-3V5a3 3 0 116 0v6a3 3 0 01-3 3z" />
               </svg>
-              <span style={{ fontSize: '10px' }}>MIC</span>
             </button>
 
             {/* Speaker Button - Red when active */}
@@ -375,17 +374,16 @@ const MobileAnalysis: React.FC<MobileAnalysisProps> = ({
                 display: 'flex',
                 alignItems: 'center',
                 justifyContent: 'center',
-                gap: '4px',
                 backgroundColor: isSpeakerActive ? '#EF4444' : '#9CA3AF', 
                 color: 'white', 
                 border: 'none', 
                 cursor: 'pointer'
               }}
+              title="Speaker"
             >
-              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2}>
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2}>
                 <path strokeLinecap="round" strokeLinejoin="round" d="M15.536 8.464a5 5 0 010 7.072m2.828-9.9a9 9 0 010 12.728M5.586 15H4a1 1 0 01-1-1v-4a1 1 0 011-1h1.586l4.707-4.707C10.923 3.663 12 4.109 12 5v14c0 .891-1.077 1.337-1.707.707L5.586 15z" />
               </svg>
-              <span style={{ fontSize: '10px' }}>SPK</span>
             </button>
 
             {/* Pause Button - Red */}
@@ -398,17 +396,16 @@ const MobileAnalysis: React.FC<MobileAnalysisProps> = ({
                 display: 'flex',
                 alignItems: 'center',
                 justifyContent: 'center',
-                gap: '4px',
                 backgroundColor: isPaused ? '#9CA3AF' : '#EF4444', 
                 color: 'white', 
                 border: 'none', 
                 cursor: 'pointer'
               }}
+              title="Pause"
             >
-              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2}>
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2}>
                 <path strokeLinecap="round" strokeLinejoin="round" d="M10 9v6m4-6v6m7-3a9 9 0 11-18 0 9 9 0 0118 0z" />
               </svg>
-              <span style={{ fontSize: '10px' }}>⏸️</span>
             </button>
 
             {/* Send Button - Green */}
@@ -422,17 +419,16 @@ const MobileAnalysis: React.FC<MobileAnalysisProps> = ({
                 display: 'flex',
                 alignItems: 'center',
                 justifyContent: 'center',
-                gap: '4px',
                 backgroundColor: inputValue.trim() ? '#22C55E' : '#D1D5DB', 
                 color: 'white', 
                 border: 'none', 
                 cursor: inputValue.trim() ? 'pointer' : 'not-allowed'
               }}
+              title="Send"
             >
-              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2}>
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2}>
                 <path strokeLinecap="round" strokeLinejoin="round" d="M7 7h10v10M17 7L7 17" />
               </svg>
-              <span style={{ fontSize: '10px' }}>Send</span>
             </button>
           </div>
         </div>
