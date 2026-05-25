@@ -197,10 +197,11 @@ const MobileAnalysis: React.FC<MobileAnalysisProps> = ({
     <div style={{ 
       display: 'flex', 
       flexDirection: 'column', 
-      height: '100vh', 
+      height: '100dvh',  // Use dynamic viewport height
       width: '100%', 
       backgroundColor: '#f5f5f5', 
-      overflow: 'hidden' 
+      overflow: 'hidden',
+      position: 'relative'
     }}>
       
       {/* TOP BAR - Fixed */}
@@ -212,7 +213,8 @@ const MobileAnalysis: React.FC<MobileAnalysisProps> = ({
         alignItems: 'center', 
         justifyContent: 'space-between', 
         flexShrink: 0,
-        zIndex: 10
+        zIndex: 10,
+        position: 'relative'
       }}>
         <button 
           onClick={onBack} 
@@ -254,14 +256,15 @@ const MobileAnalysis: React.FC<MobileAnalysisProps> = ({
         </div>
       </div>
 
-      {/* SCROLLABLE CONTENT AREA - Everything scrolls together */}
+      {/* SCROLLABLE CONTENT AREA */}
       <div style={{ 
         flex: 1, 
         overflowY: 'auto', 
         overflowX: 'hidden',
         WebkitOverflowScrolling: 'touch',
         padding: '12px 12px 8px 12px',
-        backgroundColor: '#F9FAFB'
+        backgroundColor: '#F9FAFB',
+        minHeight: 0  // Important for flex children to shrink properly
       }}>
         
         {legalTitle && (
@@ -281,7 +284,6 @@ const MobileAnalysis: React.FC<MobileAnalysisProps> = ({
         {topicId === 'about' && <AboutSection lang={langKey} />}
         {topicId === 'features' && <FeaturesSection lang={langKey} />}
 
-        {/* Analysis Module - Now fully scrollable as part of the content area */}
         {isAnalysisMode && !legalTitle && (
           <StockAnalysisModule 
             t={t}
@@ -301,9 +303,9 @@ const MobileAnalysis: React.FC<MobileAnalysisProps> = ({
           paddingBottom: 'max(10px, env(safe-area-inset-bottom))',
           flexShrink: 0,
           zIndex: 10,
-          boxShadow: '0 -2px 10px rgba(0,0,0,0.05)'
+          boxShadow: '0 -2px 10px rgba(0,0,0,0.05)',
+          position: 'relative'
         }}>
-          {/* Input Row */}
           <div style={{ display: 'flex', gap: '8px', alignItems: 'center', marginBottom: '8px' }}>
             <button
               onClick={() => setIsMenuOpen(true)}
@@ -320,8 +322,7 @@ const MobileAnalysis: React.FC<MobileAnalysisProps> = ({
                 justifyContent: 'center',
                 fontSize: '18px',
                 fontWeight: 'bold',
-                flexShrink: 0,
-                transition: 'background-color 0.2s'
+                flexShrink: 0
               }}
             >
               +
@@ -342,13 +343,11 @@ const MobileAnalysis: React.FC<MobileAnalysisProps> = ({
                 borderRadius: '24px', 
                 border: '1px solid #E5E7EB', 
                 outline: 'none',
-                minWidth: 0,
-                transition: 'border-color 0.2s'
+                minWidth: 0
               }}
             />
           </div>
           
-          {/* Control Buttons Row */}
           <div style={{ display: 'flex', gap: '8px', justifyContent: 'space-between' }}>
             <button
               onClick={handleMicToggle}
@@ -362,8 +361,7 @@ const MobileAnalysis: React.FC<MobileAnalysisProps> = ({
                 backgroundColor: isListening ? '#3B82F6' : '#EF4444', 
                 color: 'white', 
                 border: 'none', 
-                cursor: 'pointer',
-                transition: 'background-color 0.2s'
+                cursor: 'pointer'
               }}
             >
               <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2}>
@@ -383,8 +381,7 @@ const MobileAnalysis: React.FC<MobileAnalysisProps> = ({
                 backgroundColor: isSpeakerActive ? '#EF4444' : '#9CA3AF', 
                 color: 'white', 
                 border: 'none', 
-                cursor: 'pointer',
-                transition: 'background-color 0.2s'
+                cursor: 'pointer'
               }}
             >
               <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2}>
@@ -404,8 +401,7 @@ const MobileAnalysis: React.FC<MobileAnalysisProps> = ({
                 backgroundColor: isPaused ? '#9CA3AF' : '#EF4444', 
                 color: 'white', 
                 border: 'none', 
-                cursor: 'pointer',
-                transition: 'background-color 0.2s'
+                cursor: 'pointer'
               }}
             >
               <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2}>
@@ -426,8 +422,7 @@ const MobileAnalysis: React.FC<MobileAnalysisProps> = ({
                 backgroundColor: inputValue.trim() ? '#22C55E' : '#D1D5DB', 
                 color: 'white', 
                 border: 'none', 
-                cursor: inputValue.trim() ? 'pointer' : 'not-allowed',
-                transition: 'background-color 0.2s'
+                cursor: inputValue.trim() ? 'pointer' : 'not-allowed'
               }}
             >
               <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2}>
@@ -438,7 +433,6 @@ const MobileAnalysis: React.FC<MobileAnalysisProps> = ({
         </div>
       )}
 
-      {/* Professional Input Menu */}
       <SourceMenu 
         isOpen={isMenuOpen}
         onClose={() => setIsMenuOpen(false)}
