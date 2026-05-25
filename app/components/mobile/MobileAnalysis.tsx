@@ -1,4 +1,3 @@
-// components/mobile/MobileAnalysis.tsx
 "use client";
 import React, { useState, useEffect, useRef } from 'react';
 import { LanguageToggle } from '../layout/LanguageToggle';
@@ -66,22 +65,27 @@ const MobileAnalysis: React.FC<MobileAnalysisProps> = ({
     }
   }, [langKey]);
 
-  // Text-to-Speech using global utility
+  // Text-to-Speech
   useEffect(() => {
     if (analysisData?.summary && isSpeakerActive && !isPaused) {
-      utteranceRef.current = speakWithLanguage(
-        analysisData.summary,
-        langKey,
-        undefined,
-        () => { utteranceRef.current = null; },
-        () => { utteranceRef.current = null; }
-      );
-    }
-    return () => {
-      if (utteranceRef.current) {
-        stopSpeaking();
+      if (utteranceRef.current) window.speechSynthesis.cancel();
+      const utterance = new SpeechSynthesisUtterance(analysisData.summary);
+      
+      if (langKey === 'Cantonese') {
+        utterance.lang = 'zh-HK';
+      } else if (langKey === '简体中文') {
+        utterance.lang = 'zh-CN';
+      } else {
+        utterance.lang = 'en-US';
       }
-    };
+      
+      utterance.rate = 0.9;
+      utterance.onend = () => { utteranceRef.current = null; };
+      utterance.onerror = () => { utteranceRef.current = null; };
+      utteranceRef.current = utterance;
+      window.speechSynthesis.speak(utterance);
+    }
+    return () => { if (utteranceRef.current) window.speechSynthesis.cancel(); };
   }, [analysisData?.summary, isSpeakerActive, isPaused, langKey]);
 
   const handleAnalyze = async () => {
@@ -140,21 +144,42 @@ const MobileAnalysis: React.FC<MobileAnalysisProps> = ({
   };
 
   const handleSpeakerToggle = () => {
-    if (isSpeakerActive) {
-      stopSpeaking();
+    if (isSpeakerActive && utteranceRef.current) {
+      window.speechSynthesis.cancel();
+      setIsSpeakerActive(false);
     } else if (!isSpeakerActive && analysisData?.summary) {
-      speakWithLanguage(analysisData.summary, langKey);
+      const utterance = new SpeechSynthesisUtterance(analysisData.summary);
+      if (langKey === 'Cantonese') {
+        utterance.lang = 'zh-HK';
+      } else if (langKey === '简体中文') {
+        utterance.lang = 'zh-CN';
+      } else {
+        utterance.lang = 'en-US';
+      }
+      utterance.rate = 0.9;
+      utteranceRef.current = utterance;
+      window.speechSynthesis.speak(utterance);
+      setIsSpeakerActive(true);
     }
-    setIsSpeakerActive(!isSpeakerActive);
     setIsPaused(false);
   };
 
   const handlePauseToggle = () => {
     if (!isPaused && isSpeakerActive) {
-      stopSpeaking();
+      window.speechSynthesis.cancel();
       setIsPaused(true);
     } else if (isPaused && isSpeakerActive && analysisData?.summary) {
-      speakWithLanguage(analysisData.summary, langKey);
+      const utterance = new SpeechSynthesisUtterance(analysisData.summary);
+      if (langKey === 'Cantonese') {
+        utterance.lang = 'zh-HK';
+      } else if (langKey === '简体中文') {
+        utterance.lang = 'zh-CN';
+      } else {
+        utterance.lang = 'en-US';
+      }
+      utterance.rate = 0.9;
+      utteranceRef.current = utterance;
+      window.speechSynthesis.speak(utterance);
       setIsPaused(false);
     }
   };
@@ -171,7 +196,7 @@ const MobileAnalysis: React.FC<MobileAnalysisProps> = ({
         body: JSON.stringify({ url: sourceData, language: langKey }),
       }).then(response => response.json())
         .then(data => {
-          setAnalysisData(prev => ({
+          setAnalysisData((prev: any) => ({
             ...prev,
             summary: prev?.summary + "\n\n📎 URL Analysis:\n" + (data.text || "URL analysis completed.")
           }));
@@ -206,7 +231,7 @@ const MobileAnalysis: React.FC<MobileAnalysisProps> = ({
       bottom: 0
     }}>
       
-      {/* TOP BAR - Fixed */}
+      {/* TOP BAR */}
       <div style={{ 
         backgroundColor: 'white', 
         padding: '8px 12px', 
@@ -217,39 +242,16 @@ const MobileAnalysis: React.FC<MobileAnalysisProps> = ({
         flexShrink: 0,
         zIndex: 10
       }}>
-        <button 
-          onClick={onBack} 
-          style={{ 
-            display: 'flex', 
-            alignItems: 'center', 
-            gap: '3px', 
-            color: '#4B5563', 
-            background: 'none', 
-            border: 'none', 
-            cursor: 'pointer'
-          }}
-        >
+        <button onClick={onBack} style={{ display: 'flex', alignItems: 'center', gap: '3px', color: '#4B5563', background: 'none', border: 'none', cursor: 'pointer' }}>
           <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2}>
             <path strokeLinecap="round" strokeLinejoin="round" d="M15 19l-7-7 7-7" />
           </svg>
           <span style={{ fontSize: '10px', fontWeight: '500' }}>Back</span>
         </button>
-        
         <h2 style={{ fontSize: '14px', fontWeight: '600', color: '#1F2937', margin: 0 }}>{getTitle()}</h2>
-        
         <div style={{ display: 'flex', gap: '6px', alignItems: 'center' }}>
           <LanguageToggle currentLang={langKey} onLangChange={setLangKey} />
-          <button 
-            onClick={onAuthOpen} 
-            style={{ 
-              color: '#2563EB', 
-              fontWeight: '600', 
-              fontSize: '10px', 
-              background: 'none', 
-              border: 'none', 
-              cursor: 'pointer'
-            }}
-          >
+          <button onClick={onAuthOpen} style={{ color: '#2563EB', fontWeight: '600', fontSize: '10px', background: 'none', border: 'none', cursor: 'pointer' }}>
             {user ? 'Welcome' : (langKey === 'Cantonese' ? '登入' : langKey === '简体中文' ? '登录' : 'Login')}
           </button>
         </div>
@@ -305,124 +307,32 @@ const MobileAnalysis: React.FC<MobileAnalysisProps> = ({
           zIndex: 10
         }}>
           <div style={{ display: 'flex', gap: '6px', alignItems: 'center', marginBottom: '6px' }}>
-            <button
-              onClick={() => setIsMenuOpen(true)}
-              style={{
-                width: '32px',
-                height: '32px',
-                borderRadius: '8px',
-                backgroundColor: '#EF4444',
-                color: 'white',
-                border: 'none',
-                cursor: 'pointer',
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                fontSize: '16px',
-                fontWeight: 'bold',
-                flexShrink: 0
-              }}
-            >
+            <button onClick={() => setIsMenuOpen(true)} style={{ width: '32px', height: '32px', borderRadius: '8px', backgroundColor: '#EF4444', color: 'white', border: 'none', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '16px', fontWeight: 'bold', flexShrink: 0 }}>
               +
             </button>
-            
-            <input
-              type="text"
-              value={inputValue}
-              onChange={(e) => setInputValue(e.target.value)}
-              placeholder={exampleText}
-              onKeyPress={(e) => e.key === 'Enter' && handleAnalyze()}
-              style={{ 
-                flex: 1, 
-                padding: '6px 10px', 
-                fontSize: '12px', 
-                color: '#1F2937', 
-                backgroundColor: '#F3F4F6', 
-                borderRadius: '16px', 
-                border: '1px solid #E5E7EB', 
-                outline: 'none',
-                minWidth: 0
-              }}
-            />
+            <input type="text" value={inputValue} onChange={(e) => setInputValue(e.target.value)} placeholder={exampleText} onKeyPress={(e) => e.key === 'Enter' && handleAnalyze()} style={{ flex: 1, padding: '6px 10px', fontSize: '12px', color: '#1F2937', backgroundColor: '#F3F4F6', borderRadius: '16px', border: '1px solid #E5E7EB', outline: 'none', minWidth: 0 }} />
           </div>
           
           <div style={{ display: 'flex', gap: '8px', justifyContent: 'center' }}>
-            <button
-              onClick={handleMicToggle}
-              style={{ 
-                width: '40px',
-                height: '40px',
-                borderRadius: '20px',
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                backgroundColor: isListening ? '#3B82F6' : '#EF4444', 
-                color: 'white', 
-                border: 'none', 
-                cursor: 'pointer'
-              }}
-            >
+            <button onClick={handleMicToggle} style={{ width: '40px', height: '40px', borderRadius: '20px', display: 'flex', alignItems: 'center', justifyContent: 'center', backgroundColor: isListening ? '#3B82F6' : '#EF4444', color: 'white', border: 'none', cursor: 'pointer' }}>
               <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2}>
                 <path strokeLinecap="round" strokeLinejoin="round" d="M19 11a7 7 0 01-7 7m0 0a7 7 0 01-7-7m7 7v4m0 0H8m4 0h4m-4-8a3 3 0 01-3-3V5a3 3 0 116 0v6a3 3 0 01-3 3z" />
               </svg>
             </button>
 
-            <button
-              onClick={handleSpeakerToggle}
-              style={{ 
-                width: '40px',
-                height: '40px',
-                borderRadius: '20px',
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                backgroundColor: isSpeakerActive ? '#EF4444' : '#9CA3AF', 
-                color: 'white', 
-                border: 'none', 
-                cursor: 'pointer'
-              }}
-            >
+            <button onClick={handleSpeakerToggle} style={{ width: '40px', height: '40px', borderRadius: '20px', display: 'flex', alignItems: 'center', justifyContent: 'center', backgroundColor: isSpeakerActive ? '#EF4444' : '#9CA3AF', color: 'white', border: 'none', cursor: 'pointer' }}>
               <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2}>
                 <path strokeLinecap="round" strokeLinejoin="round" d="M15.536 8.464a5 5 0 010 7.072m2.828-9.9a9 9 0 010 12.728M5.586 15H4a1 1 0 01-1-1v-4a1 1 0 011-1h1.586l4.707-4.707C10.923 3.663 12 4.109 12 5v14c0 .891-1.077 1.337-1.707.707L5.586 15z" />
               </svg>
             </button>
 
-            <button
-              onClick={handlePauseToggle}
-              style={{ 
-                width: '40px',
-                height: '40px',
-                borderRadius: '20px',
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                backgroundColor: isPaused ? '#9CA3AF' : '#EF4444', 
-                color: 'white', 
-                border: 'none', 
-                cursor: 'pointer'
-              }}
-            >
+            <button onClick={handlePauseToggle} style={{ width: '40px', height: '40px', borderRadius: '20px', display: 'flex', alignItems: 'center', justifyContent: 'center', backgroundColor: isPaused ? '#9CA3AF' : '#EF4444', color: 'white', border: 'none', cursor: 'pointer' }}>
               <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2}>
                 <path strokeLinecap="round" strokeLinejoin="round" d="M10 9v6m4-6v6m7-3a9 9 0 11-18 0 9 9 0 0118 0z" />
               </svg>
             </button>
 
-            <button
-              onClick={handleAnalyze}
-              disabled={!inputValue.trim()}
-              style={{ 
-                width: '40px',
-                height: '40px',
-                borderRadius: '20px',
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                backgroundColor: inputValue.trim() ? '#22C55E' : '#D1D5DB', 
-                color: 'white', 
-                border: 'none', 
-                cursor: inputValue.trim() ? 'pointer' : 'not-allowed'
-              }}
-            >
+            <button onClick={handleAnalyze} disabled={!inputValue.trim()} style={{ width: '40px', height: '40px', borderRadius: '20px', display: 'flex', alignItems: 'center', justifyContent: 'center', backgroundColor: inputValue.trim() ? '#22C55E' : '#D1D5DB', color: 'white', border: 'none', cursor: inputValue.trim() ? 'pointer' : 'not-allowed' }}>
               <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2}>
                 <path strokeLinecap="round" strokeLinejoin="round" d="M7 7h10v10M17 7L7 17" />
               </svg>
@@ -431,12 +341,7 @@ const MobileAnalysis: React.FC<MobileAnalysisProps> = ({
         </div>
       )}
 
-      <SourceMenu 
-        isOpen={isMenuOpen}
-        onClose={() => setIsMenuOpen(false)}
-        onSelectSource={handleSourceSelect}
-        langKey={langKey}
-      />
+      <SourceMenu isOpen={isMenuOpen} onClose={() => setIsMenuOpen(false)} onSelectSource={handleSourceSelect} langKey={langKey} />
     </div>
   );
 };
