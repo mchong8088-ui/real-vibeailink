@@ -54,13 +54,27 @@ export const StockAnalysisModule: React.FC<StockAnalysisModuleProps> = ({
   const priceRange = maxPrice - minPrice;
   const yAxisDomain = [minPrice - priceRange * 0.1, maxPrice + priceRange * 0.1];
 
+  // Fix Cantonese TTS
   useEffect(() => {
     if (summaryText && isSpeaking) {
       if (utteranceRef.current) window.speechSynthesis.cancel();
       const utterance = new SpeechSynthesisUtterance(summaryText);
-      if (langKey === 'Cantonese') utterance.lang = 'zh-HK';
-      else if (langKey === '简体中文') utterance.lang = 'zh-CN';
-      else utterance.lang = 'en-US';
+      
+      // Set language for TTS
+      if (langKey === 'Cantonese') {
+        utterance.lang = 'zh-HK';
+        // Try to get a Cantonese voice if available
+        const voices = window.speechSynthesis.getVoices();
+        const cantoneseVoice = voices.find(voice => voice.lang === 'zh-HK' || voice.lang === 'zh-Hant-HK');
+        if (cantoneseVoice) utterance.voice = cantoneseVoice;
+      } else if (langKey === '简体中文') {
+        utterance.lang = 'zh-CN';
+        const chineseVoice = window.speechSynthesis.getVoices().find(voice => voice.lang === 'zh-CN');
+        if (chineseVoice) utterance.voice = chineseVoice;
+      } else {
+        utterance.lang = 'en-US';
+      }
+      
       utterance.rate = 0.9;
       utterance.onend = () => setIsSpeaking(false);
       utterance.onerror = () => setIsSpeaking(false);
@@ -247,44 +261,56 @@ export const StockAnalysisModule: React.FC<StockAnalysisModuleProps> = ({
         </div>
       </div>
 
-      {/* AI Analysis Text */}
-      <div style={{ backgroundColor: '#1F2937', borderRadius: '6px', padding: '4px' }}>
-        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '3px' }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '3px' }}>
-            <div style={{ display: 'flex' }}>
-              <div style={{ width: '16px', height: '16px', borderRadius: '50%', backgroundColor: 'white', border: '1px solid #3B82F6', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 'bold', fontSize: '7px', color: '#3B82F6' }}>M</div>
-              <div style={{ width: '16px', height: '16px', borderRadius: '50%', backgroundColor: '#374151', border: '1px solid #3B82F6', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 'bold', fontSize: '7px', color: 'white' }}>T</div>
-            </div>
-            <div>
-              <h2 style={{ fontSize: '9px', fontWeight: 'bold', color: 'white', margin: 0 }}>Market Strategy Report</h2>
-              <p style={{ fontSize: '5px', color: '#60A5FA', fontWeight: 'bold', margin: 0 }}>AI VERIFIED INSIGHTS</p>
-            </div>
+      {/* AI Analysis Text - White background, black text, removed M and T icons */}
+      <div style={{ backgroundColor: 'white', borderRadius: '6px', padding: '8px', border: '1px solid #E5E7EB' }}>
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '8px' }}>
+          <div>
+            <h2 style={{ fontSize: '11px', fontWeight: 'bold', color: '#1F2937', margin: 0 }}>
+              {langKey === 'English' ? 'Market Strategy Report' : langKey === 'Cantonese' ? '市場策略報告' : '市场策略报告'}
+            </h2>
+            <p style={{ fontSize: '6px', color: '#6B7280', fontWeight: 'bold', margin: 0 }}>AI VERIFIED INSIGHTS</p>
           </div>
           {summaryText && (
-            <button onClick={toggleSpeak} style={{ padding: '2px', borderRadius: '50%', backgroundColor: isSpeaking ? '#DC2626' : '#4B5563', border: 'none', cursor: 'pointer' }}>
-              {isSpeaking ? <VolumeX size={8} color="white" /> : <Volume2 size={8} color="white" />}
+            <button 
+              onClick={toggleSpeak} 
+              style={{ 
+                padding: '4px', 
+                borderRadius: '50%', 
+                backgroundColor: isSpeaking ? '#DC2626' : '#3B82F6', 
+                border: 'none', 
+                cursor: 'pointer',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center'
+              }}
+            >
+              {isSpeaking ? <VolumeX size={12} color="white" /> : <Volume2 size={12} color="white" />}
             </button>
           )}
         </div>
         
-        <div style={{ backgroundColor: '#374151', borderRadius: '4px', padding: '4px' }}>
+        <div style={{ backgroundColor: '#F9FAFB', borderRadius: '4px', padding: '8px', maxHeight: '200px', overflowY: 'auto' }}>
           {summaryText ? (
-            <p style={{ fontSize: '8px', color: '#E5E7EB', lineHeight: '1.3', margin: 0, whiteSpace: 'pre-wrap' }}>{summaryText}</p>
+            <p style={{ fontSize: '10px', color: '#1F2937', lineHeight: '1.5', margin: 0, whiteSpace: 'pre-wrap' }}>
+              {summaryText}
+            </p>
           ) : (
-            <div style={{ textAlign: 'center', padding: '6px' }}>
-              <Activity size={12} style={{ color: '#6B7280', margin: '0 auto 3px' }} />
-              <p style={{ fontSize: '8px', color: '#9CA3AF' }}>Waiting for analysis...</p>
+            <div style={{ textAlign: 'center', padding: '12px' }}>
+              <Activity size={16} style={{ color: '#9CA3AF', margin: '0 auto 4px' }} />
+              <p style={{ fontSize: '9px', color: '#6B7280' }}>
+                {langKey === 'English' ? 'Waiting for analysis...' : langKey === 'Cantonese' ? '等待分析結果...' : '等待分析结果...'}
+              </p>
             </div>
           )}
         </div>
         
-        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: '3px', paddingTop: '2px', borderTop: '1px solid #4B5563' }}>
-          <div style={{ display: 'flex', gap: '4px' }}>
-            <Zap size={6} style={{ color: '#FBBF24' }} />
-            <ShieldCheck size={6} style={{ color: '#60A5FA' }} />
-            <Activity size={6} style={{ color: '#34D399' }} />
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: '6px', paddingTop: '4px', borderTop: '1px solid #E5E7EB' }}>
+          <div style={{ display: 'flex', gap: '6px' }}>
+            <Zap size={8} style={{ color: '#F59E0B' }} />
+            <ShieldCheck size={8} style={{ color: '#3B82F6' }} />
+            <Activity size={8} style={{ color: '#10B981' }} />
           </div>
-          <p style={{ fontSize: '4px', fontWeight: 'bold', color: '#6B7280', margin: 0 }}>
+          <p style={{ fontSize: '5px', fontWeight: 'bold', color: '#9CA3AF', margin: 0 }}>
             {data.symbol ? `STR-${data.symbol}` : 'READY'} • {new Date().toLocaleTimeString()}
           </p>
         </div>
