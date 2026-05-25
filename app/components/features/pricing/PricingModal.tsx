@@ -37,17 +37,17 @@ export const PricingModal: React.FC<PricingModalProps> = ({
     };
 
     return (
-      <div style={{ width: '100%', maxWidth: '450px', margin: '0 auto' }}>
+      <div style={{ width: '100%', maxWidth: '350px', margin: '0 auto' }}>
         <div style={{ backgroundColor: 'white', borderRadius: '12px', boxShadow: '0 10px 25px -5px rgba(0,0,0,0.1)', overflow: 'hidden', border: '1px solid #e5e7eb' }}>
-          <div style={{ backgroundColor: '#3B82F6', padding: '16px 20px', textAlign: 'center' }}>
-            <h3 style={{ fontSize: '20px', fontWeight: 'bold', color: 'white', margin: 0 }}>☕ Coffee Plan</h3>
+          <div style={{ backgroundColor: '#3B82F6', padding: '12px 16px', textAlign: 'center' }}>
+            <h3 style={{ fontSize: '16px', fontWeight: 'bold', color: 'white', margin: 0 }}>☕ Coffee Plan</h3>
           </div>
-          <div style={{ padding: '20px', textAlign: 'center' }}>
-            <span style={{ fontSize: '36px', fontWeight: 'bold', color: '#111827' }}>$10</span>
-            <span style={{ color: '#6B7280', fontSize: '18px' }}>/month</span>
-            <p style={{ fontSize: '14px', color: '#6B7280', marginTop: '8px' }}>300 credits per month</p>
+          <div style={{ padding: '16px', textAlign: 'center' }}>
+            <span style={{ fontSize: '28px', fontWeight: 'bold', color: '#111827' }}>$10</span>
+            <span style={{ color: '#6B7280', fontSize: '14px' }}>/month</span>
+            <p style={{ fontSize: '12px', color: '#6B7280', marginTop: '6px' }}>300 credits per month</p>
           </div>
-          <div style={{ padding: '20px' }}>
+          <div style={{ padding: '16px' }}>
             <button
               onClick={handleCoffeeClick}
               disabled={loading}
@@ -56,19 +56,19 @@ export const PricingModal: React.FC<PricingModalProps> = ({
                 backgroundColor: '#22C55E',
                 color: 'white',
                 fontWeight: 'bold',
-                padding: '14px',
+                padding: '12px',
                 borderRadius: '8px',
                 border: 'none',
                 cursor: 'pointer',
-                fontSize: '16px',
+                fontSize: '14px',
               }}
             >
               {loading ? 'Processing...' : 'Join the Plan'}
             </button>
           </div>
         </div>
-        <div style={{ display: 'flex', justifyContent: 'center', marginTop: '16px' }}>
-          <button onClick={onClose} style={{ color: '#9CA3AF', fontSize: '14px', background: 'none', border: 'none', cursor: 'pointer' }}>Close</button>
+        <div style={{ display: 'flex', justifyContent: 'center', marginTop: '12px' }}>
+          <button onClick={onClose} style={{ color: '#9CA3AF', fontSize: '12px', background: 'none', border: 'none', cursor: 'pointer' }}>Close</button>
         </div>
       </div>
     );
@@ -84,7 +84,6 @@ export const PricingModal: React.FC<PricingModalProps> = ({
         setLoading(false);
         return;
       } else if (isTopUp) {
-        // Use COFFEE_TOPUP which has the alias TOPUP_100_CREDITS
         onSelectPlan('topup', STRIPE_PRICE_IDS.COFFEE_TOPUP);
       }
     } else if (planId === 'prolite') {
@@ -106,44 +105,47 @@ export const PricingModal: React.FC<PricingModalProps> = ({
     {
       id: 'explorer',
       name: 'EXPLORER',
+      shortName: 'EXP',
       price: { monthly: 0, annual: 0 },
-      credits: '100 credits',
+      credits: '100',
       period: 'one-time',
       features: [
-        'Real time Stock data - HK/TW/US markets',
+        'Real time Stock data',
         'Key Global News updates',
-        'Cantonese, Mandarin & English voice support',
-        'Basic AI summary & Analysis'
+        'Multi-language voice',
+        'Basic AI summary'
       ],
-      buttonText: isExistingUser ? 'Top-up Coffee Plan' : 'Join the Plan'
+      buttonText: isExistingUser ? 'Top-up' : 'Join'
     },
     {
       id: 'prolite',
       name: 'PRO LITE',
+      shortName: 'PRO',
       price: { monthly: 29, annual: 23 },
-      credits: '1,500 credits',
-      period: '/month',
+      credits: '1,500',
+      period: '/mo',
       features: [
         'Everything in Explorer',
-        'Personal URL input for analysis',
-        'Real time AI summary without bias',
+        'Personal URL input',
+        'Real time AI summary',
         'Priority email support'
       ],
-      buttonText: 'Join the Plan'
+      buttonText: 'Join'
     },
     {
       id: 'institutional',
       name: 'INSTITUTIONAL',
+      shortName: 'INST',
       price: { monthly: 99, annual: 79 },
-      credits: '8,000 credits',
-      period: '/month',
+      credits: '8,000',
+      period: '/mo',
       features: [
         'Everything in Pro Lite',
         'API access',
         'Dedicated account manager',
         'Priority processing'
       ],
-      buttonText: 'Join the Plan'
+      buttonText: 'Join'
     }
   ];
 
@@ -153,22 +155,23 @@ export const PricingModal: React.FC<PricingModalProps> = ({
 
   const getSavings = (plan: typeof plans[0]) => {
     if (billingCycle === 'annual' && plan.price.annual < plan.price.monthly) {
-      return (plan.price.monthly * 12 - plan.price.annual);
+      const monthlyTotal = plan.price.monthly * 12;
+      return monthlyTotal - plan.price.annual;
     }
     return 0;
   };
 
   return (
-    <div style={{ width: '100%', maxWidth: '1100px', margin: '0 auto' }}>
+    <div style={{ width: '100%', maxWidth: '100%', margin: '0 auto', overflowX: 'auto' }}>
       {/* Billing Toggle */}
-      <div style={{ display: 'flex', justifyContent: 'center', marginBottom: '24px' }}>
+      <div style={{ display: 'flex', justifyContent: 'center', marginBottom: '16px' }}>
         <div style={{ backgroundColor: '#F3F4F6', borderRadius: '9999px', padding: '4px', display: 'inline-flex' }}>
           <button
             onClick={() => setBillingCycle('monthly')}
             style={{
-              padding: '8px 28px',
+              padding: '6px 20px',
               borderRadius: '9999px',
-              fontSize: '14px',
+              fontSize: '12px',
               fontWeight: '600',
               backgroundColor: billingCycle === 'monthly' ? 'white' : 'transparent',
               color: billingCycle === 'monthly' ? '#111827' : '#6B7280',
@@ -182,9 +185,9 @@ export const PricingModal: React.FC<PricingModalProps> = ({
           <button
             onClick={() => setBillingCycle('annual')}
             style={{
-              padding: '8px 28px',
+              padding: '6px 20px',
               borderRadius: '9999px',
-              fontSize: '14px',
+              fontSize: '12px',
               fontWeight: '600',
               backgroundColor: billingCycle === 'annual' ? 'white' : 'transparent',
               color: billingCycle === 'annual' ? '#111827' : '#6B7280',
@@ -192,65 +195,76 @@ export const PricingModal: React.FC<PricingModalProps> = ({
               cursor: 'pointer',
             }}
           >
-            Annual <span style={{ color: '#22C55E' }}>Save 20%</span>
+            Annual <span style={{ color: '#22C55E', fontSize: '10px' }}>Save 20%</span>
           </button>
         </div>
       </div>
 
-      {/* 3 Plans Row */}
-      <div style={{ display: 'flex', gap: '20px', justifyContent: 'center' }}>
+      {/* 3 Plans Row - Compact for mobile */}
+      <div style={{ display: 'flex', gap: '10px', justifyContent: 'center', flexWrap: 'wrap' }}>
         {plans.map((plan) => (
           <div
             key={plan.id}
             style={{
-              flex: 1,
+              flex: '1 1 0',
+              minWidth: '100px',
               backgroundColor: 'white',
-              borderRadius: '16px',
+              borderRadius: '12px',
               overflow: 'hidden',
               border: '1px solid #E5E7EB',
-              boxShadow: '0 4px 6px -1px rgba(0,0,0,0.1)',
+              boxShadow: '0 2px 4px -1px rgba(0,0,0,0.1)',
               display: 'flex',
               flexDirection: 'column',
             }}
           >
             {/* Header - BLUE */}
-            <div style={{ backgroundColor: '#3B82F6', padding: '16px', textAlign: 'center' }}>
-              <h3 style={{ fontSize: '18px', fontWeight: 'bold', color: 'white', margin: 0 }}>{plan.name}</h3>
+            <div style={{ backgroundColor: '#3B82F6', padding: '8px', textAlign: 'center' }}>
+              <h3 style={{ 
+                fontSize: '11px', 
+                fontWeight: 'bold', 
+                color: 'white', 
+                margin: 0,
+                whiteSpace: 'nowrap',
+                overflow: 'hidden',
+                textOverflow: 'ellipsis'
+              }}>
+                {plan.name}
+              </h3>
             </div>
 
             {/* Price - White */}
-            <div style={{ padding: '16px', textAlign: 'center', borderBottom: '1px solid #F3F4F6' }}>
+            <div style={{ padding: '10px', textAlign: 'center', borderBottom: '1px solid #F3F4F6' }}>
               {currentPrice(plan) === 0 ? (
                 <>
-                  <span style={{ fontSize: '32px', fontWeight: 'bold', color: '#111827' }}>FREE</span>
-                  <p style={{ fontSize: '14px', color: '#6B7280', marginTop: '8px' }}>{plan.credits}</p>
-                  <p style={{ fontSize: '13px', color: '#9CA3AF' }}>{plan.period}</p>
+                  <span style={{ fontSize: '20px', fontWeight: 'bold', color: '#111827' }}>FREE</span>
+                  <p style={{ fontSize: '10px', color: '#6B7280', marginTop: '4px' }}>{plan.credits} credits</p>
+                  <p style={{ fontSize: '9px', color: '#9CA3AF' }}>{plan.period}</p>
                 </>
               ) : (
                 <>
-                  <span style={{ fontSize: '32px', fontWeight: 'bold', color: '#111827' }}>${currentPrice(plan)}</span>
-                  <span style={{ color: '#6B7280', fontSize: '14px' }}>/{billingCycle === 'monthly' ? 'mo' : 'yr'}</span>
-                  <p style={{ fontSize: '14px', color: '#6B7280', marginTop: '8px' }}>{plan.credits}</p>
-                  <p style={{ fontSize: '13px', color: '#9CA3AF' }}>{plan.period}</p>
+                  <span style={{ fontSize: '20px', fontWeight: 'bold', color: '#111827' }}>${currentPrice(plan)}</span>
+                  <span style={{ color: '#6B7280', fontSize: '11px' }}>/{billingCycle === 'monthly' ? 'mo' : 'yr'}</span>
+                  <p style={{ fontSize: '10px', color: '#6B7280', marginTop: '4px' }}>{plan.credits} credits</p>
+                  <p style={{ fontSize: '9px', color: '#9CA3AF' }}>{plan.period}</p>
                   {getSavings(plan) > 0 && (
-                    <p style={{ fontSize: '12px', color: '#22C55E', marginTop: '6px' }}>Save ${getSavings(plan)}/year</p>
+                    <p style={{ fontSize: '9px', color: '#22C55E', marginTop: '4px' }}>Save ${getSavings(plan)}/yr</p>
                   )}
                 </>
               )}
               {plan.id === 'explorer' && isExistingUser && (
-                <p style={{ fontSize: '13px', color: '#F97316', marginTop: '10px', fontWeight: '500' }}>Top-up $5 for 100 credits</p>
+                <p style={{ fontSize: '9px', color: '#F97316', marginTop: '6px', fontWeight: '500' }}>Top-up $5/100cr</p>
               )}
             </div>
 
-            {/* Features */}
-            <div style={{ padding: '16px', flex: 1 }}>
+            {/* Features - Compact */}
+            <div style={{ padding: '8px', flex: 1 }}>
               {plan.features.map((feature, idx) => (
-                <p key={idx} style={{ fontSize: '13px', color: '#4B5563', marginBottom: '8px', lineHeight: '1.4' }}>• {feature}</p>
+                <p key={idx} style={{ fontSize: '8px', color: '#4B5563', marginBottom: '4px', lineHeight: '1.3' }}>• {feature}</p>
               ))}
             </div>
 
             {/* Button - GREEN */}
-            <div style={{ padding: '16px', backgroundColor: '#F9FAFB' }}>
+            <div style={{ padding: '10px', backgroundColor: '#F9FAFB' }}>
               <button
                 onClick={() => handlePlanAction(plan.id, plan.id === 'explorer' && isExistingUser)}
                 disabled={loading && selectedPlan === plan.id}
@@ -259,11 +273,11 @@ export const PricingModal: React.FC<PricingModalProps> = ({
                   backgroundColor: '#22C55E',
                   color: 'white',
                   fontWeight: 'bold',
-                  padding: '12px',
+                  padding: '8px',
                   borderRadius: '8px',
                   border: 'none',
                   cursor: loading && selectedPlan === plan.id ? 'not-allowed' : 'pointer',
-                  fontSize: '14px',
+                  fontSize: '11px',
                 }}
               >
                 {loading && selectedPlan === plan.id ? '...' : plan.buttonText}
@@ -274,8 +288,8 @@ export const PricingModal: React.FC<PricingModalProps> = ({
       </div>
 
       {/* Close Button */}
-      <div style={{ display: 'flex', justifyContent: 'center', marginTop: '24px' }}>
-        <button onClick={onClose} style={{ color: '#9CA3AF', fontSize: '14px', background: 'none', border: 'none', cursor: 'pointer' }}>Close</button>
+      <div style={{ display: 'flex', justifyContent: 'center', marginTop: '16px' }}>
+        <button onClick={onClose} style={{ color: '#9CA3AF', fontSize: '12px', background: 'none', border: 'none', cursor: 'pointer' }}>Close</button>
       </div>
     </div>
   );
