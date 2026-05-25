@@ -230,11 +230,11 @@ const MobileAnalysis: React.FC<MobileAnalysisProps> = ({
 
       {/* OUTPUT AREA - No instruction text, just the analysis module */}
       <div style={{ 
-        flex: 1, 
-        overflowY: 'auto', 
-        padding: '8px 10px 4px 10px',
-        backgroundColor: '#F9FAFB'
-      }}>
+  flex: 1, 
+  overflowY: 'auto', 
+  padding: '4px 8px 2px 8px',   // 原来是 8px 10px 4px 10px
+  backgroundColor: '#F9FAFB'
+}}>
         
         {legalTitle && (
           <div style={{ backgroundColor: 'white', borderRadius: '10px', padding: '8px', marginBottom: '8px' }}>
