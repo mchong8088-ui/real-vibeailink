@@ -54,28 +54,36 @@ export const StockAnalysisModule: React.FC<StockAnalysisModuleProps> = ({
   const priceRange = maxPrice - minPrice;
   const yAxisDomain = [minPrice - priceRange * 0.1, maxPrice + priceRange * 0.1];
 
-  // TTS using global utility
+  // Simple TTS
   useEffect(() => {
     if (summaryText && isSpeaking) {
-      stopSpeaking();
-      utteranceRef.current = speakWithLanguage(
-        summaryText,
-        langKey,
-        undefined,
-        () => setIsSpeaking(false),
-        () => setIsSpeaking(false)
-      );
+      if (utteranceRef.current) window.speechSynthesis.cancel();
+      const utterance = new SpeechSynthesisUtterance(summaryText);
+      
+      if (langKey === 'Cantonese') {
+        utterance.lang = 'zh-HK';
+      } else if (langKey === '简体中文') {
+        utterance.lang = 'zh-CN';
+      } else {
+        utterance.lang = 'en-US';
+      }
+      
+      utterance.rate = 0.9;
+      utterance.onend = () => setIsSpeaking(false);
+      utterance.onerror = () => setIsSpeaking(false);
+      utteranceRef.current = utterance;
+      window.speechSynthesis.speak(utterance);
     }
     return () => {
-      if (isSpeaking) {
-        stopSpeaking();
+      if (utteranceRef.current) {
+        window.speechSynthesis.cancel();
       }
     };
   }, [summaryText, isSpeaking, langKey]);
 
   const toggleSpeak = () => {
     if (isSpeaking) {
-      stopSpeaking();
+      window.speechSynthesis.cancel();
       setIsSpeaking(false);
     } else if (summaryText) {
       setIsSpeaking(true);
@@ -246,7 +254,7 @@ export const StockAnalysisModule: React.FC<StockAnalysisModuleProps> = ({
         </div>
       </div>
 
-      {/* AI Analysis Text - White background, black text */}
+      {/* AI Analysis Text */}
       <div style={{ backgroundColor: 'white', borderRadius: '6px', padding: '8px', border: '1px solid #E5E7EB' }}>
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '8px' }}>
           <div>
