@@ -246,7 +246,7 @@ export const StockAnalysisModule: React.FC<StockAnalysisModuleProps> = ({
       </div>
 
       {/* SECTION 3: STOCK INFORMATION - 1 row of 3 columns */}
-      <div style={{ backgroundColor: '#FEF08A', borderRadius: '12px', padding: '10px', marginBottom: '12px' }}>
+      <div style={{ backgroundColor: '#FEF08A', borderRadius: '12px', padding: '8px', marginBottom: '8px' }}>
         <h3 style={{ fontSize: '10px', fontWeight: 'bold', color: '#B45309', marginBottom: '8px' }}>
           {langKey === 'English' ? 'Stock Information' : langKey === 'Cantonese' ? '股票信息' : '股票信息'}
         </h3>
