@@ -287,7 +287,7 @@ export const StockAnalysisModule: React.FC<StockAnalysisModuleProps> = ({
         </div>
         
         {/* Scrollable Text Area */}
-        <div style={{ backgroundColor: '#374151', borderRadius: '10px', padding: '10px', maxHeight: '200px', overflowY: 'auto' }}>
+        <div style={{ backgroundColor: '#374151', borderRadius: '10px', padding: '10px', maxHeight: '150px', overflowY: 'auto' }}>
           {summaryText ? (
             <p style={{ fontSize: '11px', color: '#E5E7EB', lineHeight: '1.5', margin: 0, whiteSpace: 'pre-wrap' }}>{summaryText}</p>
           ) : (

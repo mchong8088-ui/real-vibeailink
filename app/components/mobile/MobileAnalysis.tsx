@@ -203,7 +203,7 @@ const MobileAnalysis: React.FC<MobileAnalysisProps> = ({
       overflow: 'hidden' 
     }}>
       
-      {/* TOP BAR */}
+      {/* TOP BAR - Fixed height */}
       <div style={{ 
         backgroundColor: 'white', 
         padding: '10px 12px', 
@@ -228,13 +228,13 @@ const MobileAnalysis: React.FC<MobileAnalysisProps> = ({
         </div>
       </div>
 
-      {/* SCROLLABLE OUTPUT AREA - Limited height to leave room for input */}
+      {/* SCROLLABLE OUTPUT AREA - Takes remaining space but leaves room for input */}
       <div style={{ 
         flex: 1, 
         overflowY: 'auto', 
         padding: '8px 10px',
         backgroundColor: '#F9FAFB',
-        maxHeight: 'calc(100vh - 120px)'
+        minHeight: 0  // Important for flex to work correctly
       }}>
         
         {legalTitle && (
@@ -264,15 +264,14 @@ const MobileAnalysis: React.FC<MobileAnalysisProps> = ({
         )}
       </div>
 
-      {/* FIXED INPUT BAR - Always visible at bottom */}
+      {/* FIXED INPUT BAR - Always at bottom, never scrolls */}
       {isAnalysisMode && !legalTitle && (
         <div style={{ 
           backgroundColor: 'white', 
           borderTop: '1px solid #E5E7EB', 
           padding: '8px 10px', 
           paddingBottom: 'max(10px, env(safe-area-inset-bottom))',
-          flexShrink: 0,
-          boxShadow: '0 -2px 10px rgba(0,0,0,0.05)'
+          flexShrink: 0
         }}>
           {/* Input Row with + button */}
           <div style={{ display: 'flex', gap: '6px', alignItems: 'center', marginBottom: '6px' }}>
