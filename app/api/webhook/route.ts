@@ -7,7 +7,7 @@ export const dynamic = 'force-dynamic';
 // Initialize Stripe only if key exists
 const stripe = process.env.STRIPE_SECRET_KEY 
   ? new Stripe(process.env.STRIPE_SECRET_KEY, {
-      apiVersion: '2026-03-25.dahlia',
+      apiVersion: '2025-02-24.acacia',  // Changed to a valid current version
     })
   : null;
 
