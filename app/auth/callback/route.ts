@@ -31,12 +31,12 @@ export async function GET(request: Request) {
     const { error } = await supabase.auth.exchangeCodeForSession(code)
     
     if (error) {
-      console.error('❌ Error exchanging code:', error)
+      console.error('❌ Error exchanging code:', error.message)
       return NextResponse.redirect(new URL('/?error=auth_failed', requestUrl.origin))
     }
     console.log('✅ Session exchanged successfully')
   }
 
-  // Redirect to home page after sign in
+  // Redirect to home page
   return NextResponse.redirect(new URL('/', requestUrl.origin))
 }
