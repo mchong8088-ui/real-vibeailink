@@ -1,5 +1,5 @@
 "use client";
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, ReactNode } from 'react';
 import { LanguageToggle } from '../layout/LanguageToggle';
 import { SourceMenu } from '../features/controls/SourceMenu';
 import { AboutSection } from '../sections/AboutSection';
@@ -212,7 +212,7 @@ const MobileAnalysis: React.FC<MobileAnalysisProps> = ({
   };
 
   // Helper to render button with cross line when inactive
-  const renderButtonWithCross = (isActive: boolean, onClick: () => void, icon: JSX.Element, color: string, inactiveColor: string) => {
+  const renderButtonWithCross = (isActive: boolean, onClick: () => void, icon: React.ReactElement, color: string, inactiveColor: string) => {
     const bgColor = isActive ? color : inactiveColor;
     
     return (
