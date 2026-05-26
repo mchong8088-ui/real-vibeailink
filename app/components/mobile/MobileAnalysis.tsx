@@ -7,7 +7,7 @@ import { FeaturesSection } from '../sections/FeaturesSection';
 import { PricingModal } from '../features/pricing/PricingModal';
 import { StockAnalysisModule } from '../features/stock-analysis/StockAnalysisModule';
 import { footerContent } from '../../constants/content';
-import { speakText, stopSpeaking, isVoiceReady } from '../../utils/SimpleTTS';
+import { speakText, stopSpeaking } from '../../utils/SimpleTTS';
 
 interface MobileAnalysisProps {
   langKey: string;
@@ -37,24 +37,12 @@ const MobileAnalysis: React.FC<MobileAnalysisProps> = ({
   const [isPaused, setIsPaused] = useState(false);
   const [isListening, setIsListening] = useState(false);
   const [recognition, setRecognition] = useState<any>(null);
-  const [voicesReady, setVoicesReady] = useState(false);
+  const [isSpeakingState, setIsSpeakingState] = useState(false);
   const [isMenuOpen, setIsMenuOpen] = useState(false);
 
   const t = {
     analyzingMarket: langKey === 'Cantonese' ? '分析市場中...' : langKey === '简体中文' ? '分析市场中...' : 'Analyzing Market...',
   };
-
-  // Check voice readiness
-  useEffect(() => {
-    const checkReady = () => {
-      if (isVoiceReady()) {
-        setVoicesReady(true);
-      } else {
-        setTimeout(checkReady, 100);
-      }
-    };
-    checkReady();
-  }, []);
 
   // Speech Recognition Setup
   useEffect(() => {
@@ -78,27 +66,13 @@ const MobileAnalysis: React.FC<MobileAnalysisProps> = ({
     }
   }, [langKey]);
 
-  // Handle speakTexter toggle
-  const handleSpeakerToggle = () => {
-    if (isSpeakerActive) {
-      stopSpeaking();
-      setIsSpeakerActive(false);
-    } else if (analysisData?.summary && voicesReady) {
-      setIsSpeakerActive(true);
-      speakText(analysisData.summary, langKey, () => setIsSpeakerActive(false));
-    }
-    setIsPaused(false);
-  };
-
-  const handlePauseToggle = () => {
-    if (!isPaused && isSpeakerActive) {
-      stopSpeaking();
-      setIsPaused(true);
-    } else if (isPaused && isSpeakerActive && analysisData?.summary) {
-      speakText(analysisData.summary, langKey);
-      setIsPaused(false);
-    }
-  };
+  // Check speaking status periodically
+  useEffect(() => {
+    const interval = setInterval(() => {
+      setIsSpeakingState(false); // We'll track this differently
+    }, 100);
+    return () => clearInterval(interval);
+  }, []);
 
   const handleAnalyze = async () => {
     if (!inputValue.trim()) return;
@@ -152,6 +126,36 @@ const MobileAnalysis: React.FC<MobileAnalysisProps> = ({
     } else if (isListening) {
       recognition?.stop();
       setIsListening(false);
+    }
+  };
+
+  const handleSpeakerToggle = () => {
+    if (!analysisData?.summary) return;
+    
+    if (isSpeakerActive) {
+      stopSpeaking();
+      setIsSpeakerActive(false);
+    } else {
+      setIsSpeakerActive(true);
+      speakText(analysisData.summary, langKey, () => {
+        setIsSpeakerActive(false);
+      });
+    }
+    setIsPaused(false);
+  };
+
+  const handlePauseToggle = () => {
+    if (!isPaused && isSpeakerActive) {
+      stopSpeaking();
+      setIsPaused(true);
+      setIsSpeakerActive(false);
+    } else if (isPaused && !isSpeakerActive && analysisData?.summary) {
+      setIsSpeakerActive(true);
+      speakText(analysisData.summary, langKey, () => {
+        setIsSpeakerActive(false);
+        setIsPaused(false);
+      });
+      setIsPaused(false);
     }
   };
 
