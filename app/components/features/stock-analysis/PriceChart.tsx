@@ -1,5 +1,5 @@
 "use client";
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { LineChart, Line, XAxis, YAxis, Tooltip, ResponsiveContainer, Area, ComposedChart } from 'recharts';
 
 interface PriceChartProps {
@@ -8,10 +8,16 @@ interface PriceChartProps {
 }
 
 export const PriceChart = ({ data, langKey }: PriceChartProps) => {
-  const [period, setPeriod] = useState<'1W' | '1M' | '3M' | '1Y'>('1M');
+  const [period, setPeriod] = useState<'1W' | '1M' | '3M'>('1M');
+  const [filteredData, setFilteredData] = useState<any[]>([]);
   
-  // Filter data based on period
-  const getFilteredData = () => {
+  // Filter data based on selected period
+  useEffect(() => {
+    if (!data || data.length === 0) {
+      setFilteredData([]);
+      return;
+    }
+    
     const now = new Date();
     let daysToShow = 30; // Default 1M
     
@@ -19,42 +25,57 @@ export const PriceChart = ({ data, langKey }: PriceChartProps) => {
       case '1W': daysToShow = 7; break;
       case '1M': daysToShow = 30; break;
       case '3M': daysToShow = 90; break;
-      case '1Y': daysToShow = 365; break;
     }
     
-    // If data has dates, filter by date
-    if (data.length > 0 && data[0]?.date) {
+    // Check if data has real dates
+    const hasValidDates = data.some(item => item.date && !item.date.includes('d ago'));
+    
+    if (hasValidDates) {
       const cutoffDate = new Date();
       cutoffDate.setDate(now.getDate() - daysToShow);
-      return data.filter(item => new Date(item.date) >= cutoffDate);
+      const filtered = data.filter(item => {
+        const itemDate = new Date(item.date);
+        return itemDate >= cutoffDate;
+      });
+      setFilteredData(filtered.length > 0 ? filtered : data.slice(-daysToShow));
+    } else {
+      // Mock data - just take last N items
+      setFilteredData(data.slice(-daysToShow));
     }
-    
-    // If no dates or mock data, just return last N items
-    return data.slice(-daysToShow);
-  };
-  
-  const filteredData = getFilteredData();
+  }, [data, period]);
   
   const formatXAxis = (dateStr: string) => {
-    const date = new Date(dateStr);
-    if (period === '1W') {
-      return date.toLocaleDateString(undefined, { weekday: 'short' });
-    } else if (period === '1M') {
-      return `${date.getMonth() + 1}/${date.getDate()}`;
-    } else {
-      return `${date.getMonth() + 1}/${date.getDate()}`;
+    if (!dateStr) return '';
+    try {
+      const date = new Date(dateStr);
+      if (isNaN(date.getTime())) {
+        // Handle mock data format like "30d ago"
+        return dateStr;
+      }
+      if (period === '1W') {
+        return date.toLocaleDateString(undefined, { weekday: 'short' });
+      } else {
+        return `${date.getMonth() + 1}/${date.getDate()}`;
+      }
+    } catch (e) {
+      return dateStr;
     }
   };
   
   const CustomTooltip = ({ active, payload, label }: any) => {
     if (active && payload && payload.length) {
-      const date = new Date(label);
-      const formattedDate = date.toLocaleString(undefined, { 
-        month: 'short', 
-        day: 'numeric',
-        hour: '2-digit',
-        minute: '2-digit'
-      });
+      let displayLabel = label;
+      try {
+        const date = new Date(label);
+        if (!isNaN(date.getTime())) {
+          displayLabel = date.toLocaleString(undefined, { 
+            month: 'short', 
+            day: 'numeric',
+            hour: '2-digit',
+            minute: '2-digit'
+          });
+        }
+      } catch (e) {}
       
       return (
         <div style={{ 
@@ -64,10 +85,10 @@ export const PriceChart = ({ data, langKey }: PriceChartProps) => {
           padding: '8px 12px',
           boxShadow: '0 4px 6px -1px rgba(0,0,0,0.1)'
         }}>
-          <p style={{ fontSize: '11px', color: '#6B7280', margin: '0 0 4px 0' }}>
-            {formattedDate}
+          <p style={{ fontSize: '10px', color: '#6B7280', margin: '0 0 4px 0' }}>
+            {displayLabel}
           </p>
-          <p style={{ fontSize: '14px', fontWeight: 'bold', color: '#2563EB', margin: 0 }}>
+          <p style={{ fontSize: '13px', fontWeight: 'bold', color: '#2563EB', margin: 0 }}>
             ${payload[0].value}
           </p>
         </div>
@@ -80,8 +101,27 @@ export const PriceChart = ({ data, langKey }: PriceChartProps) => {
     '1W': langKey === 'Cantonese' ? '1週' : langKey === '简体中文' ? '1周' : '1W',
     '1M': langKey === 'Cantonese' ? '1月' : langKey === '简体中文' ? '1月' : '1M',
     '3M': langKey === 'Cantonese' ? '3月' : langKey === '简体中文' ? '3月' : '3M',
-    '1Y': langKey === 'Cantonese' ? '1年' : langKey === '简体中文' ? '1年' : '1Y',
   };
+  
+  if (filteredData.length === 0) {
+    return (
+      <div style={{ 
+        background: 'white', 
+        borderRadius: '12px', 
+        border: '1px solid #E5E7EB',
+        padding: '20px',
+        textAlign: 'center',
+        marginBottom: '12px'
+      }}>
+        <p style={{ color: '#6B7280', fontSize: '12px' }}>Loading chart data...</p>
+      </div>
+    );
+  }
+  
+  const minPrice = Math.min(...filteredData.map(d => d.price));
+  const maxPrice = Math.max(...filteredData.map(d => d.price));
+  const priceRange = maxPrice - minPrice;
+  const yDomain = [minPrice - priceRange * 0.1, maxPrice + priceRange * 0.1];
   
   return (
     <div style={{ 
@@ -107,7 +147,7 @@ export const PriceChart = ({ data, langKey }: PriceChartProps) => {
         </h4>
         
         <div style={{ display: 'flex', gap: '6px' }}>
-          {(['1W', '1M', '3M', '1Y'] as const).map((p) => (
+          {(['1W', '1M', '3M'] as const).map((p) => (
             <button
               key={p}
               onClick={() => setPeriod(p)}
@@ -129,7 +169,7 @@ export const PriceChart = ({ data, langKey }: PriceChartProps) => {
       </div>
       
       {/* Chart */}
-      <div style={{ padding: '12px', height: '240px' }}>
+      <div style={{ padding: '12px', height: '220px' }}>
         <ResponsiveContainer width="100%" height="100%">
           <ComposedChart data={filteredData}>
             <defs>
@@ -141,18 +181,20 @@ export const PriceChart = ({ data, langKey }: PriceChartProps) => {
             <XAxis 
               dataKey="date" 
               tickFormatter={formatXAxis}
-              fontSize={10}
+              fontSize={9}
               interval="preserveStartEnd"
+              tick={{ fill: '#6B7280' }}
             />
             <YAxis 
-              domain={['auto', 'auto']} 
-              fontSize={10}
-              width={40}
+              domain={yDomain}
+              fontSize={9}
+              width={35}
+              tick={{ fill: '#6B7280' }}
             />
             <Tooltip content={<CustomTooltip />} />
             <Area type="monotone" dataKey="upper" stroke="none" fill="#e2e8f0" fillOpacity={0.3} />
             <Area type="monotone" dataKey="lower" stroke="none" fill="#ffffff" />
-            <Line type="monotone" dataKey="price" stroke="#2563eb" strokeWidth={2} dot={false} />
+            <Line type="monotone" dataKey="price" stroke="#2563eb" strokeWidth={2} dot={false} activeDot={{ r: 3, fill: '#2563eb' }} />
             <Line type="monotone" dataKey="vwap" stroke="#f59e0b" strokeWidth={1.5} strokeDasharray="5 5" dot={false} />
           </ComposedChart>
         </ResponsiveContainer>
@@ -160,11 +202,11 @@ export const PriceChart = ({ data, langKey }: PriceChartProps) => {
       
       {/* Legend */}
       <div style={{ 
-        padding: '8px 16px 12px', 
+        padding: '6px 16px 10px', 
         borderTop: '1px solid #E5E7EB',
         display: 'flex',
         gap: '16px',
-        fontSize: '10px'
+        fontSize: '9px'
       }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
           <div style={{ width: '16px', height: '2px', backgroundColor: '#2563eb' }} />

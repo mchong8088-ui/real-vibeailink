@@ -8,6 +8,7 @@ import { PricingModal } from '../features/pricing/PricingModal';
 import { StockAnalysisModule } from '../features/stock-analysis/StockAnalysisModule';
 import { footerContent } from '../../constants/content';
 import { speakText, stopSpeaking } from '../../utils/SimpleTTS';
+import { audioManager } from '../../utils/AudioManager';
 
 interface MobileAnalysisProps {
   langKey: string;
@@ -38,11 +39,21 @@ const MobileAnalysis: React.FC<MobileAnalysisProps> = ({
   const [isListening, setIsListening] = useState(false);
   const [recognition, setRecognition] = useState<any>(null);
   const [isMenuOpen, setIsMenuOpen] = useState(false);
+  const [showSpeakerMenu, setShowSpeakerMenu] = useState(false);
   const [useBluetooth, setUseBluetooth] = useState(false);
 
   const t = {
     analyzingMarket: langKey === 'Cantonese' ? '分析市場中...' : langKey === '简体中文' ? '分析市场中...' : 'Analyzing Market...',
   };
+
+  // Load Bluetooth preference from storage
+  useEffect(() => {
+    const savedPref = localStorage.getItem('useBluetooth');
+    if (savedPref === 'true') {
+      setUseBluetooth(true);
+      audioManager.setUseBluetoothOutput(true);
+    }
+  }, []);
 
   // Speech Recognition Setup
   useEffect(() => {
@@ -121,11 +132,20 @@ const MobileAnalysis: React.FC<MobileAnalysisProps> = ({
     }
   };
 
-  const handleSpeakerToggle = () => {
-    if (!analysisData?.summary) {
-      setIsSpeakerActive(!isSpeakerActive);
-      return;
-    }
+  const handleSpeakerClick = () => {
+    setShowSpeakerMenu(!showSpeakerMenu);
+  };
+
+  const handleBluetoothToggle = () => {
+    const newValue = !useBluetooth;
+    setUseBluetooth(newValue);
+    audioManager.setUseBluetoothOutput(newValue);
+    localStorage.setItem('useBluetooth', String(newValue));
+    setShowSpeakerMenu(false);
+  };
+
+  const handleStartSpeaking = () => {
+    if (!analysisData?.summary) return;
     
     if (isSpeakerActive) {
       stopSpeaking();
@@ -136,15 +156,7 @@ const MobileAnalysis: React.FC<MobileAnalysisProps> = ({
         setIsSpeakerActive(false);
       });
     }
-  };
-
-  const handleBluetoothToggle = () => {
-    setUseBluetooth(!useBluetooth);
-    // Note: Bluetooth audio routing is handled by the browser/OS
-    // This just toggles the visual state as a hint to the user
-    if (!useBluetooth) {
-      console.log('Audio will route to Bluetooth if available');
-    }
+    setShowSpeakerMenu(false);
   };
 
   const handlePauseToggle = () => {
@@ -214,7 +226,7 @@ const MobileAnalysis: React.FC<MobileAnalysisProps> = ({
       bottom: 0
     }}>
       
-      {/* TOP BAR - Fixed */}
+      {/* TOP BAR */}
       <div style={{ 
         backgroundColor: 'white', 
         padding: '8px 12px', 
@@ -227,43 +239,16 @@ const MobileAnalysis: React.FC<MobileAnalysisProps> = ({
         width: '100%',
         boxSizing: 'border-box'
       }}>
-        <button 
-          onClick={onBack} 
-          style={{ 
-            display: 'flex', 
-            alignItems: 'center', 
-            gap: '4px', 
-            color: '#4B5563', 
-            background: 'none', 
-            border: 'none', 
-            cursor: 'pointer',
-            padding: '4px 0',
-            minWidth: '44px'
-          }}
-        >
+        <button onClick={onBack} style={{ display: 'flex', alignItems: 'center', gap: '4px', color: '#4B5563', background: 'none', border: 'none', cursor: 'pointer', padding: '4px 0', minWidth: '44px' }}>
           <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2}>
             <path strokeLinecap="round" strokeLinejoin="round" d="M15 19l-7-7 7-7" />
           </svg>
           <span style={{ fontSize: '11px', fontWeight: '500' }}>Back</span>
         </button>
-        
-        <h2 style={{ fontSize: '15px', fontWeight: '600', color: '#1F2937', margin: 0, textAlign: 'center' }}>{getTitle()}</h2>
-        
+        <h2 style={{ fontSize: '15px', fontWeight: '600', color: '#1F2937', margin: 0 }}>{getTitle()}</h2>
         <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
           <LanguageToggle currentLang={langKey} onLangChange={setLangKey} />
-          <button 
-            onClick={onAuthOpen} 
-            style={{ 
-              color: '#2563EB', 
-              fontWeight: '600', 
-              fontSize: '11px', 
-              background: 'none', 
-              border: 'none', 
-              cursor: 'pointer',
-              padding: '4px 0',
-              minWidth: '44px'
-            }}
-          >
+          <button onClick={onAuthOpen} style={{ color: '#2563EB', fontWeight: '600', fontSize: '11px', background: 'none', border: 'none', cursor: 'pointer', padding: '4px 0', minWidth: '44px' }}>
             {user ? 'Welcome' : (langKey === 'Cantonese' ? '登入' : langKey === '简体中文' ? '登录' : 'Login')}
           </button>
         </div>
@@ -279,7 +264,6 @@ const MobileAnalysis: React.FC<MobileAnalysisProps> = ({
         backgroundColor: '#F9FAFB',
         minHeight: 0
       }}>
-        
         {legalTitle && (
           <div style={{ backgroundColor: 'white', borderRadius: '8px', padding: '12px', marginBottom: '8px' }}>
             <div style={{ fontSize: '12px', color: '#4B5563', lineHeight: 1.4 }}>
@@ -287,27 +271,19 @@ const MobileAnalysis: React.FC<MobileAnalysisProps> = ({
             </div>
           </div>
         )}
-
         {topicId === 'pricing' && (
           <div style={{ backgroundColor: 'white', borderRadius: '8px', padding: '12px', marginBottom: '8px' }}>
             <PricingModal isOpen={true} onClose={onBack} user={user} profile={null} onSelectPlan={handleSelectPlan} showRetentionOnly={false} />
           </div>
         )}
-
         {topicId === 'about' && <AboutSection lang={langKey} />}
         {topicId === 'features' && <FeaturesSection lang={langKey} />}
-
         {isAnalysisMode && !legalTitle && (
-          <StockAnalysisModule 
-            t={t}
-            data={analysisData} 
-            isLoading={isLoading} 
-            langKey={langKey}
-          />
+          <StockAnalysisModule t={t} data={analysisData} isLoading={isLoading} langKey={langKey} />
         )}
       </div>
 
-      {/* BOTTOM BAR - Fixed with SQUARE buttons */}
+      {/* BOTTOM BAR with 4 buttons - Bluetooth integrated into Speaker menu */}
       {isAnalysisMode && !legalTitle && (
         <div style={{ 
           backgroundColor: 'white', 
@@ -317,150 +293,113 @@ const MobileAnalysis: React.FC<MobileAnalysisProps> = ({
           flexShrink: 0,
           zIndex: 20,
           width: '100%',
-          boxSizing: 'border-box'
+          boxSizing: 'border-box',
+          position: 'relative'
         }}>
           {/* Input Row */}
           <div style={{ display: 'flex', gap: '8px', alignItems: 'center', marginBottom: '10px' }}>
-            <button
-              onClick={() => setIsMenuOpen(true)}
-              style={{
-                width: '44px',
-                height: '44px',
-                borderRadius: '12px',
-                backgroundColor: '#EF4444',
-                color: 'white',
-                border: 'none',
-                cursor: 'pointer',
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                fontSize: '20px',
-                fontWeight: 'bold',
-                flexShrink: 0
-              }}
-            >
+            <button onClick={() => setIsMenuOpen(true)} style={{ width: '44px', height: '44px', borderRadius: '12px', backgroundColor: '#EF4444', color: 'white', border: 'none', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '20px', fontWeight: 'bold', flexShrink: 0 }}>
               +
             </button>
-            
-            <input
-              type="text"
-              value={inputValue}
-              onChange={(e) => setInputValue(e.target.value)}
-              placeholder={exampleText}
-              onKeyPress={(e) => e.key === 'Enter' && handleAnalyze()}
-              style={{ 
-                flex: 1, 
-                padding: '10px 14px', 
-                fontSize: '14px', 
-                color: '#1F2937', 
-                backgroundColor: '#F3F4F6', 
-                borderRadius: '24px', 
-                border: '1px solid #E5E7EB', 
-                outline: 'none',
-                minWidth: 0
-              }}
-            />
+            <input type="text" value={inputValue} onChange={(e) => setInputValue(e.target.value)} placeholder={exampleText} onKeyPress={(e) => e.key === 'Enter' && handleAnalyze()} style={{ flex: 1, padding: '10px 14px', fontSize: '14px', color: '#1F2937', backgroundColor: '#F3F4F6', borderRadius: '24px', border: '1px solid #E5E7EB', outline: 'none', minWidth: 0 }} />
           </div>
           
-          {/* 5 SQUARE Control Buttons Row */}
-          <div style={{ display: 'flex', gap: '6px', justifyContent: 'space-between' }}>
-            <button
-              onClick={handleMicToggle}
-              style={{ 
-                width: '60px',
-                height: '48px',
-                borderRadius: '12px',
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                backgroundColor: isListening ? '#3B82F6' : '#EF4444', 
-                color: 'white', 
-                border: 'none', 
-                cursor: 'pointer'
-              }}
-            >
+          {/* 4 SQUARE Control Buttons - Mic, Speaker(with menu), Pause, Send */}
+          <div style={{ display: 'flex', gap: '8px', justifyContent: 'space-between' }}>
+            <button onClick={handleMicToggle} style={{ flex: 1, height: '48px', borderRadius: '12px', display: 'flex', alignItems: 'center', justifyContent: 'center', backgroundColor: isListening ? '#3B82F6' : '#EF4444', color: 'white', border: 'none', cursor: 'pointer' }}>
               <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2}>
                 <path strokeLinecap="round" strokeLinejoin="round" d="M19 11a7 7 0 01-7 7m0 0a7 7 0 01-7-7m7 7v4m0 0H8m4 0h4m-4-8a3 3 0 01-3-3V5a3 3 0 116 0v6a3 3 0 01-3 3z" />
               </svg>
             </button>
 
-            <button
-              onClick={handleSpeakerToggle}
-              style={{ 
-                width: '60px',
-                height: '48px',
-                borderRadius: '12px',
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                backgroundColor: isSpeakerActive ? '#EF4444' : '#9CA3AF', 
-                color: 'white', 
-                border: 'none', 
-                cursor: 'pointer'
-              }}
-            >
-              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2}>
-                <path strokeLinecap="round" strokeLinejoin="round" d="M15.536 8.464a5 5 0 010 7.072m2.828-9.9a9 9 0 010 12.728M5.586 15H4a1 1 0 01-1-1v-4a1 1 0 011-1h1.586l4.707-4.707C10.923 3.663 12 4.109 12 5v14c0 .891-1.077 1.337-1.707.707L5.586 15z" />
-              </svg>
-            </button>
+            {/* Speaker button with dropdown menu */}
+            <div style={{ position: 'relative', flex: 1 }}>
+              <button 
+                onClick={handleSpeakerClick}
+                style={{ 
+                  width: '100%',
+                  height: '48px',
+                  borderRadius: '12px',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  backgroundColor: isSpeakerActive ? '#EF4444' : '#9CA3AF', 
+                  color: 'white', 
+                  border: 'none', 
+                  cursor: 'pointer'
+                }}
+              >
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2}>
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M15.536 8.464a5 5 0 010 7.072m2.828-9.9a9 9 0 010 12.728M5.586 15H4a1 1 0 01-1-1v-4a1 1 0 011-1h1.586l4.707-4.707C10.923 3.663 12 4.109 12 5v14c0 .891-1.077 1.337-1.707.707L5.586 15z" />
+                </svg>
+              </button>
+              
+              {/* Speaker dropdown menu */}
+              {showSpeakerMenu && (
+                <div style={{
+                  position: 'absolute',
+                  bottom: '100%',
+                  left: 0,
+                  right: 0,
+                  marginBottom: '8px',
+                  backgroundColor: 'white',
+                  border: '1px solid #E5E7EB',
+                  borderRadius: '12px',
+                  boxShadow: '0 4px 12px rgba(0,0,0,0.15)',
+                  zIndex: 30,
+                  overflow: 'hidden'
+                }}>
+                  <button
+                    onClick={handleStartSpeaking}
+                    style={{
+                      width: '100%',
+                      padding: '12px',
+                      textAlign: 'center',
+                      backgroundColor: 'white',
+                      border: 'none',
+                      borderBottom: '1px solid #E5E7EB',
+                      cursor: 'pointer',
+                      fontSize: '13px',
+                      fontWeight: '500',
+                      color: '#1F2937'
+                    }}
+                  >
+                    {isSpeakerActive ? 'Stop Speaking' : 'Start Speaking'}
+                  </button>
+                  <button
+                    onClick={handleBluetoothToggle}
+                    style={{
+                      width: '100%',
+                      padding: '12px',
+                      textAlign: 'center',
+                      backgroundColor: useBluetooth ? '#EFF6FF' : 'white',
+                      border: 'none',
+                      cursor: 'pointer',
+                      fontSize: '13px',
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      gap: '8px',
+                      color: useBluetooth ? '#2563EB' : '#4B5563'
+                    }}
+                  >
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2}>
+                      <path strokeLinecap="round" strokeLinejoin="round" d="M12 18v-6m0 0l4-4-4-4m0 4L8 6l4-4" />
+                      <path strokeLinecap="round" strokeLinejoin="round" d="M12 12l4 4-4 4m0-8L8 6l4-4" />
+                    </svg>
+                    {useBluetooth ? '✓ Bluetooth Mode' : 'Bluetooth Mode'}
+                  </button>
+                </div>
+              )}
+            </div>
 
-            <button
-              onClick={handleBluetoothToggle}
-              style={{ 
-                width: '60px',
-                height: '48px',
-                borderRadius: '12px',
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                backgroundColor: useBluetooth ? '#3B82F6' : '#9CA3AF', 
-                color: 'white', 
-                border: 'none', 
-                cursor: 'pointer'
-              }}
-            >
-              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2}>
-                <path strokeLinecap="round" strokeLinejoin="round" d="M12 18v-6m0 0l4-4-4-4m0 4L8 6l4-4" />
-                <path strokeLinecap="round" strokeLinejoin="round" d="M12 12l4 4-4 4m0-8L8 6l4-4" />
-              </svg>
-            </button>
-
-            <button
-              onClick={handlePauseToggle}
-              style={{ 
-                width: '60px',
-                height: '48px',
-                borderRadius: '12px',
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                backgroundColor: isPaused ? '#9CA3AF' : '#EF4444', 
-                color: 'white', 
-                border: 'none', 
-                cursor: 'pointer'
-              }}
-            >
+            <button onClick={handlePauseToggle} style={{ flex: 1, height: '48px', borderRadius: '12px', display: 'flex', alignItems: 'center', justifyContent: 'center', backgroundColor: isPaused ? '#9CA3AF' : '#EF4444', color: 'white', border: 'none', cursor: 'pointer' }}>
               <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2}>
                 <path strokeLinecap="round" strokeLinejoin="round" d="M10 9v6m4-6v6m7-3a9 9 0 11-18 0 9 9 0 0118 0z" />
               </svg>
             </button>
 
-            <button
-              onClick={handleAnalyze}
-              disabled={!inputValue.trim()}
-              style={{ 
-                width: '60px',
-                height: '48px',
-                borderRadius: '12px',
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                backgroundColor: inputValue.trim() ? '#22C55E' : '#D1D5DB', 
-                color: 'white', 
-                border: 'none', 
-                cursor: inputValue.trim() ? 'pointer' : 'not-allowed'
-              }}
-            >
+            <button onClick={handleAnalyze} disabled={!inputValue.trim()} style={{ flex: 1, height: '48px', borderRadius: '12px', display: 'flex', alignItems: 'center', justifyContent: 'center', backgroundColor: inputValue.trim() ? '#22C55E' : '#D1D5DB', color: 'white', border: 'none', cursor: inputValue.trim() ? 'pointer' : 'not-allowed' }}>
               <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2}>
                 <path strokeLinecap="round" strokeLinejoin="round" d="M7 7h10v10M17 7L7 17" />
               </svg>
