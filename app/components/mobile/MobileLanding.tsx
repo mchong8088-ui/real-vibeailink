@@ -22,9 +22,9 @@ const MobileLanding: React.FC<MobileLandingProps> = ({
   const t = {
     title: langKey === 'Cantonese' ? 'vibeAiLink' : langKey === '简体中文' ? 'vibeAiLink' : 'vibeAiLink',
     startAnalysis: langKey === 'Cantonese' ? '開始分析' : langKey === '简体中文' ? '开始分析' : 'Start Analysis',
-    aboutUs: langKey === 'Cantonese' ? '關於我們' : langKey === '简体中文' ? '关于我们' : 'About Us',
-    features: langKey === 'Cantonese' ? '功能介紹' : langKey === '简体中文' ? '功能介绍' : 'Features',
-    pricing: langKey === 'Cantonese' ? '服務定價' : langKey === '简体中文' ? '服务定价' : 'Pricing',
+    aboutUs: langKey === 'Cantonese' ? '關於' : langKey === '简体中文' ? '关于' : 'About',
+    features: langKey === 'Cantonese' ? '功能' : langKey === '简体中文' ? '功能' : 'Features',
+    pricing: langKey === 'Cantonese' ? '定價' : langKey === '简体中文' ? '定价' : 'Pricing',
     disclaimer: langKey === 'Cantonese' ? '免責聲明' : langKey === '简体中文' ? '免责声明' : 'Disclaimer',
     terms: langKey === 'Cantonese' ? '服務條款' : langKey === '简体中文' ? '服务条款' : 'Terms',
     privacy: langKey === 'Cantonese' ? '隱私政策' : langKey === '简体中文' ? '隐私政策' : 'Privacy',
@@ -177,10 +177,12 @@ const MobileLanding: React.FC<MobileLandingProps> = ({
             {t.startAnalysis}
           </button>
           
+          {/* Three buttons in one row - prevent wrapping */}
           <div style={{
             display: 'flex',
-            gap: '12px',
-            justifyContent: 'center'
+            gap: '8px',
+            justifyContent: 'center',
+            flexWrap: 'nowrap'
           }}>
             <button
               onClick={() => onNavigate('content', { view: 'about' })}
@@ -190,10 +192,12 @@ const MobileLanding: React.FC<MobileLandingProps> = ({
                 color: '#4B5563',
                 border: '1px solid #E5E7EB',
                 borderRadius: '40px',
-                padding: '10px 16px',
-                fontSize: '13px',
+                padding: '10px 0',
+                fontSize: '12px',
                 fontWeight: '500',
-                cursor: 'pointer'
+                cursor: 'pointer',
+                whiteSpace: 'nowrap',
+                minWidth: 0
               }}
             >
               {t.aboutUs}
@@ -206,10 +210,12 @@ const MobileLanding: React.FC<MobileLandingProps> = ({
                 color: '#4B5563',
                 border: '1px solid #E5E7EB',
                 borderRadius: '40px',
-                padding: '10px 16px',
-                fontSize: '13px',
+                padding: '10px 0',
+                fontSize: '12px',
                 fontWeight: '500',
-                cursor: 'pointer'
+                cursor: 'pointer',
+                whiteSpace: 'nowrap',
+                minWidth: 0
               }}
             >
               {t.features}
@@ -222,10 +228,12 @@ const MobileLanding: React.FC<MobileLandingProps> = ({
                 color: '#4B5563',
                 border: '1px solid #E5E7EB',
                 borderRadius: '40px',
-                padding: '10px 16px',
-                fontSize: '13px',
+                padding: '10px 0',
+                fontSize: '12px',
                 fontWeight: '500',
-                cursor: 'pointer'
+                cursor: 'pointer',
+                whiteSpace: 'nowrap',
+                minWidth: 0
               }}
             >
               {t.pricing}
