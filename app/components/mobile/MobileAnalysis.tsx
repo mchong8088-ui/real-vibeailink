@@ -37,7 +37,6 @@ const MobileAnalysis: React.FC<MobileAnalysisProps> = ({
   const [isPaused, setIsPaused] = useState(false);
   const [isListening, setIsListening] = useState(false);
   const [recognition, setRecognition] = useState<any>(null);
-  const [isSpeakingState, setIsSpeakingState] = useState(false);
   const [isMenuOpen, setIsMenuOpen] = useState(false);
 
   const t = {
@@ -65,14 +64,6 @@ const MobileAnalysis: React.FC<MobileAnalysisProps> = ({
       }
     }
   }, [langKey]);
-
-  // Check speaking status periodically
-  useEffect(() => {
-    const interval = setInterval(() => {
-      setIsSpeakingState(false); // We'll track this differently
-    }, 100);
-    return () => clearInterval(interval);
-  }, []);
 
   const handleAnalyze = async () => {
     if (!inputValue.trim()) return;
@@ -141,7 +132,6 @@ const MobileAnalysis: React.FC<MobileAnalysisProps> = ({
         setIsSpeakerActive(false);
       });
     }
-    setIsPaused(false);
   };
 
   const handlePauseToggle = () => {
@@ -292,13 +282,45 @@ const MobileAnalysis: React.FC<MobileAnalysisProps> = ({
               </svg>
             </button>
 
-            <button onClick={handleSpeakerToggle} style={{ width: '40px', height: '40px', borderRadius: '20px', display: 'flex', alignItems: 'center', justifyContent: 'center', backgroundColor: isSpeakerActive ? '#EF4444' : '#9CA3AF', color: 'white', border: 'none', cursor: 'pointer' }}>
+            <button 
+              onClick={handleSpeakerToggle} 
+              disabled={!analysisData?.summary}
+              style={{ 
+                width: '40px', 
+                height: '40px', 
+                borderRadius: '20px', 
+                display: 'flex', 
+                alignItems: 'center', 
+                justifyContent: 'center', 
+                backgroundColor: !analysisData?.summary ? '#D1D5DB' : (isSpeakerActive ? '#EF4444' : '#9CA3AF'), 
+                color: 'white', 
+                border: 'none', 
+                cursor: !analysisData?.summary ? 'not-allowed' : 'pointer',
+                opacity: !analysisData?.summary ? 0.5 : 1
+              }}
+            >
               <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2}>
                 <path strokeLinecap="round" strokeLinejoin="round" d="M15.536 8.464a5 5 0 010 7.072m2.828-9.9a9 9 0 010 12.728M5.586 15H4a1 1 0 01-1-1v-4a1 1 0 011-1h1.586l4.707-4.707C10.923 3.663 12 4.109 12 5v14c0 .891-1.077 1.337-1.707.707L5.586 15z" />
               </svg>
             </button>
 
-            <button onClick={handlePauseToggle} style={{ width: '40px', height: '40px', borderRadius: '20px', display: 'flex', alignItems: 'center', justifyContent: 'center', backgroundColor: isPaused ? '#9CA3AF' : '#EF4444', color: 'white', border: 'none', cursor: 'pointer' }}>
+            <button 
+              onClick={handlePauseToggle} 
+              disabled={!analysisData?.summary || !isSpeakerActive}
+              style={{ 
+                width: '40px', 
+                height: '40px', 
+                borderRadius: '20px', 
+                display: 'flex', 
+                alignItems: 'center', 
+                justifyContent: 'center', 
+                backgroundColor: (!analysisData?.summary || !isSpeakerActive) ? '#D1D5DB' : (isPaused ? '#9CA3AF' : '#EF4444'), 
+                color: 'white', 
+                border: 'none', 
+                cursor: (!analysisData?.summary || !isSpeakerActive) ? 'not-allowed' : 'pointer',
+                opacity: (!analysisData?.summary || !isSpeakerActive) ? 0.5 : 1
+              }}
+            >
               <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2}>
                 <path strokeLinecap="round" strokeLinejoin="round" d="M10 9v6m4-6v6m7-3a9 9 0 11-18 0 9 9 0 0118 0z" />
               </svg>

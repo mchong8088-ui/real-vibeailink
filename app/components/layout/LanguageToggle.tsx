@@ -1,22 +1,35 @@
-// components/layout/LanguageToggle.tsx
 "use client";
 import React, { useState, useRef, useEffect } from 'react';
-import { Languages, ChevronDown, Check } from 'lucide-react';
 
 interface LanguageToggleProps {
   currentLang: string;
   onLangChange: (lang: string) => void;
 }
 
-export function LanguageToggle({ currentLang, onLangChange }: LanguageToggleProps) {
+export const LanguageToggle: React.FC<LanguageToggleProps> = ({ currentLang, onLangChange }) => {
   const [isOpen, setIsOpen] = useState(false);
   const dropdownRef = useRef<HTMLDivElement>(null);
 
-  const languages = [
-    { label: "粵語 (繁體中文)", value: "Cantonese", flag: "🇭🇰", short: "廣" },
-    { label: "简体中文", value: "简体中文", flag: "🇨🇳", short: "中" },
-    { label: "English", value: "English", flag: "🇺🇸", short: "EN" }
-  ];
+  // Map display names
+  const getDisplayName = (lang: string) => {
+    switch (lang) {
+      case 'English': return 'EN';
+      case 'Cantonese': return '粵語';
+      case '简体中文': return '简体';
+      default: return lang.substring(0, 2).toUpperCase();
+    }
+  };
+
+  const getFullName = (lang: string) => {
+    switch (lang) {
+      case 'English': return 'English';
+      case 'Cantonese': return '粵語 (繁體中文)';
+      case '简体中文': return '简体中文';
+      default: return lang;
+    }
+  };
+
+  const languages = ['English', 'Cantonese', '简体中文'];
 
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
@@ -24,101 +37,84 @@ export function LanguageToggle({ currentLang, onLangChange }: LanguageToggleProp
         setIsOpen(false);
       }
     };
-    document.addEventListener("mousedown", handleClickOutside);
-    return () => document.removeEventListener("mousedown", handleClickOutside);
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
   }, []);
 
-  const currentLangData = languages.find(l => l.value === currentLang);
-
   return (
-    <div className="relative" ref={dropdownRef}>
-      <button 
+    <div style={{ position: 'relative' }} ref={dropdownRef}>
+      <button
         onClick={() => setIsOpen(!isOpen)}
         style={{
+          padding: '6px 12px',
+          borderRadius: '8px',
+          backgroundColor: '#F3F4F6',
+          border: '1px solid #E5E7EB',
+          cursor: 'pointer',
+          fontSize: '12px',
+          fontWeight: '500',
+          color: '#1F2937',
           display: 'flex',
           alignItems: 'center',
-          gap: '6px',
-          background: 'transparent',
-          border: 'none',
-          borderRadius: '9999px',
-          padding: '6px 12px',
-          cursor: 'pointer',
-          transition: 'all 0.2s',
+          gap: '6px'
         }}
       >
-        <Languages size={16} style={{ color: '#3B82F6' }} />
-        <span style={{
-          fontSize: '11px',
-          fontWeight: '700',
-          color: '#3B82F6',
-          textTransform: 'uppercase',
-        }}>
-          {currentLangData?.short || 'EN'}
-        </span>
-        <ChevronDown size={12} style={{ 
-          color: '#3B82F6',
-          transition: 'transform 0.2s',
-          transform: isOpen ? 'rotate(180deg)' : 'rotate(0deg)'
-        }} />
+        {getDisplayName(currentLang)}
+        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2}>
+          <path strokeLinecap="round" strokeLinejoin="round" d="M19 9l-7 7-7-7" />
+        </svg>
       </button>
 
       {isOpen && (
         <div style={{
           position: 'absolute',
+          top: '100%',
           right: 0,
-          marginTop: '8px',
-          width: '200px',
+          marginTop: '4px',
           backgroundColor: 'white',
-          borderRadius: '16px',
-          boxShadow: '0 10px 25px -5px rgba(0,0,0,0.1)',
-          zIndex: 110,
-          overflow: 'hidden',
-          border: '1px solid #e2e8f0',
+          border: '1px solid #E5E7EB',
+          borderRadius: '8px',
+          boxShadow: '0 4px 6px -1px rgba(0,0,0,0.1)',
+          zIndex: 50,
+          minWidth: '120px',
+          overflow: 'hidden'
         }}>
           {languages.map((lang) => (
             <button
-              key={lang.value}
+              key={lang}
               onClick={() => {
-                onLangChange(lang.value);
+                onLangChange(lang);
                 setIsOpen(false);
               }}
               style={{
+                display: 'block',
                 width: '100%',
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'space-between',
-                padding: '10px 16px',
+                padding: '8px 12px',
                 textAlign: 'left',
-                fontSize: '13px',
-                fontWeight: currentLang === lang.value ? '700' : '500',
-                backgroundColor: currentLang === lang.value ? '#EFF6FF' : 'white',
-                color: currentLang === lang.value ? '#2563EB' : '#475569',
+                backgroundColor: currentLang === lang ? '#EFF6FF' : 'white',
+                color: currentLang === lang ? '#2563EB' : '#4B5563',
                 border: 'none',
                 cursor: 'pointer',
-                transition: 'all 0.15s',
+                fontSize: '12px',
+                fontWeight: currentLang === lang ? '600' : '400',
+                transition: 'background-color 0.2s'
               }}
               onMouseEnter={(e) => {
-                if (currentLang !== lang.value) {
-                  e.currentTarget.style.backgroundColor = '#F8FAFC';
+                if (currentLang !== lang) {
+                  e.currentTarget.style.backgroundColor = '#F9FAFB';
                 }
               }}
               onMouseLeave={(e) => {
-                if (currentLang !== lang.value) {
+                if (currentLang !== lang) {
                   e.currentTarget.style.backgroundColor = 'white';
                 }
               }}
             >
-              <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-                <span style={{ fontSize: '16px' }}>{lang.flag}</span>
-                <span>{lang.label}</span>
-              </div>
-              {currentLang === lang.value && (
-                <Check size={14} style={{ color: '#2563EB' }} />
-              )}
+              {getFullName(lang)}
             </button>
           ))}
         </div>
       )}
     </div>
   );
-}
+};
