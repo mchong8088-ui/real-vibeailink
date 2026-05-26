@@ -34,6 +34,7 @@ export default function VibeAiMaster() {
   const [showPricingModal, setShowPricingModal] = useState(false);
   const [pricingContext, setPricingContext] = useState<'normal' | 'retention'>('normal');
   const [showUserMenu, setShowUserMenu] = useState(false);
+  const [authInitialized, setAuthInitialized] = useState(false);
 
   // Mobile Navigation States
   const [mobilePage, setMobilePage] = useState<'landing' | 'analysis' | 'content'>('landing');
@@ -43,26 +44,26 @@ export default function VibeAiMaster() {
 
   const systemInfo = { system: `VibeAI-${systemState.os}`, voiceEngine: "Local Synthesis" };
 
+  // Listen for auth changes
+  useEffect(() => {
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
+      console.log("🔔 Auth state changed in page:", event);
+      if (event === 'SIGNED_IN') {
+        console.log("✅ User signed in, refreshing user state");
+        setAuthInitialized(false);
+        window.location.reload();
+      } else if (event === 'SIGNED_OUT') {
+        console.log("👋 User signed out");
+        setAuthInitialized(false);
+        window.location.reload();
+      }
+    });
+
+    return () => subscription.unsubscribe();
+  }, []);
+
   useEffect(() => {
     setMounted(true);
-    
-    // Handle OAuth callback - check for hash fragment
-    const handleOAuthRedirect = async () => {
-      // Check if we have an access_token in the URL hash (OAuth redirect)
-      const hash = window.location.hash;
-      if (hash && hash.includes('access_token')) {
-        console.log("🔄 OAuth redirect detected, session will be handled by Supabase");
-        // Remove the hash from URL to clean it up
-        window.history.replaceState({}, document.title, window.location.pathname);
-        
-        // Wait a moment for Supabase to process the session
-        setTimeout(() => {
-          window.location.reload();
-        }, 500);
-      }
-    };
-    
-    handleOAuthRedirect();
     
     const isLocalhost = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1';
     const ua = window.navigator.userAgent;
@@ -75,6 +76,7 @@ export default function VibeAiMaster() {
     if (ua.indexOf("Mac") !== -1) detectedOS = "MacOS";
     
     setSystemState({ os: detectedOS, isMobile: isMobileDevice });
+    setAuthInitialized(true);
   }, []);
 
   const handleLogout = async () => {
@@ -214,7 +216,7 @@ export default function VibeAiMaster() {
     return 'User';
   };
 
-  if (!mounted) return null;
+  if (!mounted || !authInitialized) return null;
 
   // MOBILE VIEW
   if (systemState.isMobile) {
@@ -263,7 +265,7 @@ export default function VibeAiMaster() {
         overflow: 'hidden'
       }}>
         
-        {/* RESTRICTED AREA 1: TOP BAR */}
+        {/* TOP BAR */}
         <div style={{ 
           backgroundColor: 'white', 
           padding: '12px 24px', 
@@ -323,7 +325,7 @@ export default function VibeAiMaster() {
         {/* MAIN CONTENT AREA */}
         <div style={{ display: 'flex', flex: 1, overflow: 'hidden' }}>
           
-          {/* RESTRICTED AREA 2: LEFT PANEL */}
+          {/* LEFT PANEL */}
           <div style={{ 
             width: '20%', 
             backgroundColor: '#FEF08A', 
@@ -350,7 +352,7 @@ export default function VibeAiMaster() {
             </p>
           </div>
 
-          {/* RESTRICTED AREA 3: RIGHT PANEL */}
+          {/* RIGHT PANEL */}
           <div style={{ 
             width: '80%', 
             backgroundColor: '#E0F2FE', 
@@ -452,7 +454,7 @@ export default function VibeAiMaster() {
               />
             </div>
 
-            {/* RESTRICTED AREA 4: FOOTER */}
+            {/* FOOTER */}
             <div style={{ 
               backgroundColor: 'white', 
               padding: '8px 5%',
