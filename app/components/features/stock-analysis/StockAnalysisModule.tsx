@@ -1,7 +1,6 @@
 "use client";
 import React, { useState, useEffect } from 'react';
 import { Volume2, VolumeX, Activity, Zap, ShieldCheck, Globe, BarChart3 } from 'lucide-react';
-import { LineChart, Line, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid } from 'recharts';
 import { PriceChart } from './PriceChart';
 import { speakText, stopSpeaking } from '@/app/utils/SimpleTTS';
 
@@ -22,11 +21,15 @@ export const StockAnalysisModule: React.FC<Props> = ({ data, isLoading, langKey,
 
   const summaryText = data?.summary || data?.text || "";
 
+  // Generate chart data for the white PriceChart component
   const chartData = (() => {
     if (data?.historical?.length > 0) {
-      return data.historical.slice(-30).map((item: any) => ({
+      return data.historical.map((item: any) => ({
         date: new Date(item.date).toLocaleDateString(),
         price: item.close,
+        upper: item.close * 1.05,
+        lower: item.close * 0.95,
+        vwap: item.close * 0.98,
       }));
     }
     const currentPrice = parseFloat(data?.price?.replace(/[^0-9.-]/g, '') || '400');
@@ -34,13 +37,18 @@ export const StockAnalysisModule: React.FC<Props> = ({ data, isLoading, langKey,
     let price = currentPrice * 0.85;
     for (let i = 30; i >= 0; i--) {
       price += (Math.random() - 0.5) * 8;
-      sampleData.push({ date: `${i}d ago`, price: Math.max(50, price) });
+      const date = new Date();
+      date.setDate(date.getDate() - i);
+      sampleData.push({ 
+        date: date.toISOString().split('T')[0],
+        price: Math.max(50, price),
+        upper: Math.max(50, price) * 1.05,
+        lower: Math.max(50, price) * 0.95,
+        vwap: Math.max(50, price) * 0.98,
+      });
     }
     return sampleData;
   })();
-
-  const minPrice = Math.min(...chartData.map(d => d.price));
-  const maxPrice = Math.max(...chartData.map(d => d.price));
 
   const toggleSpeak = () => {
     if (!summaryText) return;
@@ -56,7 +64,7 @@ export const StockAnalysisModule: React.FC<Props> = ({ data, isLoading, langKey,
     }
   };
 
-  // Stop speaking when component unmounts or language changes
+  // Stop speaking when component unmounts
   useEffect(() => {
     return () => {
       if (isSpeaking) {
@@ -65,7 +73,7 @@ export const StockAnalysisModule: React.FC<Props> = ({ data, isLoading, langKey,
     };
   }, []);
 
-  // Stop speaking when text changes significantly
+  // Stop speaking when text changes
   useEffect(() => {
     if (isSpeaking) {
       stopSpeaking();
@@ -73,7 +81,7 @@ export const StockAnalysisModule: React.FC<Props> = ({ data, isLoading, langKey,
     }
   }, [summaryText]);
 
-  const indices = [
+  const globalIndices = [
     { name: "S&P 500", value: "5,234.18", change: "+0.8%", positive: true },
     { name: "NASDAQ", value: "16,428.82", change: "+1.2%", positive: true },
     { name: "DAX", value: "18,456.32", change: "-0.3%", positive: false },
@@ -81,6 +89,9 @@ export const StockAnalysisModule: React.FC<Props> = ({ data, isLoading, langKey,
     { name: "Nikkei 225", value: "38,234.12", change: "-0.7%", positive: false },
     { name: "FTSE 100", value: "7,845.67", change: "+0.2%", positive: true },
   ];
+
+  const row1Indices = globalIndices.slice(0, 3);
+  const row2Indices = globalIndices.slice(3, 6);
 
   if (isLoading) {
     return <div style={{ background: 'white', borderRadius: 10, padding: 10, textAlign: 'center' }}>
@@ -96,13 +107,29 @@ export const StockAnalysisModule: React.FC<Props> = ({ data, isLoading, langKey,
   }
 
   const isPositive = data.changePercent && parseFloat(data.changePercent) > 0;
+  const rsiValue = data.rsi || "N/A";
+  const macdValue = data.macd || "N/A";
+  
+  // Determine MACD color based on value
+  const getMacdColor = () => {
+    const val = String(macdValue).toLowerCase();
+    if (val.includes('bullish') || val.includes('看涨') || val.includes('看漲')) return '#10B981';
+    if (val.includes('bearish') || val.includes('看跌')) return '#EF4444';
+    return '#F59E0B';
+  };
 
   return (
     <div>
-      {/* Global Market Indices */}
-      <div style={{ background: '#FEF08A', borderRadius: 8, padding: 8, marginBottom: 8 }}>
+      {/* SECTION 1: GLOBAL MARKET INDICES */}
+      <div style={{ backgroundColor: '#FEF08A', borderRadius: 8, padding: 8, marginBottom: 8 }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 6 }}>
+          <Globe size={10} style={{ color: '#B45309' }} />
+          <h3 style={{ fontSize: 10, fontWeight: 'bold', color: '#B45309', margin: 0 }}>
+            {langKey === 'English' ? 'Global Market Indices' : langKey === 'Cantonese' ? '全球市場指數' : '全球市场指数'}
+          </h3>
+        </div>
         <div style={{ display: 'flex', gap: 6, marginBottom: 6 }}>
-          {indices.slice(0,3).map((idx, i) => (
+          {row1Indices.map((idx, i) => (
             <div key={i} style={{ flex: 1, background: 'white', borderRadius: 6, padding: 6, textAlign: 'center' }}>
               <p style={{ fontSize: 9, fontWeight: 'bold', margin: '2px 0' }}>{idx.name}</p>
               <p style={{ fontSize: 11, fontWeight: 'bold', margin: '2px 0' }}>{idx.value}</p>
@@ -111,7 +138,7 @@ export const StockAnalysisModule: React.FC<Props> = ({ data, isLoading, langKey,
           ))}
         </div>
         <div style={{ display: 'flex', gap: 6 }}>
-          {indices.slice(3,6).map((idx, i) => (
+          {row2Indices.map((idx, i) => (
             <div key={i} style={{ flex: 1, background: 'white', borderRadius: 6, padding: 6, textAlign: 'center' }}>
               <p style={{ fontSize: 9, fontWeight: 'bold', margin: '2px 0' }}>{idx.name}</p>
               <p style={{ fontSize: 11, fontWeight: 'bold', margin: '2px 0' }}>{idx.value}</p>
@@ -121,60 +148,47 @@ export const StockAnalysisModule: React.FC<Props> = ({ data, isLoading, langKey,
         </div>
       </div>
 
-      {/* Stock Info and Price */}
-      <div style={{ background: '#FEF08A', borderRadius: 8, padding: 8, marginBottom: 8 }}>
-        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 8 }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-            <div style={{ background: '#3B82F6', padding: 4, borderRadius: 6 }}>
-              <BarChart3 size={12} color="white" />
+      {/* SECTION 2: STOCK PRICE, RSI, MACD - 3 columns like indices */}
+      <div style={{ backgroundColor: '#FEF08A', borderRadius: 8, padding: 8, marginBottom: 8 }}>
+        <div style={{ display: 'flex', gap: 6 }}>
+          {/* Price Column */}
+          <div style={{ flex: 1, background: 'white', borderRadius: 6, padding: 6, textAlign: 'center' }}>
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 4, marginBottom: 4 }}>
+              <BarChart3 size={10} color="#3B82F6" />
+              <p style={{ fontSize: 8, color: '#6B7280', margin: 0 }}>Price</p>
             </div>
-            <h3 style={{ fontSize: 12, fontWeight: 'bold', margin: 0 }}>{data.symbol}</h3>
+            <p style={{ fontSize: 14, fontWeight: 'bold', color: '#1F2937', margin: '2px 0' }}>{data.price || 'N/A'}</p>
             {data.changePercent && (
-              <span style={{ fontSize: 10, fontWeight: 'bold', color: isPositive ? '#10B981' : '#EF4444' }}>
+              <p style={{ fontSize: 9, fontWeight: 'bold', color: isPositive ? '#10B981' : '#EF4444', margin: '2px 0' }}>
                 {isPositive ? `+${data.changePercent}%` : `${data.changePercent}%`}
-              </span>
+              </p>
             )}
           </div>
-          <div style={{ display: 'flex', gap: 12 }}>
-            <div style={{ textAlign: 'center' }}>
-              <p style={{ fontSize: 8, color: '#6B7280', margin: 0 }}>Price</p>
-              <p style={{ fontSize: 12, fontWeight: 'bold', margin: 0 }}>{data.price || 'N/A'}</p>
-            </div>
-            <div style={{ textAlign: 'center' }}>
-              <p style={{ fontSize: 8, color: '#6B7280', margin: 0 }}>RSI</p>
-              <p style={{ fontSize: 12, fontWeight: 'bold', margin: 0 }}>{data.rsi || 'N/A'}</p>
-            </div>
-            <div style={{ textAlign: 'center' }}>
-              <p style={{ fontSize: 8, color: '#6B7280', margin: 0 }}>MACD</p>
-              <p style={{ fontSize: 12, fontWeight: 'bold', margin: 0 }}>{data.macd || 'N/A'}</p>
-            </div>
+          
+          {/* RSI Column */}
+          <div style={{ flex: 1, background: 'white', borderRadius: 6, padding: 6, textAlign: 'center' }}>
+            <p style={{ fontSize: 8, color: '#6B7280', margin: '0 0 4px 0' }}>RSI (14)</p>
+            <p style={{ fontSize: 14, fontWeight: 'bold', color: '#3B82F6', margin: '2px 0' }}>{rsiValue}</p>
+            <p style={{ fontSize: 8, color: '#6B7280', margin: '2px 0' }}>
+              {typeof rsiValue === 'number' || !isNaN(parseFloat(String(rsiValue))) ? 
+                (parseFloat(String(rsiValue)) > 70 ? 'Overbought' : parseFloat(String(rsiValue)) < 30 ? 'Oversold' : 'Neutral') : ''}
+            </p>
           </div>
-        </div>
-        
-        {/* Mini Chart */}
-        <div style={{ height: 100 }}>
-          <ResponsiveContainer width="100%" height="100%">
-            <LineChart data={chartData} margin={{ top: 5, right: 5, left: 5, bottom: 5 }}>
-              <CartesianGrid strokeDasharray="3 3" stroke="#E5E7EB" />
-              <Tooltip content={({ active, payload }) => active && payload?.length ? 
-                <div style={{ background: 'white', border: '1px solid #E5E7EB', borderRadius: 4, padding: '4px 8px', fontSize: 10 }}>
-                  ${payload[0].value}
-                </div> : null} />
-              <Line type="monotone" dataKey="price" stroke="#3B82F6" strokeWidth={2} dot={false} />
-            </LineChart>
-          </ResponsiveContainer>
-        </div>
-        
-        <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 8, color: '#9CA3AF', marginTop: 4 }}>
-          <span>${minPrice.toFixed(2)}</span>
-          <span style={{ color: '#3B82F6' }}>${data.price || 'N/A'}</span>
-          <span>${maxPrice.toFixed(2)}</span>
+          
+          {/* MACD Column */}
+          <div style={{ flex: 1, background: 'white', borderRadius: 6, padding: 6, textAlign: 'center' }}>
+            <p style={{ fontSize: 8, color: '#6B7280', margin: '0 0 4px 0' }}>MACD</p>
+            <p style={{ fontSize: 14, fontWeight: 'bold', color: getMacdColor(), margin: '2px 0' }}>{macdValue}</p>
+            <p style={{ fontSize: 8, color: '#6B7280', margin: '2px 0' }}>Signal</p>
+          </div>
         </div>
       </div>
 
-      {/* Stock Information */}
-      <div style={{ background: '#FEF08A', borderRadius: 8, padding: 8, marginBottom: 8 }}>
-        <h3 style={{ fontSize: 11, fontWeight: 'bold', marginBottom: 6 }}>Stock Information</h3>
+      {/* SECTION 3: STOCK INFORMATION - Market Cap, P/E, Volume */}
+      <div style={{ backgroundColor: '#FEF08A', borderRadius: 8, padding: 8, marginBottom: 8 }}>
+        <h3 style={{ fontSize: 10, fontWeight: 'bold', color: '#B45309', marginBottom: 6 }}>
+          {langKey === 'English' ? 'Stock Information' : langKey === 'Cantonese' ? '股票信息' : '股票信息'}
+        </h3>
         <div style={{ display: 'flex', gap: 6 }}>
           <div style={{ flex: 1, background: 'white', borderRadius: 6, padding: 6, textAlign: 'center' }}>
             <p style={{ fontSize: 8, color: '#6B7280', margin: '2px 0' }}>Market Cap</p>
@@ -191,10 +205,10 @@ export const StockAnalysisModule: React.FC<Props> = ({ data, isLoading, langKey,
         </div>
       </div>
 
-      {/* Price Chart with Period Selector */}
+      {/* SECTION 4: PRICE CHART (White background) */}
       <PriceChart data={chartData} langKey={langKey} />
 
-      {/* AI Analysis Text */}
+      {/* SECTION 5: AI ANALYSIS TEXT */}
       <div style={{ background: 'white', borderRadius: 8, padding: 12, border: '1px solid #E5E7EB' }}>
         <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 10 }}>
           <div>
