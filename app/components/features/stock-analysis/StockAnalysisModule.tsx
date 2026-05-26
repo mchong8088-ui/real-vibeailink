@@ -1,8 +1,8 @@
 "use client";
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Volume2, VolumeX, Activity, Zap, ShieldCheck, Globe, BarChart3 } from 'lucide-react';
 import { LineChart, Line, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid } from 'recharts';
-import { speak, stopSpeaking, onVoicesReady } from '@/app/utils/UnifiedTTS';
+import { speakText, stopSpeaking, isSpeaking } from '@/app/utils/SimpleTTS';
 
 interface Props {
   data: any;
@@ -12,18 +12,18 @@ interface Props {
 }
 
 export const StockAnalysisModule: React.FC<Props> = ({ data, isLoading, langKey, t }) => {
-  const [isSpeaking, setIsSpeaking] = useState(false);
+  const [isCurrentlySpeaking, setIsCurrentlySpeaking] = useState(false);
   const [isMobile, setIsMobile] = useState(false);
-  const [voicesReady, setVoicesReady] = useState(false);
   
   useEffect(() => {
     setIsMobile(window.innerWidth <= 768);
     
-    // Wait for voices to be ready
-    onVoicesReady(() => {
-      setVoicesReady(true);
-      console.log('[StockAnalysis] Voices ready');
-    });
+    // Check speaking status periodically
+    const interval = setInterval(() => {
+      setIsCurrentlySpeaking(isSpeaking());
+    }, 100);
+    
+    return () => clearInterval(interval);
   }, []);
 
   const summaryText = data?.summary || data?.text || "";
@@ -51,26 +51,33 @@ export const StockAnalysisModule: React.FC<Props> = ({ data, isLoading, langKey,
   const toggleSpeak = () => {
     if (!summaryText) return;
     
-    if (isSpeaking) {
+    if (isCurrentlySpeaking) {
       stopSpeaking();
-      setIsSpeaking(false);
+      setIsCurrentlySpeaking(false);
     } else {
-      // Start speaking
-      setIsSpeaking(true);
-      speak(summaryText, langKey, () => {
-        setIsSpeaking(false);
+      setIsCurrentlySpeaking(true);
+      speakText(summaryText, langKey, () => {
+        setIsCurrentlySpeaking(false);
       });
     }
   };
 
-  // Stop speaking when component unmounts or text changes
+  // Stop speaking when component unmounts or language changes
   useEffect(() => {
     return () => {
-      if (isSpeaking) {
+      if (isCurrentlySpeaking) {
         stopSpeaking();
       }
     };
   }, []);
+
+  // Stop speaking when text changes significantly
+  useEffect(() => {
+    if (isCurrentlySpeaking) {
+      stopSpeaking();
+      setIsCurrentlySpeaking(false);
+    }
+  }, [summaryText]);
 
   const indices = [
     { name: "S&P 500", value: "5,234.18", change: "+0.8%", positive: true },
@@ -172,13 +179,13 @@ export const StockAnalysisModule: React.FC<Props> = ({ data, isLoading, langKey,
             <h2 style={{ fontSize: 11, fontWeight: 'bold', margin: 0 }}>Market Strategy Report</h2>
             <p style={{ fontSize: 6, color: '#6B7280', margin: 0 }}>AI VERIFIED INSIGHTS</p>
           </div>
-          {summaryText && voicesReady && (
+          {summaryText && (
             <button 
               onClick={toggleSpeak} 
               style={{ 
                 padding: 4, 
                 borderRadius: '50%', 
-                background: isSpeaking ? '#DC2626' : '#3B82F6', 
+                background: isCurrentlySpeaking ? '#DC2626' : '#3B82F6', 
                 border: 'none', 
                 cursor: 'pointer',
                 display: 'flex',
@@ -186,7 +193,7 @@ export const StockAnalysisModule: React.FC<Props> = ({ data, isLoading, langKey,
                 justifyContent: 'center'
               }}
             >
-              {isSpeaking ? <VolumeX size={12} color="white" /> : <Volume2 size={12} color="white" />}
+              {isCurrentlySpeaking ? <VolumeX size={12} color="white" /> : <Volume2 size={12} color="white" />}
             </button>
           )}
         </div>

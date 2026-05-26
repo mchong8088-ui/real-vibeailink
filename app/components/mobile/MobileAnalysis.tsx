@@ -7,7 +7,7 @@ import { FeaturesSection } from '../sections/FeaturesSection';
 import { PricingModal } from '../features/pricing/PricingModal';
 import { StockAnalysisModule } from '../features/stock-analysis/StockAnalysisModule';
 import { footerContent } from '../../constants/content';
-import { speak, stopSpeaking, isVoiceReady } from '../../utils/UnifiedTTS';
+import { speakText, stopSpeaking, isVoiceReady } from '../../utils/SimpleTTS';
 
 interface MobileAnalysisProps {
   langKey: string;
@@ -78,14 +78,14 @@ const MobileAnalysis: React.FC<MobileAnalysisProps> = ({
     }
   }, [langKey]);
 
-  // Handle speaker toggle
+  // Handle speakTexter toggle
   const handleSpeakerToggle = () => {
     if (isSpeakerActive) {
       stopSpeaking();
       setIsSpeakerActive(false);
     } else if (analysisData?.summary && voicesReady) {
       setIsSpeakerActive(true);
-      speak(analysisData.summary, langKey, () => setIsSpeakerActive(false));
+      speakText(analysisData.summary, langKey, () => setIsSpeakerActive(false));
     }
     setIsPaused(false);
   };
@@ -95,7 +95,7 @@ const MobileAnalysis: React.FC<MobileAnalysisProps> = ({
       stopSpeaking();
       setIsPaused(true);
     } else if (isPaused && isSpeakerActive && analysisData?.summary) {
-      speak(analysisData.summary, langKey);
+      speakText(analysisData.summary, langKey);
       setIsPaused(false);
     }
   };
