@@ -8,3 +8,9 @@ if (!supabaseUrl || !supabaseAnonKey) {
 }
 
 export const supabase = createBrowserClient(supabaseUrl, supabaseAnonKey)
+
+// Helper to check auth status
+export const getSession = async () => {
+  const { data: { session } } = await supabase.auth.getSession()
+  return session
+}
