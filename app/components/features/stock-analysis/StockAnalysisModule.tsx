@@ -1,34 +1,37 @@
-// components/features/stock-analysis/StockAnalysisModule.tsx
 "use client";
 import React, { useState, useEffect, useRef } from 'react';
 import { Volume2, VolumeX, Activity, Zap, ShieldCheck, Globe, BarChart3 } from 'lucide-react';
 import { LineChart, Line, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid } from 'recharts';
+import { speakWithBrowserSupport, stopSpeaking } from '@/app/utils/voiceUtils';
 
-interface StockAnalysisModuleProps {
+interface Props {
   data: any;
   isLoading: boolean;
   langKey: string;
   t: any;
 }
 
-export const StockAnalysisModule: React.FC<StockAnalysisModuleProps> = ({
-  data,
-  isLoading,
-  langKey,
-  t,
-}) => {
+export const StockAnalysisModule: React.FC<Props> = ({ data, isLoading, langKey, t }) => {
   const [isSpeaking, setIsSpeaking] = useState(false);
   const utteranceRef = useRef<SpeechSynthesisUtterance | null>(null);
   const [isMobile, setIsMobile] = useState(false);
+  const [voicesLoaded, setVoicesLoaded] = useState(false);
   
   useEffect(() => {
     setIsMobile(window.innerWidth <= 768);
+    
+    // Ensure voices are loaded
+    if (window.speechSynthesis.getVoices().length > 0) {
+      setVoicesLoaded(true);
+    } else {
+      window.speechSynthesis.onvoiceschanged = () => setVoicesLoaded(true);
+    }
   }, []);
 
   const summaryText = data?.summary || data?.text || "";
 
-  const generateChartData = () => {
-    if (data?.historical && data.historical.length > 0) {
+  const chartData = (() => {
+    if (data?.historical?.length > 0) {
       return data.historical.slice(-30).map((item: any) => ({
         date: new Date(item.date).toLocaleDateString(),
         price: item.close,
@@ -38,59 +41,44 @@ export const StockAnalysisModule: React.FC<StockAnalysisModuleProps> = ({
     const sampleData = [];
     let price = currentPrice * 0.85;
     for (let i = 30; i >= 0; i--) {
-      const change = (Math.random() - 0.5) * 8;
-      price = price + change;
-      sampleData.push({
-        date: `${i}d ago`,
-        price: Math.max(50, price),
-      });
+      price += (Math.random() - 0.5) * 8;
+      sampleData.push({ date: `${i}d ago`, price: Math.max(50, price) });
     }
     return sampleData;
-  };
+  })();
 
-  const chartData = generateChartData();
   const minPrice = Math.min(...chartData.map(d => d.price));
   const maxPrice = Math.max(...chartData.map(d => d.price));
-  const priceRange = maxPrice - minPrice;
-  const yAxisDomain = [minPrice - priceRange * 0.1, maxPrice + priceRange * 0.1];
+  const yAxisDomain = [minPrice - (maxPrice - minPrice) * 0.1, maxPrice + (maxPrice - minPrice) * 0.1];
 
-  // Simple TTS
   useEffect(() => {
-    if (summaryText && isSpeaking) {
-      if (utteranceRef.current) window.speechSynthesis.cancel();
-      const utterance = new SpeechSynthesisUtterance(summaryText);
-      
-      if (langKey === 'Cantonese') {
-        utterance.lang = 'zh-HK';
-      } else if (langKey === '简体中文') {
-        utterance.lang = 'zh-CN';
-      } else {
-        utterance.lang = 'en-US';
-      }
-      
-      utterance.rate = 0.9;
-      utterance.onend = () => setIsSpeaking(false);
-      utterance.onerror = () => setIsSpeaking(false);
-      utteranceRef.current = utterance;
-      window.speechSynthesis.speak(utterance);
+    if (summaryText && isSpeaking && voicesLoaded) {
+      stopSpeaking();
+      utteranceRef.current = speakWithBrowserSupport(
+        summaryText,
+        langKey,
+        undefined,
+        () => setIsSpeaking(false),
+        () => setIsSpeaking(false)
+      );
     }
     return () => {
-      if (utteranceRef.current) {
-        window.speechSynthesis.cancel();
+      if (isSpeaking) {
+        stopSpeaking();
       }
     };
-  }, [summaryText, isSpeaking, langKey]);
+  }, [summaryText, isSpeaking, langKey, voicesLoaded]);
 
   const toggleSpeak = () => {
     if (isSpeaking) {
-      window.speechSynthesis.cancel();
+      stopSpeaking();
       setIsSpeaking(false);
     } else if (summaryText) {
       setIsSpeaking(true);
     }
   };
 
-  const globalIndices = [
+  const indices = [
     { name: "S&P 500", value: "5,234.18", change: "+0.8%", positive: true },
     { name: "NASDAQ", value: "16,428.82", change: "+1.2%", positive: true },
     { name: "DAX", value: "18,456.32", change: "-0.3%", positive: false },
@@ -99,222 +87,124 @@ export const StockAnalysisModule: React.FC<StockAnalysisModuleProps> = ({
     { name: "FTSE 100", value: "7,845.67", change: "+0.2%", positive: true },
   ];
 
-  const row1Indices = globalIndices.slice(0, 3);
-  const row2Indices = globalIndices.slice(3, 6);
-
   if (isLoading) {
-    return (
-      <div style={{ backgroundColor: 'white', borderRadius: '10px', padding: '10px', textAlign: 'center' }}>
-        <div style={{ width: '18px', height: '18px', border: '2px solid #3B82F6', borderTopColor: 'transparent', borderRadius: '50%', animation: 'spin 1s linear infinite', margin: '0 auto 5px' }}></div>
-        <p style={{ fontSize: '10px', color: '#6B7280' }}>{t?.analyzingMarket || 'Analyzing market...'}</p>
-      </div>
-    );
+    return <div style={{ background: 'white', borderRadius: 10, padding: 10, textAlign: 'center' }}>
+      <div style={{ width: 18, height: 18, border: '2px solid #3B82F6', borderTopColor: 'transparent', borderRadius: '50%', animation: 'spin 1s linear infinite', margin: '0 auto 5px' }} />
+      <p style={{ fontSize: 10, color: '#6B7280' }}>{t?.analyzingMarket || 'Analyzing...'}</p>
+    </div>;
   }
 
-  if (!data || !data.symbol) {
-    return (
-      <div style={{ backgroundColor: 'white', borderRadius: '10px', padding: '6px', textAlign: 'center' }}>
-        <Activity size={18} strokeWidth={1} style={{ color: '#D1D5DB', margin: '0 auto' }} />
-      </div>
-    );
+  if (!data?.symbol) {
+    return <div style={{ background: 'white', borderRadius: 10, padding: 6, textAlign: 'center' }}>
+      <Activity size={18} style={{ color: '#D1D5DB' }} />
+    </div>;
   }
 
-  const stockSymbol = data.symbol || "Stock";
-  const currentPrice = data.price || "N/A";
-  const rsiValue = data.rsi || "N/A";
-  const macdValue = data.macd || "N/A";
-  const marketCap = data.marketCap || "N/A";
-  const peRatio = data.peRatio || "N/A";
-  const volume = data.volume || "N/A";
-  const changePercent = data.changePercent;
-
-  const CustomTooltip = ({ active, payload, label }: any) => {
-    if (active && payload && payload.length) {
-      return (
-        <div style={{ 
-          backgroundColor: 'rgba(255, 255, 255, 0.95)', 
-          border: '1px solid #E5E7EB', 
-          borderRadius: '4px', 
-          padding: '2px 5px'
-        }}>
-          <p style={{ fontSize: '6px', color: '#6B7280', margin: 0 }}>{label}</p>
-          <p style={{ fontSize: '8px', fontWeight: 'bold', color: '#1F2937', margin: '1px 0 0 0' }}>${payload[0].value.toFixed(2)}</p>
-        </div>
-      );
-    }
-    return null;
-  };
-
-  const isPositive = changePercent && parseFloat(changePercent) > 0;
+  const isPositive = data.changePercent && parseFloat(data.changePercent) > 0;
 
   return (
-    <div style={{ maxWidth: '100%', overflowX: 'hidden' }}>
-      
-      {/* Global Market Indices */}
-      <div style={{ backgroundColor: '#FEF08A', borderRadius: '6px', padding: '4px', marginBottom: '4px' }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: '3px', marginBottom: '3px' }}>
-          <Globe size={8} style={{ color: '#B45309' }} />
-          <h3 style={{ fontSize: '8px', fontWeight: 'bold', color: '#B45309', margin: 0 }}>
-            {langKey === 'English' ? 'Global Market Indices' : langKey === 'Cantonese' ? '全球市場指數' : '全球市场指数'}
-          </h3>
-        </div>
-        <div style={{ display: 'flex', gap: '3px', marginBottom: '3px' }}>
-          {row1Indices.map((index, i) => (
-            <div key={i} style={{ flex: 1, backgroundColor: 'white', borderRadius: '3px', padding: '2px', textAlign: 'center' }}>
-              <p style={{ fontSize: '6px', fontWeight: 'bold', color: '#4B5563', margin: '1px 0' }}>{index.name}</p>
-              <p style={{ fontSize: '8px', fontWeight: 'bold', color: '#1F2937', margin: '1px 0' }}>{index.value}</p>
-              <p style={{ fontSize: '5px', fontWeight: 'bold', color: index.positive ? '#10B981' : '#EF4444', margin: '1px 0' }}>{index.change}</p>
+    <div>
+      {/* Indices */}
+      <div style={{ background: '#FEF08A', borderRadius: 6, padding: 4, marginBottom: 4 }}>
+        <div style={{ display: 'flex', gap: 3, marginBottom: 3 }}>
+          {indices.slice(0,3).map((idx, i) => (
+            <div key={i} style={{ flex: 1, background: 'white', borderRadius: 3, padding: 2, textAlign: 'center' }}>
+              <p style={{ fontSize: 6, fontWeight: 'bold', margin: '1px 0' }}>{idx.name}</p>
+              <p style={{ fontSize: 8, fontWeight: 'bold', margin: '1px 0' }}>{idx.value}</p>
+              <p style={{ fontSize: 5, fontWeight: 'bold', color: idx.positive ? '#10B981' : '#EF4444', margin: '1px 0' }}>{idx.change}</p>
             </div>
           ))}
         </div>
-        <div style={{ display: 'flex', gap: '3px' }}>
-          {row2Indices.map((index, i) => (
-            <div key={i} style={{ flex: 1, backgroundColor: 'white', borderRadius: '3px', padding: '2px', textAlign: 'center' }}>
-              <p style={{ fontSize: '6px', fontWeight: 'bold', color: '#4B5563', margin: '1px 0' }}>{index.name}</p>
-              <p style={{ fontSize: '8px', fontWeight: 'bold', color: '#1F2937', margin: '1px 0' }}>{index.value}</p>
-              <p style={{ fontSize: '5px', fontWeight: 'bold', color: index.positive ? '#10B981' : '#EF4444', margin: '1px 0' }}>{index.change}</p>
+        <div style={{ display: 'flex', gap: 3 }}>
+          {indices.slice(3,6).map((idx, i) => (
+            <div key={i} style={{ flex: 1, background: 'white', borderRadius: 3, padding: 2, textAlign: 'center' }}>
+              <p style={{ fontSize: 6, fontWeight: 'bold', margin: '1px 0' }}>{idx.name}</p>
+              <p style={{ fontSize: 8, fontWeight: 'bold', margin: '1px 0' }}>{idx.value}</p>
+              <p style={{ fontSize: 5, fontWeight: 'bold', color: idx.positive ? '#10B981' : '#EF4444', margin: '1px 0' }}>{idx.change}</p>
             </div>
           ))}
         </div>
       </div>
 
-      {/* Chart Section */}
-      <div style={{ backgroundColor: '#FEF08A', borderRadius: '6px', padding: '4px', marginBottom: '4px' }}>
-        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '3px' }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '3px' }}>
-            <div style={{ backgroundColor: '#3B82F6', padding: '2px', borderRadius: '3px' }}>
-              <BarChart3 size={6} style={{ color: 'white' }} />
-            </div>
-            <h3 style={{ fontSize: '8px', fontWeight: 'bold', color: '#1F2937', margin: 0 }}>{stockSymbol}</h3>
-            {changePercent && (
-              <span style={{ fontSize: '7px', fontWeight: 'bold', color: isPositive ? '#10B981' : '#EF4444' }}>
-                {isPositive ? `+${changePercent}%` : `${changePercent}%`}
-              </span>
-            )}
+      {/* Chart */}
+      <div style={{ background: '#FEF08A', borderRadius: 6, padding: 4, marginBottom: 4 }}>
+        <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 3 }}>
+          <div style={{ display: 'flex', gap: 3, alignItems: 'center' }}>
+            <div style={{ background: '#3B82F6', padding: 2, borderRadius: 3 }}><BarChart3 size={6} color="white" /></div>
+            <h3 style={{ fontSize: 8, fontWeight: 'bold', margin: 0 }}>{data.symbol}</h3>
+            {data.changePercent && <span style={{ fontSize: 7, fontWeight: 'bold', color: isPositive ? '#10B981' : '#EF4444' }}>{isPositive ? `+${data.changePercent}%` : `${data.changePercent}%`}</span>}
           </div>
-          <div style={{ display: 'flex', gap: '6px' }}>
-            <div style={{ textAlign: 'center' }}>
-              <p style={{ fontSize: '5px', color: '#6B7280', margin: 0 }}>Price</p>
-              <p style={{ fontSize: '8px', fontWeight: 'bold', color: '#1F2937', margin: 0 }}>{currentPrice}</p>
-            </div>
-            <div style={{ textAlign: 'center' }}>
-              <p style={{ fontSize: '5px', color: '#6B7280', margin: 0 }}>RSI</p>
-              <p style={{ fontSize: '8px', fontWeight: 'bold', color: '#3B82F6', margin: 0 }}>{rsiValue}</p>
-            </div>
-            <div style={{ textAlign: 'center' }}>
-              <p style={{ fontSize: '5px', color: '#6B7280', margin: 0 }}>MACD</p>
-              <p style={{ fontSize: '8px', fontWeight: 'bold', color: '#10B981', margin: 0 }}>{macdValue}</p>
-            </div>
+          <div style={{ display: 'flex', gap: 6 }}>
+            <div><p style={{ fontSize: 5, margin: 0 }}>Price</p><p style={{ fontSize: 8, fontWeight: 'bold', margin: 0 }}>{data.price || 'N/A'}</p></div>
+            <div><p style={{ fontSize: 5, margin: 0 }}>RSI</p><p style={{ fontSize: 8, fontWeight: 'bold', margin: 0 }}>{data.rsi || 'N/A'}</p></div>
+            <div><p style={{ fontSize: 5, margin: 0 }}>MACD</p><p style={{ fontSize: 8, fontWeight: 'bold', margin: 0 }}>{data.macd || 'N/A'}</p></div>
           </div>
         </div>
-        
-        <div style={{ width: '100%', height: '80px' }}>
+        <div style={{ height: 80 }}>
           <ResponsiveContainer width="100%" height="100%">
             <LineChart data={chartData} margin={{ top: 2, right: 2, left: 2, bottom: 2 }}>
               <CartesianGrid strokeDasharray="3 3" stroke="#E5E7EB" />
-              <XAxis dataKey="date" hide={true} />
-              <YAxis domain={yAxisDomain} hide={true} />
-              <Tooltip content={<CustomTooltip />} />
-              <Line type="monotone" dataKey="price" stroke="#3B82F6" strokeWidth={1} dot={false} activeDot={{ r: 2 }} />
+              <Tooltip content={({ active, payload }) => active && payload?.length ? <div style={{ background: 'white', border: '1px solid #E5E7EB', borderRadius: 4, padding: '2px 5px', fontSize: 8 }}>${payload[0].value}</div> : null} />
+              <Line type="monotone" dataKey="price" stroke="#3B82F6" strokeWidth={1} dot={false} />
             </LineChart>
           </ResponsiveContainer>
         </div>
-        
-        <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '5px', color: '#9CA3AF', marginTop: '2px' }}>
+        <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 5, marginTop: 2 }}>
           <span>${minPrice.toFixed(2)}</span>
-          <span style={{ color: '#3B82F6' }}>${currentPrice}</span>
+          <span style={{ color: '#3B82F6' }}>${data.price || 'N/A'}</span>
           <span>${maxPrice.toFixed(2)}</span>
         </div>
-        
-        <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '3px', marginTop: '2px' }}>
-          {['1D', '1W', '1M', '3M', '1Y'].map((period) => (
-            <span key={period} style={{ fontSize: '5px', color: period === '1M' ? '#3B82F6' : '#9CA3AF', cursor: 'pointer' }}>{period}</span>
-          ))}
-        </div>
       </div>
 
-      {/* Stock Information */}
-      <div style={{ backgroundColor: '#FEF08A', borderRadius: '6px', padding: '4px', marginBottom: '4px' }}>
-        <h3 style={{ fontSize: '7px', fontWeight: 'bold', color: '#B45309', marginBottom: '3px' }}>
-          {langKey === 'English' ? 'Stock Information' : langKey === 'Cantonese' ? '股票信息' : '股票信息'}
-        </h3>
-        <div style={{ display: 'flex', gap: '3px' }}>
-          <div style={{ flex: 1, backgroundColor: 'white', borderRadius: '3px', padding: '2px', textAlign: 'center' }}>
-            <p style={{ fontSize: '5px', color: '#6B7280', margin: '1px 0' }}>Market Cap</p>
-            <p style={{ fontSize: '7px', fontWeight: 'bold', color: '#1F2937', margin: '1px 0' }}>{marketCap}</p>
+      {/* Stock Info */}
+      <div style={{ background: '#FEF08A', borderRadius: 6, padding: 4, marginBottom: 4 }}>
+        <h3 style={{ fontSize: 7, fontWeight: 'bold', marginBottom: 3 }}>Stock Information</h3>
+        <div style={{ display: 'flex', gap: 3 }}>
+          <div style={{ flex: 1, background: 'white', borderRadius: 3, padding: 2, textAlign: 'center' }}>
+            <p style={{ fontSize: 5, margin: '1px 0' }}>Market Cap</p>
+            <p style={{ fontSize: 7, fontWeight: 'bold', margin: '1px 0' }}>{data.marketCap || 'N/A'}</p>
           </div>
-          <div style={{ flex: 1, backgroundColor: 'white', borderRadius: '3px', padding: '2px', textAlign: 'center' }}>
-            <p style={{ fontSize: '5px', color: '#6B7280', margin: '1px 0' }}>P/E</p>
-            <p style={{ fontSize: '7px', fontWeight: 'bold', color: '#1F2937', margin: '1px 0' }}>{peRatio}</p>
+          <div style={{ flex: 1, background: 'white', borderRadius: 3, padding: 2, textAlign: 'center' }}>
+            <p style={{ fontSize: 5, margin: '1px 0' }}>P/E</p>
+            <p style={{ fontSize: 7, fontWeight: 'bold', margin: '1px 0' }}>{data.peRatio || 'N/A'}</p>
           </div>
-          <div style={{ flex: 1, backgroundColor: 'white', borderRadius: '3px', padding: '2px', textAlign: 'center' }}>
-            <p style={{ fontSize: '5px', color: '#6B7280', margin: '1px 0' }}>Volume</p>
-            <p style={{ fontSize: '7px', fontWeight: 'bold', color: '#1F2937', margin: '1px 0' }}>{typeof volume === 'number' ? (volume / 1000000).toFixed(1) + 'M' : volume}</p>
+          <div style={{ flex: 1, background: 'white', borderRadius: 3, padding: 2, textAlign: 'center' }}>
+            <p style={{ fontSize: 5, margin: '1px 0' }}>Volume</p>
+            <p style={{ fontSize: 7, fontWeight: 'bold', margin: '1px 0' }}>{typeof data.volume === 'number' ? (data.volume / 1000000).toFixed(1) + 'M' : data.volume || 'N/A'}</p>
           </div>
         </div>
       </div>
 
-      {/* AI Analysis Text */}
-      <div style={{ backgroundColor: 'white', borderRadius: '6px', padding: '8px', border: '1px solid #E5E7EB' }}>
-        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '8px' }}>
+      {/* AI Analysis */}
+      <div style={{ background: 'white', borderRadius: 6, padding: 8, border: '1px solid #E5E7EB' }}>
+        <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 8 }}>
           <div>
-            <h2 style={{ fontSize: '11px', fontWeight: 'bold', color: '#1F2937', margin: 0 }}>
-              {langKey === 'English' ? 'Market Strategy Report' : langKey === 'Cantonese' ? '市場策略報告' : '市场策略报告'}
-            </h2>
-            <p style={{ fontSize: '6px', color: '#6B7280', fontWeight: 'bold', margin: 0 }}>AI VERIFIED INSIGHTS</p>
+            <h2 style={{ fontSize: 11, fontWeight: 'bold', margin: 0 }}>Market Strategy Report</h2>
+            <p style={{ fontSize: 6, color: '#6B7280', margin: 0 }}>AI VERIFIED INSIGHTS</p>
           </div>
           {summaryText && (
-            <button 
-              onClick={toggleSpeak} 
-              style={{ 
-                padding: '4px', 
-                borderRadius: '50%', 
-                backgroundColor: isSpeaking ? '#DC2626' : '#3B82F6', 
-                border: 'none', 
-                cursor: 'pointer',
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center'
-              }}
-            >
+            <button onClick={toggleSpeak} style={{ padding: 4, borderRadius: '50%', background: isSpeaking ? '#DC2626' : '#3B82F6', border: 'none', cursor: 'pointer' }}>
               {isSpeaking ? <VolumeX size={12} color="white" /> : <Volume2 size={12} color="white" />}
             </button>
           )}
         </div>
-        
-        <div style={{ backgroundColor: '#F9FAFB', borderRadius: '4px', padding: '8px', maxHeight: '200px', overflowY: 'auto' }}>
+        <div style={{ background: '#F9FAFB', borderRadius: 4, padding: 8, maxHeight: 200, overflowY: 'auto' }}>
           {summaryText ? (
-            <p style={{ fontSize: '10px', color: '#1F2937', lineHeight: '1.5', margin: 0, whiteSpace: 'pre-wrap' }}>
-              {summaryText}
-            </p>
+            <p style={{ fontSize: 10, color: '#1F2937', lineHeight: 1.5, margin: 0, whiteSpace: 'pre-wrap' }}>{summaryText}</p>
           ) : (
-            <div style={{ textAlign: 'center', padding: '12px' }}>
+            <div style={{ textAlign: 'center', padding: 12 }}>
               <Activity size={16} style={{ color: '#9CA3AF', margin: '0 auto 4px' }} />
-              <p style={{ fontSize: '9px', color: '#6B7280' }}>
-                {langKey === 'English' ? 'Waiting for analysis...' : langKey === 'Cantonese' ? '等待分析結果...' : '等待分析结果...'}
-              </p>
+              <p style={{ fontSize: 9, color: '#6B7280' }}>Waiting for analysis...</p>
             </div>
           )}
         </div>
-        
-        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: '6px', paddingTop: '4px', borderTop: '1px solid #E5E7EB' }}>
-          <div style={{ display: 'flex', gap: '6px' }}>
-            <Zap size={8} style={{ color: '#F59E0B' }} />
-            <ShieldCheck size={8} style={{ color: '#3B82F6' }} />
-            <Activity size={8} style={{ color: '#10B981' }} />
-          </div>
-          <p style={{ fontSize: '5px', fontWeight: 'bold', color: '#9CA3AF', margin: 0 }}>
-            {data.symbol ? `STR-${data.symbol}` : 'READY'} • {new Date().toLocaleTimeString()}
-          </p>
+        <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: 6, paddingTop: 4, borderTop: '1px solid #E5E7EB' }}>
+          <div style={{ display: 'flex', gap: 6 }}><Zap size={8} /><ShieldCheck size={8} /><Activity size={8} /></div>
+          <p style={{ fontSize: 5, margin: 0 }}>{data.symbol ? `STR-${data.symbol}` : 'READY'} • {new Date().toLocaleTimeString()}</p>
         </div>
       </div>
 
-      <style>{`
-        @keyframes spin {
-          from { transform: rotate(0deg); }
-          to { transform: rotate(360deg); }
-        }
-      `}</style>
+      <style>{`@keyframes spin { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }`}</style>
     </div>
   );
 };
