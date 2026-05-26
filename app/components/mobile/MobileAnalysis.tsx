@@ -211,6 +211,45 @@ const MobileAnalysis: React.FC<MobileAnalysisProps> = ({
     return langKey === 'Cantonese' ? 'AI 分析' : langKey === '简体中文' ? 'AI 分析' : 'AI Analysis';
   };
 
+  // Helper to render button with cross line when inactive
+  const renderButtonWithCross = (isActive: boolean, onClick: () => void, icon: JSX.Element, color: string, inactiveColor: string) => {
+    const bgColor = isActive ? color : inactiveColor;
+    
+    return (
+      <button 
+        onClick={onClick}
+        style={{ 
+          flex: 1,
+          height: '48px',
+          borderRadius: '12px',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          backgroundColor: bgColor,
+          color: 'white', 
+          border: 'none', 
+          cursor: 'pointer',
+          position: 'relative',
+          overflow: 'hidden'
+        }}
+      >
+        {icon}
+        {!isActive && (
+          <div style={{
+            position: 'absolute',
+            top: '50%',
+            left: '50%',
+            width: '2px',
+            height: '30px',
+            backgroundColor: 'white',
+            transform: 'translate(-50%, -50%) rotate(45deg)',
+            borderRadius: '1px'
+          }} />
+        )}
+      </button>
+    );
+  };
+
   return (
     <div style={{ 
       display: 'flex', 
@@ -283,7 +322,7 @@ const MobileAnalysis: React.FC<MobileAnalysisProps> = ({
         )}
       </div>
 
-      {/* BOTTOM BAR with 4 buttons - Bluetooth integrated into Speaker menu */}
+      {/* BOTTOM BAR */}
       {isAnalysisMode && !legalTitle && (
         <div style={{ 
           backgroundColor: 'white', 
@@ -304,35 +343,30 @@ const MobileAnalysis: React.FC<MobileAnalysisProps> = ({
             <input type="text" value={inputValue} onChange={(e) => setInputValue(e.target.value)} placeholder={exampleText} onKeyPress={(e) => e.key === 'Enter' && handleAnalyze()} style={{ flex: 1, padding: '10px 14px', fontSize: '14px', color: '#1F2937', backgroundColor: '#F3F4F6', borderRadius: '24px', border: '1px solid #E5E7EB', outline: 'none', minWidth: 0 }} />
           </div>
           
-          {/* 4 SQUARE Control Buttons - Mic, Speaker(with menu), Pause, Send */}
+          {/* Control Buttons with cross line when inactive */}
           <div style={{ display: 'flex', gap: '8px', justifyContent: 'space-between' }}>
-            <button onClick={handleMicToggle} style={{ flex: 1, height: '48px', borderRadius: '12px', display: 'flex', alignItems: 'center', justifyContent: 'center', backgroundColor: isListening ? '#3B82F6' : '#EF4444', color: 'white', border: 'none', cursor: 'pointer' }}>
+            {/* Mic Button */}
+            {renderButtonWithCross(
+              isListening, 
+              handleMicToggle,
               <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2}>
                 <path strokeLinecap="round" strokeLinejoin="round" d="M19 11a7 7 0 01-7 7m0 0a7 7 0 01-7-7m7 7v4m0 0H8m4 0h4m-4-8a3 3 0 01-3-3V5a3 3 0 116 0v6a3 3 0 01-3 3z" />
-              </svg>
-            </button>
+              </svg>,
+              '#3B82F6',
+              '#EF4444'
+            )}
 
-            {/* Speaker button with dropdown menu */}
+            {/* Speaker Button with menu */}
             <div style={{ position: 'relative', flex: 1 }}>
-              <button 
-                onClick={handleSpeakerClick}
-                style={{ 
-                  width: '100%',
-                  height: '48px',
-                  borderRadius: '12px',
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  backgroundColor: isSpeakerActive ? '#EF4444' : '#9CA3AF', 
-                  color: 'white', 
-                  border: 'none', 
-                  cursor: 'pointer'
-                }}
-              >
+              {renderButtonWithCross(
+                isSpeakerActive, 
+                handleSpeakerClick,
                 <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2}>
                   <path strokeLinecap="round" strokeLinejoin="round" d="M15.536 8.464a5 5 0 010 7.072m2.828-9.9a9 9 0 010 12.728M5.586 15H4a1 1 0 01-1-1v-4a1 1 0 011-1h1.586l4.707-4.707C10.923 3.663 12 4.109 12 5v14c0 .891-1.077 1.337-1.707.707L5.586 15z" />
-                </svg>
-              </button>
+                </svg>,
+                '#EF4444',
+                '#9CA3AF'
+              )}
               
               {/* Speaker dropdown menu */}
               {showSpeakerMenu && (
@@ -393,13 +427,35 @@ const MobileAnalysis: React.FC<MobileAnalysisProps> = ({
               )}
             </div>
 
-            <button onClick={handlePauseToggle} style={{ flex: 1, height: '48px', borderRadius: '12px', display: 'flex', alignItems: 'center', justifyContent: 'center', backgroundColor: isPaused ? '#9CA3AF' : '#EF4444', color: 'white', border: 'none', cursor: 'pointer' }}>
+            {/* Pause Button */}
+            {renderButtonWithCross(
+              isPaused, 
+              handlePauseToggle,
               <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2}>
                 <path strokeLinecap="round" strokeLinejoin="round" d="M10 9v6m4-6v6m7-3a9 9 0 11-18 0 9 9 0 0118 0z" />
-              </svg>
-            </button>
+              </svg>,
+              '#EF4444',
+              '#9CA3AF'
+            )}
 
-            <button onClick={handleAnalyze} disabled={!inputValue.trim()} style={{ flex: 1, height: '48px', borderRadius: '12px', display: 'flex', alignItems: 'center', justifyContent: 'center', backgroundColor: inputValue.trim() ? '#22C55E' : '#D1D5DB', color: 'white', border: 'none', cursor: inputValue.trim() ? 'pointer' : 'not-allowed' }}>
+            {/* Send Button - No cross line, just disabled color */}
+            <button 
+              onClick={handleAnalyze} 
+              disabled={!inputValue.trim()} 
+              style={{ 
+                flex: 1, 
+                height: '48px', 
+                borderRadius: '12px', 
+                display: 'flex', 
+                alignItems: 'center', 
+                justifyContent: 'center', 
+                backgroundColor: inputValue.trim() ? '#22C55E' : '#D1D5DB', 
+                color: 'white', 
+                border: 'none', 
+                cursor: inputValue.trim() ? 'pointer' : 'not-allowed',
+                position: 'relative'
+              }}
+            >
               <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2}>
                 <path strokeLinecap="round" strokeLinejoin="round" d="M7 7h10v10M17 7L7 17" />
               </svg>

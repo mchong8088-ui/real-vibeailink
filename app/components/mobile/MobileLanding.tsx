@@ -1,6 +1,5 @@
-// components/mobile/MobileLanding.tsx
 "use client";
-import React, { useState } from 'react';
+import React from 'react';
 import { LanguageToggle } from '../layout/LanguageToggle';
 
 interface MobileLandingProps {
@@ -18,119 +17,204 @@ const MobileLanding: React.FC<MobileLandingProps> = ({
   user,
   onNavigate,
 }) => {
-  const [showFooterMenu, setShowFooterMenu] = useState(false);
-
-  const headerTopics = [
-    { id: 'analysis', label: 'AI分析', icon: '📊' },
-    { id: 'about', label: '關於', icon: '👥' },
-    { id: 'features', label: '功能', icon: '⚙️' },
-    { id: 'pricing', label: '定價', icon: '💰' },
-  ];
-
-  const footerTopics = [
-    { id: 'DISCLAIMER', label: '免責聲明' },
-    { id: '服務條款', label: '服務條款' },
-    { id: '隱私政策', label: '隱私政策' },
-    { id: '退款政策', label: '退款政策' },
-    { id: '聯絡我們', label: '聯絡我們' },
-  ];
-
-  const handleNavigate = (page: string, topicId?: string) => {
-    if (page === 'analysis') {
-      onNavigate('analysis', { view: 'analysis' });
-    } else {
-      onNavigate('content', { view: topicId });
-    }
-  };
-
-  const handleFooterSelect = (topicId: string) => {
-    setShowFooterMenu(false);
-    onNavigate('content', { view: topicId });
+  const t = {
+    title: langKey === 'Cantonese' ? 'vibeAiLink' : langKey === '简体中文' ? 'vibeAiLink' : 'vibeAiLink',
+    startAnalysis: langKey === 'Cantonese' ? '開始分析' : langKey === '简体中文' ? '开始分析' : 'Start Analysis',
+    aboutUs: langKey === 'Cantonese' ? '關於我們' : langKey === '简体中文' ? '关于我们' : 'About Us',
+    features: langKey === 'Cantonese' ? '功能介紹' : langKey === '简体中文' ? '功能介绍' : 'Features',
+    pricing: langKey === 'Cantonese' ? '服務定價' : langKey === '简体中文' ? '服务定价' : 'Pricing',
+    welcome: langKey === 'Cantonese' ? '歡迎' : langKey === '简体中文' ? '欢迎' : 'Welcome',
   };
 
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', height: '100vh', width: '100%', backgroundColor: 'white', overflow: 'hidden' }}>
+    <div style={{
+      display: 'flex',
+      flexDirection: 'column',
+      height: '100dvh',
+      width: '100%',
+      backgroundColor: '#FEF08A',
+      overflow: 'hidden'
+    }}>
       
-      {/* Top Header */}
-      <div style={{ backgroundColor: 'white', padding: '12px 16px 8px 16px', flexShrink: 0 }}>
-        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-          <h1 style={{ fontSize: '14px', fontWeight: '900', fontStyle: 'italic', color: '#DC2626', margin: 0 }}>vibeAiLink</h1>
-          <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
-            <LanguageToggle currentLang={langKey} onLangChange={setLangKey} />
-            <button onClick={onAuthOpen} style={{ color: '#2563EB', fontWeight: '600', fontSize: '11px', background: 'none', border: 'none', cursor: 'pointer' }}>
-              {user ? 'Welcome' : '登入'}
+      {/* Top Bar */}
+      <div style={{
+        backgroundColor: 'white',
+        padding: '12px 16px',
+        borderBottom: '1px solid #E5E7EB',
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'space-between',
+        flexShrink: 0
+      }}>
+        <h1 style={{ fontSize: '18px', fontWeight: '900', fontStyle: 'italic', color: '#DC2626', margin: 0 }}>vibeAiLink</h1>
+        <div style={{ display: 'flex', gap: '12px', alignItems: 'center' }}>
+          <LanguageToggle currentLang={langKey} onLangChange={setLangKey} />
+          <button
+            onClick={onAuthOpen}
+            style={{
+              color: '#2563EB',
+              fontWeight: '600',
+              fontSize: '12px',
+              background: 'none',
+              border: 'none',
+              cursor: 'pointer'
+            }}
+          >
+            {user ? t.welcome : (langKey === 'Cantonese' ? '登入' : langKey === '简体中文' ? '登录' : 'Login')}
+          </button>
+        </div>
+      </div>
+
+      {/* Main Content - Centered */}
+      <div style={{
+        flex: 1,
+        display: 'flex',
+        flexDirection: 'column',
+        alignItems: 'center',
+        justifyContent: 'center',
+        padding: '20px',
+        overflowY: 'auto'
+      }}>
+        
+        {/* Large Rounded Image */}
+        <div style={{
+          width: '180px',
+          height: '180px',
+          borderRadius: '30px',
+          overflow: 'hidden',
+          backgroundColor: 'white',
+          boxShadow: '0 8px 20px rgba(0,0,0,0.15)',
+          marginBottom: '24px'
+        }}>
+          <img
+            src="/avatars/michael_teresa.jpg"
+            alt="Michael & Teresa"
+            style={{
+              width: '100%',
+              height: '100%',
+              objectFit: 'cover'
+            }}
+          />
+        </div>
+
+        {/* Bigger Wording Below */}
+        <h2 style={{
+          fontSize: '24px',
+          fontWeight: 'bold',
+          color: '#1F2937',
+          margin: '0 0 8px 0',
+          textAlign: 'center'
+        }}>
+          Michael & Teresa
+        </h2>
+        
+        <p style={{
+          fontSize: '14px',
+          color: '#2563EB',
+          fontWeight: '600',
+          margin: '0 0 4px 0',
+          textAlign: 'center'
+        }}>
+          {langKey === 'Cantonese' ? '金融與市場分析' : langKey === '简体中文' ? '金融与市场分析' : 'Finance & Market Analysis'}
+        </p>
+        
+        <p style={{
+          fontSize: '13px',
+          color: '#6B7280',
+          margin: '0 0 32px 0',
+          textAlign: 'center',
+          lineHeight: 1.4,
+          padding: '0 20px'
+        }}>
+          {langKey === 'Cantonese' ? '我哋係 Michael 同 Teresa，金融專員同數據分析助手。' : 
+           langKey === '简体中文' ? '我们是 Michael 和 Teresa，金融专员和数据分析助手。' : 
+           'We are Michael and Teresa, finance specialist and data analysis assistant.'}
+        </p>
+
+        {/* Action Buttons */}
+        <div style={{
+          display: 'flex',
+          flexDirection: 'column',
+          gap: '12px',
+          width: '100%',
+          maxWidth: '280px'
+        }}>
+          <button
+            onClick={() => onNavigate('analysis')}
+            style={{
+              backgroundColor: '#DC2626',
+              color: 'white',
+              border: 'none',
+              borderRadius: '40px',
+              padding: '14px 24px',
+              fontSize: '16px',
+              fontWeight: 'bold',
+              cursor: 'pointer',
+              boxShadow: '0 2px 8px rgba(220,38,38,0.3)',
+              transition: 'transform 0.2s'
+            }}
+            onMouseEnter={(e) => e.currentTarget.style.transform = 'scale(1.02)'}
+            onMouseLeave={(e) => e.currentTarget.style.transform = 'scale(1)'}
+          >
+            {t.startAnalysis}
+          </button>
+          
+          <div style={{
+            display: 'flex',
+            gap: '12px',
+            justifyContent: 'center'
+          }}>
+            <button
+              onClick={() => onNavigate('content', { view: 'about' })}
+              style={{
+                flex: 1,
+                backgroundColor: 'white',
+                color: '#4B5563',
+                border: '1px solid #E5E7EB',
+                borderRadius: '40px',
+                padding: '10px 16px',
+                fontSize: '13px',
+                fontWeight: '500',
+                cursor: 'pointer'
+              }}
+            >
+              {t.aboutUs}
+            </button>
+            <button
+              onClick={() => onNavigate('content', { view: 'features' })}
+              style={{
+                flex: 1,
+                backgroundColor: 'white',
+                color: '#4B5563',
+                border: '1px solid #E5E7EB',
+                borderRadius: '40px',
+                padding: '10px 16px',
+                fontSize: '13px',
+                fontWeight: '500',
+                cursor: 'pointer'
+              }}
+            >
+              {t.features}
+            </button>
+            <button
+              onClick={() => onNavigate('content', { view: 'pricing' })}
+              style={{
+                flex: 1,
+                backgroundColor: 'white',
+                color: '#4B5563',
+                border: '1px solid #E5E7EB',
+                borderRadius: '40px',
+                padding: '10px 16px',
+                fontSize: '13px',
+                fontWeight: '500',
+                cursor: 'pointer'
+              }}
+            >
+              {t.pricing}
             </button>
           </div>
         </div>
-        
-        {/* Header Topics */}
-        <div style={{ display: 'flex', justifyContent: 'space-around', marginTop: '12px' }}>
-          {headerTopics.map((topic) => (
-            <button
-              key={topic.id}
-              onClick={() => handleNavigate(topic.id, topic.id)}
-              style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '2px', padding: '4px 8px', background: 'none', border: 'none', cursor: 'pointer' }}
-            >
-              <span style={{ fontSize: '20px' }}>{topic.icon}</span>
-              <span style={{ fontSize: '9px', fontWeight: '500', color: '#4B5563' }}>{topic.label}</span>
-            </button>
-          ))}
-        </div>
       </div>
-
-      {/* Main Content - Yellow background */}
-      <div style={{ flex: 1, backgroundColor: '#FEF08A', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', padding: '16px' }}>
-        {/* Avatar - 56px (slightly larger but still contained) */}
-        <div style={{ width: '56px', height: '56px', borderRadius: '50%', overflow: 'hidden', backgroundColor: 'white', boxShadow: '0 4px 6px -1px rgba(0,0,0,0.1)', marginBottom: '8px' }}>
-          <img src="/avatars/michael_teresa.jpg" style={{ width: '100%', height: '100%', objectFit: 'cover' }} alt="Michael & Teresa" />
-        </div>
-        
-        <h3 style={{ fontWeight: 'bold', color: '#1F2937', fontSize: '11px', margin: '4px 0 0 0' }}>Michael & Teresa</h3>
-        <p style={{ fontSize: '9px', color: '#4B5563', margin: '2px 0 0 0' }}>金融與市場分析</p>
-        
-        {/* Welcome Message */}
-        <p style={{ fontSize: '10px', color: '#374151', textAlign: 'center', marginTop: '12px', padding: '0 8px', lineHeight: '1.4' }}>
-          我哋係 Michael 同 Teresa，金融專員同數據分析助手。
-        </p>
-        
-        {/* Start Button */}
-        <button
-          onClick={() => handleNavigate('analysis', 'analysis')}
-          style={{ marginTop: '16px', padding: '8px 20px', backgroundColor: '#FBBF24', borderRadius: '9999px', boxShadow: '0 4px 6px -1px rgba(0,0,0,0.1)', display: 'flex', alignItems: 'center', gap: '8px', border: 'none', cursor: 'pointer' }}
-        >
-          <span style={{ fontSize: '14px' }}>⭐</span>
-          <span style={{ fontSize: '12px', fontWeight: 'bold', color: '#1F2937' }}>開始分析</span>
-        </button>
-      </div>
-
-      {/* Footer - 3-line icon */}
-      <div style={{ backgroundColor: 'white', padding: '8px 16px', borderTop: '1px solid #F3F4F6', display: 'flex', justifyContent: 'flex-end', flexShrink: 0 }}>
-        <button
-          onClick={() => setShowFooterMenu(!showFooterMenu)}
-          style={{ padding: '6px', borderRadius: '50%', backgroundColor: '#F3F4F6', border: 'none', cursor: 'pointer' }}
-        >
-          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round">
-            <line x1="4" y1="6" x2="20" y2="6" />
-            <line x1="4" y1="12" x2="20" y2="12" />
-            <line x1="4" y1="18" x2="20" y2="18" />
-          </svg>
-        </button>
-      </div>
-
-      {/* Footer Popup Menu */}
-      {showFooterMenu && (
-        <div style={{ position: 'fixed', bottom: '48px', right: '12px', backgroundColor: 'white', borderRadius: '12px', boxShadow: '0 10px 15px -3px rgba(0,0,0,0.1)', border: '1px solid #E5E7EB', zIndex: 50, width: '160px' }}>
-          {footerTopics.map((topic) => (
-            <button
-              key={topic.id}
-              onClick={() => handleFooterSelect(topic.id)}
-              style={{ width: '100%', textAlign: 'left', padding: '8px 12px', fontSize: '11px', color: '#2563EB', background: 'none', border: 'none', borderBottom: '1px solid #F3F4F6', cursor: 'pointer' }}
-            >
-              {topic.label}
-            </button>
-          ))}
-        </div>
-      )}
     </div>
   );
 };
