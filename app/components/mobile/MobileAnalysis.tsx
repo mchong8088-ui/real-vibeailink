@@ -121,7 +121,10 @@ const MobileAnalysis: React.FC<MobileAnalysisProps> = ({
   };
 
   const handleSpeakerToggle = () => {
-    if (!analysisData?.summary) return;
+    if (!analysisData?.summary) {
+      // No text to speak yet
+      return;
+    }
     
     if (isSpeakerActive) {
       stopSpeaking();
@@ -135,6 +138,8 @@ const MobileAnalysis: React.FC<MobileAnalysisProps> = ({
   };
 
   const handlePauseToggle = () => {
+    if (!analysisData?.summary) return;
+    
     if (!isPaused && isSpeakerActive) {
       stopSpeaking();
       setIsPaused(true);
@@ -196,6 +201,7 @@ const MobileAnalysis: React.FC<MobileAnalysisProps> = ({
       bottom: 0
     }}>
       
+      {/* TOP BAR - Fixed */}
       <div style={{ 
         backgroundColor: 'white', 
         padding: '8px 12px', 
@@ -204,7 +210,7 @@ const MobileAnalysis: React.FC<MobileAnalysisProps> = ({
         alignItems: 'center', 
         justifyContent: 'space-between', 
         flexShrink: 0,
-        zIndex: 10
+        zIndex: 20
       }}>
         <button onClick={onBack} style={{ display: 'flex', alignItems: 'center', gap: '3px', color: '#4B5563', background: 'none', border: 'none', cursor: 'pointer' }}>
           <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2}>
@@ -221,15 +227,14 @@ const MobileAnalysis: React.FC<MobileAnalysisProps> = ({
         </div>
       </div>
 
+      {/* SCROLLABLE CONTENT AREA - Takes remaining space */}
       <div style={{ 
-        flex: '0 1 auto',
+        flex: 1,
         overflowY: 'auto', 
         overflowX: 'hidden',
         WebkitOverflowScrolling: 'touch',
-        padding: '4px 8px 2px 8px',
-        backgroundColor: '#F9FAFB',
-        minHeight: 0,
-        maxHeight: 'calc(100dvh - 130px)'
+        padding: '8px 12px',
+        backgroundColor: '#F9FAFB'
       }}>
         
         {legalTitle && (
@@ -259,44 +264,95 @@ const MobileAnalysis: React.FC<MobileAnalysisProps> = ({
         )}
       </div>
 
+      {/* BOTTOM BAR - Fixed at bottom */}
       {isAnalysisMode && !legalTitle && (
         <div style={{ 
           backgroundColor: 'white', 
           borderTop: '1px solid #E5E7EB', 
-          padding: '6px 10px', 
-          paddingBottom: 'max(6px, env(safe-area-inset-bottom))',
+          padding: '8px 12px', 
+          paddingBottom: 'max(8px, env(safe-area-inset-bottom))',
           flexShrink: 0,
-          zIndex: 10
+          zIndex: 20,
+          boxShadow: '0 -2px 10px rgba(0,0,0,0.05)'
         }}>
-          <div style={{ display: 'flex', gap: '6px', alignItems: 'center', marginBottom: '6px' }}>
-            <button onClick={() => setIsMenuOpen(true)} style={{ width: '32px', height: '32px', borderRadius: '8px', backgroundColor: '#EF4444', color: 'white', border: 'none', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '16px', fontWeight: 'bold', flexShrink: 0 }}>
+          {/* Input Row */}
+          <div style={{ display: 'flex', gap: '8px', alignItems: 'center', marginBottom: '8px' }}>
+            <button
+              onClick={() => setIsMenuOpen(true)}
+              style={{
+                width: '36px',
+                height: '36px',
+                borderRadius: '10px',
+                backgroundColor: '#EF4444',
+                color: 'white',
+                border: 'none',
+                cursor: 'pointer',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                fontSize: '18px',
+                fontWeight: 'bold',
+                flexShrink: 0
+              }}
+            >
               +
             </button>
-            <input type="text" value={inputValue} onChange={(e) => setInputValue(e.target.value)} placeholder={exampleText} onKeyPress={(e) => e.key === 'Enter' && handleAnalyze()} style={{ flex: 1, padding: '6px 10px', fontSize: '12px', color: '#1F2937', backgroundColor: '#F3F4F6', borderRadius: '16px', border: '1px solid #E5E7EB', outline: 'none', minWidth: 0 }} />
+            
+            <input
+              type="text"
+              value={inputValue}
+              onChange={(e) => setInputValue(e.target.value)}
+              placeholder={exampleText}
+              onKeyPress={(e) => e.key === 'Enter' && handleAnalyze()}
+              style={{ 
+                flex: 1, 
+                padding: '8px 12px', 
+                fontSize: '13px', 
+                color: '#1F2937', 
+                backgroundColor: '#F3F4F6', 
+                borderRadius: '20px', 
+                border: '1px solid #E5E7EB', 
+                outline: 'none',
+                minWidth: 0
+              }}
+            />
           </div>
           
-          <div style={{ display: 'flex', gap: '8px', justifyContent: 'center' }}>
-            <button onClick={handleMicToggle} style={{ width: '40px', height: '40px', borderRadius: '20px', display: 'flex', alignItems: 'center', justifyContent: 'center', backgroundColor: isListening ? '#3B82F6' : '#EF4444', color: 'white', border: 'none', cursor: 'pointer' }}>
+          {/* Control Buttons Row */}
+          <div style={{ display: 'flex', gap: '8px', justifyContent: 'space-between' }}>
+            <button
+              onClick={handleMicToggle}
+              style={{ 
+                flex: 1,
+                padding: '8px',
+                borderRadius: '10px',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                backgroundColor: isListening ? '#3B82F6' : '#EF4444', 
+                color: 'white', 
+                border: 'none', 
+                cursor: 'pointer'
+              }}
+            >
               <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2}>
                 <path strokeLinecap="round" strokeLinejoin="round" d="M19 11a7 7 0 01-7 7m0 0a7 7 0 01-7-7m7 7v4m0 0H8m4 0h4m-4-8a3 3 0 01-3-3V5a3 3 0 116 0v6a3 3 0 01-3 3z" />
               </svg>
             </button>
 
-            <button 
-              onClick={handleSpeakerToggle} 
-              disabled={!analysisData?.summary}
+            <button
+              onClick={handleSpeakerToggle}
               style={{ 
-                width: '40px', 
-                height: '40px', 
-                borderRadius: '20px', 
-                display: 'flex', 
-                alignItems: 'center', 
-                justifyContent: 'center', 
+                flex: 1,
+                padding: '8px',
+                borderRadius: '10px',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
                 backgroundColor: !analysisData?.summary ? '#D1D5DB' : (isSpeakerActive ? '#EF4444' : '#9CA3AF'), 
                 color: 'white', 
                 border: 'none', 
-                cursor: !analysisData?.summary ? 'not-allowed' : 'pointer',
-                opacity: !analysisData?.summary ? 0.5 : 1
+                cursor: !analysisData?.summary ? 'not-allowed' : 'pointer'
               }}
             >
               <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2}>
@@ -304,21 +360,19 @@ const MobileAnalysis: React.FC<MobileAnalysisProps> = ({
               </svg>
             </button>
 
-            <button 
-              onClick={handlePauseToggle} 
-              disabled={!analysisData?.summary || !isSpeakerActive}
+            <button
+              onClick={handlePauseToggle}
               style={{ 
-                width: '40px', 
-                height: '40px', 
-                borderRadius: '20px', 
-                display: 'flex', 
-                alignItems: 'center', 
-                justifyContent: 'center', 
-                backgroundColor: (!analysisData?.summary || !isSpeakerActive) ? '#D1D5DB' : (isPaused ? '#9CA3AF' : '#EF4444'), 
+                flex: 1,
+                padding: '8px',
+                borderRadius: '10px',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                backgroundColor: !analysisData?.summary ? '#D1D5DB' : (isPaused ? '#9CA3AF' : '#EF4444'), 
                 color: 'white', 
                 border: 'none', 
-                cursor: (!analysisData?.summary || !isSpeakerActive) ? 'not-allowed' : 'pointer',
-                opacity: (!analysisData?.summary || !isSpeakerActive) ? 0.5 : 1
+                cursor: !analysisData?.summary ? 'not-allowed' : 'pointer'
               }}
             >
               <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2}>
@@ -326,7 +380,22 @@ const MobileAnalysis: React.FC<MobileAnalysisProps> = ({
               </svg>
             </button>
 
-            <button onClick={handleAnalyze} disabled={!inputValue.trim()} style={{ width: '40px', height: '40px', borderRadius: '20px', display: 'flex', alignItems: 'center', justifyContent: 'center', backgroundColor: inputValue.trim() ? '#22C55E' : '#D1D5DB', color: 'white', border: 'none', cursor: inputValue.trim() ? 'pointer' : 'not-allowed' }}>
+            <button
+              onClick={handleAnalyze}
+              disabled={!inputValue.trim()}
+              style={{ 
+                flex: 1,
+                padding: '8px',
+                borderRadius: '10px',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                backgroundColor: inputValue.trim() ? '#22C55E' : '#D1D5DB', 
+                color: 'white', 
+                border: 'none', 
+                cursor: inputValue.trim() ? 'pointer' : 'not-allowed'
+              }}
+            >
               <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2}>
                 <path strokeLinecap="round" strokeLinejoin="round" d="M7 7h10v10M17 7L7 17" />
               </svg>
