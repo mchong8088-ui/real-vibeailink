@@ -2,7 +2,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { Volume2, VolumeX, Activity, Zap, ShieldCheck, Globe, BarChart3 } from 'lucide-react';
 import { LineChart, Line, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid } from 'recharts';
-import { speak, stopSpeaking, isVoiceReady } from '@/app/utils/UnifiedTTS';
+import { speak, stopSpeaking, onVoicesReady } from '@/app/utils/UnifiedTTS';
 
 interface Props {
   data: any;
@@ -13,21 +13,17 @@ interface Props {
 
 export const StockAnalysisModule: React.FC<Props> = ({ data, isLoading, langKey, t }) => {
   const [isSpeaking, setIsSpeaking] = useState(false);
-  const [voicesReady, setVoicesReady] = useState(false);
   const [isMobile, setIsMobile] = useState(false);
+  const [voicesReady, setVoicesReady] = useState(false);
   
   useEffect(() => {
     setIsMobile(window.innerWidth <= 768);
     
-    // Check if voices are ready
-    const checkReady = () => {
-      if (isVoiceReady()) {
-        setVoicesReady(true);
-      } else {
-        setTimeout(checkReady, 100);
-      }
-    };
-    checkReady();
+    // Wait for voices to be ready
+    onVoicesReady(() => {
+      setVoicesReady(true);
+      console.log('[StockAnalysis] Voices ready');
+    });
   }, []);
 
   const summaryText = data?.summary || data?.text || "";
@@ -53,14 +49,28 @@ export const StockAnalysisModule: React.FC<Props> = ({ data, isLoading, langKey,
   const maxPrice = Math.max(...chartData.map(d => d.price));
 
   const toggleSpeak = () => {
+    if (!summaryText) return;
+    
     if (isSpeaking) {
       stopSpeaking();
       setIsSpeaking(false);
-    } else if (summaryText && voicesReady) {
+    } else {
+      // Start speaking
       setIsSpeaking(true);
-      speak(summaryText, langKey, () => setIsSpeaking(false));
+      speak(summaryText, langKey, () => {
+        setIsSpeaking(false);
+      });
     }
   };
+
+  // Stop speaking when component unmounts or text changes
+  useEffect(() => {
+    return () => {
+      if (isSpeaking) {
+        stopSpeaking();
+      }
+    };
+  }, []);
 
   const indices = [
     { name: "S&P 500", value: "5,234.18", change: "+0.8%", positive: true },
@@ -162,8 +172,20 @@ export const StockAnalysisModule: React.FC<Props> = ({ data, isLoading, langKey,
             <h2 style={{ fontSize: 11, fontWeight: 'bold', margin: 0 }}>Market Strategy Report</h2>
             <p style={{ fontSize: 6, color: '#6B7280', margin: 0 }}>AI VERIFIED INSIGHTS</p>
           </div>
-          {summaryText && (
-            <button onClick={toggleSpeak} style={{ padding: 4, borderRadius: '50%', background: isSpeaking ? '#DC2626' : '#3B82F6', border: 'none', cursor: 'pointer' }}>
+          {summaryText && voicesReady && (
+            <button 
+              onClick={toggleSpeak} 
+              style={{ 
+                padding: 4, 
+                borderRadius: '50%', 
+                background: isSpeaking ? '#DC2626' : '#3B82F6', 
+                border: 'none', 
+                cursor: 'pointer',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center'
+              }}
+            >
               {isSpeaking ? <VolumeX size={12} color="white" /> : <Volume2 size={12} color="white" />}
             </button>
           )}
