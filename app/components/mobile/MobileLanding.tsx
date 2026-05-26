@@ -17,14 +17,29 @@ const MobileLanding: React.FC<MobileLandingProps> = ({
   user,
   onNavigate,
 }) => {
+  const [showFooterMenu, setShowFooterMenu] = React.useState(false);
+
   const t = {
     title: langKey === 'Cantonese' ? 'vibeAiLink' : langKey === '简体中文' ? 'vibeAiLink' : 'vibeAiLink',
     startAnalysis: langKey === 'Cantonese' ? '開始分析' : langKey === '简体中文' ? '开始分析' : 'Start Analysis',
     aboutUs: langKey === 'Cantonese' ? '關於我們' : langKey === '简体中文' ? '关于我们' : 'About Us',
     features: langKey === 'Cantonese' ? '功能介紹' : langKey === '简体中文' ? '功能介绍' : 'Features',
     pricing: langKey === 'Cantonese' ? '服務定價' : langKey === '简体中文' ? '服务定价' : 'Pricing',
+    disclaimer: langKey === 'Cantonese' ? '免責聲明' : langKey === '简体中文' ? '免责声明' : 'Disclaimer',
+    terms: langKey === 'Cantonese' ? '服務條款' : langKey === '简体中文' ? '服务条款' : 'Terms',
+    privacy: langKey === 'Cantonese' ? '隱私政策' : langKey === '简体中文' ? '隐私政策' : 'Privacy',
+    refund: langKey === 'Cantonese' ? '退款政策' : langKey === '简体中文' ? '退款政策' : 'Refund',
+    contact: langKey === 'Cantonese' ? '聯絡我們' : langKey === '简体中文' ? '联系我们' : 'Contact',
     welcome: langKey === 'Cantonese' ? '歡迎' : langKey === '简体中文' ? '欢迎' : 'Welcome',
   };
+
+  const footerItems = [
+    { label: t.disclaimer, key: 'DISCLAIMER' },
+    { label: t.terms, key: '服務條款' },
+    { label: t.privacy, key: '隱私政策' },
+    { label: t.refund, key: '退款政策' },
+    { label: t.contact, key: '聯絡我們' },
+  ];
 
   return (
     <div style={{
@@ -33,10 +48,11 @@ const MobileLanding: React.FC<MobileLandingProps> = ({
       height: '100dvh',
       width: '100%',
       backgroundColor: '#FEF08A',
-      overflow: 'hidden'
+      overflow: 'hidden',
+      position: 'relative'
     }}>
       
-      {/* Top Bar */}
+      {/* Top Bar - Single row */}
       <div style={{
         backgroundColor: 'white',
         padding: '12px 16px',
@@ -44,10 +60,11 @@ const MobileLanding: React.FC<MobileLandingProps> = ({
         display: 'flex',
         alignItems: 'center',
         justifyContent: 'space-between',
-        flexShrink: 0
+        flexShrink: 0,
+        gap: '8px'
       }}>
-        <h1 style={{ fontSize: '18px', fontWeight: '900', fontStyle: 'italic', color: '#DC2626', margin: 0 }}>vibeAiLink</h1>
-        <div style={{ display: 'flex', gap: '12px', alignItems: 'center' }}>
+        <h1 style={{ fontSize: '18px', fontWeight: '900', fontStyle: 'italic', color: '#DC2626', margin: 0, flexShrink: 0 }}>vibeAiLink</h1>
+        <div style={{ display: 'flex', gap: '12px', alignItems: 'center', flexShrink: 0 }}>
           <LanguageToggle currentLang={langKey} onLangChange={setLangKey} />
           <button
             onClick={onAuthOpen}
@@ -57,7 +74,8 @@ const MobileLanding: React.FC<MobileLandingProps> = ({
               fontSize: '12px',
               background: 'none',
               border: 'none',
-              cursor: 'pointer'
+              cursor: 'pointer',
+              whiteSpace: 'nowrap'
             }}
           >
             {user ? t.welcome : (langKey === 'Cantonese' ? '登入' : langKey === '简体中文' ? '登录' : 'Login')}
@@ -214,6 +232,76 @@ const MobileLanding: React.FC<MobileLandingProps> = ({
             </button>
           </div>
         </div>
+      </div>
+
+      {/* Footer Menu Button - Bottom Right */}
+      <div style={{
+        position: 'absolute',
+        bottom: '20px',
+        right: '20px',
+        zIndex: 30
+      }}>
+        <button
+          onClick={() => setShowFooterMenu(!showFooterMenu)}
+          style={{
+            width: '48px',
+            height: '48px',
+            borderRadius: '24px',
+            backgroundColor: '#DC2626',
+            color: 'white',
+            border: 'none',
+            cursor: 'pointer',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            boxShadow: '0 2px 8px rgba(0,0,0,0.2)'
+          }}
+        >
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2}>
+            <path strokeLinecap="round" strokeLinejoin="round" d="M4 6h16M4 12h16M4 18h16" />
+          </svg>
+        </button>
+
+        {/* Footer Menu Popup */}
+        {showFooterMenu && (
+          <div style={{
+            position: 'absolute',
+            bottom: '56px',
+            right: '0',
+            backgroundColor: 'white',
+            border: '1px solid #E5E7EB',
+            borderRadius: '12px',
+            boxShadow: '0 4px 12px rgba(0,0,0,0.15)',
+            minWidth: '140px',
+            overflow: 'hidden'
+          }}>
+            {footerItems.map((item, index) => (
+              <button
+                key={index}
+                onClick={() => {
+                  onNavigate('content', { view: item.key });
+                  setShowFooterMenu(false);
+                }}
+                style={{
+                  width: '100%',
+                  padding: '12px 16px',
+                  textAlign: 'left',
+                  backgroundColor: 'white',
+                  border: 'none',
+                  borderBottom: index < footerItems.length - 1 ? '1px solid #E5E7EB' : 'none',
+                  cursor: 'pointer',
+                  fontSize: '13px',
+                  color: '#4B5563',
+                  transition: 'background-color 0.2s'
+                }}
+                onMouseEnter={(e) => e.currentTarget.style.backgroundColor = '#F9FAFB'}
+                onMouseLeave={(e) => e.currentTarget.style.backgroundColor = 'white'}
+              >
+                {item.label}
+              </button>
+            ))}
+          </div>
+        )}
       </div>
     </div>
   );
