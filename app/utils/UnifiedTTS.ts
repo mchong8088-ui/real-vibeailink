@@ -7,7 +7,7 @@ class UnifiedTTS {
   private static instance: UnifiedTTS;
   private voices: SpeechSynthesisVoice[] = [];
   private platform: Platform = 'unknown';
-  private isReady = false;
+  private systemReady = false;
   private currentUtterance: SpeechSynthesisUtterance | null = null;
   private voiceChangeListeners: (() => void)[] = [];
 
@@ -26,7 +26,7 @@ class UnifiedTTS {
   }
 
   onVoicesReady(callback: () => void): void {
-    if (this.isReady) {
+    if (this.systemReady) {
       callback();
     } else {
       this.voiceChangeListeners.push(callback);
@@ -63,8 +63,8 @@ class UnifiedTTS {
   private initVoices(): void {
     const loadVoices = () => {
       this.voices = window.speechSynthesis.getVoices();
-      if (this.voices.length > 0 && !this.isReady) {
-        this.isReady = true;
+      if (this.voices.length > 0 && !this.systemReady) {
+        this.systemReady = true;
         console.log(`[TTS] Loaded ${this.voices.length} voices`);
         this.voiceChangeListeners.forEach(cb => cb());
         this.voiceChangeListeners = [];
@@ -79,7 +79,7 @@ class UnifiedTTS {
   }
 
   private findBestVoice(langKey: string): SpeechSynthesisVoice | null {
-    if (!this.isReady || this.voices.length === 0) return null;
+    if (!this.systemReady || this.voices.length === 0) return null;
 
     const isCantonese = langKey === 'Cantonese';
     const isMandarin = langKey === '简体中文';
@@ -225,7 +225,7 @@ class UnifiedTTS {
   }
 
   isReady(): boolean {
-    return this.isReady;
+    return this.systemReady;
   }
 }
 
