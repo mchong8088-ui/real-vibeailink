@@ -7,6 +7,7 @@ import { FeaturesSection } from '../sections/FeaturesSection';
 import { PricingModal } from '../features/pricing/PricingModal';
 import { StockAnalysisModule } from '../features/stock-analysis/StockAnalysisModule';
 import { footerContent } from '../../constants/content';
+import { speak, stopSpeaking, isVoiceReady } from '../../utils/UnifiedTTS';
 
 interface MobileAnalysisProps {
   langKey: string;
@@ -36,12 +37,24 @@ const MobileAnalysis: React.FC<MobileAnalysisProps> = ({
   const [isPaused, setIsPaused] = useState(false);
   const [isListening, setIsListening] = useState(false);
   const [recognition, setRecognition] = useState<any>(null);
-  const utteranceRef = useRef<SpeechSynthesisUtterance | null>(null);
+  const [voicesReady, setVoicesReady] = useState(false);
   const [isMenuOpen, setIsMenuOpen] = useState(false);
 
   const t = {
     analyzingMarket: langKey === 'Cantonese' ? '分析市場中...' : langKey === '简体中文' ? '分析市场中...' : 'Analyzing Market...',
   };
+
+  // Check voice readiness
+  useEffect(() => {
+    const checkReady = () => {
+      if (isVoiceReady()) {
+        setVoicesReady(true);
+      } else {
+        setTimeout(checkReady, 100);
+      }
+    };
+    checkReady();
+  }, []);
 
   // Speech Recognition Setup
   useEffect(() => {
@@ -65,28 +78,27 @@ const MobileAnalysis: React.FC<MobileAnalysisProps> = ({
     }
   }, [langKey]);
 
-  // Text-to-Speech
-  useEffect(() => {
-    if (analysisData?.summary && isSpeakerActive && !isPaused) {
-      if (utteranceRef.current) window.speechSynthesis.cancel();
-      const utterance = new SpeechSynthesisUtterance(analysisData.summary);
-      
-      if (langKey === 'Cantonese') {
-        utterance.lang = 'zh-HK';
-      } else if (langKey === '简体中文') {
-        utterance.lang = 'zh-CN';
-      } else {
-        utterance.lang = 'en-US';
-      }
-      
-      utterance.rate = 0.9;
-      utterance.onend = () => { utteranceRef.current = null; };
-      utterance.onerror = () => { utteranceRef.current = null; };
-      utteranceRef.current = utterance;
-      window.speechSynthesis.speak(utterance);
+  // Handle speaker toggle
+  const handleSpeakerToggle = () => {
+    if (isSpeakerActive) {
+      stopSpeaking();
+      setIsSpeakerActive(false);
+    } else if (analysisData?.summary && voicesReady) {
+      setIsSpeakerActive(true);
+      speak(analysisData.summary, langKey, () => setIsSpeakerActive(false));
     }
-    return () => { if (utteranceRef.current) window.speechSynthesis.cancel(); };
-  }, [analysisData?.summary, isSpeakerActive, isPaused, langKey]);
+    setIsPaused(false);
+  };
+
+  const handlePauseToggle = () => {
+    if (!isPaused && isSpeakerActive) {
+      stopSpeaking();
+      setIsPaused(true);
+    } else if (isPaused && isSpeakerActive && analysisData?.summary) {
+      speak(analysisData.summary, langKey);
+      setIsPaused(false);
+    }
+  };
 
   const handleAnalyze = async () => {
     if (!inputValue.trim()) return;
@@ -143,47 +155,6 @@ const MobileAnalysis: React.FC<MobileAnalysisProps> = ({
     }
   };
 
-  const handleSpeakerToggle = () => {
-    if (isSpeakerActive && utteranceRef.current) {
-      window.speechSynthesis.cancel();
-      setIsSpeakerActive(false);
-    } else if (!isSpeakerActive && analysisData?.summary) {
-      const utterance = new SpeechSynthesisUtterance(analysisData.summary);
-      if (langKey === 'Cantonese') {
-        utterance.lang = 'zh-HK';
-      } else if (langKey === '简体中文') {
-        utterance.lang = 'zh-CN';
-      } else {
-        utterance.lang = 'en-US';
-      }
-      utterance.rate = 0.9;
-      utteranceRef.current = utterance;
-      window.speechSynthesis.speak(utterance);
-      setIsSpeakerActive(true);
-    }
-    setIsPaused(false);
-  };
-
-  const handlePauseToggle = () => {
-    if (!isPaused && isSpeakerActive) {
-      window.speechSynthesis.cancel();
-      setIsPaused(true);
-    } else if (isPaused && isSpeakerActive && analysisData?.summary) {
-      const utterance = new SpeechSynthesisUtterance(analysisData.summary);
-      if (langKey === 'Cantonese') {
-        utterance.lang = 'zh-HK';
-      } else if (langKey === '简体中文') {
-        utterance.lang = 'zh-CN';
-      } else {
-        utterance.lang = 'en-US';
-      }
-      utterance.rate = 0.9;
-      utteranceRef.current = utterance;
-      window.speechSynthesis.speak(utterance);
-      setIsPaused(false);
-    }
-  };
-
   const handleSelectPlan = async (planId: string, priceId: string) => {
     console.log('Selected plan:', planId, priceId);
   };
@@ -231,7 +202,6 @@ const MobileAnalysis: React.FC<MobileAnalysisProps> = ({
       bottom: 0
     }}>
       
-      {/* TOP BAR */}
       <div style={{ 
         backgroundColor: 'white', 
         padding: '8px 12px', 
@@ -257,7 +227,6 @@ const MobileAnalysis: React.FC<MobileAnalysisProps> = ({
         </div>
       </div>
 
-      {/* SCROLLABLE CONTENT AREA */}
       <div style={{ 
         flex: '0 1 auto',
         overflowY: 'auto', 
@@ -296,7 +265,6 @@ const MobileAnalysis: React.FC<MobileAnalysisProps> = ({
         )}
       </div>
 
-      {/* BOTTOM INPUT BAR */}
       {isAnalysisMode && !legalTitle && (
         <div style={{ 
           backgroundColor: 'white', 

@@ -2,7 +2,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { Volume2, VolumeX, Activity, Zap, ShieldCheck, Globe, BarChart3 } from 'lucide-react';
 import { LineChart, Line, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid } from 'recharts';
-import { speakWithBrowserSupport, stopSpeaking } from '@/app/utils/voiceUtils';
+import { speak, stopSpeaking, isVoiceReady } from '@/app/utils/UnifiedTTS';
 
 interface Props {
   data: any;
@@ -13,19 +13,21 @@ interface Props {
 
 export const StockAnalysisModule: React.FC<Props> = ({ data, isLoading, langKey, t }) => {
   const [isSpeaking, setIsSpeaking] = useState(false);
-  const utteranceRef = useRef<SpeechSynthesisUtterance | null>(null);
+  const [voicesReady, setVoicesReady] = useState(false);
   const [isMobile, setIsMobile] = useState(false);
-  const [voicesLoaded, setVoicesLoaded] = useState(false);
   
   useEffect(() => {
     setIsMobile(window.innerWidth <= 768);
     
-    // Ensure voices are loaded
-    if (window.speechSynthesis.getVoices().length > 0) {
-      setVoicesLoaded(true);
-    } else {
-      window.speechSynthesis.onvoiceschanged = () => setVoicesLoaded(true);
-    }
+    // Check if voices are ready
+    const checkReady = () => {
+      if (isVoiceReady()) {
+        setVoicesReady(true);
+      } else {
+        setTimeout(checkReady, 100);
+      }
+    };
+    checkReady();
   }, []);
 
   const summaryText = data?.summary || data?.text || "";
@@ -49,32 +51,14 @@ export const StockAnalysisModule: React.FC<Props> = ({ data, isLoading, langKey,
 
   const minPrice = Math.min(...chartData.map(d => d.price));
   const maxPrice = Math.max(...chartData.map(d => d.price));
-  const yAxisDomain = [minPrice - (maxPrice - minPrice) * 0.1, maxPrice + (maxPrice - minPrice) * 0.1];
-
-  useEffect(() => {
-    if (summaryText && isSpeaking && voicesLoaded) {
-      stopSpeaking();
-      utteranceRef.current = speakWithBrowserSupport(
-        summaryText,
-        langKey,
-        undefined,
-        () => setIsSpeaking(false),
-        () => setIsSpeaking(false)
-      );
-    }
-    return () => {
-      if (isSpeaking) {
-        stopSpeaking();
-      }
-    };
-  }, [summaryText, isSpeaking, langKey, voicesLoaded]);
 
   const toggleSpeak = () => {
     if (isSpeaking) {
       stopSpeaking();
       setIsSpeaking(false);
-    } else if (summaryText) {
+    } else if (summaryText && voicesReady) {
       setIsSpeaking(true);
+      speak(summaryText, langKey, () => setIsSpeaking(false));
     }
   };
 
@@ -104,7 +88,6 @@ export const StockAnalysisModule: React.FC<Props> = ({ data, isLoading, langKey,
 
   return (
     <div>
-      {/* Indices */}
       <div style={{ background: '#FEF08A', borderRadius: 6, padding: 4, marginBottom: 4 }}>
         <div style={{ display: 'flex', gap: 3, marginBottom: 3 }}>
           {indices.slice(0,3).map((idx, i) => (
@@ -126,7 +109,6 @@ export const StockAnalysisModule: React.FC<Props> = ({ data, isLoading, langKey,
         </div>
       </div>
 
-      {/* Chart */}
       <div style={{ background: '#FEF08A', borderRadius: 6, padding: 4, marginBottom: 4 }}>
         <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 3 }}>
           <div style={{ display: 'flex', gap: 3, alignItems: 'center' }}>
@@ -156,7 +138,6 @@ export const StockAnalysisModule: React.FC<Props> = ({ data, isLoading, langKey,
         </div>
       </div>
 
-      {/* Stock Info */}
       <div style={{ background: '#FEF08A', borderRadius: 6, padding: 4, marginBottom: 4 }}>
         <h3 style={{ fontSize: 7, fontWeight: 'bold', marginBottom: 3 }}>Stock Information</h3>
         <div style={{ display: 'flex', gap: 3 }}>
@@ -175,7 +156,6 @@ export const StockAnalysisModule: React.FC<Props> = ({ data, isLoading, langKey,
         </div>
       </div>
 
-      {/* AI Analysis */}
       <div style={{ background: 'white', borderRadius: 6, padding: 8, border: '1px solid #E5E7EB' }}>
         <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 8 }}>
           <div>
