@@ -34,6 +34,7 @@ export default function VibeAiMaster() {
   const [pricingContext, setPricingContext] = useState<'normal' | 'retention'>('normal');
   const [showUserMenu, setShowUserMenu] = useState(false);
   const [isHydrated, setIsHydrated] = useState(false);
+  const [attachments, setAttachments] = useState<any[]>([]);
 
   const [mobilePage, setMobilePage] = useState<'landing' | 'analysis' | 'content'>('landing');
   const [mobileView, setMobileView] = useState<string>('analysis');
@@ -42,7 +43,6 @@ export default function VibeAiMaster() {
 
   const systemInfo = { system: `VibeAI-${systemState.os}`, voiceEngine: "Local Synthesis" };
 
-  // Set hydrated immediately to prevent flashing
   useEffect(() => { 
     setIsHydrated(true); 
   }, []);
@@ -63,14 +63,22 @@ export default function VibeAiMaster() {
     window.location.href = '/';
   };
 
-  const handleAnalyzeRequest = async (ticker: string) => {
+  const handleAnalyzeRequest = async (ticker: string, attachmentsList?: any[]) => {
     if (!user) { setIsAuthOpen(true); return; }
     setIsLoading(true);
+    
+    console.log("🔵 Analyzing ticker:", ticker);
+    console.log("📎 Attachments:", attachmentsList);
+    
     try {
       const response = await fetch('/api/chat', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ message: ticker, language }),
+        body: JSON.stringify({ 
+          message: ticker,
+          language,
+          attachments: attachmentsList 
+        }),
       });
       const data = await response.json();
       setAnalysisData({
@@ -133,7 +141,6 @@ export default function VibeAiMaster() {
     return 'User';
   };
 
-  // Get translated text based on language
   const getTranslatedText = () => {
     if (language === 'Cantonese') {
       return {
@@ -185,7 +192,6 @@ export default function VibeAiMaster() {
 
   const text = getTranslatedText();
 
-  // Show nothing until mounted to prevent flash
   if (!mounted || !isHydrated) {
     return null;
   }
@@ -212,7 +218,6 @@ export default function VibeAiMaster() {
           </div>
         </div>
         <div style={{ display: 'flex', flex: 1, overflow: 'hidden' }}>
-          {/* LEFT PANEL */}
           <div style={{ width: '25%', backgroundColor: '#FEF08A', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', padding: '32px 24px', overflow: 'auto', minWidth: '220px' }}>
             <div style={{ width: '140px', height: '140px', borderRadius: '20px', overflow: 'hidden', marginBottom: '24px', backgroundColor: 'white', boxShadow: '0 8px 20px rgba(0,0,0,0.15)' }}>
               <img src="/avatars/michael_teresa.jpg" style={{ width: '100%', height: '100%', objectFit: 'cover' }} alt="Michael & Teresa" />
@@ -233,7 +238,15 @@ export default function VibeAiMaster() {
             </div>
             <div style={{ backgroundColor: 'white', padding: '12px 5%', borderTop: '1px solid #E5E7EB', flexShrink: 0 }}>
               <p style={{ fontSize: '13px', color: '#4B5563', textAlign: 'center', marginBottom: '12px', fontWeight: '500' }}>{text.inputLabel}</p>
-              <SmartInputSystem langKey={language} onAnalyze={handleAnalyzeRequest} onPlusClick={() => setIsMenuOpen(true)} systemInfo={systemInfo} analysisText={analysisData?.summary} />
+              <SmartInputSystem 
+                langKey={language} 
+                onAnalyze={handleAnalyzeRequest} 
+                onPlusClick={() => setIsMenuOpen(true)} 
+                systemInfo={systemInfo} 
+                analysisText={analysisData?.summary}
+                attachments={attachments}
+                onAttachmentsChange={setAttachments}
+              />
             </div>
             <div style={{ backgroundColor: 'white', padding: '8px 5%', borderTop: '1px solid #E5E7EB', display: 'flex', justifyContent: 'center', gap: '24px', flexWrap: 'wrap', flexShrink: 0 }}>
               <button onClick={() => setLegalTitle('DISCLAIMER')} style={{ fontSize: '10px', color: '#3B82F6', background: 'none', border: 'none', cursor: 'pointer' }}>{text.disclaimer}</button>
