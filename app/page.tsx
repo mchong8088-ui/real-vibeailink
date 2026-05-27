@@ -33,7 +33,6 @@ export default function VibeAiMaster() {
   const [showPricingModal, setShowPricingModal] = useState(false);
   const [pricingContext, setPricingContext] = useState<'normal' | 'retention'>('normal');
   const [showUserMenu, setShowUserMenu] = useState(false);
-  const [authInitialized, setAuthInitialized] = useState(false);
   const [isHydrated, setIsHydrated] = useState(false);
 
   const [mobilePage, setMobilePage] = useState<'landing' | 'analysis' | 'content'>('landing');
@@ -43,13 +42,11 @@ export default function VibeAiMaster() {
 
   const systemInfo = { system: `VibeAI-${systemState.os}`, voiceEngine: "Local Synthesis" };
 
-  useEffect(() => { setIsHydrated(true); }, []);
-  useEffect(() => {
-    const { data: { subscription } } = supabase.auth.onAuthStateChange((event) => {
-      if (event === 'SIGNED_IN' || event === 'SIGNED_OUT') window.location.reload();
-    });
-    return () => subscription.unsubscribe();
+  // Set hydrated immediately to prevent flashing
+  useEffect(() => { 
+    setIsHydrated(true); 
   }, []);
+
   useEffect(() => {
     setMounted(true);
     const isMobileDevice = /iPhone|iPad|iPod|Android/i.test(navigator.userAgent) || window.innerWidth < 1024;
@@ -57,7 +54,6 @@ export default function VibeAiMaster() {
     if (navigator.userAgent.indexOf("Win") !== -1) detectedOS = "Windows";
     if (navigator.userAgent.indexOf("Mac") !== -1) detectedOS = "MacOS";
     setSystemState({ os: detectedOS, isMobile: isMobileDevice });
-    setAuthInitialized(true);
   }, []);
 
   const handleLogout = async () => {
@@ -137,11 +133,61 @@ export default function VibeAiMaster() {
     return 'User';
   };
 
-  if (!isHydrated || !mounted || !authInitialized) {
-    return <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '100vh' }}>
-      <div style={{ width: '48px', height: '48px', border: '3px solid #E5E7EB', borderTopColor: '#DC2626', borderRadius: '50%', animation: 'spin 0.8s linear infinite' }} />
-      <style>{`@keyframes spin { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }`}</style>
-    </div>;
+  // Get translated text based on language
+  const getTranslatedText = () => {
+    if (language === 'Cantonese') {
+      return {
+        financeText: '金融與市場分析',
+        inputLabel: '請在下方輸入股票代號',
+        placeholder: '例如: 0700.hk, TSLA 或 2330.TW',
+        disclaimer: '免責聲明',
+        terms: '服務條款',
+        privacy: '隱私政策',
+        refund: '退款政策',
+        contact: '聯絡我們',
+        aiStock: 'AI 股票',
+        about: '關於',
+        features: '功能',
+        pricing: '定價'
+      };
+    } else if (language === '简体中文') {
+      return {
+        financeText: '金融与市场分析',
+        inputLabel: '请在下方输入股票代码',
+        placeholder: '例如: 0700.hk, TSLA 或 2330.TW',
+        disclaimer: '免责声明',
+        terms: '服务条款',
+        privacy: '隐私政策',
+        refund: '退款政策',
+        contact: '联系我们',
+        aiStock: 'AI 股票',
+        about: '关于',
+        features: '功能',
+        pricing: '定价'
+      };
+    } else {
+      return {
+        financeText: 'Finance & Market Analysis',
+        inputLabel: 'Please input stock symbol below',
+        placeholder: 'e.g.: 0700.hk, TSLA or 2330.TW',
+        disclaimer: 'DISCLAIMER',
+        terms: 'TERMS',
+        privacy: 'PRIVACY',
+        refund: 'REFUND',
+        contact: 'CONTACT',
+        aiStock: 'AI STOCK',
+        about: 'ABOUT',
+        features: 'FEATURES',
+        pricing: 'PRICING'
+      };
+    }
+  };
+
+  const text = getTranslatedText();
+
+  // Show nothing until mounted to prevent flash
+  if (!mounted || !isHydrated) {
+    return null;
   }
 
   if (systemState.isMobile) {
@@ -155,7 +201,10 @@ export default function VibeAiMaster() {
         <div style={{ backgroundColor: 'white', padding: '12px 24px', borderBottom: '1px solid #E5E7EB', display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexShrink: 0 }}>
           <div><h1 style={{ fontSize: '20px', fontWeight: '900', fontStyle: 'italic', color: '#DC2626', margin: 0 }}>vibeAiLink</h1></div>
           <div style={{ display: 'flex', gap: '48px' }}>
-            {['analysis', 'about', 'features', 'pricing'].map(v => <button key={v} onClick={() => { setCurrentView(v as any); setLegalTitle(null); }} style={{ fontSize: '13px', fontWeight: currentView === v && !legalTitle ? '900' : '500', letterSpacing: '0.1em', color: currentView === v && !legalTitle ? '#2563EB' : '#94A3B8', textTransform: 'uppercase', background: 'none', border: 'none', cursor: 'pointer', padding: '8px 0' }}>{v === 'analysis' ? 'AI STOCK' : v.toUpperCase()}</button>)}
+            <button onClick={() => { setCurrentView('analysis'); setLegalTitle(null); }} style={{ fontSize: '13px', fontWeight: currentView === 'analysis' && !legalTitle ? '900' : '500', letterSpacing: '0.1em', color: currentView === 'analysis' && !legalTitle ? '#2563EB' : '#94A3B8', textTransform: 'uppercase', background: 'none', border: 'none', cursor: 'pointer', padding: '8px 0' }}>{text.aiStock}</button>
+            <button onClick={() => { setCurrentView('about'); setLegalTitle(null); }} style={{ fontSize: '13px', fontWeight: currentView === 'about' && !legalTitle ? '900' : '500', letterSpacing: '0.1em', color: currentView === 'about' && !legalTitle ? '#2563EB' : '#94A3B8', textTransform: 'uppercase', background: 'none', border: 'none', cursor: 'pointer', padding: '8px 0' }}>{text.about}</button>
+            <button onClick={() => { setCurrentView('features'); setLegalTitle(null); }} style={{ fontSize: '13px', fontWeight: currentView === 'features' && !legalTitle ? '900' : '500', letterSpacing: '0.1em', color: currentView === 'features' && !legalTitle ? '#2563EB' : '#94A3B8', textTransform: 'uppercase', background: 'none', border: 'none', cursor: 'pointer', padding: '8px 0' }}>{text.features}</button>
+            <button onClick={() => { setCurrentView('pricing'); setLegalTitle(null); }} style={{ fontSize: '13px', fontWeight: currentView === 'pricing' && !legalTitle ? '900' : '500', letterSpacing: '0.1em', color: currentView === 'pricing' && !legalTitle ? '#2563EB' : '#94A3B8', textTransform: 'uppercase', background: 'none', border: 'none', cursor: 'pointer', padding: '8px 0' }}>{text.pricing}</button>
           </div>
           <div style={{ display: 'flex', gap: '16px', alignItems: 'center', width: '180px', justifyContent: 'flex-end' }}>
             <LanguageToggle currentLang={language} onLangChange={setLanguage} />
@@ -169,8 +218,7 @@ export default function VibeAiMaster() {
               <img src="/avatars/michael_teresa.jpg" style={{ width: '100%', height: '100%', objectFit: 'cover' }} alt="Michael & Teresa" />
             </div>
             <h2 style={{ fontWeight: 'bold', color: '#1F2937', fontSize: '20px', textAlign: 'center', margin: '0 0 8px 0' }}>Michael & Teresa</h2>
-            <p style={{ fontSize: '13px', fontWeight: '600', color: '#2563EB', textAlign: 'center', margin: '0 0 12px 0' }}>Finance & Market Analysis</p>
-            <p style={{ fontSize: '11px', color: '#6B7280', textAlign: 'center', margin: 0, padding: '8px 12px', backgroundColor: 'rgba(255,255,255,0.5)', borderRadius: '20px' }}>{systemState.os} Environment</p>
+            <p style={{ fontSize: '13px', fontWeight: '600', color: '#2563EB', textAlign: 'center', margin: '0' }}>{text.financeText}</p>
           </div>
           <div style={{ width: '75%', backgroundColor: '#E0F2FE', display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
             <div style={{ flex: 1, overflowY: 'auto', padding: '16px 5%', minHeight: '200px' }}>
@@ -183,13 +231,16 @@ export default function VibeAiMaster() {
                 {currentView === "features" && <FeaturesSection lang={language} />}
               </div>
             </div>
-            <div style={{ backgroundColor: 'white', padding: '12px 5%', borderTop: '1px solid #E5E7EB', flexShrink: 0 }}><p style={{ fontSize: '13px', color: '#4B5563', textAlign: 'center', marginBottom: '12px', fontWeight: '500' }}>Please input stock symbol below</p><SmartInputSystem langKey={language} onAnalyze={handleAnalyzeRequest} onPlusClick={() => setIsMenuOpen(true)} systemInfo={systemInfo} analysisText={analysisData?.summary} /></div>
+            <div style={{ backgroundColor: 'white', padding: '12px 5%', borderTop: '1px solid #E5E7EB', flexShrink: 0 }}>
+              <p style={{ fontSize: '13px', color: '#4B5563', textAlign: 'center', marginBottom: '12px', fontWeight: '500' }}>{text.inputLabel}</p>
+              <SmartInputSystem langKey={language} onAnalyze={handleAnalyzeRequest} onPlusClick={() => setIsMenuOpen(true)} systemInfo={systemInfo} analysisText={analysisData?.summary} />
+            </div>
             <div style={{ backgroundColor: 'white', padding: '8px 5%', borderTop: '1px solid #E5E7EB', display: 'flex', justifyContent: 'center', gap: '24px', flexWrap: 'wrap', flexShrink: 0 }}>
-              <button onClick={() => setLegalTitle('DISCLAIMER')} style={{ fontSize: '10px', color: '#3B82F6', background: 'none', border: 'none', cursor: 'pointer' }}>DISCLAIMER</button>
-              <button onClick={() => setLegalTitle('服務條款')} style={{ fontSize: '10px', color: '#3B82F6', background: 'none', border: 'none', cursor: 'pointer' }}>TERMS</button>
-              <button onClick={() => setLegalTitle('隱私政策')} style={{ fontSize: '10px', color: '#3B82F6', background: 'none', border: 'none', cursor: 'pointer' }}>PRIVACY</button>
-              <button onClick={() => setLegalTitle('退款政策')} style={{ fontSize: '10px', color: '#3B82F6', background: 'none', border: 'none', cursor: 'pointer' }}>REFUND</button>
-              <button onClick={() => setLegalTitle('聯絡我們')} style={{ fontSize: '10px', color: '#3B82F6', background: 'none', border: 'none', cursor: 'pointer' }}>CONTACT</button>
+              <button onClick={() => setLegalTitle('DISCLAIMER')} style={{ fontSize: '10px', color: '#3B82F6', background: 'none', border: 'none', cursor: 'pointer' }}>{text.disclaimer}</button>
+              <button onClick={() => setLegalTitle('服務條款')} style={{ fontSize: '10px', color: '#3B82F6', background: 'none', border: 'none', cursor: 'pointer' }}>{text.terms}</button>
+              <button onClick={() => setLegalTitle('隱私政策')} style={{ fontSize: '10px', color: '#3B82F6', background: 'none', border: 'none', cursor: 'pointer' }}>{text.privacy}</button>
+              <button onClick={() => setLegalTitle('退款政策')} style={{ fontSize: '10px', color: '#3B82F6', background: 'none', border: 'none', cursor: 'pointer' }}>{text.refund}</button>
+              <button onClick={() => setLegalTitle('聯絡我們')} style={{ fontSize: '10px', color: '#3B82F6', background: 'none', border: 'none', cursor: 'pointer' }}>{text.contact}</button>
             </div>
           </div>
         </div>

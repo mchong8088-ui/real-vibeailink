@@ -19,19 +19,56 @@ const MobileLanding: React.FC<MobileLandingProps> = ({
 }) => {
   const [showFooterMenu, setShowFooterMenu] = React.useState(false);
 
-  const t = {
-    title: langKey === 'Cantonese' ? 'vibeAiLink' : langKey === '简体中文' ? 'vibeAiLink' : 'vibeAiLink',
-    startAnalysis: langKey === 'Cantonese' ? '開始分析' : langKey === '简体中文' ? '开始分析' : 'Start Analysis',
-    aboutUs: langKey === 'Cantonese' ? '關於' : langKey === '简体中文' ? '关于' : 'About',
-    features: langKey === 'Cantonese' ? '功能' : langKey === '简体中文' ? '功能' : 'Features',
-    pricing: langKey === 'Cantonese' ? '定價' : langKey === '简体中文' ? '定价' : 'Pricing',
-    disclaimer: langKey === 'Cantonese' ? '免責聲明' : langKey === '简体中文' ? '免责声明' : 'Disclaimer',
-    terms: langKey === 'Cantonese' ? '服務條款' : langKey === '简体中文' ? '服务条款' : 'Terms',
-    privacy: langKey === 'Cantonese' ? '隱私政策' : langKey === '简体中文' ? '隐私政策' : 'Privacy',
-    refund: langKey === 'Cantonese' ? '退款政策' : langKey === '简体中文' ? '退款政策' : 'Refund',
-    contact: langKey === 'Cantonese' ? '聯絡我們' : langKey === '简体中文' ? '联系我们' : 'Contact',
-    welcome: langKey === 'Cantonese' ? '歡迎' : langKey === '简体中文' ? '欢迎' : 'Welcome',
+  const getTranslatedText = () => {
+    if (langKey === 'Cantonese') {
+      return {
+        startAnalysis: '開始分析',
+        aboutUs: '關於',
+        features: '功能',
+        pricing: '定價',
+        disclaimer: '免責聲明',
+        terms: '服務條款',
+        privacy: '隱私政策',
+        refund: '退款政策',
+        contact: '聯絡我們',
+        welcome: '歡迎',
+        financeText: '金融與市場分析',
+        description: '我哋係 Michael 同 Teresa，金融專員同數據分析助手。'
+      };
+    } else if (langKey === '简体中文') {
+      return {
+        startAnalysis: '开始分析',
+        aboutUs: '关于',
+        features: '功能',
+        pricing: '定价',
+        disclaimer: '免责声明',
+        terms: '服务条款',
+        privacy: '隐私政策',
+        refund: '退款政策',
+        contact: '联系我们',
+        welcome: '欢迎',
+        financeText: '金融与市场分析',
+        description: '我们是 Michael 和 Teresa，金融专员和数据分析助手。'
+      };
+    } else {
+      return {
+        startAnalysis: 'Start Analysis',
+        aboutUs: 'About',
+        features: 'Features',
+        pricing: 'Pricing',
+        disclaimer: 'Disclaimer',
+        terms: 'Terms',
+        privacy: 'Privacy',
+        refund: 'Refund',
+        contact: 'Contact',
+        welcome: 'Welcome',
+        financeText: 'Finance & Market Analysis',
+        description: 'We are Michael and Teresa, finance specialist and data analysis assistant.'
+      };
+    }
   };
+
+  const t = getTranslatedText();
 
   const footerItems = [
     { label: t.disclaimer, key: 'DISCLAIMER' },
@@ -52,7 +89,7 @@ const MobileLanding: React.FC<MobileLandingProps> = ({
       position: 'relative'
     }}>
       
-      {/* Top Bar - Single row */}
+      {/* Top Bar */}
       <div style={{
         backgroundColor: 'white',
         padding: '12px 16px',
@@ -83,7 +120,7 @@ const MobileLanding: React.FC<MobileLandingProps> = ({
         </div>
       </div>
 
-      {/* Main Content - Centered */}
+      {/* Main Content */}
       <div style={{
         flex: 1,
         display: 'flex',
@@ -94,7 +131,6 @@ const MobileLanding: React.FC<MobileLandingProps> = ({
         overflowY: 'auto'
       }}>
         
-        {/* Large Rounded Image */}
         <div style={{
           width: '180px',
           height: '180px',
@@ -115,7 +151,6 @@ const MobileLanding: React.FC<MobileLandingProps> = ({
           />
         </div>
 
-        {/* Bigger Wording Below */}
         <h2 style={{
           fontSize: '24px',
           fontWeight: 'bold',
@@ -133,7 +168,7 @@ const MobileLanding: React.FC<MobileLandingProps> = ({
           margin: '0 0 4px 0',
           textAlign: 'center'
         }}>
-          {langKey === 'Cantonese' ? '金融與市場分析' : langKey === '简体中文' ? '金融与市场分析' : 'Finance & Market Analysis'}
+          {t.financeText}
         </p>
         
         <p style={{
@@ -144,12 +179,9 @@ const MobileLanding: React.FC<MobileLandingProps> = ({
           lineHeight: 1.4,
           padding: '0 20px'
         }}>
-          {langKey === 'Cantonese' ? '我哋係 Michael 同 Teresa，金融專員同數據分析助手。' : 
-           langKey === '简体中文' ? '我们是 Michael 和 Teresa，金融专员和数据分析助手。' : 
-           'We are Michael and Teresa, finance specialist and data analysis assistant.'}
+          {t.description}
         </p>
 
-        {/* Action Buttons */}
         <div style={{
           display: 'flex',
           flexDirection: 'column',
@@ -169,15 +201,11 @@ const MobileLanding: React.FC<MobileLandingProps> = ({
               fontWeight: 'bold',
               cursor: 'pointer',
               boxShadow: '0 2px 8px rgba(220,38,38,0.3)',
-              transition: 'transform 0.2s'
             }}
-            onMouseEnter={(e) => e.currentTarget.style.transform = 'scale(1.02)'}
-            onMouseLeave={(e) => e.currentTarget.style.transform = 'scale(1)'}
           >
             {t.startAnalysis}
           </button>
           
-          {/* Three buttons in one row - prevent wrapping */}
           <div style={{
             display: 'flex',
             gap: '8px',
@@ -242,7 +270,7 @@ const MobileLanding: React.FC<MobileLandingProps> = ({
         </div>
       </div>
 
-      {/* Footer Menu Button - Bottom Right */}
+      {/* Footer Menu Button */}
       <div style={{
         position: 'absolute',
         bottom: '20px',
@@ -270,7 +298,6 @@ const MobileLanding: React.FC<MobileLandingProps> = ({
           </svg>
         </button>
 
-        {/* Footer Menu Popup */}
         {showFooterMenu && (
           <div style={{
             position: 'absolute',
@@ -300,10 +327,7 @@ const MobileLanding: React.FC<MobileLandingProps> = ({
                   cursor: 'pointer',
                   fontSize: '13px',
                   color: '#4B5563',
-                  transition: 'background-color 0.2s'
                 }}
-                onMouseEnter={(e) => e.currentTarget.style.backgroundColor = '#F9FAFB'}
-                onMouseLeave={(e) => e.currentTarget.style.backgroundColor = 'white'}
               >
                 {item.label}
               </button>
