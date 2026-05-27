@@ -25,8 +25,8 @@ export const SourceMenu: React.FC<SourceMenuProps> = ({
     if (langKey === 'Cantonese') {
       return {
         title: '新增分析來源',
-        urlOption: '分析新聞連結',
-        urlPlaceholder: '貼上 Motley Fool, CNBC 等連結',
+        urlOption: '分析新聞或財經資訊',
+        urlPlaceholder: '貼上 Motley Fool, CNBC, Bloomberg 等連結',
         photoOption: '拍照或上傳文件',
         photoDesc: '掃描實體報告或截圖',
         fileOption: '上傳數據文件',
@@ -36,8 +36,8 @@ export const SourceMenu: React.FC<SourceMenuProps> = ({
     } else if (langKey === '简体中文') {
       return {
         title: '新增分析来源',
-        urlOption: '分析新闻链接',
-        urlPlaceholder: '贴上 Motley Fool, CNBC 等链接',
+        urlOption: '分析新闻或财经资讯',
+        urlPlaceholder: '贴上 Motley Fool, CNBC, Bloomberg 等链接',
         photoOption: '拍照或上传文件',
         photoDesc: '扫描实体报告或截图',
         fileOption: '上传数据文件',
@@ -47,8 +47,8 @@ export const SourceMenu: React.FC<SourceMenuProps> = ({
     } else {
       return {
         title: 'Add Analysis Source',
-        urlOption: 'Analyze News Link',
-        urlPlaceholder: 'Paste links from Motley Fool, CNBC, etc.',
+        urlOption: 'Analyze News or Financial Information',
+        urlPlaceholder: 'Paste links from Motley Fool, CNBC, Bloomberg, etc.',
         photoOption: 'Take Photo or Upload',
         photoDesc: 'Scan physical reports or screenshots',
         fileOption: 'Upload Data File',
@@ -63,7 +63,6 @@ export const SourceMenu: React.FC<SourceMenuProps> = ({
   const handleUrlSubmit = () => {
     if (urlInput.trim()) {
       onSelectSource('url', urlInput.trim());
-      // Emit custom event for SmartInputSystem
       window.dispatchEvent(new CustomEvent('source-select', { 
         detail: { sourceType: 'url', sourceData: urlInput.trim() } 
       }));
