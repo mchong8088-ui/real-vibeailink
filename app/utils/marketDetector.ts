@@ -1,21 +1,6 @@
-// Stock symbol mapping for Chinese and English names
+// Stock symbol mapping for Chinese and English names (Top 50+ stocks)
 const SYMBOL_MAP: Record<string, string> = {
-  // Taiwan stocks
-  "台積電": "2330.TW",
-  "台积电": "2330.TW",
-  "TSMC": "2330.TW",
-  "台積電股份有限公司": "2330.TW",
-  
-  // Hong Kong stocks
-  "騰訊": "0700.HK",
-  "腾讯": "0700.HK",
-  "Tencent": "0700.HK",
-  "騰訊控股": "0700.HK",
-  "腾讯控股": "0700.HK",
-  "港交所": "0388.HK",
-  "香港交易所": "0388.HK",
-  
-  // US stocks
+  // ===== US Tech Stocks =====
   "特斯拉": "TSLA",
   "Tesla": "TSLA",
   "英偉達": "NVDA",
@@ -34,8 +19,18 @@ const SYMBOL_MAP: Record<string, string> = {
   "Meta": "META",
   "臉書": "META",
   "Facebook": "META",
-  "比亚迪": "BYDDF",
-  "比亞迪": "BYDDF",
+  "奈飞": "NFLX",
+  "Netflix": "NFLX",
+  
+  // ===== Chinese Tech Stocks =====
+  "台積電": "2330.TW",
+  "台积电": "2330.TW",
+  "TSMC": "2330.TW",
+  "騰訊": "0700.HK",
+  "腾讯": "0700.HK",
+  "Tencent": "0700.HK",
+  "騰訊控股": "0700.HK",
+  "腾讯控股": "0700.HK",
   "阿里巴巴": "BABA",
   "Alibaba": "BABA",
   "百度": "BIDU",
@@ -48,6 +43,43 @@ const SYMBOL_MAP: Record<string, string> = {
   "网易": "NTES",
   "網易": "NTES",
   "NetEase": "NTES",
+  "港交所": "0388.HK",
+  "香港交易所": "0388.HK",
+  "比亚迪": "1211.HK",
+  "比亞迪": "1211.HK",
+  "BYD": "1211.HK",
+  "小米": "1810.HK",
+  "Xiaomi": "1810.HK",
+  "美团": "3690.HK",
+  "美團": "3690.HK",
+  "Meituan": "3690.HK",
+  
+  // ===== Taiwan Stocks =====
+  "鸿海": "2317.TW",
+  "鴻海": "2317.TW",
+  "Hon Hai": "2317.TW",
+  "联发科": "2454.TW",
+  "聯發科": "2454.TW",
+  "MediaTek": "2454.TW",
+  "台达电": "2308.TW",
+  "台達電": "2308.TW",
+  "Delta": "2308.TW",
+  
+  // ===== Other US Stocks =====
+  "波音": "BA",
+  "Boeing": "BA",
+  "迪士尼": "DIS",
+  "Disney": "DIS",
+  "可口可乐": "KO",
+  "可口可樂": "KO",
+  "Coca-Cola": "KO",
+  "星巴克": "SBUX",
+  "Starbucks": "SBUX",
+  "耐克": "NKE",
+  "Nike": "NKE",
+  "麦当劳": "MCD",
+  "麥當勞": "MCD",
+  "McDonald's": "MCD",
 };
 
 // Keywords that indicate a stock symbol might be mentioned
@@ -55,7 +87,7 @@ const STOCK_KEYWORDS = [
   "stock", "share", "買", "卖", "賣", "buy", "sell", "invest", "投資",
   "股价", "股價", "price", "should I", "我應該", "我应该",
   "recommend", "建議", "建议", "analysis", "分析", "worth", "值不值得",
-  "看好", "看跌", "bullish", "bearish"
+  "看好", "看跌", "bullish", "bearish", "target", "目標", "目标"
 ];
 
 // Extract stock symbol from natural language question
@@ -77,7 +109,7 @@ export const extractStockFromQuestion = (input: string): string | null => {
   if (match && match[0].length >= 2 && match[0].length <= 8) {
     const potentialSymbol = match[0].toUpperCase();
     // Validate it's a reasonable stock symbol (not common words)
-    if (!['I', 'A', 'TO', 'BE', 'AND', 'FOR', 'THE'].includes(potentialSymbol)) {
+    if (!['I', 'A', 'TO', 'BE', 'AND', 'FOR', 'THE', 'IS', 'ARE'].includes(potentialSymbol)) {
       console.log(`✅ Found potential ticker "${potentialSymbol}" in question`);
       return potentialSymbol;
     }
@@ -88,7 +120,7 @@ export const extractStockFromQuestion = (input: string): string | null => {
 
 // Check if the input is asking a question rather than just entering a symbol
 export const isQuestion = (input: string): boolean => {
-  const questionIndicators = ['?', '？', 'should', '買', '卖', '賣', 'buy', 'sell', '如何', '怎樣', '怎样', '是否', '值不值得'];
+  const questionIndicators = ['?', '？', 'should', '買', '卖', '賣', 'buy', 'sell', '如何', '怎樣', '怎样', '是否', '值不值得', '會', '会'];
   return questionIndicators.some(indicator => input.includes(indicator));
 };
 
