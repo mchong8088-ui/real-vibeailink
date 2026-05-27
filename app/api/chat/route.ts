@@ -1,7 +1,8 @@
 // app/api/chat/route.ts
 
 import { GoogleGenerativeAI } from "@google/generative-ai";
-import { fetchYahooHelper } from "../../lib/market/yahooHelper";import { NextResponse } from "next/server";
+import { NextResponse } from "next/server";
+import { fetchYahooHelper } from "../../lib/market/yahooHelper";
 
 import {
   calculateIndicators,
@@ -162,7 +163,7 @@ async function fetchTwelveData(
 
     const apiKey =
       process.env
-        .TWELVEDATA_API_KEY;
+        .TWELVE_DATA_API_KEY;
 
     const finalSymbol =
       formatSymbol(
@@ -327,13 +328,14 @@ async function fetchFinnhub(
 // =====================================
 
 async function fetchStockData(
+  symbol: string
+) {
+
   // For HK/TW stocks, try Yahoo Finance first
   if (symbol.endsWith('.HK') || symbol.endsWith('.TW')) {
     const yahooData = await fetchYahooHelper(symbol);
     if (yahooData) return yahooData;
   }
-  symbol: string
-) {
 
   let historical =
     await fetchAlphaVantage(
