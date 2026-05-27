@@ -29,12 +29,13 @@ export const SmartInputSystem: React.FC<SmartInputSystemProps> = ({
   onAttachmentsChange,
 }) => {
   const [inputValue, setInputValue] = useState('');
-  const [attachments, setAttachments] = useState<Attachment[]>(externalAttachments || []);
+  const [attachments, setAttachments] = useState<Attachment[]>([]);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const photoInputRef = useRef<HTMLInputElement>(null);
 
+  // Sync with external attachments (for reset)
   useEffect(() => {
-    if (externalAttachments) {
+    if (externalAttachments !== undefined) {
       setAttachments(externalAttachments);
     }
   }, [externalAttachments]);
@@ -82,8 +83,12 @@ export const SmartInputSystem: React.FC<SmartInputSystemProps> = ({
 
   const handleSubmit = () => {
     if (inputValue.trim() || attachments.length > 0) {
-      onAnalyze(inputValue.trim(), attachments);
-      // Don't clear attachments - keep them for the analysis
+      // Pass current attachments to analysis
+      onAnalyze(inputValue.trim(), [...attachments]);
+      
+      // Clear input and attachments after submitting
+      setInputValue('');
+      updateAttachments([]);
     }
   };
 
@@ -102,14 +107,12 @@ export const SmartInputSystem: React.FC<SmartInputSystemProps> = ({
     }
   };
 
-  // Listen for custom events from SourceMenu
   useEffect(() => {
     const handleSourceSelect = (event: CustomEvent) => {
       const { sourceType, sourceData } = event.detail;
       if (sourceType === 'url' && sourceData) {
         handleAddURL(sourceData);
       } else if (sourceType === 'file' && sourceData) {
-        // Handle file from SourceMenu
         const newAttachment: Attachment = {
           id: Date.now().toString(),
           type: 'file',
@@ -234,7 +237,6 @@ export const SmartInputSystem: React.FC<SmartInputSystemProps> = ({
         </button>
       </div>
 
-      {/* Hidden file inputs */}
       <input
         ref={fileInputRef}
         type="file"
