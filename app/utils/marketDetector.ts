@@ -1,59 +1,40 @@
-// Simple stock symbol detection - generic approach
+// Simple stock symbol detection
 const SYMBOL_MAP: Record<string, string> = {
   "台積電": "2330.TW",
-  "台积电": "2330.TW",
   "騰訊": "0700.HK",
-  "腾讯": "0700.HK",
   "港交所": "0388.HK",
   "特斯拉": "TSLA",
-  "Tesla": "TSLA",
   "英偉達": "NVDA",
-  "輝達": "NVDA",
-  "NVIDIA": "NVDA",
-  "比亚迪": "1211.HK",
-  "比亞迪": "1211.HK",
-  "BYD": "1211.HK",
+  "輝達": "NVDA"
 };
 
 export const detectMarket = (input: string) => {
   const cleanInput = input.trim().toUpperCase();
 
-  // 1. Direct stock symbol (generic - any format works)
-  // If user enters ANY stock symbol like 0001.HK, TSLA, 2330.TW, just use it
-  if (cleanInput.match(/^[A-Z0-9.]+$/)) {
-    // Check if it already has a suffix
-    if (cleanInput.endsWith('.TW') || cleanInput.endsWith('.HK')) {
-      return { market: cleanInput.endsWith('.TW') ? 'TW' : 'HK', symbol: cleanInput };
-    }
-    // Check if it's a 4-digit number (likely Hong Kong stock)
-    if (/^\d{4}$/.test(cleanInput)) {
-      return { market: 'HK', symbol: `${cleanInput}.HK` };
-    }
-    // Default to US for letters
-    if (/^[A-Z]+$/.test(cleanInput)) {
-      return { market: 'US', symbol: cleanInput };
-    }
-  }
+  // 1. Check if already includes market suffix
+  if (cleanInput.endsWith('.TW') || cleanInput.includes('台灣')) return { market: 'TW', symbol: cleanInput.replace('台灣', '').trim() };
+  if (cleanInput.endsWith('.HK') || cleanInput.includes('香港')) return { market: 'HK', symbol: cleanInput.replace('香港', '').trim() };
   
-  // 2. Check Chinese name mapping
+  // 2. Check SYMBOL_MAP dictionary
   for (const [name, symbol] of Object.entries(SYMBOL_MAP)) {
-    if (input.includes(name)) {
-      if (symbol.includes('.TW')) return { market: 'TW', symbol: symbol };
-      if (symbol.includes('.HK')) return { market: 'HK', symbol: symbol };
-      return { market: 'US', symbol: symbol };
-    }
+    if (input.includes(name)) return { market: symbol.includes('.TW') ? 'TW' : symbol.includes('.HK') ? 'HK' : 'US', symbol: symbol };
   }
 
-  // 3. Default: treat as US stock symbol
-  const symbol = cleanInput.replace(/[^A-Z0-9]/g, '');
-  if (symbol) return { market: 'US', symbol: symbol };
+  // 3. Default logic: if pure number treat as HK, otherwise US
+  if (/^\d+$/.test(cleanInput)) return { market: 'HK', symbol: `${cleanInput}.HK` };
   
   return { market: 'US', symbol: cleanInput };
 };
 
 export const extractStockFromQuestion = (input: string): string | null => {
-  const result = detectMarket(input);
-  return result.symbol !== input.toUpperCase() ? result.symbol : null;
+  const cleanInput = input.trim();
+  
+  // Check for known stock names
+  for (const [name, symbol] of Object.entries(SYMBOL_MAP)) {
+    if (cleanInput.includes(name)) return symbol;
+  }
+  
+  return null;
 };
 
 export const isQuestion = (input: string): boolean => {
