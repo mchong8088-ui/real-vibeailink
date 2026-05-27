@@ -163,11 +163,10 @@ export default function VibeAiMaster() {
           </div>
         </div>
         <div style={{ display: 'flex', flex: 1, overflow: 'hidden' }}>
-          {/* LEFT PANEL - Clean design without broken image */}
+          {/* LEFT PANEL */}
           <div style={{ width: '25%', backgroundColor: '#FEF08A', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', padding: '32px 24px', overflow: 'auto', minWidth: '220px' }}>
-            {/* Professional Avatar Placeholder */}
-            <div style={{ width: '140px', height: '140px', borderRadius: '20px', marginBottom: '24px', backgroundColor: '#3B82F6', display: 'flex', alignItems: 'center', justifyContent: 'center', boxShadow: '0 8px 20px rgba(0,0,0,0.15)' }}>
-              <span style={{ fontSize: '48px', fontWeight: 'bold', color: 'white' }}>M&T</span>
+            <div style={{ width: '140px', height: '140px', borderRadius: '20px', overflow: 'hidden', marginBottom: '24px', backgroundColor: 'white', boxShadow: '0 8px 20px rgba(0,0,0,0.15)' }}>
+              <img src="/avatars/michael_teresa.jpg" style={{ width: '100%', height: '100%', objectFit: 'cover' }} alt="Michael & Teresa" />
             </div>
             <h2 style={{ fontWeight: 'bold', color: '#1F2937', fontSize: '20px', textAlign: 'center', margin: '0 0 8px 0' }}>Michael & Teresa</h2>
             <p style={{ fontSize: '13px', fontWeight: '600', color: '#2563EB', textAlign: 'center', margin: '0 0 12px 0' }}>Finance & Market Analysis</p>
