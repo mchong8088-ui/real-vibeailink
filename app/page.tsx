@@ -24,7 +24,6 @@ export default function VibeAiMaster() {
   const [systemState, setSystemState] = useState({ os: "Detecting...", isMobile: false });
   const { user, profile, initializeNewUser } = useAuthFlow();
 
-  // UI States
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const [currentView, setCurrentView] = useState<"analysis" | "about" | "features" | "pricing">("analysis");
   const [legalTitle, setLegalTitle] = useState<string | null>(null);
@@ -37,7 +36,6 @@ export default function VibeAiMaster() {
   const [authInitialized, setAuthInitialized] = useState(false);
   const [isHydrated, setIsHydrated] = useState(false);
 
-  // Mobile Navigation States
   const [mobilePage, setMobilePage] = useState<'landing' | 'analysis' | 'content'>('landing');
   const [mobileView, setMobileView] = useState<string>('analysis');
   const [mobileTopic, setMobileTopic] = useState<string | null>(null);
@@ -45,89 +43,41 @@ export default function VibeAiMaster() {
 
   const systemInfo = { system: `VibeAI-${systemState.os}`, voiceEngine: "Local Synthesis" };
 
-  // Prevent flash by waiting for hydration
+  useEffect(() => { setIsHydrated(true); }, []);
   useEffect(() => {
-    setIsHydrated(true);
-  }, []);
-
-  // Listen for auth changes
-  useEffect(() => {
-    const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
-      console.log("🔔 Auth state changed in page:", event);
-      if (event === 'SIGNED_IN') {
-        console.log("✅ User signed in, refreshing user state");
-        setAuthInitialized(false);
-        window.location.reload();
-      } else if (event === 'SIGNED_OUT') {
-        console.log("👋 User signed out");
-        setAuthInitialized(false);
-        window.location.reload();
-      }
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((event) => {
+      if (event === 'SIGNED_IN' || event === 'SIGNED_OUT') window.location.reload();
     });
-
     return () => subscription.unsubscribe();
   }, []);
-
   useEffect(() => {
     setMounted(true);
-    
-    const isLocalhost = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1';
-    const ua = window.navigator.userAgent;
-    const isMobileUA = /iPhone|iPad|iPod|Android/i.test(ua);
-    const isSmallScreen = window.innerWidth < 1024;
-    const isMobileDevice = isLocalhost ? false : (isMobileUA || isSmallScreen);
-    
+    const isMobileDevice = /iPhone|iPad|iPod|Android/i.test(navigator.userAgent) || window.innerWidth < 1024;
     let detectedOS = "Standard OS";
-    if (ua.indexOf("Win") !== -1) detectedOS = "Windows";
-    if (ua.indexOf("Mac") !== -1) detectedOS = "MacOS";
-    
+    if (navigator.userAgent.indexOf("Win") !== -1) detectedOS = "Windows";
+    if (navigator.userAgent.indexOf("Mac") !== -1) detectedOS = "MacOS";
     setSystemState({ os: detectedOS, isMobile: isMobileDevice });
     setAuthInitialized(true);
   }, []);
 
   const handleLogout = async () => {
-    try {
-      if (supabase && supabase.auth) {
-        await supabase.auth.signOut();
-      }
-    } catch (error) {
-      console.error('Logout error:', error);
-    }
+    await supabase.auth.signOut();
     localStorage.clear();
     sessionStorage.clear();
     window.location.href = '/';
   };
 
   const handleAnalyzeRequest = async (ticker: string) => {
-    // Check if user is logged in
-    if (!user) {
-      setIsAuthOpen(true);
-      return;
-    }
-    
+    if (!user) { setIsAuthOpen(true); return; }
     setIsLoading(true);
-    setLegalTitle(null);
-    
     try {
-      console.log("🔵 Analyzing ticker:", ticker, "Language:", language);
-      
       const response = await fetch('/api/chat', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ 
-          message: ticker,
-          language: language
-        }),
+        body: JSON.stringify({ message: ticker, language }),
       });
-      
-      if (!response.ok) {
-        throw new Error(`API error: ${response.status}`);
-      }
-      
       const data = await response.json();
-      
       setAnalysisData({
-        success: data.success,
         symbol: data.symbol || ticker.toUpperCase(),
         price: data.price || "N/A",
         rsi: data.rsi || "N/A",
@@ -138,72 +88,38 @@ export default function VibeAiMaster() {
         historical: data.historical || [],
         summary: data.summary || data.text || `Analysis for ${ticker.toUpperCase()} completed.`,
       });
-      
     } catch (error) {
-      console.error('❌ Error fetching analysis:', error);
-      setAnalysisData({
-        symbol: ticker.toUpperCase(),
-        price: "N/A",
-        rsi: "N/A",
-        macd: "N/A",
-        marketCap: "N/A",
-        peRatio: "N/A",
-        volume: "N/A",
-        summary: `Unable to fetch analysis for ${ticker.toUpperCase()}. Please try again.`,
-      });
-    } finally {
-      setIsLoading(false);
-    }
+      setAnalysisData({ symbol: ticker.toUpperCase(), summary: `Unable to fetch analysis for ${ticker.toUpperCase()}.` });
+    } finally { setIsLoading(false); }
   };
 
   const handleSelectPlan = async (planId: string, priceId: string) => {
-    if (!user && planId !== 'explorer') {
-      setIsAuthOpen(true);
-      return;
-    }
+    if (!user && planId !== 'explorer') { setIsAuthOpen(true); return; }
     try {
       const response = await fetch('/api/billing/create-checkout', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ priceId, userId: user?.id, successUrl: `${window.location.origin}/success`, cancelUrl: window.location.href }),
       });
       const { url } = await response.json();
       if (url) window.location.href = url;
-    } catch (error) {
-      console.error('Error:', error);
-      alert('Unable to process payment.');
-    }
+    } catch (error) { alert('Unable to process payment.'); }
   };
 
   const handleSourceSelect = async (sourceType: string, sourceData?: any) => {
     if (sourceType === 'url' && sourceData) {
-      try {
-        const response = await fetch('/api/chat', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ url: sourceData, language: language }),
-        });
-        const data = await response.json();
-        setAnalysisData((prev: any) => ({
-          ...prev,
-          summary: prev?.summary + "\n\n📎 " + (data.text || "URL analysis completed."),
-        }));
-      } catch (error) {
-        console.error('Error:', error);
-      }
+      const response = await fetch('/api/chat', {
+        method: 'POST',
+        body: JSON.stringify({ url: sourceData, language }),
+      });
+      const data = await response.json();
+      setAnalysisData((prev: any) => ({ ...prev, summary: prev?.summary + "\n\n📎 " + (data.text || "URL analysis completed.") }));
     }
     setIsMenuOpen(false);
   };
 
   const handleMobileNavigate = (page: string, params?: any) => {
-    if (page === 'analysis') {
-      setMobilePage('analysis');
-      setMobileView('analysis');
-    } else if (page === 'content') {
-      setMobilePage('content');
-      setMobileTopic(params?.view);
-      setMobileLegal(params?.view);
-    }
+    if (page === 'analysis') { setMobilePage('analysis'); setMobileView('analysis'); }
+    else if (page === 'content') { setMobilePage('content'); setMobileTopic(params?.view); setMobileLegal(params?.view); }
   };
 
   const handleMobileBack = () => {
@@ -215,275 +131,70 @@ export default function VibeAiMaster() {
 
   const showLegalGate = user && profile && profile.has_accepted_legal === false;
   const showMasterPopup = isAuthOpen || legalTitle || showLegalGate;
-
   const getUserDisplayName = () => {
     if (profile?.display_name) return profile.display_name.substring(0, 10);
     if (user?.email) return user.email.split('@')[0].substring(0, 10);
     return 'User';
   };
 
-  // Show loading spinner while hydrating or initializing auth
   if (!isHydrated || !mounted || !authInitialized) {
-    return (
-      <div style={{
-        display: 'flex',
-        justifyContent: 'center',
-        alignItems: 'center',
-        height: '100vh',
-        width: '100%',
-        backgroundColor: '#f5f5f5'
-      }}>
-        <div style={{
-          width: '48px',
-          height: '48px',
-          border: '3px solid #E5E7EB',
-          borderTopColor: '#DC2626',
-          borderRadius: '50%',
-          animation: 'spin 0.8s linear infinite'
-        }} />
-        <style>{`
-          @keyframes spin {
-            from { transform: rotate(0deg); }
-            to { transform: rotate(360deg); }
-          }
-        `}</style>
-      </div>
-    );
+    return <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '100vh' }}>
+      <div style={{ width: '48px', height: '48px', border: '3px solid #E5E7EB', borderTopColor: '#DC2626', borderRadius: '50%', animation: 'spin 0.8s linear infinite' }} />
+      <style>{`@keyframes spin { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }`}</style>
+    </div>;
   }
 
-  // MOBILE VIEW
   if (systemState.isMobile) {
-    if (mobilePage === 'landing') {
-      return (
-        <MobileLanding 
-          langKey={language} 
-          setLangKey={setLanguage} 
-          onAuthOpen={() => setIsAuthOpen(true)} 
-          user={user}
-          onNavigate={handleMobileNavigate}
-        />
-      );
-    }
-    return (
-      <MobileAnalysis
-        langKey={language} 
-        setLangKey={setLanguage} 
-        user={user} 
-        onAuthOpen={() => setIsAuthOpen(true)}
-        viewType={mobileView} 
-        topicId={mobileTopic} 
-        legalTitle={mobileLegal}
-        onBack={handleMobileBack}
-      />
-    );
+    if (mobilePage === 'landing') return <MobileLanding langKey={language} setLangKey={setLanguage} onAuthOpen={() => setIsAuthOpen(true)} user={user} onNavigate={handleMobileNavigate} />;
+    return <MobileAnalysis langKey={language} setLangKey={setLanguage} user={user} onAuthOpen={() => setIsAuthOpen(true)} viewType={mobileView} topicId={mobileTopic} legalTitle={mobileLegal} onBack={handleMobileBack} />;
   }
 
-  // DESKTOP VIEW
   return (
-    <div style={{ 
-      display: 'flex', 
-      flexDirection: 'column', 
-      height: '100vh',
-      width: '100%',
-      backgroundColor: '#f0f0f0',
-      overflow: 'hidden'
-    }}>
-      
-      <div style={{ 
-        width: '100%',
-        height: '100%',
-        backgroundColor: 'white',
-        display: 'flex',
-        flexDirection: 'column',
-        overflow: 'hidden'
-      }}>
-        
-        {/* TOP BAR */}
-        <div style={{ 
-          backgroundColor: 'white', 
-          padding: '12px 24px', 
-          borderBottom: '1px solid #E5E7EB',
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'space-between',
-          flexShrink: 0
-        }}>
-          <div style={{ width: '180px' }}>
-            <h1 style={{ fontSize: '20px', fontWeight: '900', fontStyle: 'italic', color: '#DC2626', margin: 0 }}>vibeAiLink</h1>
-          </div>
+    <div style={{ display: 'flex', flexDirection: 'column', height: '100vh', width: '100%', backgroundColor: '#f0f0f0', overflow: 'hidden' }}>
+      <div style={{ width: '100%', height: '100%', backgroundColor: 'white', display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
+        <div style={{ backgroundColor: 'white', padding: '12px 24px', borderBottom: '1px solid #E5E7EB', display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexShrink: 0 }}>
+          <div><h1 style={{ fontSize: '20px', fontWeight: '900', fontStyle: 'italic', color: '#DC2626', margin: 0 }}>vibeAiLink</h1></div>
           <div style={{ display: 'flex', gap: '48px' }}>
-            {['analysis', 'about', 'features', 'pricing'].map((view) => (
-              <button
-                key={view}
-                onClick={() => { setCurrentView(view as any); setLegalTitle(null); }}
-                style={{
-                  fontSize: '13px',
-                  fontWeight: currentView === view && !legalTitle ? '900' : '500',
-                  letterSpacing: '0.1em',
-                  color: currentView === view && !legalTitle ? '#2563EB' : '#94A3B8',
-                  textTransform: 'uppercase',
-                  background: 'none',
-                  border: 'none',
-                  cursor: 'pointer',
-                  padding: '8px 0',
-                }}
-              >
-                {view === 'analysis' ? 'AI STOCK' : view.toUpperCase()}
-              </button>
-            ))}
+            {['analysis', 'about', 'features', 'pricing'].map(v => <button key={v} onClick={() => { setCurrentView(v as any); setLegalTitle(null); }} style={{ fontSize: '13px', fontWeight: currentView === v && !legalTitle ? '900' : '500', letterSpacing: '0.1em', color: currentView === v && !legalTitle ? '#2563EB' : '#94A3B8', textTransform: 'uppercase', background: 'none', border: 'none', cursor: 'pointer', padding: '8px 0' }}>{v === 'analysis' ? 'AI STOCK' : v.toUpperCase()}</button>)}
           </div>
           <div style={{ display: 'flex', gap: '16px', alignItems: 'center', width: '180px', justifyContent: 'flex-end' }}>
-            <LanguageToggle currentLang={language} onLangChange={(lang: string) => setLanguage(lang as any)} />
-            {user ? (
-              <button 
-                onClick={() => setShowUserMenu(!showUserMenu)} 
-                style={{ display: 'flex', alignItems: 'center', gap: '8px', padding: '4px 8px', borderRadius: '20px', backgroundColor: '#F3F4F6', border: 'none', cursor: 'pointer' }}
-              >
-                <div style={{ width: '28px', height: '28px', borderRadius: '50%', backgroundColor: '#3B82F6', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'white', fontWeight: 'bold', fontSize: '12px' }}>
-                  {getUserDisplayName().charAt(0).toUpperCase()}
-                </div>
-                <span style={{ fontSize: '12px' }}>{getUserDisplayName()}</span>
-              </button>
-            ) : (
-              <button 
-                onClick={() => setIsAuthOpen(true)} 
-                style={{ color: '#2563EB', fontWeight: '600', fontSize: '12px', background: 'none', border: 'none', cursor: 'pointer' }}
-              >
-                LOGIN
-              </button>
-            )}
+            <LanguageToggle currentLang={language} onLangChange={setLanguage} />
+            {user ? <button onClick={() => setShowUserMenu(!showUserMenu)} style={{ display: 'flex', alignItems: 'center', gap: '8px', padding: '4px 8px', borderRadius: '20px', backgroundColor: '#F3F4F6', border: 'none', cursor: 'pointer' }}><div style={{ width: '28px', height: '28px', borderRadius: '50%', backgroundColor: '#3B82F6', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'white', fontWeight: 'bold', fontSize: '12px' }}>{getUserDisplayName().charAt(0).toUpperCase()}</div><span>{getUserDisplayName()}</span></button> : <button onClick={() => setIsAuthOpen(true)} style={{ color: '#2563EB', fontWeight: '600', fontSize: '12px', background: 'none', border: 'none', cursor: 'pointer' }}>LOGIN</button>}
           </div>
         </div>
-
-        {/* MAIN CONTENT AREA */}
         <div style={{ display: 'flex', flex: 1, overflow: 'hidden' }}>
-          
-          {/* LEFT PANEL - Using the new larger component */}
-          
-
-          {/* RIGHT PANEL */}
-          <div style={{ 
-            width: '75%', 
-            backgroundColor: '#E0F2FE', 
-            display: 'flex', 
-            flexDirection: 'column',
-            overflow: 'hidden'
-          }}>
-            
-            {/* SCROLLABLE MEAT AREA */}
-            <div id="meat-scroll-area" style={{ 
-              flex: 1, 
-              overflowY: 'auto', 
-              padding: '16px 5% 16px 5%',
-              minHeight: '200px'
-            }}>
-              
-              {showUserMenu && (
-                <div style={{ marginBottom: '16px' }}>
-                  <UserMenu 
-                    user={user} 
-                    profile={profile} 
-                    onLogout={handleLogout} 
-                    onOpenPricingPage={() => { setCurrentView("pricing"); setShowPricingModal(true); setShowUserMenu(false); }}
-                    onSelectPlan={handleSelectPlan} 
-                    onClose={() => setShowUserMenu(false)} 
-                  />
-                </div>
-              )}
-
-              {(showMasterPopup || legalTitle) && (
-                <div style={{ backgroundColor: 'white', borderRadius: '12px', padding: '16px', marginBottom: '16px', boxShadow: '0 1px 3px rgba(0,0,0,0.1)' }}>
-                  <button 
-                    onClick={() => { setIsAuthOpen(false); setLegalTitle(null); setShowPricingModal(false); }} 
-                    style={{ float: 'right', color: '#EF4444', fontSize: '12px', fontWeight: 'bold', background: 'none', border: 'none', cursor: 'pointer' }}
-                  >
-                    Close ✕
-                  </button>
-                  <div style={{ clear: 'both' }}>
-                    {isAuthOpen && !user && <AuthModal isOpen={isAuthOpen} onClose={() => setIsAuthOpen(false)} />}
-                    {showLegalGate && <LegalGate language={language} onAccept={() => initializeNewUser("Guest", "guest@vibeailink.com")} />}
-                    {legalTitle && (
-                      <div>
-                        <h2 style={{ fontSize: '16px', fontWeight: 'bold', marginBottom: '12px', color: '#2563EB' }}>{legalTitle}</h2>
-                        <div style={{ fontSize: '13px', color: '#4B5563' }}>
-                          {footerContent[legalTitle]?.[language === "Cantonese" ? "粵語 (繁體中文)" : language] || "Content coming soon..."}
-                        </div>
-                      </div>
-                    )}
-                  </div>
-                </div>
-              )}
-
+          {/* LEFT PANEL - Clean design without broken image */}
+          <div style={{ width: '25%', backgroundColor: '#FEF08A', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', padding: '32px 24px', overflow: 'auto', minWidth: '220px' }}>
+            {/* Professional Avatar Placeholder */}
+            <div style={{ width: '140px', height: '140px', borderRadius: '20px', marginBottom: '24px', backgroundColor: '#3B82F6', display: 'flex', alignItems: 'center', justifyContent: 'center', boxShadow: '0 8px 20px rgba(0,0,0,0.15)' }}>
+              <span style={{ fontSize: '48px', fontWeight: 'bold', color: 'white' }}>M&T</span>
+            </div>
+            <h2 style={{ fontWeight: 'bold', color: '#1F2937', fontSize: '20px', textAlign: 'center', margin: '0 0 8px 0' }}>Michael & Teresa</h2>
+            <p style={{ fontSize: '13px', fontWeight: '600', color: '#2563EB', textAlign: 'center', margin: '0 0 12px 0' }}>Finance & Market Analysis</p>
+            <p style={{ fontSize: '11px', color: '#6B7280', textAlign: 'center', margin: 0, padding: '8px 12px', backgroundColor: 'rgba(255,255,255,0.5)', borderRadius: '20px' }}>{systemState.os} Environment</p>
+          </div>
+          <div style={{ width: '75%', backgroundColor: '#E0F2FE', display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
+            <div style={{ flex: 1, overflowY: 'auto', padding: '16px 5%', minHeight: '200px' }}>
+              {showUserMenu && <UserMenu user={user} profile={profile} onLogout={handleLogout} onOpenPricingPage={() => { setCurrentView("pricing"); setShowPricingModal(true); setShowUserMenu(false); }} onSelectPlan={handleSelectPlan} onClose={() => setShowUserMenu(false)} />}
+              {(showMasterPopup || legalTitle) && <div style={{ backgroundColor: 'white', borderRadius: '12px', padding: '16px', marginBottom: '16px' }}><button onClick={() => { setIsAuthOpen(false); setLegalTitle(null); setShowPricingModal(false); }} style={{ float: 'right', color: '#EF4444', fontSize: '12px', fontWeight: 'bold', background: 'none', border: 'none', cursor: 'pointer' }}>Close ✕</button><div style={{ clear: 'both' }}>{isAuthOpen && !user && <AuthModal isOpen={isAuthOpen} onClose={() => setIsAuthOpen(false)} />}{showLegalGate && <LegalGate language={language} onAccept={() => initializeNewUser("Guest", "guest@vibeailink.com")} />}{legalTitle && <div><h2 style={{ fontSize: '16px', fontWeight: 'bold', marginBottom: '12px', color: '#2563EB' }}>{legalTitle}</h2><div style={{ fontSize: '13px', color: '#4B5563' }}>{footerContent[legalTitle]?.[language === "Cantonese" ? "粵語 (繁體中文)" : language] || "Content coming soon..."}</div></div>}</div></div>}
               <div>
-                {currentView === "analysis" && (
-                  <StockAnalysisModule 
-                    t={t}
-                    data={analysisData} 
-                    isLoading={isLoading} 
-                    langKey={language}
-                  />
-                )}
-                {currentView === "pricing" && (
-                  <PricingModal 
-                    isOpen={true} 
-                    onClose={() => { setCurrentView("analysis"); setShowPricingModal(false); }}
-                    user={user} 
-                    profile={profile} 
-                    onSelectPlan={handleSelectPlan} 
-                    showRetentionOnly={pricingContext === 'retention'}
-                  />
-                )}
+                {currentView === "analysis" && <StockAnalysisModule t={t} data={analysisData} isLoading={isLoading} langKey={language} />}
+                {currentView === "pricing" && <PricingModal isOpen={true} onClose={() => { setCurrentView("analysis"); setShowPricingModal(false); }} user={user} profile={profile} onSelectPlan={handleSelectPlan} showRetentionOnly={pricingContext === 'retention'} />}
                 {currentView === "about" && <AboutSection lang={language} />}
                 {currentView === "features" && <FeaturesSection lang={language} />}
               </div>
             </div>
-
-            {/* FIXED INPUT AREA */}
-            <div style={{ 
-              backgroundColor: 'white', 
-              padding: '12px 5%',
-              borderTop: '1px solid #E5E7EB',
-              flexShrink: 0
-            }}>
-              <p style={{ 
-                fontSize: '13px', 
-                color: '#4B5563', 
-                textAlign: 'center', 
-                marginBottom: '12px',
-                fontWeight: '500'
-              }}>
-                Please input stock symbol below
-              </p>
-              <SmartInputSystem 
-                langKey={language}
-                onAnalyze={handleAnalyzeRequest}
-                onPlusClick={() => setIsMenuOpen(true)} 
-                systemInfo={systemInfo}
-                analysisText={analysisData?.summary}
-              />
-            </div>
-
-            {/* FOOTER */}
-            <div style={{ 
-              backgroundColor: 'white', 
-              padding: '8px 5%',
-              borderTop: '1px solid #E5E7EB',
-              display: 'flex',
-              justifyContent: 'center',
-              gap: '24px',
-              flexWrap: 'wrap',
-              flexShrink: 0
-            }}>
-              <button onClick={() => { setLegalTitle('DISCLAIMER'); }} style={{ fontSize: '10px', color: '#3B82F6', background: 'none', border: 'none', cursor: 'pointer' }}>DISCLAIMER</button>
-              <button onClick={() => { setLegalTitle('服務條款'); }} style={{ fontSize: '10px', color: '#3B82F6', background: 'none', border: 'none', cursor: 'pointer' }}>TERMS</button>
-              <button onClick={() => { setLegalTitle('隱私政策'); }} style={{ fontSize: '10px', color: '#3B82F6', background: 'none', border: 'none', cursor: 'pointer' }}>PRIVACY</button>
-              <button onClick={() => { setLegalTitle('退款政策'); }} style={{ fontSize: '10px', color: '#3B82F6', background: 'none', border: 'none', cursor: 'pointer' }}>REFUND</button>
-              <button onClick={() => { setLegalTitle('聯絡我們'); }} style={{ fontSize: '10px', color: '#3B82F6', background: 'none', border: 'none', cursor: 'pointer' }}>CONTACT</button>
+            <div style={{ backgroundColor: 'white', padding: '12px 5%', borderTop: '1px solid #E5E7EB', flexShrink: 0 }}><p style={{ fontSize: '13px', color: '#4B5563', textAlign: 'center', marginBottom: '12px', fontWeight: '500' }}>Please input stock symbol below</p><SmartInputSystem langKey={language} onAnalyze={handleAnalyzeRequest} onPlusClick={() => setIsMenuOpen(true)} systemInfo={systemInfo} analysisText={analysisData?.summary} /></div>
+            <div style={{ backgroundColor: 'white', padding: '8px 5%', borderTop: '1px solid #E5E7EB', display: 'flex', justifyContent: 'center', gap: '24px', flexWrap: 'wrap', flexShrink: 0 }}>
+              <button onClick={() => setLegalTitle('DISCLAIMER')} style={{ fontSize: '10px', color: '#3B82F6', background: 'none', border: 'none', cursor: 'pointer' }}>DISCLAIMER</button>
+              <button onClick={() => setLegalTitle('服務條款')} style={{ fontSize: '10px', color: '#3B82F6', background: 'none', border: 'none', cursor: 'pointer' }}>TERMS</button>
+              <button onClick={() => setLegalTitle('隱私政策')} style={{ fontSize: '10px', color: '#3B82F6', background: 'none', border: 'none', cursor: 'pointer' }}>PRIVACY</button>
+              <button onClick={() => setLegalTitle('退款政策')} style={{ fontSize: '10px', color: '#3B82F6', background: 'none', border: 'none', cursor: 'pointer' }}>REFUND</button>
+              <button onClick={() => setLegalTitle('聯絡我們')} style={{ fontSize: '10px', color: '#3B82F6', background: 'none', border: 'none', cursor: 'pointer' }}>CONTACT</button>
             </div>
           </div>
         </div>
       </div>
-
       <SourceMenu isOpen={isMenuOpen} onClose={() => setIsMenuOpen(false)} onSelectSource={handleSourceSelect} langKey={language}/>
     </div>
   );
