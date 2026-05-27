@@ -13,7 +13,6 @@ import { FeaturesSection } from './components/sections/FeaturesSection';
 import { PricingModal } from './components/features/pricing/PricingModal';
 import MobileLanding from './components/mobile/MobileLanding';
 import MobileAnalysis from './components/mobile/MobileAnalysis';
-import { LeftPanel } from './components/desktop/LeftPanel';
 import { supabase } from './lib/supabase';
 import { footerContent } from './constants/content';
 import { useLanguage } from './context/LanguageContext';
@@ -360,7 +359,7 @@ export default function VibeAiMaster() {
         <div style={{ display: 'flex', flex: 1, overflow: 'hidden' }}>
           
           {/* LEFT PANEL - Using the new larger component */}
-          <LeftPanel os={systemState.os} />
+          
 
           {/* RIGHT PANEL */}
           <div style={{ 
