@@ -1,0 +1,6 @@
+<svg width="200" height="200" viewBox="0 0 200 200" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <circle cx="100" cy="100" r="100" fill="#3B82F6"/>
+  <circle cx="100" cy="80" r="30" fill="white"/>
+  <circle cx="100" cy="140" r="40" fill="white"/>
+  <text x="100" y="105" text-anchor="middle" fill="#3B82F6" font-size="14" font-weight="bold">M&T</text>
+</svg>
