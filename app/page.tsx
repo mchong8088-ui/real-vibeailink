@@ -13,6 +13,7 @@ import { FeaturesSection } from './components/sections/FeaturesSection';
 import { PricingModal } from './components/features/pricing/PricingModal';
 import MobileLanding from './components/mobile/MobileLanding';
 import MobileAnalysis from './components/mobile/MobileAnalysis';
+import { LeftPanel } from './components/desktop/LeftPanel';
 import { supabase } from './lib/supabase';
 import { footerContent } from './constants/content';
 import { useLanguage } from './context/LanguageContext';
@@ -35,6 +36,7 @@ export default function VibeAiMaster() {
   const [pricingContext, setPricingContext] = useState<'normal' | 'retention'>('normal');
   const [showUserMenu, setShowUserMenu] = useState(false);
   const [authInitialized, setAuthInitialized] = useState(false);
+  const [isHydrated, setIsHydrated] = useState(false);
 
   // Mobile Navigation States
   const [mobilePage, setMobilePage] = useState<'landing' | 'analysis' | 'content'>('landing');
@@ -43,6 +45,11 @@ export default function VibeAiMaster() {
   const [mobileLegal, setMobileLegal] = useState<string | null>(null);
 
   const systemInfo = { system: `VibeAI-${systemState.os}`, voiceEngine: "Local Synthesis" };
+
+  // Prevent flash by waiting for hydration
+  useEffect(() => {
+    setIsHydrated(true);
+  }, []);
 
   // Listen for auth changes
   useEffect(() => {
@@ -216,7 +223,34 @@ export default function VibeAiMaster() {
     return 'User';
   };
 
-  if (!mounted || !authInitialized) return null;
+  // Show loading spinner while hydrating or initializing auth
+  if (!isHydrated || !mounted || !authInitialized) {
+    return (
+      <div style={{
+        display: 'flex',
+        justifyContent: 'center',
+        alignItems: 'center',
+        height: '100vh',
+        width: '100%',
+        backgroundColor: '#f5f5f5'
+      }}>
+        <div style={{
+          width: '48px',
+          height: '48px',
+          border: '3px solid #E5E7EB',
+          borderTopColor: '#DC2626',
+          borderRadius: '50%',
+          animation: 'spin 0.8s linear infinite'
+        }} />
+        <style>{`
+          @keyframes spin {
+            from { transform: rotate(0deg); }
+            to { transform: rotate(360deg); }
+          }
+        `}</style>
+      </div>
+    );
+  }
 
   // MOBILE VIEW
   if (systemState.isMobile) {
@@ -325,36 +359,12 @@ export default function VibeAiMaster() {
         {/* MAIN CONTENT AREA */}
         <div style={{ display: 'flex', flex: 1, overflow: 'hidden' }}>
           
-          {/* LEFT PANEL */}
-          <div style={{ 
-            width: '20%', 
-            backgroundColor: '#FEF08A', 
-            display: 'flex', 
-            flexDirection: 'column', 
-            alignItems: 'center', 
-            justifyContent: 'center', 
-            padding: '24px',
-            overflow: 'auto'
-          }}>
-            <div style={{ width: '100px', height: '100px', borderRadius: '50%', overflow: 'hidden', marginBottom: '16px', backgroundColor: 'white', boxShadow: '0 2px 4px rgba(0,0,0,0.1)' }}>
-              <img 
-                src="/avatars/michael_teresa.jpg" 
-                style={{ width: '100%', height: '100%', objectFit: 'cover' }}
-                alt="Michael & Teresa"
-              />
-            </div>
-            <h3 style={{ fontWeight: 'bold', color: '#1F2937', fontSize: '14px', textAlign: 'center', margin: '0' }}>Michael & Teresa</h3>
-            <p style={{ fontSize: '10px', fontWeight: 'bold', color: '#2563EB', textAlign: 'center', marginTop: '8px' }}>
-              Finance & Market Analysis
-            </p>
-            <p style={{ fontSize: '9px', fontWeight: 'bold', color: '#6B7280', textAlign: 'center', marginTop: '8px' }}>
-              {systemState.os} Environment
-            </p>
-          </div>
+          {/* LEFT PANEL - Using the new larger component */}
+          <LeftPanel os={systemState.os} />
 
           {/* RIGHT PANEL */}
           <div style={{ 
-            width: '80%', 
+            width: '75%', 
             backgroundColor: '#E0F2FE', 
             display: 'flex', 
             flexDirection: 'column',
