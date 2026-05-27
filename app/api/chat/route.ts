@@ -9,128 +9,103 @@ export async function POST(request: Request) {
     const userQuery = message || '';
     console.log(`📝 Query: "${userQuery}"`);
     
-    // Find the stock
+    // Find the stock - this now handles direct symbols like "1928.HK"
     const stockInfo = findStock(userQuery);
     const stockSymbol = stockInfo?.symbol || '';
+    const stockName = stockInfo?.en || '';
+    const stockCn = stockInfo?.cn || '';
     
-    console.log(`📊 Stock found: ${stockSymbol}`);
+    console.log(`📊 Found stock: ${stockSymbol} (${stockName})`);
     
     const isCantonese = language === 'Cantonese';
     const isChinese = language === '简体中文';
     
-    // Tesla Analysis
-    if (stockSymbol === 'TSLA' || userQuery.toLowerCase().includes('tesla') || userQuery.includes('特斯拉')) {
+    // If stock found, provide analysis
+    if (stockInfo) {
+      let analysis = '';
+      
       if (isCantonese) {
-        const analysis = `## 📊 特斯拉 (TSLA) 投資分析
+        analysis = `## 📊 ${stockCn} (${stockSymbol}) 投資分析
 
-### 🌍 宏觀經濟環境
-電動車市場競爭加劇，但特斯拉仍係行業龍頭。美聯儲利率政策影響汽車貸款需求，AI熱潮帶動自動駕駛概念。
+### 📈 基本資料
+- **公司名稱**: ${stockName}
+- **行業**: ${stockInfo.segment}
+- **市場**: ${stockInfo.market === 'HK' ? '香港' : stockInfo.market === 'TW' ? '台灣' : '美國'}
 
 ### 🔬 技術分析
-- **當前趨勢**：股價近期由高位回調，喺$160-$180區間整固
-- **支持位**：$160、$145
-- **阻力位**：$185、$200
-- **RSI(14)**: 48 - 中性偏弱
-- **MACD**: 信號線低於MACD線，短期仍有壓力
+由於即時股價數據需要連接金融數據API，建議您：
+1. 使用股票交易軟件查看即時圖表
+2. 關注關鍵技術指標：50日/200日移動平均線、RSI、MACD
+3. 留意成交量和支撐/阻力位
 
-### 💰 基本面分析
-**財務數據**：
-- 2025年Q1交付量：386,810輛（同比-8.5%）
-- 毛利率：17.4%（低於市場預期）
-- 自由現金流：正數但下降
-- 本益比：約65倍
+### 📰 分析建議
+要獲取完整嘅技術和基本面分析，請提供更具體嘅問題，例如：
+- "${stockCn}嘅前景如何？"
+- "應唔應該買入${stockCn}？"
+- "${stockCn}嘅合理目標價係幾多？"
 
-**競爭優勢**：
-1. 品牌效應強
-2. 充電網絡領先
-3. 自動駕駛技術儲備
-4. 成本控制能力
-
-### ⚠️ 風險因素
-1. 電動車市場需求放緩
-2. 比亞迪、小米等競爭對手追趕
-3. 馬斯克言行影響股價波動
-4. 估值仍然偏高
-
-### 🎯 投資建議
-
-**短期 (1-3個月): 中性偏淡**
-需求放緩，短期缺乏催化劑
-
-**中期 (3-12個月): 中性**
-等待新車型（Model 2/Q）推出
-
-**長期 (1年以上): 看好**
-自動駕駛和機器人長期潛力大
-
-### 💡 買賣時機建議
-- **理想買入區間**：$140 - $155
-- **加倉區間**：$155 - $165
-- **止蝕位**：$130
-- **短期目標**：$180
-- **中期目標**：$200
-- **長期目標**：$250
-
-### 📝 總結
-特斯拉短期面對需求放緩壓力，但長期增長故事仍在。建議等待股價回調至$155以下再考慮入市，長線投資者可分批布局。
-
-*⚠️ 以上分析僅供參考，不構成投資建議。*`;
-        return NextResponse.json({ success: true, symbol: "TSLA", summary: analysis, price: "$170.42", rsi: "48", macd: "Neutral" });
+*⚠️ 以上分析僅供參考，不構成投資建議。建議諮詢專業財務顧問。*`;
       } else {
-        const analysis = `## 📊 Tesla (TSLA) Investment Analysis
+        analysis = `## 📊 ${stockName} (${stockSymbol}) Investment Analysis
 
-### 🌍 Macroeconomic Environment
-EV market competition is intensifying, but Tesla remains the industry leader. Fed rate policy affects auto loan demand.
+### 📈 Basic Information
+- **Company**: ${stockName}
+- **Sector**: ${stockInfo.segment}
+- **Market**: ${stockInfo.market === 'HK' ? 'Hong Kong' : stockInfo.market === 'TW' ? 'Taiwan' : 'US'}
 
 ### 🔬 Technical Analysis
-- **Current Trend**: Pulling back from highs, consolidating in $160-$180 range
-- **Support**: $160, $145
-- **Resistance**: $185, $200
-- **RSI(14)**: 48 - Neutral to weak
-- **MACD**: Bearish signal line below MACD line
+For real-time price data and technical analysis, please:
+1. Use your trading platform for live charts
+2. Monitor key indicators: 50/200 MA, RSI, MACD
+3. Watch volume and support/resistance levels
 
-### 💰 Fundamental Analysis
-- **Q1 2025 Deliveries**: 386,810 units (-8.5% YoY)
-- **Gross Margin**: 17.4% (below expectations)
-- **P/E Ratio**: ~65x
+### 📰 Analysis Request
+For detailed fundamental and technical analysis, please ask specific questions like:
+- "What is the outlook for ${stockName}?"
+- "Should I buy ${stockName}?"
+- "What is the fair value target for ${stockName}?"
 
-### 🎯 Investment Recommendation
-- **Short-term (1-3 months)**: Neutral to Bearish
-- **Medium-term (3-12 months)**: Neutral
-- **Long-term (1+ years)**: Bullish
-
-### 💡 Entry/Exit Timing
-- **Ideal Entry Zone**: $140 - $155
-- **Stop Loss**: $130
-- **Target**: $180 (short), $200 (mid), $250 (long)
-
-*⚠️ This analysis is for reference only.*`;
-        return NextResponse.json({ success: true, symbol: "TSLA", summary: analysis, price: "$170.42", rsi: "48", macd: "Neutral" });
+*⚠️ This analysis is for reference only. Please consult a financial advisor.*`;
       }
+      
+      return NextResponse.json({ 
+        success: true, 
+        symbol: stockSymbol, 
+        summary: analysis,
+        price: "N/A",
+        rsi: "N/A",
+        macd: "N/A"
+      });
     }
     
-    // TSMC Analysis
-    if (stockSymbol === '2330.TW' || userQuery.includes('台積電') || userQuery.includes('台积电') || userQuery.toLowerCase().includes('tsmc')) {
-      // ... TSMC analysis
-    }
-    
-    // Default response
-    const defaultAnalysis = `## 📊 Stock Analysis
+    // Default response for unknown stocks
+    const defaultAnalysis = `## 📊 Stock Not Found
 
-I couldn't identify the stock. Please try:
+I couldn't identify the stock "${userQuery}".
+
+**Please try with**:
+- **HK stocks**: 1928.HK, 0700.HK, 1211.HK, 9988.HK, 0388.HK
+- **US stocks**: TSLA, NVDA, AAPL, AMZN, MSFT
+- **TW stocks**: 2330.TW, 2454.TW, 2317.TW
+- **Company names**: 金沙中國, 騰訊, 台積電, 特斯拉
 
 **Examples**:
-- "Should I buy Tesla now?"
-- "分析一下 台積電"
-- "Is NVDA a good investment?"
-- "Tell me about 比亞迪"
-
-**Supported stocks**: TSLA, NVDA, AAPL, AMZN, MSFT, TSMC, Tencent, BYD, and more.`;
+- "1928.HK"
+- "分析 金沙中國"
+- "Should I buy TSLA?"
+- "Tell me about 0700.HK"`;
     
-    return NextResponse.json({ success: true, symbol: "N/A", summary: defaultAnalysis });
+    return NextResponse.json({ 
+      success: true, 
+      symbol: "N/A", 
+      summary: defaultAnalysis 
+    });
     
   } catch (error) {
     console.error('❌ API Error:', error);
-    return NextResponse.json({ success: false, summary: "Analysis temporarily unavailable." });
+    return NextResponse.json({ 
+      success: false, 
+      summary: "Analysis temporarily unavailable. Please try again." 
+    });
   }
 }
