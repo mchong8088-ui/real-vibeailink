@@ -10,6 +10,7 @@ import { footerContent } from '../../constants/content';
 import { speakText, stopSpeaking } from '../../utils/SimpleTTS';
 import { audioManager } from '../../utils/AudioManager';
 
+// Allow null for legalTitle
 interface MobileAnalysisProps {
   langKey: string;
   setLangKey: (lang: string) => void;
@@ -28,10 +29,10 @@ const MobileAnalysis: React.FC<MobileAnalysisProps> = ({
   onAuthOpen,
   viewType,
   topicId,
-  legalTitle,
+  legalTitle = null,
   onBack,
 }) => {
-  // Rest of component remains the same...
+  // ... rest of component (same as before)
   const [inputValue, setInputValue] = useState('');
   const [analysisData, setAnalysisData] = useState<any>(null);
   const [isLoading, setIsLoading] = useState(false);
