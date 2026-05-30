@@ -1,57 +1,36 @@
 import { RSI, MACD, SMA } from "technicalindicators";
 
-export interface RSIResult {
-  value: number | null;
-  status: 'Overbought' | 'Oversold' | 'Neutral';
-}
-
-export interface MACDResult {
-  value: number | null;
-  signal: number | null;
-  histogram: number | null;
-  status: 'Bullish' | 'Bearish' | 'Neutral';
-}
-
-export interface SMAResult {
-  sma20: number | null;
-  sma50: number | null;
-}
-
-export interface IndicatorResult {
-  rsi: RSIResult;
-  macd: MACDResult;
-  sma: SMAResult;
-  trend: 'Uptrend' | 'Downtrend' | 'Sideways';
-}
-
-// Calculate RSI (14-period)
-export function calculateRSI(closes: number[]): RSIResult {
-  if (!closes || closes.length < 14) {
-    return { value: null, status: 'Neutral' };
-  }
+export function calculateIndicators(closes: number[]) {
+  const defaultResult = {
+    rsi: { value: null, status: 'Neutral' },
+    macd: { value: null, signal: null, histogram: null, status: 'Neutral' },
+    sma: { sma20: null, sma50: null },
+    trend: 'Sideways' as const,
+  };
   
-  try {
-    const rsiValues = RSI.calculate({ values: closes, period: 14 });
-    const value = rsiValues[rsiValues.length - 1] || null;
-    
-    let status: 'Overbought' | 'Oversold' | 'Neutral' = 'Neutral';
-    if (value !== null) {
-      if (value > 70) status = 'Overbought';
-      else if (value < 30) status = 'Oversold';
-    }
-    
-    return { value, status };
-  } catch (error) {
-    console.error("RSI calculation error:", error);
-    return { value: null, status: 'Neutral' };
-  }
-}
+  if (!closes || closes.length < 26) return defaultResult;
 
-// Calculate MACD (12, 26, 9)
-export function calculateMACD(closes: number[]): MACDResult {
-  if (!closes || closes.length < 26) {
-    return { value: null, signal: null, histogram: null, status: 'Neutral' };
+  // Calculate RSI
+  let rsi = null;
+  let rsiStatus = 'Neutral';
+  try {
+    if (closes.length >= 14) {
+      const rsiValues = RSI.calculate({ values: closes, period: 14 });
+      rsi = rsiValues[rsiValues.length - 1];
+      if (rsi !== null && rsi !== undefined) {
+        if (rsi > 70) rsiStatus = 'Overbought';
+        else if (rsi < 30) rsiStatus = 'Oversold';
+      }
+    }
+  } catch (e) {
+    console.error('RSI calculation error:', e);
   }
+
+  // Calculate MACD
+  let macdValue = null;
+  let macdSignal = null;
+  let macdHistogram = null;
+  let macdStatus = 'Neutral';
   
   try {
     const macdValues = MACD.calculate({
@@ -59,105 +38,60 @@ export function calculateMACD(closes: number[]): MACDResult {
       fastPeriod: 12,
       slowPeriod: 26,
       signalPeriod: 9,
-      SimpleMAOscillator: false,
-      SimpleMASignal: false,
     });
     
-    const last = macdValues[macdValues.length - 1];
-    if (!last) {
-      return { value: null, signal: null, histogram: null, status: 'Neutral' };
+    if (macdValues && macdValues.length > 0) {
+      const last = macdValues[macdValues.length - 1];
+      if (last) {
+        macdValue = typeof last.MACD === 'number' ? last.MACD : null;
+        macdSignal = typeof last.signal === 'number' ? last.signal : null;
+        macdHistogram = typeof last.histogram === 'number' ? last.histogram : null;
+        
+        // Determine MACD status
+        if (macdValue !== null && macdSignal !== null) {
+          if (macdValue > macdSignal) {
+            macdStatus = 'Bullish';
+          } else if (macdValue < macdSignal) {
+            macdStatus = 'Bearish';
+          }
+        }
+      }
     }
-    
-    const value = latestMacd?.MACD;
-    const signal = latestMacd?.signal;
-    const histogram = last.histogram;
-    
-    let status: 'Bullish' | 'Bearish' | 'Neutral' = 'Neutral';
-
-let status: 'Bullish' | 'Bearish' | 'Neutral' = 'Neutral';
-
-if (typeof value === "number" && typeof signal === "number") {
-  if (value > signal) status = "Bullish";
-  else if (value < signal) status = "Bearish";
-}
-    
-    return { value, signal, histogram, status };
-  } catch (error) {
-    console.error("MACD calculation error:", error);
-    return { value: null, signal: null, histogram: null, status: 'Neutral' };
+  } catch (e) {
+    console.error('MACD calculation error:', e);
   }
-}
 
-// Calculate SMA (20 and 50 period)
-export function calculateSMA(closes: number[]): SMAResult {
-  if (!closes || closes.length < 20) {
-    return { sma20: null, sma50: null };
-  }
-  
+  // Calculate SMAs
+  let sma20 = null;
+  let sma50 = null;
   try {
-    let sma20: number | null = null;
-    let sma50: number | null = null;
-    
     if (closes.length >= 20) {
       const sma20Values = SMA.calculate({ values: closes, period: 20 });
-      sma20 = sma20Values[sma20Values.length - 1] || null;
+      sma20 = sma20Values && sma20Values.length > 0 ? sma20Values[sma20Values.length - 1] : null;
     }
-    
     if (closes.length >= 50) {
       const sma50Values = SMA.calculate({ values: closes, period: 50 });
-      sma50 = sma50Values[sma50Values.length - 1] || null;
+      sma50 = sma50Values && sma50Values.length > 0 ? sma50Values[sma50Values.length - 1] : null;
     }
-    
-    return { sma20, sma50 };
-  } catch (error) {
-    console.error("SMA calculation error:", error);
-    return { sma20: null, sma50: null };
+  } catch (e) {
+    console.error('SMA calculation error:', e);
   }
-}
 
-// Calculate trend based on SMA and price
-export function calculateTrend(closes: number[], sma20: number | null, sma50: number | null): 'Uptrend' | 'Downtrend' | 'Sideways' {
-  if (!closes.length || sma20 === null || sma50 === null) {
-    return 'Sideways';
-  }
-  
+  // Determine trend
+  let trend: 'Uptrend' | 'Downtrend' | 'Sideways' = 'Sideways';
   const lastPrice = closes[closes.length - 1];
-  
-  if (lastPrice > sma20 && sma20 > sma50) {
-    return 'Uptrend';
-  } else if (lastPrice < sma20 && sma20 < sma50) {
-    return 'Downtrend';
+  if (sma20 !== null && sma50 !== null) {
+    if (lastPrice > sma20 && sma20 > sma50) {
+      trend = 'Uptrend';
+    } else if (lastPrice < sma20 && sma20 < sma50) {
+      trend = 'Downtrend';
+    }
   }
-  
-  return 'Sideways';
-}
 
-// Main function that returns all indicators
-export function calculateIndicators(closes: number[]): IndicatorResult {
-  const rsi = calculateRSI(closes);
-  const macd = calculateMACD(closes);
-  const sma = calculateSMA(closes);
-  const trend = calculateTrend(closes, sma.sma20, sma.sma50);
-  
   return {
-    rsi,
-    macd,
-    sma,
+    rsi: { value: rsi, status: rsiStatus },
+    macd: { value: macdValue, signal: macdSignal, histogram: macdHistogram, status: macdStatus },
+    sma: { sma20, sma50 },
     trend,
   };
-}
-
-// Legacy exports for compatibility with existing code
-export function getMACDSignal(macdValue: number | null, macdSignal: number | null): string {
-  if (macdValue === null || macdSignal === null) return "Neutral";
-  if (macdValue > macdSignal) return "Bullish";
-  if (macdValue < macdSignal) return "Bearish";
-  return "Neutral";
-}
-
-export function getRSIStatus(rsiValue: number | null): string {
-  if (rsiValue === null) return "Neutral";
-  if (rsiValue > 70) return "Overbought";
-  if (rsiValue < 30) return "Oversold";
-  return "Neutral";
 }
