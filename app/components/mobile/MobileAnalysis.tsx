@@ -1,5 +1,5 @@
 "use client";
-import React, { useState, useEffect, useRef, ReactNode } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { LanguageToggle } from '../layout/LanguageToggle';
 import { SourceMenu } from '../features/controls/SourceMenu';
 import { AboutSection } from '../sections/AboutSection';
@@ -46,7 +46,6 @@ const MobileAnalysis: React.FC<MobileAnalysisProps> = ({
     analyzingMarket: langKey === 'Cantonese' ? '分析市場中...' : langKey === '简体中文' ? '分析市场中...' : 'Analyzing Market...',
   };
 
-  // Load Bluetooth preference from storage
   useEffect(() => {
     const savedPref = localStorage.getItem('useBluetooth');
     if (savedPref === 'true') {
@@ -55,7 +54,6 @@ const MobileAnalysis: React.FC<MobileAnalysisProps> = ({
     }
   }, []);
 
-  // Speech Recognition Setup
   useEffect(() => {
     if (typeof window !== 'undefined') {
       const SpeechRecognition = (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition;
@@ -79,16 +77,12 @@ const MobileAnalysis: React.FC<MobileAnalysisProps> = ({
 
   const handleAnalyze = async () => {
     if (!inputValue.trim()) return;
-    
     setIsLoading(true);
     try {
       const response = await fetch('/api/chat', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ 
-          message: inputValue.trim(),
-          language: langKey,
-        }),
+        body: JSON.stringify({ message: inputValue.trim(), language: langKey }),
       });
       const data = await response.json();
       setAnalysisData({
@@ -105,10 +99,9 @@ const MobileAnalysis: React.FC<MobileAnalysisProps> = ({
         changePercent: data.changePercent,
       });
     } catch (error) {
-      console.error('Error:', error);
       setAnalysisData({
         symbol: inputValue.trim().toUpperCase(),
-        summary: langKey === 'Cantonese' ? `無法獲取 ${inputValue.trim().toUpperCase()} 的分析。請稍後再試。` : `Unable to fetch analysis for ${inputValue.trim().toUpperCase()}. Please try again.`,
+        summary: `Unable to fetch analysis for ${inputValue.trim().toUpperCase()}. Please try again.`,
         price: "N/A",
         rsi: "N/A",
         macd: "N/A",
@@ -132,10 +125,7 @@ const MobileAnalysis: React.FC<MobileAnalysisProps> = ({
     }
   };
 
-  const handleSpeakerClick = () => {
-    setShowSpeakerMenu(!showSpeakerMenu);
-  };
-
+  const handleSpeakerClick = () => setShowSpeakerMenu(!showSpeakerMenu);
   const handleBluetoothToggle = () => {
     const newValue = !useBluetooth;
     setUseBluetooth(newValue);
@@ -146,15 +136,12 @@ const MobileAnalysis: React.FC<MobileAnalysisProps> = ({
 
   const handleStartSpeaking = () => {
     if (!analysisData?.summary) return;
-    
     if (isSpeakerActive) {
       stopSpeaking();
       setIsSpeakerActive(false);
     } else {
       setIsSpeakerActive(true);
-      speakText(analysisData.summary, langKey, () => {
-        setIsSpeakerActive(false);
-      });
+      speakText(analysisData.summary, langKey, () => setIsSpeakerActive(false));
     }
     setShowSpeakerMenu(false);
   };
@@ -164,7 +151,6 @@ const MobileAnalysis: React.FC<MobileAnalysisProps> = ({
       setIsPaused(!isPaused);
       return;
     }
-    
     if (!isPaused && isSpeakerActive) {
       stopSpeaking();
       setIsPaused(true);
@@ -187,15 +173,10 @@ const MobileAnalysis: React.FC<MobileAnalysisProps> = ({
     if (sourceType === 'url' && sourceData) {
       fetch('/api/chat', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ url: sourceData, language: langKey }),
-      }).then(response => response.json())
-        .then(data => {
-          setAnalysisData((prev: any) => ({
-            ...prev,
-            summary: prev?.summary + "\n\n📎 URL Analysis:\n" + (data.text || "URL analysis completed.")
-          }));
-        });
+      }).then(response => response.json()).then(data => {
+        setAnalysisData((prev: any) => ({ ...prev, summary: prev?.summary + "\n\n📎 URL Analysis:\n" + (data.text || "URL analysis completed.") }));
+      });
     }
     setIsMenuOpen(false);
   };
@@ -211,259 +192,61 @@ const MobileAnalysis: React.FC<MobileAnalysisProps> = ({
     return langKey === 'Cantonese' ? 'AI 分析' : langKey === '简体中文' ? 'AI 分析' : 'AI Analysis';
   };
 
-  // Helper to render button with cross line when inactive
   const renderButtonWithCross = (isActive: boolean, onClick: () => void, icon: React.ReactElement, color: string, inactiveColor: string) => {
     const bgColor = isActive ? color : inactiveColor;
-    
     return (
-      <button 
-        onClick={onClick}
-        style={{ 
-          flex: 1,
-          height: '48px',
-          borderRadius: '12px',
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'center',
-          backgroundColor: bgColor,
-          color: 'white', 
-          border: 'none', 
-          cursor: 'pointer',
-          position: 'relative',
-          overflow: 'hidden'
-        }}
-      >
+      <button onClick={onClick} style={{ flex: 1, height: '48px', borderRadius: '12px', display: 'flex', alignItems: 'center', justifyContent: 'center', backgroundColor: bgColor, color: 'white', border: 'none', cursor: 'pointer', position: 'relative', overflow: 'hidden' }}>
         {icon}
-        {!isActive && (
-          <div style={{
-            position: 'absolute',
-            top: '50%',
-            left: '50%',
-            width: '2px',
-            height: '30px',
-            backgroundColor: 'white',
-            transform: 'translate(-50%, -50%) rotate(45deg)',
-            borderRadius: '1px'
-          }} />
-        )}
+        {!isActive && (<div style={{ position: 'absolute', top: '50%', left: '50%', width: '2px', height: '30px', backgroundColor: 'white', transform: 'translate(-50%, -50%) rotate(45deg)', borderRadius: '1px' }} />)}
       </button>
     );
   };
 
   return (
-    <div style={{ 
-      display: 'flex', 
-      flexDirection: 'column', 
-      height: '100%',
-      width: '100%', 
-      backgroundColor: '#f5f5f5', 
-      overflow: 'hidden',
-      position: 'absolute',
-      top: 0,
-      left: 0,
-      right: 0,
-      bottom: 0
-    }}>
-      
-      {/* TOP BAR */}
-      <div style={{ 
-        backgroundColor: 'white', 
-        padding: '8px 12px', 
-        borderBottom: '1px solid #E5E7EB', 
-        display: 'flex', 
-        alignItems: 'center', 
-        justifyContent: 'space-between', 
-        flexShrink: 0,
-        zIndex: 20,
-        width: '100%',
-        boxSizing: 'border-box'
-      }}>
+    <div style={{ display: 'flex', flexDirection: 'column', height: '100%', width: '100%', backgroundColor: '#f5f5f5', overflow: 'hidden', position: 'absolute', top: 0, left: 0, right: 0, bottom: 0 }}>
+      <div style={{ backgroundColor: 'white', padding: '8px 12px', borderBottom: '1px solid #E5E7EB', display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexShrink: 0, zIndex: 20, width: '100%', boxSizing: 'border-box' }}>
         <button onClick={onBack} style={{ display: 'flex', alignItems: 'center', gap: '4px', color: '#4B5563', background: 'none', border: 'none', cursor: 'pointer', padding: '4px 0', minWidth: '44px' }}>
-          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2}>
-            <path strokeLinecap="round" strokeLinejoin="round" d="M15 19l-7-7 7-7" />
-          </svg>
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M15 19l-7-7 7-7" /></svg>
           <span style={{ fontSize: '11px', fontWeight: '500' }}>Back</span>
         </button>
         <h2 style={{ fontSize: '15px', fontWeight: '600', color: '#1F2937', margin: 0 }}>{getTitle()}</h2>
         <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
           <LanguageToggle currentLang={langKey} onLangChange={setLangKey} />
-          <button onClick={onAuthOpen} style={{ color: '#2563EB', fontWeight: '600', fontSize: '11px', background: 'none', border: 'none', cursor: 'pointer', padding: '4px 0', minWidth: '44px' }}>
-            {user ? 'Welcome' : (langKey === 'Cantonese' ? '登入' : langKey === '简体中文' ? '登录' : 'Login')}
-          </button>
+          <button onClick={onAuthOpen} style={{ color: '#2563EB', fontWeight: '600', fontSize: '11px', background: 'none', border: 'none', cursor: 'pointer', padding: '4px 0', minWidth: '44px' }}>{user ? 'Welcome' : (langKey === 'Cantonese' ? '登入' : langKey === '简体中文' ? '登录' : 'Login')}</button>
         </div>
       </div>
-
-      {/* SCROLLABLE CONTENT AREA */}
-      <div style={{ 
-        flex: 1,
-        overflowY: 'auto', 
-        overflowX: 'hidden',
-        WebkitOverflowScrolling: 'touch',
-        padding: '12px',
-        backgroundColor: '#F9FAFB',
-        minHeight: 0
-      }}>
-        {legalTitle && (
-          <div style={{ backgroundColor: 'white', borderRadius: '8px', padding: '12px', marginBottom: '8px' }}>
-            <div style={{ fontSize: '12px', color: '#4B5563', lineHeight: 1.4 }}>
-              {footerContent[legalTitle]?.[langKey === "Cantonese" ? "粵語 (繁體中文)" : langKey] || "Content coming soon..."}
-            </div>
-          </div>
-        )}
-        {topicId === 'pricing' && (
-          <div style={{ backgroundColor: 'white', borderRadius: '8px', padding: '12px', marginBottom: '8px' }}>
-            <PricingModal isOpen={true} onClose={onBack} user={user} profile={null} onSelectPlan={handleSelectPlan} showRetentionOnly={false} />
-          </div>
-        )}
+      <div style={{ flex: 1, overflowY: 'auto', overflowX: 'hidden', WebkitOverflowScrolling: 'touch', padding: '12px', backgroundColor: '#F9FAFB', minHeight: 0 }}>
+        {legalTitle && <div style={{ backgroundColor: 'white', borderRadius: '8px', padding: '12px', marginBottom: '8px' }}><div style={{ fontSize: '12px', color: '#4B5563', lineHeight: 1.4 }}>{footerContent[legalTitle]?.[langKey === "Cantonese" ? "粵語 (繁體中文)" : langKey] || "Content coming soon..."}</div></div>}
+        {topicId === 'pricing' && <div style={{ backgroundColor: 'white', borderRadius: '8px', padding: '12px', marginBottom: '8px' }}><PricingModal isOpen={true} onClose={onBack} user={user} profile={null} onSelectPlan={handleSelectPlan} showRetentionOnly={false} /></div>}
         {topicId === 'about' && <AboutSection lang={langKey} />}
         {topicId === 'features' && <FeaturesSection lang={langKey} />}
-        {isAnalysisMode && !legalTitle && (
-          <StockAnalysisModule t={t} data={analysisData} isLoading={isLoading} langKey={langKey} />
-        )}
+        {isAnalysisMode && !legalTitle && <StockAnalysisModule t={t} data={analysisData} isLoading={isLoading} langKey={langKey} />}
       </div>
-
-      {/* BOTTOM BAR */}
       {isAnalysisMode && !legalTitle && (
-        <div style={{ 
-          backgroundColor: 'white', 
-          borderTop: '1px solid #E5E7EB', 
-          padding: '10px 12px', 
-          paddingBottom: 'max(10px, env(safe-area-inset-bottom))',
-          flexShrink: 0,
-          zIndex: 20,
-          width: '100%',
-          boxSizing: 'border-box',
-          position: 'relative'
-        }}>
-          {/* Input Row */}
+        <div style={{ backgroundColor: 'white', borderTop: '1px solid #E5E7EB', padding: '10px 12px', paddingBottom: 'max(10px, env(safe-area-inset-bottom))', flexShrink: 0, zIndex: 20, width: '100%', boxSizing: 'border-box', position: 'relative' }}>
           <div style={{ display: 'flex', gap: '8px', alignItems: 'center', marginBottom: '10px' }}>
-            <button onClick={() => setIsMenuOpen(true)} style={{ width: '44px', height: '44px', borderRadius: '12px', backgroundColor: '#EF4444', color: 'white', border: 'none', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '20px', fontWeight: 'bold', flexShrink: 0 }}>
-              +
-            </button>
+            <button onClick={() => setIsMenuOpen(true)} style={{ width: '44px', height: '44px', borderRadius: '12px', backgroundColor: '#EF4444', color: 'white', border: 'none', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '20px', fontWeight: 'bold', flexShrink: 0 }}>+</button>
             <input type="text" value={inputValue} onChange={(e) => setInputValue(e.target.value)} placeholder={exampleText} onKeyPress={(e) => e.key === 'Enter' && handleAnalyze()} style={{ flex: 1, padding: '10px 14px', fontSize: '14px', color: '#1F2937', backgroundColor: '#F3F4F6', borderRadius: '24px', border: '1px solid #E5E7EB', outline: 'none', minWidth: 0 }} />
           </div>
-          
-          {/* Control Buttons with cross line when inactive */}
           <div style={{ display: 'flex', gap: '8px', justifyContent: 'space-between' }}>
-            {/* Mic Button */}
-            {renderButtonWithCross(
-              isListening, 
-              handleMicToggle,
-              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2}>
-                <path strokeLinecap="round" strokeLinejoin="round" d="M19 11a7 7 0 01-7 7m0 0a7 7 0 01-7-7m7 7v4m0 0H8m4 0h4m-4-8a3 3 0 01-3-3V5a3 3 0 116 0v6a3 3 0 01-3 3z" />
-              </svg>,
-              '#3B82F6',
-              '#EF4444'
-            )}
-
-            {/* Speaker Button with menu */}
+            {renderButtonWithCross(isListening, handleMicToggle, <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M19 11a7 7 0 01-7 7m0 0a7 7 0 01-7-7m7 7v4m0 0H8m4 0h4m-4-8a3 3 0 01-3-3V5a3 3 0 116 0v6a3 3 0 01-3 3z" /></svg>, '#3B82F6', '#EF4444')}
             <div style={{ position: 'relative', flex: 1 }}>
-              {renderButtonWithCross(
-                isSpeakerActive, 
-                handleSpeakerClick,
-                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2}>
-                  <path strokeLinecap="round" strokeLinejoin="round" d="M15.536 8.464a5 5 0 010 7.072m2.828-9.9a9 9 0 010 12.728M5.586 15H4a1 1 0 01-1-1v-4a1 1 0 011-1h1.586l4.707-4.707C10.923 3.663 12 4.109 12 5v14c0 .891-1.077 1.337-1.707.707L5.586 15z" />
-                </svg>,
-                '#EF4444',
-                '#9CA3AF'
-              )}
-              
-              {/* Speaker dropdown menu */}
-              {showSpeakerMenu && (
-                <div style={{
-                  position: 'absolute',
-                  bottom: '100%',
-                  left: 0,
-                  right: 0,
-                  marginBottom: '8px',
-                  backgroundColor: 'white',
-                  border: '1px solid #E5E7EB',
-                  borderRadius: '12px',
-                  boxShadow: '0 4px 12px rgba(0,0,0,0.15)',
-                  zIndex: 30,
-                  overflow: 'hidden'
-                }}>
-                  <button
-                    onClick={handleStartSpeaking}
-                    style={{
-                      width: '100%',
-                      padding: '12px',
-                      textAlign: 'center',
-                      backgroundColor: 'white',
-                      border: 'none',
-                      borderBottom: '1px solid #E5E7EB',
-                      cursor: 'pointer',
-                      fontSize: '13px',
-                      fontWeight: '500',
-                      color: '#1F2937'
-                    }}
-                  >
-                    {isSpeakerActive ? 'Stop Speaking' : 'Start Speaking'}
-                  </button>
-                  <button
-                    onClick={handleBluetoothToggle}
-                    style={{
-                      width: '100%',
-                      padding: '12px',
-                      textAlign: 'center',
-                      backgroundColor: useBluetooth ? '#EFF6FF' : 'white',
-                      border: 'none',
-                      cursor: 'pointer',
-                      fontSize: '13px',
-                      display: 'flex',
-                      alignItems: 'center',
-                      justifyContent: 'center',
-                      gap: '8px',
-                      color: useBluetooth ? '#2563EB' : '#4B5563'
-                    }}
-                  >
-                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2}>
-                      <path strokeLinecap="round" strokeLinejoin="round" d="M12 18v-6m0 0l4-4-4-4m0 4L8 6l4-4" />
-                      <path strokeLinecap="round" strokeLinejoin="round" d="M12 12l4 4-4 4m0-8L8 6l4-4" />
-                    </svg>
-                    {useBluetooth ? '✓ Bluetooth Mode' : 'Bluetooth Mode'}
-                  </button>
-                </div>
-              )}
+              {renderButtonWithCross(isSpeakerActive, handleSpeakerClick, <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M15.536 8.464a5 5 0 010 7.072m2.828-9.9a9 9 0 010 12.728M5.586 15H4a1 1 0 01-1-1v-4a1 1 0 011-1h1.586l4.707-4.707C10.923 3.663 12 4.109 12 5v14c0 .891-1.077 1.337-1.707.707L5.586 15z" /></svg>, '#EF4444', '#9CA3AF')}
+              {showSpeakerMenu && (<div style={{ position: 'absolute', bottom: '100%', left: 0, right: 0, marginBottom: '8px', backgroundColor: 'white', border: '1px solid #E5E7EB', borderRadius: '12px', boxShadow: '0 4px 12px rgba(0,0,0,0.15)', zIndex: 30, overflow: 'hidden' }}>
+                <button onClick={handleStartSpeaking} style={{ width: '100%', padding: '12px', textAlign: 'center', backgroundColor: 'white', border: 'none', borderBottom: '1px solid #E5E7EB', cursor: 'pointer', fontSize: '13px', fontWeight: '500', color: '#1F2937' }}>{isSpeakerActive ? 'Stop Speaking' : 'Start Speaking'}</button>
+                <button onClick={handleBluetoothToggle} style={{ width: '100%', padding: '12px', textAlign: 'center', backgroundColor: useBluetooth ? '#EFF6FF' : 'white', border: 'none', cursor: 'pointer', fontSize: '13px', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px', color: useBluetooth ? '#2563EB' : '#4B5563' }}>
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M12 18v-6m0 0l4-4-4-4m0 4L8 6l4-4" /><path strokeLinecap="round" strokeLinejoin="round" d="M12 12l4 4-4 4m0-8L8 6l4-4" /></svg>
+                  {useBluetooth ? '✓ Bluetooth Mode' : 'Bluetooth Mode'}
+                </button>
+              </div>)}
             </div>
-
-            {/* Pause Button */}
-            {renderButtonWithCross(
-              isPaused, 
-              handlePauseToggle,
-              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2}>
-                <path strokeLinecap="round" strokeLinejoin="round" d="M10 9v6m4-6v6m7-3a9 9 0 11-18 0 9 9 0 0118 0z" />
-              </svg>,
-              '#EF4444',
-              '#9CA3AF'
-            )}
-
-            {/* Send Button - No cross line, just disabled color */}
-            <button 
-              onClick={handleAnalyze} 
-              disabled={!inputValue.trim()} 
-              style={{ 
-                flex: 1, 
-                height: '48px', 
-                borderRadius: '12px', 
-                display: 'flex', 
-                alignItems: 'center', 
-                justifyContent: 'center', 
-                backgroundColor: inputValue.trim() ? '#22C55E' : '#D1D5DB', 
-                color: 'white', 
-                border: 'none', 
-                cursor: inputValue.trim() ? 'pointer' : 'not-allowed',
-                position: 'relative'
-              }}
-            >
-              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2}>
-                <path strokeLinecap="round" strokeLinejoin="round" d="M7 7h10v10M17 7L7 17" />
-              </svg>
+            {renderButtonWithCross(isPaused, handlePauseToggle, <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M10 9v6m4-6v6m7-3a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>, '#EF4444', '#9CA3AF')}
+            <button onClick={handleAnalyze} disabled={!inputValue.trim()} style={{ flex: 1, height: '48px', borderRadius: '12px', display: 'flex', alignItems: 'center', justifyContent: 'center', backgroundColor: inputValue.trim() ? '#22C55E' : '#D1D5DB', color: 'white', border: 'none', cursor: inputValue.trim() ? 'pointer' : 'not-allowed', position: 'relative' }}>
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M7 7h10v10M17 7L7 17" /></svg>
             </button>
           </div>
         </div>
       )}
-
       <SourceMenu isOpen={isMenuOpen} onClose={() => setIsMenuOpen(false)} onSelectSource={handleSourceSelect} langKey={langKey} />
     </div>
   );
