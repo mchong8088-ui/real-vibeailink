@@ -28,7 +28,7 @@ const MobileAnalysis: React.FC<MobileAnalysisProps> = ({
   onAuthOpen,
   viewType,
   topicId,
-  legalTitle,
+  legalTitle = null,
   onBack,
 }) => {
   const [inputValue, setInputValue] = useState('');
@@ -202,6 +202,8 @@ const MobileAnalysis: React.FC<MobileAnalysisProps> = ({
     );
   };
 
+  const displayLegalTitle = legalTitle || undefined;
+
   return (
     <div style={{ display: 'flex', flexDirection: 'column', height: '100%', width: '100%', backgroundColor: '#f5f5f5', overflow: 'hidden', position: 'absolute', top: 0, left: 0, right: 0, bottom: 0 }}>
       <div style={{ backgroundColor: 'white', padding: '8px 12px', borderBottom: '1px solid #E5E7EB', display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexShrink: 0, zIndex: 20, width: '100%', boxSizing: 'border-box' }}>
@@ -216,13 +218,13 @@ const MobileAnalysis: React.FC<MobileAnalysisProps> = ({
         </div>
       </div>
       <div style={{ flex: 1, overflowY: 'auto', overflowX: 'hidden', WebkitOverflowScrolling: 'touch', padding: '12px', backgroundColor: '#F9FAFB', minHeight: 0 }}>
-        {legalTitle && <div style={{ backgroundColor: 'white', borderRadius: '8px', padding: '12px', marginBottom: '8px' }}><div style={{ fontSize: '12px', color: '#4B5563', lineHeight: 1.4 }}>{footerContent[legalTitle]?.[langKey === "Cantonese" ? "粵語 (繁體中文)" : langKey] || "Content coming soon..."}</div></div>}
+        {displayLegalTitle && <div style={{ backgroundColor: 'white', borderRadius: '8px', padding: '12px', marginBottom: '8px' }}><div style={{ fontSize: '12px', color: '#4B5563', lineHeight: 1.4 }}>{footerContent[displayLegalTitle]?.[langKey === "Cantonese" ? "粵語 (繁體中文)" : langKey] || "Content coming soon..."}</div></div>}
         {topicId === 'pricing' && <div style={{ backgroundColor: 'white', borderRadius: '8px', padding: '12px', marginBottom: '8px' }}><PricingModal isOpen={true} onClose={onBack} user={user} profile={null} onSelectPlan={handleSelectPlan} showRetentionOnly={false} /></div>}
         {topicId === 'about' && <AboutSection lang={langKey} />}
         {topicId === 'features' && <FeaturesSection lang={langKey} />}
-        {isAnalysisMode && !legalTitle && <StockAnalysisModule t={t} data={analysisData} isLoading={isLoading} langKey={langKey} />}
+        {isAnalysisMode && !displayLegalTitle && <StockAnalysisModule t={t} data={analysisData} isLoading={isLoading} langKey={langKey} />}
       </div>
-      {isAnalysisMode && !legalTitle && (
+      {isAnalysisMode && !displayLegalTitle && (
         <div style={{ backgroundColor: 'white', borderTop: '1px solid #E5E7EB', padding: '10px 12px', paddingBottom: 'max(10px, env(safe-area-inset-bottom))', flexShrink: 0, zIndex: 20, width: '100%', boxSizing: 'border-box', position: 'relative' }}>
           <div style={{ display: 'flex', gap: '8px', alignItems: 'center', marginBottom: '10px' }}>
             <button onClick={() => setIsMenuOpen(true)} style={{ width: '44px', height: '44px', borderRadius: '12px', backgroundColor: '#EF4444', color: 'white', border: 'none', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '20px', fontWeight: 'bold', flexShrink: 0 }}>+</button>
