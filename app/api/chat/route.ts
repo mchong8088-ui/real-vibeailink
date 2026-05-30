@@ -1,12 +1,12 @@
 import { NextResponse } from 'next/server';
-import { detectStock } from '../../../lib/market/stockDetector';
-import { getMarketData } from '../../../lib/market/marketData';
-import { calculateIndicators } from '../../../lib/market/indicators';
-import { getFundamentals } from '../../../lib/market/fundamentals';
-import { getNews } from '../../../lib/market/news';
-import { getSentiment } from '../../../lib/market/sentiment';
-import { buildPrompt } from '../../../lib/ai/promptBuilder';
-import { callAI } from '../../../lib/ai/gateway';
+import { detectStock } from '../../lib/market/stockDetector';
+import { getMarketData } from '../../lib/market/marketData';
+import { calculateIndicators } from '../../lib/market/indicators';
+import { getFundamentals } from '../../lib/market/fundamentals';
+import { getNews } from '../../lib/market/news';
+import { getSentiment } from '../../lib/market/sentiment';
+import { buildPrompt } from '../../lib/ai/promptBuilder';
+import { callAI } from '../../lib/ai/gateway';
 
 // ============================================
 // Main API Handler
@@ -48,7 +48,7 @@ export async function POST(req: Request) {
     if (!marketData || !marketData.price) {
       return NextResponse.json({
         success: false,
-        text: `Live market data unavailable for ${symbol}. Possible reasons:\n- The symbol may be invalid\n- Market may be closed\n- Please try another symbol like TSLA, 0700.HK, or 2330.TW`
+        text: `Live market data unavailable for ${symbol}. Please try another symbol.`
       });
     }
     console.log(`💰 Price: $${marketData.price}, Change: ${marketData.changePercent?.toFixed(2)}%`);
@@ -106,7 +106,7 @@ export async function POST(req: Request) {
         profitMargin: fundamentals?.profitMargin || null,
         debtRatio: fundamentals?.debtRatio || null,
       },
-      news: news.slice(0, 5).map(n => ({
+      news: news.slice(0, 5).map((n: any) => ({
         title: n.title,
         source: n.source,
         date: n.date,
@@ -181,9 +181,6 @@ export async function POST(req: Request) {
 // ============================================
 
 export async function GET() {
-  const { getAvailableProviders } = await import('../../../lib/ai/gateway');
-  const providers = getAvailableProviders();
-  
   return NextResponse.json({
     status: 'online',
     version: '3.0.0',
@@ -191,11 +188,6 @@ export async function GET() {
     endpoints: {
       analyze: 'POST /api/chat - Send stock symbol or question',
       health: 'GET /api/chat - This status page',
-    },
-    providers: {
-      gemini: providers.gemini,
-      openai: providers.openai,
-      deepseek: providers.deepseek,
     },
     examples: {
       symbol: 'TSLA, 0700.HK, 2330.TW',
