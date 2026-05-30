@@ -8,17 +8,17 @@ function callMockAI(prompt: string): string {
   const symbolMatch = prompt.match(/STOCK: ([A-Z0-9.]+)/i);
   const symbol = symbolMatch ? symbolMatch[1] : 'the stock';
   
-  return `{
-  "summary": "${symbol} shows mixed signals. Technical indicators suggest neutral momentum in the near term.",
-  "technical": "RSI is in neutral territory. MACD shows mixed signals. Price is near key support levels.",
-  "fundamental": "Valuation appears reasonable relative to sector peers.",
-  "bullCase": ["Technical indicators suggest potential bounce", "Support levels holding"],
-  "bearCase": ["Resistance overhead may limit upside", "Market volatility"],
-  "risks": ["Broader market uncertainty", "Interest rate expectations"],
-  "recommendation": "HOLD",
-  "priceTarget": "N/A",
-  "confidence": 65
-}`;
+  return JSON.stringify({
+    summary: `${symbol} shows mixed signals. Technical indicators suggest neutral momentum in the near term.`,
+    technical: "RSI is in neutral territory. MACD shows mixed signals. Price is near key support levels.",
+    fundamental: "Valuation appears reasonable relative to sector peers.",
+    bullCase: ["Technical indicators suggest potential bounce", "Support levels holding"],
+    bearCase: ["Resistance overhead may limit upside", "Market volatility"],
+    risks: ["Broader market uncertainty", "Interest rate expectations"],
+    recommendation: "HOLD",
+    priceTarget: "N/A",
+    confidence: 65
+  });
 }
 
 // Google Gemini API
