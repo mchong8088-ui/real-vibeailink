@@ -198,7 +198,7 @@ export default function VibeAiMaster() {
 
   if (systemState.isMobile) {
     if (mobilePage === 'landing') return <MobileLanding langKey={language} setLangKey={(lang: string) => setLanguage(lang as any)} onAuthOpen={() => setIsAuthOpen(true)} user={user} onNavigate={handleMobileNavigate} />;
-    return <MobileAnalysis langKey={language} setLangKey={(lang: string) => setLanguage(lang as any)} user={user} onAuthOpen={() => setIsAuthOpen(true)} viewType={mobileView} topicId={mobileTopic} legalTitle={mobileLegal} onBack={handleMobileBack} />;
+    return <MobileAnalysis langKey={language} setLangKey={(lang: string) => setLanguage(lang as any)} user={user} onAuthOpen={() => setIsAuthOpen(true)} viewType={mobileView} topicId={mobileTopic} legalTitle={mobileLegal === null ? undefined : mobileLegal === null ? undefined : mobileLegal} onBack={handleMobileBack} />;
   }
 
   return (
