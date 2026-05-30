@@ -197,10 +197,11 @@ export default function VibeAiMaster() {
   }
 
   if (systemState.isMobile) {
-    if (mobilePage === 'landing') return <MobileLanding langKey={language} setLangKey={(lang: string) => setLanguage(lang as any)} onAuthOpen={() => setIsAuthOpen(true)} user={user} onNavigate={handleMobileNavigate} />;
-    return <MobileAnalysis langKey={language} setLangKey={(lang: string) => setLanguage(lang as any)} user={user} onAuthOpen={() => setIsAuthOpen(true)} viewType={mobileView} topicId={mobileTopic} legalTitle={mobileLegal === null ? undefined : mobileLegal === null ? undefined : mobileLegal} onBack={handleMobileBack} />;
+    if (mobilePage === "landing") {
+      return <MobileLanding langKey={language} setLangKey={(lang: string) => setLanguage(lang as any)} onAuthOpen={() => setIsAuthOpen(true)} user={user} onNavigate={handleMobileNavigate} />;
+    }
+    return <MobileAnalysis langKey={language} setLangKey={(lang: string) => setLanguage(lang as any)} user={user} onAuthOpen={() => setIsAuthOpen(true)} viewType={mobileView} topicId={mobileTopic} legalTitle={mobileLegal || undefined} onBack={handleMobileBack} />;
   }
-
   return (
     <div style={{ display: 'flex', flexDirection: 'column', height: '100vh', width: '100%', backgroundColor: '#f0f0f0', overflow: 'hidden' }}>
       <div style={{ width: '100%', height: '100%', backgroundColor: 'white', display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
