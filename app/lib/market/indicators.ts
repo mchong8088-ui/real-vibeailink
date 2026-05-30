@@ -68,15 +68,18 @@ export function calculateMACD(closes: number[]): MACDResult {
       return { value: null, signal: null, histogram: null, status: 'Neutral' };
     }
     
-    const value = last.MACD;
-    const signal = last.signal;
+    const value = latestMacd?.MACD;
+    const signal = latestMacd?.signal;
     const histogram = last.histogram;
     
     let status: 'Bullish' | 'Bearish' | 'Neutral' = 'Neutral';
-    if (value !== null && signal !== null) {
-      if (value > signal) status = 'Bullish';
-      else if (value < signal) status = 'Bearish';
-    }
+
+let status: 'Bullish' | 'Bearish' | 'Neutral' = 'Neutral';
+
+if (typeof value === "number" && typeof signal === "number") {
+  if (value > signal) status = "Bullish";
+  else if (value < signal) status = "Bearish";
+}
     
     return { value, signal, histogram, status };
   } catch (error) {
