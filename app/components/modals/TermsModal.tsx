@@ -1,7 +1,5 @@
-// components/modals/TermsModal.tsx
 import React, { useState } from 'react';
 import { supabase } from '../../lib/supabase';
-import { disclaimerData } from '../../constants/legal';
 
 interface TermsModalProps {
   isOpen: boolean;
@@ -11,6 +9,41 @@ interface TermsModalProps {
   email: string;
   onAccept: () => void;
 }
+
+// Define the disclaimer data type
+interface DisclaimerContent {
+  title: string;
+  content: string;
+  lastUpdated: string;
+  version: string;
+}
+
+interface DisclaimerData {
+  English: DisclaimerContent;
+  Chinese: DisclaimerContent;
+  Cantonese: DisclaimerContent;
+}
+
+const disclaimerData: DisclaimerData = {
+  English: {
+    title: "Disclaimer",
+    content: "Data provided is based on 'Big Data Algorithms' and 'Mathematical Models' and does not constitute investment advice. Past performance does not guarantee future results.",
+    lastUpdated: "2026-01-01",
+    version: "1.0"
+  },
+  Chinese: {
+    title: "免责声明",
+    content: "提供的数据基于'大数据算法'和'数学模型'，不构成投资建议。过去的表现并不保证未来的结果。",
+    lastUpdated: "2026-01-01",
+    version: "1.0"
+  },
+  Cantonese: {
+    title: "免責聲明",
+    content: "提供嘅數據基於'大數據算法'同'數學模型'，唔構成投資建議。過去嘅表現唔保證未來嘅結果。",
+    lastUpdated: "2026-01-01",
+    version: "1.0"
+  }
+};
 
 const TermsModal: React.FC<TermsModalProps> = ({
   isOpen,
@@ -72,7 +105,7 @@ const TermsModal: React.FC<TermsModalProps> = ({
           <div>
             <h3 className="text-base font-bold text-blue-600 mb-2">2. Disclaimer</h3>
             <div className="text-sm text-gray-700">
-              <p>{disclaimerData?.["English"]?.content || "Data provided is based on 'Big Data Algorithms' and 'Mathematical Models' and does not constitute investment advice."}</p>
+              <p>{disclaimerData.English.content}</p>
             </div>
           </div>
           
