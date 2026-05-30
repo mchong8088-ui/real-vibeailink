@@ -6,43 +6,6 @@ export function useAuthFlow() {
   const [profile, setProfile] = useState<any>(null);
   const [loading, setLoading] = useState(true);
 
-  useEffect(() => {
-    // Check current session
-    const checkSession = async () => {
-      const { data: { session } } = await supabase.auth.getSession();
-      console.log('🔐 Initial session check:', session?.user?.email || 'No session');
-      setUser(session?.user || null);
-      if (session?.user) {
-        await fetchProfile(session.user.id, session.user.email);
-      } else {
-        setLoading(false);
-      }
-    };
-    
-    checkSession();
-
-    // Listen for auth changes
-    const { data: { subscription } } = onAuthChange(async (event, session) => {
-      console.log('🔄 Auth state changed:', event, session?.user?.email);
-      setUser(session?.user || null);
-      if (session?.user) {
-        await fetchProfile(session.user.id, session.user.email);
-      } else {
-        setProfile(null);
-        setLoading(false);
-      }
-      
-      // Force reload on sign in to refresh all components
-      if (event === 'SIGNED_IN') {
-        window.location.reload();
-      }
-    });
-
-    return () => {
-      subscription.unsubscribe();
-    };
-  }, []);
-
   const fetchProfile = async (userId: string, email: string) => {
     try {
       const { data, error } = await supabase
@@ -63,9 +26,46 @@ export function useAuthFlow() {
     }
   };
 
+  useEffect(() => {
+    // Check current session
+    const checkSession = async () => {
+      const { data: { session } } = await supabase.auth.getSession();
+      console.log('🔐 Initial session check:', session?.user?.email || 'No session');
+      setUser(session?.user || null);
+      if (session?.user && session.user.id && session.user.email) {
+        await fetchProfile(session.user.id, session.user.email);
+      } else {
+        setLoading(false);
+      }
+    };
+    
+    checkSession();
+
+    // Listen for auth changes
+    const { data: { subscription } } = onAuthChange(async (event, session) => {
+      console.log('🔄 Auth state changed:', event, session?.user?.email);
+      setUser(session?.user || null);
+      if (session?.user && session.user.id && session.user.email) {
+        await fetchProfile(session.user.id, session.user.email);
+      } else {
+        setProfile(null);
+        setLoading(false);
+      }
+      
+      // Force reload on sign in to refresh all components
+      if (event === 'SIGNED_IN') {
+        window.location.reload();
+      }
+    });
+
+    return () => {
+      subscription.unsubscribe();
+    };
+  }, []);
+
   const initializeNewUser = async (displayName: string, email: string) => {
     const { data: { user } } = await supabase.auth.getUser();
-    if (user) {
+    if (user && user.id) {
       const { error } = await supabase
         .from('profiles')
         .upsert({
@@ -78,7 +78,7 @@ export function useAuthFlow() {
           subscription_plan: 'Free Explorer',
         });
       
-      if (!error) {
+      if (!error && user.id && email) {
         await fetchProfile(user.id, email);
       }
     }
