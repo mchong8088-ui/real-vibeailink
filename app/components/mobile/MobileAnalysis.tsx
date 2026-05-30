@@ -28,9 +28,10 @@ const MobileAnalysis: React.FC<MobileAnalysisProps> = ({
   onAuthOpen,
   viewType,
   topicId,
-  legalTitle = null,
+  legalTitle,
   onBack,
 }) => {
+  // Rest of component remains the same...
   const [inputValue, setInputValue] = useState('');
   const [analysisData, setAnalysisData] = useState<any>(null);
   const [isLoading, setIsLoading] = useState(false);
