@@ -8,25 +8,33 @@ export function useAuthFlow() {
 
   useEffect(() => {
     // Check current session
-    supabase.auth.getSession().then(({ data: { session } }) => {
+    const checkSession = async () => {
+      const { data: { session } } = await supabase.auth.getSession();
       console.log('🔐 Initial session check:', session?.user?.email || 'No session');
       setUser(session?.user || null);
       if (session?.user) {
-        fetchProfile(session.user.id, session.user.email);
+        await fetchProfile(session.user.id, session.user.email);
       } else {
         setLoading(false);
       }
-    });
+    };
+    
+    checkSession();
 
     // Listen for auth changes
-    const { data: { subscription } } = onAuthChange((event, session) => {
+    const { data: { subscription } } = onAuthChange(async (event, session) => {
       console.log('🔄 Auth state changed:', event, session?.user?.email);
       setUser(session?.user || null);
       if (session?.user) {
-        fetchProfile(session.user.id, session.user.email);
+        await fetchProfile(session.user.id, session.user.email);
       } else {
         setProfile(null);
         setLoading(false);
+      }
+      
+      // Force reload on sign in to refresh all components
+      if (event === 'SIGNED_IN') {
+        window.location.reload();
       }
     });
 
@@ -56,7 +64,6 @@ export function useAuthFlow() {
   };
 
   const initializeNewUser = async (displayName: string, email: string) => {
-    // This function is called when user accepts terms
     const { data: { user } } = await supabase.auth.getUser();
     if (user) {
       const { error } = await supabase
