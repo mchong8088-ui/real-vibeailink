@@ -7,14 +7,10 @@ export async function GET(request: Request) {
   const code = requestUrl.searchParams.get('code')
   const next = requestUrl.searchParams.get('next') ?? '/'
 
-  console.log('🔵 Auth callback started')
-  console.log('📝 Code present:', !!code)
-  console.log('🔗 Origin:', requestUrl.origin)
+  console.log('🔵 Auth callback received, code present:', !!code)
 
   if (code) {
     const cookieStore = await cookies()
-    
-    // Create Supabase client with proper cookie handling
     const supabase = createServerClient(
       process.env.NEXT_PUBLIC_SUPABASE_URL!,
       process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
@@ -24,39 +20,25 @@ export async function GET(request: Request) {
             return cookieStore.get(name)?.value
           },
           set(name: string, value: string, options: any) {
-            try {
-              cookieStore.set({ name, value, ...options })
-            } catch (error) {
-              console.error('Cookie set error:', error)
-            }
+            cookieStore.set({ name, value, ...options })
           },
           remove(name: string, options: any) {
-            try {
-              cookieStore.set({ name, value: '', ...options })
-            } catch (error) {
-              console.error('Cookie remove error:', error)
-            }
+            cookieStore.set({ name, value: '', ...options })
           },
         },
       }
     )
     
-    // Exchange the code for a session
     const { error, data } = await supabase.auth.exchangeCodeForSession(code)
     
     if (error) {
-      console.error('❌ Exchange error:', error.message)
-      return NextResponse.redirect(new URL('/?error=' + encodeURIComponent(error.message), requestUrl.origin))
+      console.error('❌ Error exchanging code:', error.message)
+      return NextResponse.redirect(new URL('/?error=auth_failed', requestUrl.origin))
     }
     
-    console.log('✅ Session exchanged successfully')
-    console.log('👤 User email:', data.user?.email)
-    
-    // Successful login - redirect to home
-    return NextResponse.redirect(new URL(next, requestUrl.origin))
+    console.log('✅ Session exchanged successfully for user:', data.user?.email)
   }
 
-  // No code provided
-  console.log('❌ No code provided in callback')
-  return NextResponse.redirect(new URL('/?error=no_code', requestUrl.origin))
+  // Redirect to home page
+  return NextResponse.redirect(new URL(next, requestUrl.origin))
 }
