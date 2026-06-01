@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server';
 import { GoogleGenerativeAI } from "@google/generative-ai";
-import { buildAnalysisPrompt } from '../../../lib/ai/promptBuilder';
+import { buildAnalysisPrompt } from '../../lib/ai/promptBuilder';
 
 const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY || "");
 
