@@ -4,6 +4,7 @@ import { SourceMenu } from './components/features/controls/SourceMenu';
 import { SmartInputSystem } from './components/features/controls/SmartInputSystem';
 import { StockAnalysisModule } from './components/features/stock-analysis/StockAnalysisModule';
 import { useAuthFlow } from './hooks/useAuthFlow'; 
+import { AuthModal } from './components/modals/AuthModal';
 import { LanguageToggle } from './components/layout/LanguageToggle'; 
 import { AboutSection } from './components/sections/AboutSection';
 import { FeaturesSection } from './components/sections/FeaturesSection';
