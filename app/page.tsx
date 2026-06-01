@@ -4,9 +4,6 @@ import { SourceMenu } from './components/features/controls/SourceMenu';
 import { SmartInputSystem } from './components/features/controls/SmartInputSystem';
 import { StockAnalysisModule } from './components/features/stock-analysis/StockAnalysisModule';
 import { useAuthFlow } from './hooks/useAuthFlow'; 
-import UserMenu from './components/auth/UserMenu';
-import { AuthModal } from './components/modals/AuthModal';
-import { LegalGate } from './components/auth/LegalGate';
 import { LanguageToggle } from './components/layout/LanguageToggle'; 
 import { AboutSection } from './components/sections/AboutSection';
 import { FeaturesSection } from './components/sections/FeaturesSection';
@@ -22,7 +19,8 @@ export default function VibeAiMaster() {
   
   const [mounted, setMounted] = useState(false);
   const [systemState, setSystemState] = useState({ os: "Detecting...", isMobile: false });
-  const { user, profile, initializeNewUser } = useAuthFlow();
+  const [user, setUser] = useState<any>(null);
+  const [profile, setProfile] = useState<any>(null);
 
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const [currentView, setCurrentView] = useState<"analysis" | "about" | "features" | "pricing">("analysis");
@@ -41,6 +39,17 @@ export default function VibeAiMaster() {
 
   const systemInfo = { system: `VibeAI-${systemState.os}`, voiceEngine: "Local Synthesis" };
 
+  // Check auth on mount
+  useEffect(() => {
+    supabase.auth.getSession().then(({ data }) => {
+      setUser(data.session?.user || null);
+    });
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
+      setUser(session?.user || null);
+    });
+    return () => subscription.unsubscribe();
+  }, []);
+
   useEffect(() => { 
     setIsHydrated(true); 
   }, []);
@@ -56,11 +65,11 @@ export default function VibeAiMaster() {
 
   const handleLogout = async () => {
     await supabase.auth.signOut();
+    setUser(null);
     window.location.href = '/';
   };
 
   const handleAnalyzeRequest = async (ticker: string) => {
-    if (!user) { setIsAuthOpen(true); return; }
     setIsLoading(true);
     try {
       const response = await fetch('/api/chat', {
@@ -78,7 +87,6 @@ export default function VibeAiMaster() {
   };
 
   const handleSelectPlan = async (planId: string, priceId: string) => {
-    if (!user && planId !== 'explorer') { setIsAuthOpen(true); return; }
     try {
       const response = await fetch('/api/billing/create-checkout', {
         method: 'POST',
@@ -105,10 +113,7 @@ export default function VibeAiMaster() {
     setMobileLegal(null);
   };
 
-  const showLegalGate = user && profile && profile.has_accepted_legal === false;
-  const showMasterPopup = isAuthOpen || legalTitle || showLegalGate;
   const getUserDisplayName = () => {
-    if (profile?.display_name) return profile.display_name.substring(0, 10);
     if (user?.email) return user.email.split('@')[0].substring(0, 10);
     return 'User';
   };
@@ -236,13 +241,10 @@ export default function VibeAiMaster() {
 
       <SourceMenu isOpen={isMenuOpen} onClose={() => setIsMenuOpen(false)} onSelectSource={handleSourceSelect} langKey={language}/>
       
-      {(showMasterPopup || legalTitle) && (
+      {isAuthOpen && !user && (
         <div style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, backgroundColor: 'rgba(0,0,0,0.5)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1000 }}>
           <div style={{ backgroundColor: 'white', borderRadius: '16px', padding: '24px', maxWidth: '500px' }}>
-            <button onClick={() => { setIsAuthOpen(false); setLegalTitle(null); }} style={{ float: 'right', background: 'none', border: 'none', fontSize: '20px', cursor: 'pointer' }}>✕</button>
-            {isAuthOpen && !user && <AuthModal isOpen={isAuthOpen} onClose={() => setIsAuthOpen(false)} />}
-            {showLegalGate && <LegalGate language={language} onAccept={() => initializeNewUser("Guest", "guest@vibeailink.com")} />}
-            {legalTitle && <div><h3>{legalTitle}</h3><div>{footerContent[legalTitle]?.[language] || "Content coming..."}</div></div>}
+            <AuthModal isOpen={isAuthOpen} onClose={() => setIsAuthOpen(false)} />
           </div>
         </div>
       )}
