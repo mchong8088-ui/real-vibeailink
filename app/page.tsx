@@ -3,7 +3,6 @@ import React, { useState, useEffect } from 'react';
 import { SourceMenu } from './components/features/controls/SourceMenu';
 import { SmartInputSystem } from './components/features/controls/SmartInputSystem';
 import { StockAnalysisModule } from './components/features/stock-analysis/StockAnalysisModule';
-import { useAuthFlow } from './hooks/useAuthFlow'; 
 import { AuthModal } from './components/modals/AuthModal';
 import { LanguageToggle } from './components/layout/LanguageToggle'; 
 import { AboutSection } from './components/sections/AboutSection';
@@ -21,7 +20,6 @@ export default function VibeAiMaster() {
   const [mounted, setMounted] = useState(false);
   const [systemState, setSystemState] = useState({ os: "Detecting...", isMobile: false });
   const [user, setUser] = useState<any>(null);
-  const [profile, setProfile] = useState<any>(null);
 
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const [currentView, setCurrentView] = useState<"analysis" | "about" | "features" | "pricing">("analysis");
@@ -40,6 +38,7 @@ export default function VibeAiMaster() {
 
   const systemInfo = { system: `VibeAI-${systemState.os}`, voiceEngine: "Local Synthesis" };
 
+  // Check auth on mount
   useEffect(() => {
     supabase.auth.getSession().then(({ data }) => {
       setUser(data.session?.user || null);
@@ -174,11 +173,12 @@ export default function VibeAiMaster() {
     if (mobilePage === 'landing') {
       return <MobileLanding langKey={language} setLangKey={setLanguage as any} onAuthOpen={() => setIsAuthOpen(true)} user={user} onNavigate={handleMobileNavigate} />;
     }
-    return <MobileAnalysis langKey={language} setLangKey={setLanguage as any} user={user} onAuthOpen={() => setIsAuthOpen(true)} viewType={mobileView} topicId={mobileTopic} legalTitle={mobileLegal === null ? undefined : mobileLegal} onBack={handleMobileBack} />;
+    return <MobileAnalysis langKey={language} setLangKey={setLanguage as any} user={user} onAuthOpen={() => setIsAuthOpen(true)} viewType={mobileView} topicId={mobileTopic} legalTitle={mobileLegal} onBack={handleMobileBack} />;
   }
 
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', height: '100vh', width: '100%', overflow: 'hidden' }}>
+    <div style={{ display: 'flex', flexDirection: 'column', height: '100vh', width: '100%', overflow: 'hidden', backgroundColor: '#f0f0f0' }}>
+      {/* Top Bar */}
       <div style={{ backgroundColor: 'white', padding: '12px 24px', borderBottom: '1px solid #E5E7EB', display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexShrink: 0 }}>
         <h1 style={{ fontSize: '20px', fontWeight: '900', fontStyle: 'italic', color: '#DC2626', margin: 0 }}>vibeAiLink</h1>
         <div style={{ display: 'flex', gap: '32px' }}>
@@ -201,29 +201,36 @@ export default function VibeAiMaster() {
         </div>
       </div>
 
+      {/* Main Content */}
       <div style={{ display: 'flex', flex: 1, overflow: 'hidden' }}>
-        <div style={{ width: '25%', backgroundColor: '#FEF08A', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', padding: '32px 24px' }}>
-          <div style={{ width: '120px', height: '120px', borderRadius: '60px', overflow: 'hidden', marginBottom: '16px' }}>
+        {/* Left Panel */}
+        <div style={{ width: '20%', backgroundColor: '#FEF08A', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', padding: '24px', overflow: 'auto', minWidth: '200px' }}>
+          <div style={{ width: '100px', height: '100px', borderRadius: '50%', overflow: 'hidden', marginBottom: '16px', backgroundColor: 'white', boxShadow: '0 2px 4px rgba(0,0,0,0.1)' }}>
             <img src="/avatars/michael_teresa.jpg" style={{ width: '100%', height: '100%', objectFit: 'cover' }} alt="Michael & Teresa" />
           </div>
-          <h2 style={{ fontSize: '18px', fontWeight: 'bold', margin: '0 0 4px' }}>Michael & Teresa</h2>
-          <p style={{ fontSize: '12px', color: '#2563EB', margin: '0' }}>{text.financeText}</p>
+          <h3 style={{ fontWeight: 'bold', color: '#1F2937', fontSize: '14px', textAlign: 'center', margin: '0' }}>Michael & Teresa</h3>
+          <p style={{ fontSize: '10px', fontWeight: 'bold', color: '#2563EB', textAlign: 'center', marginTop: '8px' }}>{text.financeText}</p>
+          <p style={{ fontSize: '9px', color: '#6B7280', textAlign: 'center', marginTop: '8px' }}>{systemState.os} Environment</p>
         </div>
 
-        <div style={{ width: '75%', backgroundColor: '#E0F2FE', display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
+        {/* Right Panel */}
+        <div style={{ width: '80%', backgroundColor: '#E0F2FE', display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
+          {/* Scrollable Content */}
           <div style={{ flex: 1, overflowY: 'auto', padding: '20px' }}>
             {currentView === "analysis" && <StockAnalysisModule t={t} data={analysisData} isLoading={isLoading} langKey={language} />}
-            {currentView === "pricing" && <PricingModal isOpen={true} onClose={() => setCurrentView("analysis")} user={user} profile={profile} onSelectPlan={handleSelectPlan} showRetentionOnly={false} />}
+            {currentView === "pricing" && <PricingModal isOpen={true} onClose={() => setCurrentView("analysis")} user={user} profile={null} onSelectPlan={handleSelectPlan} showRetentionOnly={false} />}
             {currentView === "about" && <AboutSection lang={language} />}
             {currentView === "features" && <FeaturesSection lang={language} />}
           </div>
 
-          <div style={{ backgroundColor: 'white', padding: '12px 20px', borderTop: '1px solid #E5E7EB' }}>
+          {/* Fixed Input Area */}
+          <div style={{ backgroundColor: 'white', padding: '12px 20px', borderTop: '1px solid #E5E7EB', flexShrink: 0 }}>
             <p style={{ fontSize: '12px', color: '#6B7280', textAlign: 'center', marginBottom: '8px' }}>{text.inputLabel}</p>
             <SmartInputSystem langKey={language} onAnalyze={handleAnalyzeRequest} onPlusClick={() => setIsMenuOpen(true)} systemInfo={systemInfo} analysisText={analysisData?.summary} />
           </div>
 
-          <div style={{ backgroundColor: 'white', padding: '8px 20px', borderTop: '1px solid #E5E7EB', display: 'flex', justifyContent: 'center', gap: '16px', flexWrap: 'wrap' }}>
+          {/* Footer */}
+          <div style={{ backgroundColor: 'white', padding: '8px 20px', borderTop: '1px solid #E5E7EB', display: 'flex', justifyContent: 'center', gap: '24px', flexWrap: 'wrap', flexShrink: 0 }}>
             <button onClick={() => setLegalTitle('DISCLAIMER')} style={{ fontSize: '9px', color: '#3B82F6', background: 'none', border: 'none', cursor: 'pointer' }}>{text.disclaimer}</button>
             <button onClick={() => setLegalTitle('服務條款')} style={{ fontSize: '9px', color: '#3B82F6', background: 'none', border: 'none', cursor: 'pointer' }}>{text.terms}</button>
             <button onClick={() => setLegalTitle('隱私政策')} style={{ fontSize: '9px', color: '#3B82F6', background: 'none', border: 'none', cursor: 'pointer' }}>{text.privacy}</button>
@@ -237,9 +244,7 @@ export default function VibeAiMaster() {
       
       {isAuthOpen && !user && (
         <div style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, backgroundColor: 'rgba(0,0,0,0.5)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1000 }}>
-          <div style={{ backgroundColor: 'white', borderRadius: '16px', padding: '24px', maxWidth: '500px' }}>
-            <AuthModal isOpen={isAuthOpen} onClose={() => setIsAuthOpen(false)} />
-          </div>
+          <AuthModal isOpen={isAuthOpen} onClose={() => setIsAuthOpen(false)} />
         </div>
       )}
     </div>
