@@ -1,5 +1,29 @@
 import { NextResponse } from 'next/server';
-import { detectStock } from '../../../lib/market/stockDetector';
+
+// Simple stock symbol detection
+function detectStock(input: string): string | null {
+  if (!input || input.trim() === '') return null;
+  const cleanInput = input.trim().toUpperCase();
+  
+  // Direct symbol with suffix
+  if (/^[A-Z0-9]+\.(HK|TW)$/i.test(cleanInput)) return cleanInput;
+  if (/^\d{4}$/.test(cleanInput)) return `${cleanInput}.HK`;
+  if (/^\d{5}$/.test(cleanInput)) return `${cleanInput}.TW`;
+  if (/^[A-Z]{1,5}$/i.test(cleanInput)) return cleanInput;
+  
+  // Chinese name mappings
+  const nameMap: Record<string, string> = {
+    "台積電": "2330.TW", "台积电": "2330.TW", "TSMC": "2330.TW",
+    "騰訊": "0700.HK", "腾讯": "0700.HK", "Tencent": "0700.HK",
+    "特斯拉": "TSLA", "Tesla": "TSLA",
+  };
+  
+  for (const [name, symbol] of Object.entries(nameMap)) {
+    if (input.includes(name)) return symbol;
+  }
+  
+  return null;
+}
 
 export async function POST(req: Request) {
   try {
@@ -42,7 +66,7 @@ export async function POST(req: Request) {
         }
       }
     } catch (err) {
-      console.log('Yahoo fetch failed, using mock data');
+      console.log('Yahoo fetch failed');
     }
     
     // Build analysis response
@@ -95,4 +119,8 @@ Based on current market conditions, please check back for a complete technical a
       summary: "Service temporarily unavailable. Please try again."
     });
   }
+}
+
+export async function GET() {
+  return NextResponse.json({ status: "API is running", timestamp: new Date().toISOString() });
 }
