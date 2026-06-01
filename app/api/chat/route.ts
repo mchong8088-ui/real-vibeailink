@@ -1,14 +1,19 @@
 import { NextResponse } from 'next/server';
+import { GoogleGenerativeAI } from "@google/generative-ai";
+import { buildAnalysisPrompt } from '../../../lib/ai/promptBuilder';
+
+const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY || "");
 
 const COMPANY_NAMES: Record<string, string> = {
-  "0700.HK": "騰訊控股 (Tencent Holdings)",
-  "2330.TW": "台積電 (TSMC)",
-  "TSLA": "特斯拉 (Tesla)",
-  "NVDA": "英偉達 (NVIDIA)",
-  "AAPL": "蘋果 (Apple)",
-  "MSFT": "微軟 (Microsoft)",
-  "AMZN": "亞馬遜 (Amazon)",
-  "CVX": "雪佛龍 (Chevron)",
+  "0700.HK": "騰訊控股",
+  "2330.TW": "台積電",
+  "TSLA": "特斯拉",
+  "NVDA": "英偉達",
+  "AAPL": "蘋果公司",
+  "MSFT": "微軟",
+  "AMZN": "亞馬遜",
+  "CVX": "雪佛龍",
+  "GOOGL": "谷歌",
 };
 
 function getCompanyName(symbol: string): string {
@@ -29,6 +34,7 @@ function detectStock(input: string): string | null {
     "騰訊": "0700.HK", "腾讯": "0700.HK", "Tencent": "0700.HK",
     "特斯拉": "TSLA", "Tesla": "TSLA",
     "英偉達": "NVDA", "輝達": "NVDA", "NVIDIA": "NVDA",
+    "蘋果": "AAPL", "苹果": "AAPL", "Apple": "AAPL",
   };
   
   for (const [name, symbol] of Object.entries(nameMap)) {
@@ -72,21 +78,12 @@ async function fetchStockData(symbol: string) {
     }
     
     let macdStatus = 'Neutral';
-    let macdDesc = '';
     if (validCloses.length >= 26) {
       const ema12 = validCloses.slice(-12).reduce((a, b) => a + b, 0) / 12;
       const ema26 = validCloses.slice(-26).reduce((a, b) => a + b, 0) / 26;
       const macd = ema12 - ema26;
       const signal = validCloses.slice(-9).reduce((a, b) => a + b, 0) / 9;
-      if (macd > signal) {
-        macdStatus = 'Bullish 📈';
-        macdDesc = 'MACD快線高於慢線，多頭動能增強';
-      } else if (macd < signal) {
-        macdStatus = 'Bearish 📉';
-        macdDesc = 'MACD快線低於慢線，空頭動能增強';
-      } else {
-        macdDesc = 'MACD動能平衡';
-      }
+      macdStatus = macd > signal ? 'Bullish 📈' : macd < signal ? 'Bearish 📉' : 'Neutral';
     }
     
     return {
@@ -94,7 +91,6 @@ async function fetchStockData(symbol: string) {
       changePercent: ((meta.regularMarketPrice - meta.previousClose) / meta.previousClose) * 100,
       rsi: rsi,
       macdStatus: macdStatus,
-      macdDesc: macdDesc,
       sma20: validCloses.slice(-20).reduce((a, b) => a + b, 0) / 20,
       sma50: validCloses.slice(-50).reduce((a, b) => a + b, 0) / 50,
     };
@@ -103,30 +99,66 @@ async function fetchStockData(symbol: string) {
   }
 }
 
+async function fetchUrlContent(url: string): Promise<string> {
+  try {
+    const res = await fetch(url, {
+      headers: {
+        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36',
+      },
+    });
+    if (!res.ok) return `無法獲取內容 (HTTP ${res.status})`;
+    
+    const html = await res.text();
+    const titleMatch = html.match(/<title>(.*?)<\/title>/i);
+    const title = titleMatch ? titleMatch[1] : '';
+    
+    let text = html.replace(/<script\b[^<]*(?:(?!<\/script>)<[^<]*)*<\/script>/gi, ' ');
+    text = text.replace(/<style\b[^<]*(?:(?!<\/style>)<[^<]*)*<\/style>/gi, ' ');
+    text = text.replace(/<[^>]+>/g, ' ');
+    text = text.replace(/\s+/g, ' ').trim();
+    
+    return `標題: ${title}\n內容摘要: ${text.substring(0, 1500)}`;
+  } catch (err) {
+    return `無法獲取內容: ${err}`;
+  }
+}
+
+async function callGemini(prompt: string): Promise<string> {
+  const model = genAI.getGenerativeModel({ model: "gemini-1.5-flash" });
+  const result = await model.generateContent(prompt);
+  const response = await result.response;
+  return response.text();
+}
+
 export async function POST(req: Request) {
   try {
     const contentType = req.headers.get('content-type') || '';
     
     let message = '';
-    let language = 'EN';
+    let language = 'ZH';
     let urlParam = null;
+    let fileContent = null;
     
     if (contentType.includes('multipart/form-data')) {
       const formData = await req.formData();
       message = formData.get('message') as string || '';
-      language = formData.get('language') as string || 'EN';
+      language = formData.get('language') as string || 'ZH';
       urlParam = formData.get('url') as string || null;
-      console.log('📎 URL from formData:', urlParam);
+      const file = formData.get('file') as File || null;
+      if (file) {
+        const bytes = await file.arrayBuffer();
+        const buffer = Buffer.from(bytes);
+        fileContent = buffer.toString('utf-8').substring(0, 1500);
+      }
     } else {
       const body = await req.json();
       message = body.message || '';
-      language = body.language || 'EN';
+      language = body.language || 'ZH';
       urlParam = body.url || null;
-      console.log('📎 URL from JSON:', urlParam);
     }
     
     console.log(`📝 Query: ${message}`);
-    console.log(`🔗 URL param: ${urlParam}`);
+    console.log(`🔗 URL: ${urlParam || 'none'}`);
     
     const symbol = detectStock(message);
     if (!symbol) {
@@ -134,6 +166,12 @@ export async function POST(req: Request) {
         success: false,
         summary: `無法識別股票代號。請嘗試: 2330.TW, 0700.HK, TSLA`
       });
+    }
+    
+    let urlContent = null;
+    if (urlParam) {
+      urlContent = await fetchUrlContent(urlParam);
+      console.log(`📄 URL content fetched, length: ${urlContent.length}`);
     }
     
     const stockData = await fetchStockData(symbol);
@@ -145,90 +183,18 @@ export async function POST(req: Request) {
     }
     
     const companyName = getCompanyName(symbol);
-    const isPositive = stockData.changePercent >= 0;
-    const rsiText = stockData.rsi ? stockData.rsi.toFixed(1) : 'N/A';
     
-    let rsiAdvice = '';
-    if (stockData.rsi) {
-      if (stockData.rsi > 70) rsiAdvice = '⚠️ 超買區間，短期可能回調';
-      else if (stockData.rsi < 30) rsiAdvice = '✅ 超賣區間，可能出現反彈';
-      else rsiAdvice = '➡️ 中性區間，動能平衡';
-    }
+    const prompt = buildAnalysisPrompt(
+      symbol, companyName,
+      stockData.price, stockData.changePercent,
+      stockData.rsi, stockData.macdStatus,
+      stockData.sma20, stockData.sma50,
+      urlContent, fileContent,
+      language
+    );
     
-    // Create analysis based on whether URL was provided
-    let urlAnalysis = '';
-    if (urlParam) {
-      urlAnalysis = `
-【3. 用戶提供新聞分析】
-您提供的新聞連結: ${urlParam}
-
-根據您提供的新聞連結，AI分析師已經閱讀並分析如下:
-
-📰 新聞核心內容:
-這則新聞報導了台積電(2330)即將舉行的股東會，以及近期的市場表現:
-- 三大法人單日合計買超突破2萬張，顯示機構資金看好
-- 股價創近期新高，站穩各天期均線之上
-- 4月營收年增17.5%，1月及3月營收創歷史新高
-- AI半導體需求強勁，先進製程產能滿載
-
-📊 AI分析師判斷:
-這則新聞對台積電(2330.TW)的影響評估:
-- 短期影響(1-4週): 正面。法人持續買超是真實的資金流入信號，股東會可能釋出正面展望。
-- 長期影響(3-12個月): 正面。AI需求持續增長，台積電作為全球龍頭直接受惠。
-- 風險提示: 股價短線漲幅較大，需注意技術性回調風險。
-
-💡 投資建議:
-- 新聞提到的法人買超和營收增長是實質利好
-- 短線漲多後不建議追高，可等待拉回
-- 中長期投資者可持續持有，關注股東會指引
-
-${stockData.rsi && stockData.rsi < 40 ? '⚠️ 注意: RSI偏低，短線可能有反彈機會。' : ''}`;
-    } else {
-      urlAnalysis = `
-【3. 新聞分析】
-未提供新聞連結。建議關注公司業績公告和行業政策變化。`;
-    }
-    
-    const entryZone = stockData.rsi && stockData.rsi < 40 
-      ? `$${(stockData.price * 0.95).toFixed(2)} - $${stockData.price.toFixed(2)}` 
-      : `$${(stockData.price * 0.92).toFixed(2)} - $${(stockData.price * 0.97).toFixed(2)}`;
-    
-    const analysis = `${companyName} (${symbol}) 目前股價為 $${stockData.price.toFixed(2)}，日漲跌幅 ${isPositive ? '+' : ''}${stockData.changePercent.toFixed(2)}%。
-
-【1. 技術分析】
-RSI(14): ${rsiText} - ${rsiAdvice}
-
-MACD: ${stockData.macdStatus}
-${stockData.macdDesc}
-
-均線系統: SMA20=$${stockData.sma20?.toFixed(2) || 'N/A'}, SMA50=$${stockData.sma50?.toFixed(2) || 'N/A'}
-${stockData.sma20 && stockData.sma50 ? (stockData.sma20 > stockData.sma50 ? '短期均線高於長期均線，技術面偏多' : '短期均線低於長期均線，技術面偏空') : ''}
-
-${urlAnalysis}
-
-【4. 看好因素】
-1. AI半導體需求強勁，先進製程產能滿載
-2. 法人持續買超，籌碼集中度提升
-3. 營收創新高，基本面強勁
-
-【5. 看淡因素】
-1. 短線漲多，可能技術性回調
-2. 全球宏觀經濟不確定性
-3. 地緣政治風險
-
-【6. 買賣區間建議】
-📊 理想買入區間: ${entryZone}
-🎯 短期目標價: $${(stockData.price * 1.05).toFixed(2)} - $${(stockData.price * 1.1).toFixed(2)}
-🎯 中期目標價: $${(stockData.price * 1.12).toFixed(2)} - $${(stockData.price * 1.2).toFixed(2)}
-🛡️ 建議止蝕位: $${(stockData.price * 0.92).toFixed(2)}
-
-【7. AI投資建議】
-建議: ${stockData.rsi && stockData.rsi < 35 ? '分批買入' : stockData.rsi && stockData.rsi > 65 ? '分批獲利' : '持有觀望'}
-
-【8. AI信心評分】
-信心評分: ${stockData.rsi ? (stockData.rsi < 35 ? 75 : stockData.rsi > 65 ? 65 : 70) : 65}%
-
-⚠️ AI分析僅供參考，不構成投資建議。`;
+    console.log('🤖 Calling Gemini AI...');
+    const aiAnalysis = await callGemini(prompt);
     
     return NextResponse.json({
       success: true,
@@ -238,8 +204,8 @@ ${urlAnalysis}
       changePercent: stockData.changePercent,
       rsi: stockData.rsi,
       macd: stockData.macdStatus,
-      summary: analysis,
-      text: analysis,
+      summary: aiAnalysis,
+      text: aiAnalysis,
     });
     
   } catch (error) {
