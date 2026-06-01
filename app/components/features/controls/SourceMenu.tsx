@@ -26,33 +26,33 @@ export const SourceMenu: React.FC<SourceMenuProps> = ({
       return {
         title: '新增分析來源',
         urlOption: '分析新聞或財經資訊',
-        urlPlaceholder: '貼上 Motley Fool, CNBC, Bloomberg 等連結',
-        photoOption: '拍照或上傳文件',
-        photoDesc: '掃描實體報告或截圖',
-        fileOption: '上傳數據文件',
-        fileDesc: 'PDF, CSV, 或技術資料表',
+        urlPlaceholder: '貼上 Motley Fool, CNBC, Bloomberg, 信報等連結',
+        photoOption: '拍照或上傳圖片',
+        photoDesc: '掃描圖表、報告或截圖',
+        fileOption: '上傳文件',
+        fileDesc: 'PDF, CSV, 或財報文件',
         back: '返回'
       };
     } else if (langKey === '简体中文') {
       return {
         title: '新增分析来源',
         urlOption: '分析新闻或财经资讯',
-        urlPlaceholder: '贴上 Motley Fool, CNBC, Bloomberg 等链接',
-        photoOption: '拍照或上传文件',
-        photoDesc: '扫描实体报告或截图',
-        fileOption: '上传数据文件',
-        fileDesc: 'PDF, CSV, 或技术资料表',
+        urlPlaceholder: '贴上 Motley Fool, CNBC, Bloomberg, 信报等链接',
+        photoOption: '拍照或上传图片',
+        photoDesc: '扫描图表、报告或截图',
+        fileOption: '上传文件',
+        fileDesc: 'PDF, CSV, 或财报文件',
         back: '返回'
       };
     } else {
       return {
         title: 'Add Analysis Source',
-        urlOption: 'Analyze News or Financial Information',
+        urlOption: 'Analyze News or Financial Info',
         urlPlaceholder: 'Paste links from Motley Fool, CNBC, Bloomberg, etc.',
-        photoOption: 'Take Photo or Upload',
-        photoDesc: 'Scan physical reports or screenshots',
-        fileOption: 'Upload Data File',
-        fileDesc: 'PDF, CSV, or Technical Sheets',
+        photoOption: 'Take Photo or Upload Image',
+        photoDesc: 'Scan charts, reports or screenshots',
+        fileOption: 'Upload File',
+        fileDesc: 'PDF, CSV, or Financial Reports',
         back: 'Back'
       };
     }
@@ -113,7 +113,6 @@ export const SourceMenu: React.FC<SourceMenuProps> = ({
         width: '100%',
         maxWidth: '500px',
         padding: '24px',
-        animation: 'slideUp 0.3s ease',
       }} onClick={(e) => e.stopPropagation()}>
         
         {!showUrlInput ? (
@@ -184,6 +183,21 @@ export const SourceMenu: React.FC<SourceMenuProps> = ({
             >
               {t.back}
             </button>
+            
+            <input
+              ref={fileInputRef}
+              type="file"
+              accept=".pdf,.csv,.txt,.jpg,.png,.jpeg"
+              style={{ display: 'none' }}
+              onChange={(e) => handleFileUpload(e, 'file')}
+            />
+            <input
+              ref={photoInputRef}
+              type="file"
+              accept="image/*"
+              style={{ display: 'none' }}
+              onChange={(e) => handleFileUpload(e, 'photo')}
+            />
           </>
         ) : (
           <>
@@ -235,29 +249,7 @@ export const SourceMenu: React.FC<SourceMenuProps> = ({
             </div>
           </>
         )}
-        
-        <input
-          ref={fileInputRef}
-          type="file"
-          accept=".pdf,.csv,.txt,.doc,.docx"
-          style={{ display: 'none' }}
-          onChange={(e) => handleFileUpload(e, 'file')}
-        />
-        <input
-          ref={photoInputRef}
-          type="file"
-          accept="image/*"
-          capture="environment"
-          style={{ display: 'none' }}
-          onChange={(e) => handleFileUpload(e, 'photo')}
-        />
       </div>
-      <style>{`
-        @keyframes slideUp {
-          from { transform: translateY(100%); }
-          to { transform: translateY(0); }
-        }
-      `}</style>
     </div>
   );
 };
