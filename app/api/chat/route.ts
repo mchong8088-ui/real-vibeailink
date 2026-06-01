@@ -1,5 +1,36 @@
 import { NextResponse } from 'next/server';
 
+// Stock symbol to company name mapping
+const COMPANY_NAMES: Record<string, string> = {
+  // Taiwan stocks
+  "2330.TW": "台灣積體電路製造股份有限公司 (TSMC)",
+  "2454.TW": "聯發科技股份有限公司 (MediaTek)",
+  "2317.TW": "鴻海精密工業股份有限公司 (Foxconn)",
+  
+  // Hong Kong stocks
+  "0700.HK": "騰訊控股有限公司 (Tencent Holdings)",
+  "1211.HK": "比亞迪股份有限公司 (BYD)",
+  "0388.HK": "香港交易及結算所有限公司 (HKEX)",
+  "0005.HK": "滙豐控股有限公司 (HSBC Holdings)",
+  "9988.HK": "阿里巴巴集團控股有限公司 (Alibaba Group)",
+  "3690.HK": "美團 (Meituan)",
+  "1810.HK": "小米集團 (Xiaomi)",
+  
+  // US stocks
+  "TSLA": "特斯拉公司 (Tesla, Inc.)",
+  "AAPL": "蘋果公司 (Apple Inc.)",
+  "NVDA": "英偉達公司 (NVIDIA Corporation)",
+  "MSFT": "微軟公司 (Microsoft Corporation)",
+  "AMZN": "亞馬遜公司 (Amazon.com, Inc.)",
+  "GOOGL": "谷歌公司 (Alphabet Inc.)",
+  "META": "Meta Platforms, Inc.",
+  "AMD": "超微半導體公司 (Advanced Micro Devices, Inc.)",
+};
+
+function getCompanyName(symbol: string): string {
+  return COMPANY_NAMES[symbol] || symbol;
+}
+
 // Simple stock symbol detection
 function detectStock(input: string): string | null {
   if (!input || input.trim() === '') return null;
@@ -14,6 +45,7 @@ function detectStock(input: string): string | null {
     "台積電": "2330.TW", "台积电": "2330.TW", "TSMC": "2330.TW",
     "騰訊": "0700.HK", "腾讯": "0700.HK", "Tencent": "0700.HK",
     "特斯拉": "TSLA", "Tesla": "TSLA",
+    "比亞迪": "1211.HK", "比亚迪": "1211.HK", "BYD": "1211.HK",
   };
   
   for (const [name, symbol] of Object.entries(nameMap)) {
@@ -81,10 +113,11 @@ function determineTrend(prices: number[]): string {
   return 'Sideways ➡️';
 }
 
-// Generate structured analysis (no external AI needed)
+// Generate structured analysis with company name
 function generateAnalysis(symbol: string, price: number, changePercent: number, rsi: number | null, trend: string, news: any[], userQuestion: string, language: string): string {
   const isCantonese = language === 'Cantonese';
   const isChinese = language === '简体中文';
+  const companyName = getCompanyName(symbol);
   
   const rsiValue = rsi ? rsi.toFixed(1) : 'N/A';
   const rsiStatus = rsi ? (rsi > 70 ? 'Overbought' : rsi < 30 ? 'Oversold' : 'Neutral') : 'N/A';
@@ -96,10 +129,10 @@ function generateAnalysis(symbol: string, price: number, changePercent: number, 
     : 'No significant news for this stock recently.';
   
   if (isCantonese) {
-    return `## 📊 ${symbol} 股票分析報告
+    return `## 📊 ${symbol} - ${companyName}
 
 ### 1. 摘要
-${symbol} 目前股價為 $${price.toFixed(2)}，${changePercent > 0 ? '上升' : changePercent < 0 ? '下跌' : '持平'} ${changeText}。RSI 為 ${rsiValue}，處於 ${rsiStatus === 'Overbought' ? '超買' : rsiStatus === 'Oversold' ? '超賣' : '中性'} 水平。整體趨勢 ${trend === 'Bullish 📈' ? '看好' : trend === 'Bearish 📉' ? '看淡' : '橫向整理'}。
+${companyName} (${symbol}) 目前股價為 $${price.toFixed(2)}，${changePercent > 0 ? '上升' : changePercent < 0 ? '下跌' : '持平'} ${changeText}。RSI 為 ${rsiValue}，處於 ${rsiStatus === 'Overbought' ? '超買' : rsiStatus === 'Oversold' ? '超賣' : '中性'} 水平。整體趨勢 ${trend === 'Bullish 📈' ? '看好' : trend === 'Bearish 📉' ? '看淡' : '橫向整理'}。
 
 ### 2. 技術分析
 - **RSI(14)**: ${rsiValue} - ${rsiStatus === 'Overbought' ? '超買區間，可能出現回調' : rsiStatus === 'Oversold' ? '超賣區間，可能出現反彈' : '中性區間，動能平衡'}
@@ -133,10 +166,10 @@ ${newsText}
 
 *⚠️ 以上分析僅供參考，不構成投資建議。*`;
   } else {
-    return `## 📊 ${symbol} Stock Analysis Report
+    return `## 📊 ${symbol} - ${companyName}
 
 ### 1. SUMMARY
-${symbol} is trading at $${price.toFixed(2)} with a ${changeDirection} of ${changeText}. RSI is at ${rsiValue} (${rsiStatus}). The overall trend is ${trend}.
+${companyName} (${symbol}) is trading at $${price.toFixed(2)} with a ${changeDirection} of ${changeText}. RSI is at ${rsiValue} (${rsiStatus}). The overall trend is ${trend}.
 
 ### 2. TECHNICAL ANALYSIS
 - **RSI(14)**: ${rsiValue} - ${rsiStatus === 'Overbought' ? 'Overbought territory, potential pullback' : rsiStatus === 'Oversold' ? 'Oversold territory, potential bounce' : 'Neutral zone, balanced momentum'}
@@ -242,6 +275,7 @@ export async function POST(req: Request) {
     return NextResponse.json({
       success: true,
       symbol: symbol,
+      companyName: getCompanyName(symbol),
       price: marketData.price,
       changePercent: marketData.changePercent,
       rsi: rsi,
