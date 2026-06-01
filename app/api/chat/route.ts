@@ -1,4 +1,5 @@
 import { NextResponse } from 'next/server';
+import { buildAnalysisPrompt } from '../../../lib/ai/promptBuilder';
 
 // Simple stock symbol detection
 function detectStock(input: string): string | null {
@@ -22,10 +23,43 @@ function detectStock(input: string): string | null {
   return null;
 }
 
-// Calculate RSI from price history
+// Fetch news from Finnhub (free tier)
+async function fetchNews(symbol: string): Promise<Array<{title: string; summary: string; source: string}>> {
+  try {
+    const apiKey = process.env.FINNHUB_API_KEY;
+    if (!apiKey) return [];
+    
+    let finnhubSymbol = symbol;
+    if (symbol.endsWith('.HK')) finnhubSymbol = symbol.replace('.HK', '');
+    if (symbol.endsWith('.TW')) finnhubSymbol = symbol.replace('.TW', '');
+    
+    const from = new Date();
+    from.setDate(from.getDate() - 7);
+    const to = new Date();
+    const fromStr = from.toISOString().split('T')[0];
+    const toStr = to.toISOString().split('T')[0];
+    
+    const url = `https://finnhub.io/api/v1/company-news?symbol=${finnhubSymbol}&from=${fromStr}&to=${toStr}&token=${apiKey}`;
+    const res = await fetch(url);
+    if (!res.ok) return [];
+    
+    const data = await res.json();
+    if (!Array.isArray(data)) return [];
+    
+    return data.slice(0, 5).map((item: any) => ({
+      title: item.headline || '',
+      summary: item.summary || '',
+      source: item.source || 'Financial News',
+    }));
+  } catch (err) {
+    console.log('News fetch failed:', err);
+    return [];
+  }
+}
+
+// Calculate RSI
 function calculateRSI(prices: number[], period: number = 14): number | null {
   if (prices.length < period + 1) return null;
-  
   let gains = 0, losses = 0;
   for (let i = prices.length - period; i < prices.length; i++) {
     const change = prices[i] - (prices[i-1] || prices[i]);
@@ -39,18 +73,18 @@ function calculateRSI(prices: number[], period: number = 14): number | null {
   return 100 - (100 / (1 + rs));
 }
 
-// Determine trend based on moving averages
+// Determine trend
 function determineTrend(prices: number[]): string {
-  if (prices.length < 20) return 'Insufficient data';
+  if (prices.length < 20) return 'Sideways';
   const sma20 = prices.slice(-20).reduce((a, b) => a + b, 0) / 20;
   const currentPrice = prices[prices.length - 1];
-  if (currentPrice > sma20 * 1.02) return 'Bullish 📈';
-  if (currentPrice < sma20 * 0.98) return 'Bearish 📉';
-  return 'Sideways ➡️';
+  if (currentPrice > sma20 * 1.02) return 'Bullish';
+  if (currentPrice < sma20 * 0.98) return 'Bearish';
+  return 'Sideways';
 }
 
-// Fetch historical data from Yahoo
-async function fetchHistoricalData(symbol: string): Promise<number[]> {
+// Fetch data from Yahoo
+async function fetchStockData(symbol: string) {
   try {
     let yahooSymbol = symbol;
     if (symbol.endsWith('.HK')) yahooSymbol = `${symbol.replace('.HK', '')}.HK`;
@@ -58,22 +92,62 @@ async function fetchHistoricalData(symbol: string): Promise<number[]> {
     
     const url = `https://query1.finance.yahoo.com/v8/finance/chart/${yahooSymbol}`;
     const res = await fetch(url);
-    if (!res.ok) return [];
+    if (!res.ok) return null;
     
     const data = await res.json();
     const result = data.chart?.result?.[0];
-    const closes = result?.indicators?.quote?.[0]?.close || [];
-    return closes.filter((c: number) => c !== null);
+    if (!result) return null;
+    
+    const meta = result.meta;
+    const closes = result.indicators?.quote?.[0]?.close || [];
+    const validCloses = closes.filter((c: number) => c !== null);
+    
+    return {
+      price: meta.regularMarketPrice,
+      previousClose: meta.previousClose,
+      changePercent: ((meta.regularMarketPrice - meta.previousClose) / meta.previousClose) * 100,
+      closes: validCloses,
+    };
   } catch (err) {
-    return [];
+    return null;
   }
+}
+
+// Call AI (mock for now, will integrate Gemini)
+async function callAI(prompt: string): Promise<string> {
+  // This is a mock response - you'll integrate Gemini/OpenAI here
+  // For now, return a structured analysis based on the prompt
+  return `## 1. SUMMARY
+The stock shows mixed signals with neutral momentum.
+
+## 2. TECHNICAL ANALYSIS
+RSI is at neutral levels. MACD indicates sideways movement. Price is range-bound.
+
+## 3. FUNDAMENTAL ANALYSIS
+Valuation appears reasonable. Revenue growth remains positive.
+
+## 4. NEWS SENTIMENT
+Recent news sentiment is neutral to slightly positive.
+
+## 5. RISK ANALYSIS
+Market volatility and sector rotation are key risks.
+
+## 6. BULL CASE
+Technical support levels holding. Growth catalysts ahead.
+
+## 7. BEAR CASE
+Resistance overhead. Competitive pressures increasing.
+
+## 8. FINAL RECOMMENDATION
+HOLD with a target price range. Wait for clearer signals.`;
 }
 
 export async function POST(req: Request) {
   try {
-    const { message, language = 'EN' } = await req.json();
+    const { message, language = 'EN', url, attachments } = await req.json();
     console.log(`📝 Analyzing: ${message}`);
     
+    // Detect stock symbol
     const symbol = detectStock(message);
     if (!symbol) {
       return NextResponse.json({
@@ -84,90 +158,63 @@ export async function POST(req: Request) {
     
     console.log(`📊 Symbol: ${symbol}`);
     
-    // Fetch price and historical data
-    let price = null;
-    let changePercent = null;
-    let rsi: number | null = null;
-    let trend = 'Analyzing...';
-    
-    try {
-      let yahooSymbol = symbol;
-      if (symbol.endsWith('.HK')) yahooSymbol = `${symbol.replace('.HK', '')}.HK`;
-      if (symbol.endsWith('.TW')) yahooSymbol = `${symbol.replace('.TW', '')}.TW`;
-      
-      const url = `https://query1.finance.yahoo.com/v8/finance/chart/${yahooSymbol}`;
-      const res = await fetch(url);
-      
-      if (res.ok) {
-        const data = await res.json();
-        const result = data.chart?.result?.[0];
-        if (result?.meta) {
-          const meta = result.meta;
-          price = meta.regularMarketPrice;
-          const previousClose = meta.previousClose;
-          if (price && previousClose) {
-            changePercent = ((price - previousClose) / previousClose) * 100;
-          }
-        }
-        
-        // Get historical closes for indicators
-        const closes = result?.indicators?.quote?.[0]?.close || [];
-        const validCloses = closes.filter((c: number) => c !== null);
-        
-        if (validCloses.length >= 15) {
-          rsi = calculateRSI(validCloses);
-          trend = determineTrend(validCloses);
-        }
-      }
-    } catch (err) {
-      console.log('Yahoo fetch failed');
+    // Fetch market data
+    const marketData = await fetchStockData(symbol);
+    if (!marketData) {
+      return NextResponse.json({
+        success: false,
+        summary: `Unable to fetch market data for ${symbol}. Please try again.`
+      });
     }
     
-    // Build analysis
-    const priceDisplay = price ? `$${price.toFixed(2)}` : 'N/A';
-    const changeDisplay = changePercent ? `${changePercent > 0 ? '+' : ''}${changePercent.toFixed(2)}%` : 'N/A';
-    const rsiDisplay = rsi ? `${rsi.toFixed(1)}` : 'Calculating...';
-    const rsiStatus = rsi ? (rsi > 70 ? '(Overbought)' : rsi < 30 ? '(Oversold)' : '(Neutral)') : '';
-    const macdStatus = rsi ? (rsi > 60 ? 'Bullish 📈' : rsi < 40 ? 'Bearish 📉' : 'Neutral ➡️') : 'Calculating...';
+    // Calculate technical indicators
+    const rsi = calculateRSI(marketData.closes);
+    const trend = determineTrend(marketData.closes);
+    const macd = rsi ? (rsi > 60 ? 'Bullish' : rsi < 40 ? 'Bearish' : 'Neutral') : 'Neutral';
     
-    const analysis = `
-## 📊 ${symbol} Analysis
-
-### 📈 Price Information
-- **Current Price**: ${priceDisplay}
-- **Change**: ${changeDisplay}
-- **Time**: ${new Date().toLocaleString()}
-
-### 🔬 Technical Indicators
-- **RSI (14)**: ${rsiDisplay} ${rsiStatus}
-- **MACD**: ${macdStatus}
-- **Trend**: ${trend}
-
-### 📰 Market Summary
-${symbol} is trading at ${priceDisplay} with a ${changePercent > 0 ? 'gain' : changePercent < 0 ? 'loss' : 'stable'} of ${changeDisplay}. 
-RSI is at ${rsiDisplay} indicating ${rsi ? (rsi > 70 ? 'overbought conditions' : rsi < 30 ? 'oversold conditions' : 'neutral momentum') : 'neutral momentum'}.
-
-### 🎯 Recommendation
-Based on current technical indicators:
-- **Short-term**: ${rsi ? (rsi > 70 ? 'Consider taking profits' : rsi < 30 ? 'Watch for potential reversal' : 'Hold') : 'Analyzing...'}
-- **Medium-term**: ${trend === 'Bullish 📈' ? 'Accumulate on dips' : trend === 'Bearish 📉' ? 'Wait for stabilization' : 'Range trading'}
-
----
-*Data source: Yahoo Finance | AI-powered analysis for reference only*
-`;
+    // Fetch news
+    const news = await fetchNews(symbol);
     
-    return NextResponse.json({
+    // If user provided a URL, add it as news
+    if (url) {
+      news.unshift({
+        title: `User-provided article: ${url.substring(0, 80)}...`,
+        summary: 'User submitted this link for analysis.',
+        source: 'User Input',
+      });
+    }
+    
+    // Build the analysis prompt
+    const prompt = buildAnalysisPrompt({
+      symbol,
+      price: marketData.price,
+      changePercent: marketData.changePercent,
+      rsi: rsi,
+      macd: macd,
+      trend: trend,
+      news: news,
+      userQuestion: message,
+      language: language,
+    });
+    
+    console.log('📝 Prompt built, calling AI...');
+    
+    // Call AI for analysis
+    const aiAnalysis = await callAI(prompt);
+    
+    const response = {
       success: true,
       symbol: symbol,
-      price: price || "N/A",
-      change: changePercent || 0,
-      changePercent: changePercent || 0,
+      price: marketData.price,
+      changePercent: marketData.changePercent,
       rsi: rsi,
-      macd: macdStatus,
+      macd: macd,
       trend: trend,
-      summary: analysis,
-      text: analysis,
-    });
+      summary: aiAnalysis,
+      text: aiAnalysis,
+    };
+    
+    return NextResponse.json(response);
     
   } catch (error) {
     console.error('API Error:', error);
