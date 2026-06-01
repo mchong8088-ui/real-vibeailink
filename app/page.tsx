@@ -204,12 +204,12 @@ export default function VibeAiMaster() {
       {/* Main Content */}
       <div style={{ display: 'flex', flex: 1, overflow: 'hidden' }}>
         {/* Left Panel */}
-        <div style={{ width: '20%', backgroundColor: '#FEF08A', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', padding: '24px', overflow: 'auto', minWidth: '200px' }}>
-          <div style={{ width: '100px', height: '100px', borderRadius: '50%', overflow: 'hidden', marginBottom: '16px', backgroundColor: 'white', boxShadow: '0 2px 4px rgba(0,0,0,0.1)' }}>
+        <div style={{ width: '25%', backgroundColor: '#FEF08A', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', padding: '24px', overflow: 'auto', minWidth: '200px' }}>
+          <div style={{ width: '140px', height: '140px', borderRadius: '50%', overflow: 'hidden', marginBottom: '16px', backgroundColor: 'white', boxShadow: '0 2px 4px rgba(0,0,0,0.1)' }}>
             <img src="/avatars/michael_teresa.jpg" style={{ width: '100%', height: '100%', objectFit: 'cover' }} alt="Michael & Teresa" />
           </div>
-          <h3 style={{ fontWeight: 'bold', color: '#1F2937', fontSize: '14px', textAlign: 'center', margin: '0' }}>Michael & Teresa</h3>
-          <p style={{ fontSize: '10px', fontWeight: 'bold', color: '#2563EB', textAlign: 'center', marginTop: '8px' }}>{text.financeText}</p>
+          <h3 style={{ fontWeight: 'bold', color: '#1F2937', fontSize: '16px', textAlign: 'center', margin: '0' }}>Michael & Teresa</h3>
+          <p style={{ fontSize: '12px', fontWeight: 'bold', color: '#2563EB', textAlign: 'center', marginTop: '8px' }}>{text.financeText}</p>
           <p style={{ fontSize: '9px', color: '#6B7280', textAlign: 'center', marginTop: '8px' }}>{systemState.os} Environment</p>
         </div>
 

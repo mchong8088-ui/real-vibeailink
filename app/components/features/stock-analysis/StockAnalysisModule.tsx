@@ -16,7 +16,6 @@ export const StockAnalysisModule: React.FC<Props> = ({ data, isLoading, langKey,
     setIsMobile(window.innerWidth <= 768);
   }, []);
 
-  // Global market indices data
   const globalIndices = [
     { name: "S&P 500", value: "5,234.18", change: "+0.8%", positive: true },
     { name: "NASDAQ", value: "16,428.82", change: "+1.2%", positive: true },
@@ -40,13 +39,7 @@ export const StockAnalysisModule: React.FC<Props> = ({ data, isLoading, langKey,
   }
 
   if (!data || !data.summary) {
-    return (
-      <div style={{ backgroundColor: 'white', borderRadius: '12px', padding: '20px', textAlign: 'center' }}>
-        <Activity size={32} style={{ color: '#9CA3AF', margin: '0 auto 12px' }} />
-        <p style={{ color: '#6B7280' }}>Enter a stock symbol to begin analysis</p>
-        <p style={{ fontSize: '12px', color: '#9CA3AF', marginTop: '8px' }}>e.g., TSLA, 0700.HK, 2330.TW</p>
-      </div>
-    );
+    return null;
   }
 
   const companyName = data.companyName || data.symbol;
@@ -54,7 +47,6 @@ export const StockAnalysisModule: React.FC<Props> = ({ data, isLoading, langKey,
 
   return (
     <div style={{ maxWidth: '100%' }}>
-      {/* Section 1: Global Market Indices */}
       <div style={{ backgroundColor: '#FEF08A', borderRadius: '12px', padding: '12px', marginBottom: '16px' }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '10px' }}>
           <Globe size={14} style={{ color: '#B45309' }} />
@@ -62,7 +54,6 @@ export const StockAnalysisModule: React.FC<Props> = ({ data, isLoading, langKey,
             {langKey === 'English' ? 'Global Market Indices' : langKey === 'Cantonese' ? '全球市場指數' : '全球市场指数'}
           </h3>
         </div>
-        {/* Row 1 */}
         <div style={{ display: 'flex', gap: '10px', marginBottom: '10px' }}>
           {row1Indices.map((idx, i) => (
             <div key={i} style={{ flex: 1, backgroundColor: 'white', borderRadius: '8px', padding: '8px', textAlign: 'center' }}>
@@ -72,7 +63,6 @@ export const StockAnalysisModule: React.FC<Props> = ({ data, isLoading, langKey,
             </div>
           ))}
         </div>
-        {/* Row 2 */}
         <div style={{ display: 'flex', gap: '10px' }}>
           {row2Indices.map((idx, i) => (
             <div key={i} style={{ flex: 1, backgroundColor: 'white', borderRadius: '8px', padding: '8px', textAlign: 'center' }}>
@@ -84,7 +74,6 @@ export const StockAnalysisModule: React.FC<Props> = ({ data, isLoading, langKey,
         </div>
       </div>
 
-      {/* Section 2: Stock Info Bar */}
       <div style={{ backgroundColor: '#FEF08A', borderRadius: '12px', padding: '12px', marginBottom: '16px' }}>
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '12px' }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
@@ -96,7 +85,7 @@ export const StockAnalysisModule: React.FC<Props> = ({ data, isLoading, langKey,
               <p style={{ fontSize: '11px', color: '#6B7280', margin: 0 }}>{data.symbol}</p>
             </div>
             <span style={{ fontSize: '13px', fontWeight: 'bold', color: isPositive ? '#10B981' : '#EF4444' }}>
-              {isPositive ? `+${data.changePercent}%` : `${data.changePercent}%`}
+              {isPositive ? `+${data.changePercent?.toFixed(2)}%` : `${data.changePercent?.toFixed(2)}%`}
             </span>
           </div>
           <div style={{ display: 'flex', gap: '20px' }}>
@@ -119,7 +108,6 @@ export const StockAnalysisModule: React.FC<Props> = ({ data, isLoading, langKey,
         </div>
       </div>
 
-      {/* Section 3: Analysis Report */}
       <div style={{ backgroundColor: 'white', borderRadius: '12px', padding: '20px', border: '1px solid #E5E7EB' }}>
         <div style={{ whiteSpace: 'pre-wrap', lineHeight: 1.6, fontSize: '13px' }}>
           {typeof data.summary === 'string' ? data.summary : JSON.stringify(data.summary)}
