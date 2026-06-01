@@ -63,9 +63,6 @@ export const SourceMenu: React.FC<SourceMenuProps> = ({
   const handleUrlSubmit = () => {
     if (urlInput.trim()) {
       onSelectSource('url', urlInput.trim());
-      window.dispatchEvent(new CustomEvent('source-select', { 
-        detail: { sourceType: 'url', sourceData: urlInput.trim() } 
-      }));
       setUrlInput('');
       setShowUrlInput(false);
       onClose();
@@ -84,9 +81,6 @@ export const SourceMenu: React.FC<SourceMenuProps> = ({
           type: file.type,
         };
         onSelectSource(type, sourceData);
-        window.dispatchEvent(new CustomEvent('source-select', { 
-          detail: { sourceType: type, sourceData } 
-        }));
       };
       reader.readAsDataURL(file);
     }

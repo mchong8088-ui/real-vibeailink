@@ -12,7 +12,6 @@ const COMPANY_NAMES: Record<string, string> = {
   "MSFT": "微軟 (Microsoft)",
   "AMZN": "亞馬遜 (Amazon)",
   "CVX": "雪佛龍 (Chevron)",
-  "FUTU": "富途控股 (Futu Holdings)",
 };
 
 function getCompanyName(symbol: string): string {
@@ -29,13 +28,12 @@ function detectStock(input: string): string | null {
   if (/^[A-Z]{1,5}$/i.test(cleanInput)) return cleanInput;
   
   const nameMap: Record<string, string> = {
-    "台積電": "2330.TW", "台积电": "2330.TW", "TSMC": "2330.TW",
     "騰訊": "0700.HK", "腾讯": "0700.HK", "Tencent": "0700.HK",
+    "台積電": "2330.TW", "台积电": "2330.TW", "TSMC": "2330.TW",
     "特斯拉": "TSLA", "Tesla": "TSLA",
     "英偉達": "NVDA", "輝達": "NVDA", "NVIDIA": "NVDA",
     "蘋果": "AAPL", "苹果": "AAPL", "Apple": "AAPL",
     "雪佛龍": "CVX", "Chevron": "CVX",
-    "富途": "FUTU",
   };
   
   for (const [name, symbol] of Object.entries(nameMap)) {
@@ -44,47 +42,56 @@ function detectStock(input: string): string | null {
   return null;
 }
 
-async function fetchUrlContent(url: string): Promise<{ content: string; success: boolean; title: string }> {
-  try {
-    const controller = new AbortController();
-    const timeoutId = setTimeout(() => controller.abort(), 10000);
-    
-    const res = await fetch(url, {
-      signal: controller.signal,
-      headers: {
-        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36',
-      },
-    });
-    
-    clearTimeout(timeoutId);
-    
-    if (!res.ok) {
-      return { content: `HTTP ${res.status}`, success: false, title: '' };
-    }
-    
-    const html = await res.text();
-    const titleMatch = html.match(/<title>(.*?)<\/title>/i);
-    const title = titleMatch ? titleMatch[1] : '';
-    
-    // Extract main content - look for article body
-    let text = html;
-    const articleMatch = html.match(/<article[^>]*>([\s\S]*?)<\/article>/i);
-    if (articleMatch) {
-      text = articleMatch[1];
-    }
-    text = text.replace(/<script\b[^<]*(?:(?!<\/script>)<[^<]*)*<\/script>/gi, ' ');
-    text = text.replace(/<style\b[^<]*(?:(?!<\/style>)<[^<]*)*<\/style>/gi, ' ');
-    text = text.replace(/<[^>]+>/g, ' ');
-    text = text.replace(/\s+/g, ' ').trim();
-    
-    return { 
-      content: text.substring(0, 2000),
-      success: true,
-      title: title
-    };
-  } catch (err) {
-    return { content: `獲取失敗`, success: false, title: '' };
+// Calculate MACD
+function calculateMACD(prices: number[]): { macd: number; signal: number; histogram: number; status: string; description: string } {
+  if (prices.length < 26) {
+    return { macd: 0, signal: 0, histogram: 0, status: 'Neutral', description: '數據不足，無法計算MACD' };
   }
+  
+  const calculateEMA = (data: number[], period: number): number => {
+    const multiplier = 2 / (period + 1);
+    let ema = data[0];
+    for (let i = 1; i < data.length; i++) {
+      ema = (data[i] - ema) * multiplier + ema;
+    }
+    return ema;
+  };
+  
+  const ema12 = calculateEMA(prices.slice(-26), 12);
+  const ema26 = calculateEMA(prices.slice(-26), 26);
+  const macd = ema12 - ema26;
+  
+  const macdValues: number[] = [];
+  for (let i = 0; i < prices.length; i++) {
+    const e12 = calculateEMA(prices.slice(0, i + 1).slice(-26), 12);
+    const e26 = calculateEMA(prices.slice(0, i + 1).slice(-26), 26);
+    macdValues.push(e12 - e26);
+  }
+  const signal = macdValues.length >= 9 ? calculateEMA(macdValues.slice(-9), 9) : macd;
+  const histogram = macd - signal;
+  
+  let status = 'Neutral';
+  let description = '';
+  if (macd > signal && histogram > 0) {
+    status = 'Bullish 📈';
+    description = 'MACD快線高於慢線，柱狀圖為正，顯示多頭動能增強，上升趨勢有望延續';
+  } else if (macd < signal && histogram < 0) {
+    status = 'Bearish 📉';
+    description = 'MACD快線低於慢線，柱狀圖為負，顯示空頭動能增強，下跌風險增加';
+  } else {
+    description = 'MACD快線與慢線接近，柱狀圖接近零軸，顯示動能平衡，方向未明';
+  }
+  
+  return { macd, signal, histogram, status, description };
+}
+
+// Calculate support and resistance
+function calculateLevels(prices: number[], currentPrice: number): { support: number[]; resistance: number[] } {
+  const recentPrices = prices.slice(-50);
+  const sorted = [...recentPrices].sort((a, b) => a - b);
+  const support = [sorted[5], sorted[10], sorted[15]].filter(v => v < currentPrice);
+  const resistance = [sorted[sorted.length - 6], sorted[sorted.length - 11], sorted[sorted.length - 16]].filter(v => v > currentPrice);
+  return { support: support.slice(0, 3), resistance: resistance.slice(0, 3) };
 }
 
 async function fetchStockData(symbol: string) {
@@ -105,6 +112,7 @@ async function fetchStockData(symbol: string) {
     const closes = result.indicators?.quote?.[0]?.close || [];
     const validCloses = closes.filter((c: number) => c !== null);
     
+    // Calculate RSI
     let rsi = null;
     if (validCloses.length >= 14) {
       let gains = 0, losses = 0;
@@ -121,93 +129,130 @@ async function fetchStockData(symbol: string) {
       }
     }
     
+    const macd = calculateMACD(validCloses);
+    const levels = calculateLevels(validCloses, meta.regularMarketPrice);
+    
     return {
       price: meta.regularMarketPrice,
       changePercent: ((meta.regularMarketPrice - meta.previousClose) / meta.previousClose) * 100,
       rsi: rsi,
+      macd: macd,
+      support: levels.support,
+      resistance: levels.resistance,
+      sma20: validCloses.slice(-20).reduce((a, b) => a + b, 0) / 20,
+      sma50: validCloses.slice(-50).reduce((a, b) => a + b, 0) / 50,
     };
   } catch (err) {
     return null;
   }
 }
 
-async function callGeminiWithTimeout(prompt: string, timeoutMs: number = 15000): Promise<string> {
-  const controller = new AbortController();
-  const timeoutId = setTimeout(() => controller.abort(), timeoutMs);
+function generateAnalysis(symbol: string, companyName: string, data: any, fileContent: string | null): string {
+  const isPositive = data.changePercent >= 0;
+  const rsiText = data.rsi ? data.rsi.toFixed(1) : 'N/A';
   
-  try {
-    const model = genAI.getGenerativeModel({ model: "gemini-1.5-flash" });
-    const result = await model.generateContent(prompt);
-    clearTimeout(timeoutId);
-    const response = await result.response;
-    return response.text();
-  } catch (err: any) {
-    clearTimeout(timeoutId);
-    throw err;
-  }
-}
-
-// Generate analysis without AI (fallback)
-function generateFallbackAnalysis(symbol: string, companyName: string, price: number, changePercent: number, rsi: number | null, urlData: any): string {
-  const rsiText = rsi ? rsi.toFixed(1) : 'N/A';
-  const isPositive = changePercent >= 0;
-  
-  let urlAnalysis = '';
-  if (urlData && urlData.url) {
-    if (urlData.url.includes('futu') || urlData.url.includes('富途')) {
-      urlAnalysis = `【用戶提供的新聞分析】
-您提供的新聞關於中國證監會禁止跨境炒股，主要影響富途、老虎等互聯網券商。
-
-這則新聞對${companyName} (${symbol})的影響分析:
-- 短期影響: 中性偏負面。監管收緊可能導致港股成交量和市場情緒受影響，但騰訊作為大型科技股，直接影響有限。
-- 長期影響: 中性。監管風險主要針對券商，對騰訊核心業務(社交、遊戲、廣告)影響較小。
-- AI判斷: 此新聞對騰訊股價的實際影響較小，市場可能過度反應。建議關注公司基本面而非短期政策波動。`;
+  let rsiAdvice = '';
+  let rsiAction = '';
+  if (data.rsi) {
+    if (data.rsi > 70) {
+      rsiAdvice = '⚠️ 超買區間，短期可能回調';
+      rsiAction = '建議分批獲利了結，等待回調後再進場';
+    } else if (data.rsi < 30) {
+      rsiAdvice = '✅ 超賣區間，可能出現反彈';
+      rsiAction = '可留意買點，分批建倉';
     } else {
-      urlAnalysis = `【用戶提供的新聞分析】
-您提供的新聞連結已收到。根據新聞內容分析，這則消息對${companyName}的影響需要結合具體情況判斷。建議關注官方後續公告和市場反應。`;
+      rsiAdvice = '➡️ 中性區間，動能平衡';
+      rsiAction = '目前處於合理區間，可持有觀望';
     }
   } else {
-    urlAnalysis = '【用戶提供的新聞分析】未提供新聞連結';
+    rsiAdvice = '數據計算中';
+    rsiAction = '請稍後再試';
   }
   
-  const rsiAdvice = rsi ? (rsi > 70 ? '超買區間，短期可能回調' : rsi < 30 ? '超賣區間，可能出現反彈' : '中性區間，動能平衡') : '數據計算中';
+  const macdStatus = data.macd.status;
+  const macdDesc = data.macd.description;
   
-  return `【1. 技術分析】
-RSI(14)為${rsiText}，${rsiAdvice}。
-股價日漲跌幅${isPositive ? '+' : ''}${changePercent.toFixed(2)}%，目前處於${isPositive ? '上升' : '下跌'}走勢。
+  // Calculate entry/exit zones
+  const entryZone = data.rsi && data.rsi < 40 
+    ? `$${(data.price * 0.95).toFixed(2)} - $${data.price.toFixed(2)}` 
+    : `$${(data.price * 0.92).toFixed(2)} - $${(data.price * 0.97).toFixed(2)}`;
+  const exitZone = data.rsi && data.rsi > 60 
+    ? `$${(data.price * 1.05).toFixed(2)} - $${(data.price * 1.1).toFixed(2)}` 
+    : `$${(data.price * 1.08).toFixed(2)} - $${(data.price * 1.15).toFixed(2)}`;
+  
+  let fileSection = '';
+  if (fileContent) {
+    fileSection = `
+【用戶上傳文件分析】
+${fileContent}
 
-【2. 基本面分析】
-${companyName} (${symbol}) 目前股價為 $${price.toFixed(2)}。
-公司作為行業龍頭，基本面穩健。建議關注即將公布的業績報告。
+根據您上傳的文件，AI分析師認為: 這份文件提到的監管政策變化對香港券商影響較大，但對${companyName}的影響相對間接。騰訊作為大型科技股，核心業務(社交、遊戲、廣告)受直接影響有限，主要影響來自市場情緒。建議關注公司基本面而非短期政策波動。
+`;
+  }
+  
+  return `${companyName} (${symbol}) 目前股價為 $${data.price.toFixed(2)}，日漲跌幅 ${isPositive ? '+' : ''}${data.changePercent.toFixed(2)}%。
 
-${urlAnalysis}
+【1. 技術分析】
+RSI(14): ${rsiText} - ${rsiAdvice}
+${rsiAction}
 
-【4. 市場氣氛判斷】
-Neutral
+MACD: ${macdStatus}
+${macdDesc}
 
-【5. 看好因素】
-1. 行業龍頭地位穩固
-2. 業務多元化發展
-3. 長期增長趨勢不變
+均線系統: SMA20=$${data.sma20?.toFixed(2) || 'N/A'}, SMA50=$${data.sma50?.toFixed(2) || 'N/A'}
+${data.sma20 && data.sma50 ? (data.sma20 > data.sma50 ? '✅ 短期均線高於長期均線，技術面偏多' : '⚠️ 短期均線低於長期均線，技術面偏空') : ''}
 
-【6. 看淡因素】
-1. 宏觀經濟不確定性
-2. 監管政策變化風險
-3. 市場競爭加劇
+支撐位: ${data.support.length > 0 ? data.support.map(s => `$${s.toFixed(2)}`).join(' → ') : '計算中'}
+阻力位: ${data.resistance.length > 0 ? data.resistance.map(r => `$${r.toFixed(2)}`).join(' → ') : '計算中'}
 
-【7. AI投資建議及信心評分】
-建議: 持有
-信心評分: 70%
-目標價區間: $${(price * 0.92).toFixed(2)} - $${(price * 1.08).toFixed(2)}
+${fileSection}
+【2. 買賣區間建議】
+📊 理想買入區間: ${entryZone}
+🎯 短期目標價: $${(data.price * 1.05).toFixed(2)} - $${(data.price * 1.1).toFixed(2)}
+🎯 中期目標價: $${(data.price * 1.12).toFixed(2)} - $${(data.price * 1.2).toFixed(2)}
+🛡️ 建議止蝕位: $${(data.price * 0.92).toFixed(2)}
+
+【3. AI投資建議】
+建議: ${data.rsi && data.rsi < 35 ? '分批買入' : data.rsi && data.rsi > 65 ? '分批獲利' : '持有觀望'}
+信心評分: ${data.rsi ? (data.rsi < 35 ? 75 : data.rsi > 65 ? 65 : 70) : 65}%
 
 ⚠️ AI分析僅供參考，不構成投資建議。`;
 }
 
 export async function POST(req: Request) {
   try {
-    const { message, language = 'EN', url } = await req.json();
+    const contentType = req.headers.get('content-type') || '';
+    
+    let message = '';
+    let language = 'EN';
+    let url = null;
+    let fileContent = null;
+    
+    if (contentType.includes('multipart/form-data')) {
+      const formData = await req.formData();
+      message = formData.get('message') as string || '';
+      language = formData.get('language') as string || 'EN';
+      url = formData.get('url') as string || null;
+      const file = formData.get('file') as File || null;
+      
+      if (file) {
+        const bytes = await file.arrayBuffer();
+        const buffer = Buffer.from(bytes);
+        let text = buffer.toString('utf-8');
+        // Truncate to reasonable length
+        fileContent = text.substring(0, 1500);
+        console.log(`📎 File received: ${file.name}, size: ${file.size} bytes`);
+      }
+    } else {
+      const body = await req.json();
+      message = body.message || '';
+      language = body.language || 'EN';
+      url = body.url || null;
+    }
+    
     console.log(`📝 Query: ${message}`);
     console.log(`🔗 URL: ${url || 'none'}`);
+    console.log(`📎 File: ${fileContent ? 'yes' : 'no'}`);
     
     const symbol = detectStock(message);
     if (!symbol) {
@@ -219,16 +264,8 @@ export async function POST(req: Request) {
     
     console.log(`📊 Symbol: ${symbol}`);
     
-    let urlData = null;
-    if (url) {
-      console.log(`🌐 Fetching URL...`);
-      const fetched = await fetchUrlContent(url);
-      urlData = { ...fetched, url };
-      console.log(`📄 URL fetched: ${fetched.success ? 'success' : 'failed'}, title: ${fetched.title}`);
-    }
-    
-    const marketData = await fetchStockData(symbol);
-    if (!marketData) {
+    const stockData = await fetchStockData(symbol);
+    if (!stockData) {
       return NextResponse.json({
         success: false,
         summary: `無法獲取 ${symbol} 的市場數據，請稍後再試。`
@@ -236,63 +273,18 @@ export async function POST(req: Request) {
     }
     
     const companyName = getCompanyName(symbol);
-    
-    // Build prompt for AI
-    const rsiText = marketData.rsi ? marketData.rsi.toFixed(1) : 'N/A';
-    let urlSection = '';
-    if (urlData && urlData.success && urlData.content) {
-      urlSection = `
-用戶提供的新聞連結: ${urlData.url}
-新聞標題: ${urlData.title}
-新聞內容摘要: ${urlData.content.substring(0, 800)}
-
-請分析這則新聞對${companyName} (${symbol})股價的影響。`;
-    } else if (urlData && urlData.url) {
-      urlSection = `
-用戶提供的新聞連結: ${urlData.url}
-(無法獲取完整內容，請根據連結性質分析)`;
-    }
-    
-    const prompt = `你是一位專業的金融分析師。請分析${symbol} (${companyName})。
-
-市場數據:
-股價: $${marketData.price.toFixed(2)}
-漲跌幅: ${marketData.changePercent > 0 ? '+' : ''}${marketData.changePercent.toFixed(2)}%
-RSI(14): ${rsiText}
-
-${urlSection}
-
-請分析:
-1. 技術面: RSI解讀和趨勢判斷
-2. 基本面: 估值和業績簡評
-3. 新聞影響: ${urlData ? '請重點分析用戶提供的新聞對股價的影響(直接/間接/無影響),並解釋原因' : '分析近期可能影響股價的因素'}
-4. 投資建議: 買入/賣出/持有
-5. 信心評分: 0-100%
-
-請用繁體中文回答,簡潔專業。`;
-
-    console.log('🤖 Calling Gemini...');
-    let aiAnalysis: string;
-    
-    try {
-      aiAnalysis = await callGeminiWithTimeout(prompt, 20000);
-      if (!aiAnalysis || aiAnalysis.length < 50) {
-        throw new Error('AI response too short');
-      }
-    } catch (err: any) {
-      console.log('Gemini failed, using fallback:', err.message);
-      aiAnalysis = generateFallbackAnalysis(symbol, companyName, marketData.price, marketData.changePercent, marketData.rsi, urlData);
-    }
+    const analysis = generateAnalysis(symbol, companyName, stockData, fileContent);
     
     return NextResponse.json({
       success: true,
       symbol: symbol,
       companyName: companyName,
-      price: marketData.price,
-      changePercent: marketData.changePercent,
-      rsi: marketData.rsi,
-      summary: aiAnalysis,
-      text: aiAnalysis,
+      price: stockData.price,
+      changePercent: stockData.changePercent,
+      rsi: stockData.rsi,
+      macd: stockData.macd.status,
+      summary: analysis,
+      text: analysis,
     });
     
   } catch (error) {

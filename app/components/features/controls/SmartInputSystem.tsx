@@ -26,8 +26,9 @@ export const SmartInputSystem: React.FC<SmartInputSystemProps> = ({
 }) => {
   const [inputValue, setInputValue] = useState('');
   const [attachments, setAttachments] = useState<Attachment[]>([]);
+  const [isLoading, setIsLoading] = useState(false);
   const [isListening, setIsListening] = useState(false);
-  const [isSpeaking, setIsSpeaking] = useState(true);
+  const [isSpeaking, setIsSpeaking] = useState(false);
   const [isPaused, setIsPaused] = useState(false);
   const [recognition, setRecognition] = useState<any>(null);
   const utteranceRef = useRef<SpeechSynthesisUtterance | null>(null);
@@ -102,25 +103,51 @@ export const SmartInputSystem: React.FC<SmartInputSystemProps> = ({
     }
   };
 
-  const handleAddURL = (url: string) => {
-    const newAttachment: Attachment = {
-      id: Date.now().toString(),
-      type: 'url',
-      name: url,
-      content: url,
-    };
-    setAttachments([...attachments, newAttachment]);
-  };
-
-  const removeAttachment = (id: string) => {
-    setAttachments(attachments.filter(a => a.id !== id));
-  };
-
-  const handleSubmit = () => {
-    if (inputValue.trim() || attachments.length > 0) {
-      onAnalyze(inputValue.trim(), attachments);
-      setInputValue('');
-      setAttachments([]);
+  const handleSubmit = async () => {
+    if ((!inputValue.trim() && attachments.length === 0) || isLoading) return;
+    
+    setIsLoading(true);
+    
+    try {
+      const formData = new FormData();
+      formData.append('message', inputValue);
+      formData.append('language', langKey);
+      
+      // Add URL attachment if present
+      const urlAttachment = attachments.find(a => a.type === 'url');
+      if (urlAttachment) {
+        formData.append('url', urlAttachment.name);
+      }
+      
+      // Add file attachment if present
+      const fileAttachment = attachments.find(a => a.type === 'file' || a.type === 'photo');
+      if (fileAttachment && fileAttachment.content) {
+        // Convert base64 to blob
+        const base64 = fileAttachment.content.split(',')[1];
+        const binary = atob(base64);
+        const array = new Uint8Array(binary.length);
+        for (let i = 0; i < binary.length; i++) {
+          array[i] = binary.charCodeAt(i);
+        }
+        const blob = new Blob([array], { type: 'application/octet-stream' });
+        formData.append('file', blob, fileAttachment.name);
+      }
+      
+      const response = await fetch('/api/chat', { method: 'POST', body: formData });
+      const data = await response.json();
+      
+      if (data.success) {
+        setInputValue('');
+        setAttachments([]);
+        onAnalyze(data.symbol, []);
+      } else {
+        alert(data.summary || '分析失敗，請稍後再試');
+      }
+    } catch (error) {
+      console.error('Submit error:', error);
+      alert('提交失敗，請檢查網絡連接');
+    } finally {
+      setIsLoading(false);
     }
   };
 
@@ -129,17 +156,6 @@ export const SmartInputSystem: React.FC<SmartInputSystemProps> = ({
     if (langKey === '简体中文') return '输入股票代码 e.g.: 0700.hk, TSLA';
     return 'Enter stock symbol e.g.: 0700.hk, TSLA';
   };
-
-  useEffect(() => {
-    const handleSourceSelect = (event: CustomEvent) => {
-      const { sourceType, sourceData } = event.detail;
-      if (sourceType === 'url' && sourceData) {
-        handleAddURL(sourceData);
-      }
-    };
-    window.addEventListener('source-select', handleSourceSelect as EventListener);
-    return () => window.removeEventListener('source-select', handleSourceSelect as EventListener);
-  }, [attachments]);
 
   const renderButtonWithCross = (isActive: boolean, onClick: () => void, icon: React.ReactElement, color: string, inactiveColor: string) => {
     const bgColor = isActive ? color : inactiveColor;
@@ -151,26 +167,66 @@ export const SmartInputSystem: React.FC<SmartInputSystemProps> = ({
     );
   };
 
+  // Listen for source select events from SourceMenu
+  useEffect(() => {
+    const handleSourceSelect = (event: CustomEvent) => {
+      const { sourceType, sourceData } = event.detail;
+      if (sourceType === 'url' && sourceData) {
+        setAttachments(prev => [...prev, {
+          id: Date.now().toString(),
+          type: 'url',
+          name: sourceData,
+        }]);
+      } else if (sourceType === 'file' && sourceData) {
+        setAttachments(prev => [...prev, {
+          id: Date.now().toString(),
+          type: 'file',
+          name: sourceData.name,
+          content: sourceData.content,
+        }]);
+      } else if (sourceType === 'photo' && sourceData) {
+        setAttachments(prev => [...prev, {
+          id: Date.now().toString(),
+          type: 'photo',
+          name: sourceData.name,
+          content: sourceData.content,
+          preview: sourceData.content,
+        }]);
+      }
+    };
+    window.addEventListener('source-select', handleSourceSelect as EventListener);
+    return () => window.removeEventListener('source-select', handleSourceSelect as EventListener);
+  }, []);
+
+  const removeAttachment = (id: string) => {
+    setAttachments(prev => prev.filter(a => a.id !== id));
+  };
+
   return (
     <div style={{ width: '100%' }}>
+      {/* Attachments Display */}
       {attachments.length > 0 && (
         <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px', marginBottom: '12px', padding: '8px', backgroundColor: '#F9FAFB', borderRadius: '12px', border: '1px solid #E5E7EB' }}>
           {attachments.map((att) => (
             <div key={att.id} style={{ display: 'flex', alignItems: 'center', gap: '8px', backgroundColor: 'white', padding: '6px 10px', borderRadius: '8px', border: '1px solid #E5E7EB', fontSize: '12px' }}>
               <span>{att.type === 'url' ? '🔗' : att.type === 'file' ? '📄' : '📷'}</span>
-              <span style={{ maxWidth: '150px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{att.name.length > 20 ? att.name.substring(0, 20) + '...' : att.name}</span>
+              <span style={{ maxWidth: '150px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{att.name.length > 30 ? att.name.substring(0, 30) + '...' : att.name}</span>
               <button onClick={() => removeAttachment(att.id)} style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#EF4444', fontSize: '14px', padding: '0 4px' }}>✕</button>
             </div>
           ))}
         </div>
       )}
 
+      {/* Input Row */}
       <div style={{ display: 'flex', gap: '8px', alignItems: 'center', marginBottom: '10px' }}>
         <button onClick={onPlusClick} style={{ width: '44px', height: '44px', borderRadius: '12px', backgroundColor: '#EF4444', color: 'white', border: 'none', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '20px', fontWeight: 'bold', flexShrink: 0 }}>+</button>
-        <input type="text" value={inputValue} onChange={(e) => setInputValue(e.target.value)} placeholder={getPlaceholder()} onKeyPress={(e) => e.key === 'Enter' && handleSubmit()} style={{ flex: 1, padding: '10px 14px', fontSize: '14px', color: '#1F2937', backgroundColor: '#F3F4F6', borderRadius: '24px', border: '1px solid #E5E7EB', outline: 'none', minWidth: 0 }} />
-        <button onClick={handleSubmit} disabled={!inputValue.trim() && attachments.length === 0} style={{ padding: '10px 20px', borderRadius: '24px', backgroundColor: (inputValue.trim() || attachments.length > 0) ? '#22C55E' : '#D1D5DB', color: 'white', border: 'none', cursor: (inputValue.trim() || attachments.length > 0) ? 'pointer' : 'not-allowed', fontWeight: '500', fontSize: '14px' }}>Send</button>
+        <input type="text" value={inputValue} onChange={(e) => setInputValue(e.target.value)} placeholder={getPlaceholder()} onKeyPress={(e) => e.key === 'Enter' && !isLoading && handleSubmit()} style={{ flex: 1, padding: '10px 14px', fontSize: '14px', color: '#1F2937', backgroundColor: '#F3F4F6', borderRadius: '24px', border: '1px solid #E5E7EB', outline: 'none', minWidth: 0 }} disabled={isLoading} />
+        <button onClick={handleSubmit} disabled={(!inputValue.trim() && attachments.length === 0) || isLoading} style={{ padding: '10px 20px', borderRadius: '24px', backgroundColor: ((inputValue.trim() || attachments.length > 0) && !isLoading) ? '#22C55E' : '#D1D5DB', color: 'white', border: 'none', cursor: ((inputValue.trim() || attachments.length > 0) && !isLoading) ? 'pointer' : 'not-allowed', fontWeight: '500', fontSize: '14px' }}>
+          {isLoading ? '分析中...' : 'Send'}
+        </button>
       </div>
 
+      {/* Control Buttons Row */}
       <div style={{ display: 'flex', gap: '8px', justifyContent: 'space-between' }}>
         {renderButtonWithCross(isListening, handleMicToggle, 
           <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2}>
@@ -187,9 +243,6 @@ export const SmartInputSystem: React.FC<SmartInputSystemProps> = ({
             <path strokeLinecap="round" strokeLinejoin="round" d="M10 9v6m4-6v6m7-3a9 9 0 11-18 0 9 9 0 0118 0z" />
           </svg>, '#EF4444', '#9CA3AF')}
       </div>
-
-      <input ref={fileInputRef} type="file" accept=".pdf,.csv,.txt" style={{ display: 'none' }} onChange={(e) => {}} />
-      <input ref={photoInputRef} type="file" accept="image/*" style={{ display: 'none' }} onChange={(e) => {}} />
     </div>
   );
 };
