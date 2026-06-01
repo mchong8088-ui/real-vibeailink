@@ -113,16 +113,16 @@ export const SmartInputSystem: React.FC<SmartInputSystemProps> = ({
       formData.append('message', inputValue);
       formData.append('language', langKey);
       
-      // Add URL attachment if present
+      // Add URL from attachments if present
       const urlAttachment = attachments.find(a => a.type === 'url');
       if (urlAttachment) {
         formData.append('url', urlAttachment.name);
+        console.log('📎 Sending URL:', urlAttachment.name);
       }
       
       // Add file attachment if present
       const fileAttachment = attachments.find(a => a.type === 'file' || a.type === 'photo');
       if (fileAttachment && fileAttachment.content) {
-        // Convert base64 to blob
         const base64 = fileAttachment.content.split(',')[1];
         const binary = atob(base64);
         const array = new Uint8Array(binary.length);
@@ -131,6 +131,7 @@ export const SmartInputSystem: React.FC<SmartInputSystemProps> = ({
         }
         const blob = new Blob([array], { type: 'application/octet-stream' });
         formData.append('file', blob, fileAttachment.name);
+        console.log('📎 Sending file:', fileAttachment.name);
       }
       
       const response = await fetch('/api/chat', { method: 'POST', body: formData });
@@ -167,30 +168,23 @@ export const SmartInputSystem: React.FC<SmartInputSystemProps> = ({
     );
   };
 
-  // Listen for source select events from SourceMenu
+  // Listen for source select events
   useEffect(() => {
     const handleSourceSelect = (event: CustomEvent) => {
       const { sourceType, sourceData } = event.detail;
+      console.log('📎 Source selected:', sourceType, sourceData);
       if (sourceType === 'url' && sourceData) {
         setAttachments(prev => [...prev, {
           id: Date.now().toString(),
           type: 'url',
           name: sourceData,
         }]);
-      } else if (sourceType === 'file' && sourceData) {
+      } else if ((sourceType === 'file' || sourceType === 'photo') && sourceData) {
         setAttachments(prev => [...prev, {
           id: Date.now().toString(),
-          type: 'file',
+          type: sourceType,
           name: sourceData.name,
           content: sourceData.content,
-        }]);
-      } else if (sourceType === 'photo' && sourceData) {
-        setAttachments(prev => [...prev, {
-          id: Date.now().toString(),
-          type: 'photo',
-          name: sourceData.name,
-          content: sourceData.content,
-          preview: sourceData.content,
         }]);
       }
     };
