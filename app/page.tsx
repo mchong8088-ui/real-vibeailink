@@ -20,6 +20,7 @@ export default function VibeAiMaster() {
   const [mounted, setMounted] = useState(false);
   const [systemState, setSystemState] = useState({ os: "Detecting...", isMobile: false });
   const [user, setUser] = useState<any>(null);
+  const [isSpeakerActive, setIsSpeakerActive] = useState(true); // Speaker active by default
 
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const [currentView, setCurrentView] = useState<"analysis" | "about" | "features" | "pricing">("analysis");
@@ -38,7 +39,6 @@ export default function VibeAiMaster() {
 
   const systemInfo = { system: `VibeAI-${systemState.os}`, voiceEngine: "Local Synthesis" };
 
-  // Check auth on mount
   useEffect(() => {
     supabase.auth.getSession().then(({ data }) => {
       setUser(data.session?.user || null);
@@ -120,7 +120,7 @@ export default function VibeAiMaster() {
   const getTranslatedText = () => {
     if (language === 'Cantonese') {
       return {
-        financeText: '金融與市場分析',
+        financeText: 'Your Finance & Market Analysts',
         inputLabel: '請在下方輸入股票代號',
         disclaimer: '免責聲明',
         terms: '服務條款',
@@ -130,11 +130,12 @@ export default function VibeAiMaster() {
         aiStock: 'AI 股票',
         about: '關於',
         features: '功能',
-        pricing: '定價'
+        pricing: '定價',
+        welcome: '歡迎'
       };
     } else if (language === '简体中文') {
       return {
-        financeText: '金融与市场分析',
+        financeText: 'Your Finance & Market Analysts',
         inputLabel: '请在下方输入股票代码',
         disclaimer: '免责声明',
         terms: '服务条款',
@@ -144,11 +145,12 @@ export default function VibeAiMaster() {
         aiStock: 'AI 股票',
         about: '关于',
         features: '功能',
-        pricing: '定价'
+        pricing: '定价',
+        welcome: '欢迎'
       };
     } else {
       return {
-        financeText: 'Finance & Market Analysis',
+        financeText: 'Your Finance & Market Analysts',
         inputLabel: 'Please input stock symbol below',
         disclaimer: 'DISCLAIMER',
         terms: 'TERMS',
@@ -158,7 +160,8 @@ export default function VibeAiMaster() {
         aiStock: 'AI STOCK',
         about: 'ABOUT',
         features: 'FEATURES',
-        pricing: 'PRICING'
+        pricing: 'PRICING',
+        welcome: 'Welcome'
       };
     }
   };
@@ -178,43 +181,42 @@ export default function VibeAiMaster() {
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', height: '100vh', width: '100%', overflow: 'hidden', backgroundColor: '#f0f0f0' }}>
-      {/* Top Bar */}
-      <div style={{ backgroundColor: 'white', padding: '12px 24px', borderBottom: '1px solid #E5E7EB', display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexShrink: 0 }}>
-        <h1 style={{ fontSize: '20px', fontWeight: '900', fontStyle: 'italic', color: '#DC2626', margin: 0 }}>vibeAiLink</h1>
-        <div style={{ display: 'flex', gap: '32px' }}>
+      {/* Top Bar - Larger */}
+      <div style={{ backgroundColor: 'white', padding: '16px 32px', borderBottom: '1px solid #E5E7EB', display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexShrink: 0 }}>
+        <h1 style={{ fontSize: '24px', fontWeight: '900', fontStyle: 'italic', color: '#DC2626', margin: 0 }}>vibeAiLink</h1>
+        <div style={{ display: 'flex', gap: '48px' }}>
           {['analysis', 'about', 'features', 'pricing'].map(v => (
-            <button key={v} onClick={() => setCurrentView(v as any)} style={{ fontSize: '13px', fontWeight: currentView === v ? 'bold' : 'normal', color: currentView === v ? '#2563EB' : '#6B7280', background: 'none', border: 'none', cursor: 'pointer' }}>
+            <button key={v} onClick={() => setCurrentView(v as any)} style={{ fontSize: '15px', fontWeight: currentView === v ? 'bold' : 'normal', color: currentView === v ? '#2563EB' : '#6B7280', background: 'none', border: 'none', cursor: 'pointer' }}>
               {v === 'analysis' ? text.aiStock : text[v as keyof typeof text]}
             </button>
           ))}
         </div>
-        <div style={{ display: 'flex', gap: '16px', alignItems: 'center' }}>
+        <div style={{ display: 'flex', gap: '20px', alignItems: 'center' }}>
           <LanguageToggle currentLang={language} onLangChange={setLanguage as any} />
           {user ? (
             <button onClick={() => setShowUserMenu(!showUserMenu)} style={{ display: 'flex', alignItems: 'center', gap: '8px', padding: '4px 12px', borderRadius: '20px', backgroundColor: '#F3F4F6', border: 'none', cursor: 'pointer' }}>
-              <div style={{ width: '28px', height: '28px', borderRadius: '50%', backgroundColor: '#3B82F6', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'white' }}>{getUserDisplayName().charAt(0).toUpperCase()}</div>
-              <span>{getUserDisplayName()}</span>
+              <div style={{ width: '32px', height: '32px', borderRadius: '50%', backgroundColor: '#3B82F6', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'white', fontWeight: 'bold', fontSize: '14px' }}>{getUserDisplayName().charAt(0).toUpperCase()}</div>
+              <span style={{ fontSize: '14px' }}>{getUserDisplayName()}</span>
             </button>
           ) : (
-            <button onClick={() => setIsAuthOpen(true)} style={{ color: '#2563EB', fontWeight: '600', fontSize: '12px', background: 'none', border: 'none', cursor: 'pointer' }}>LOGIN</button>
+            <button onClick={() => setIsAuthOpen(true)} style={{ color: '#2563EB', fontWeight: '600', fontSize: '14px', background: 'none', border: 'none', cursor: 'pointer' }}>LOGIN</button>
           )}
         </div>
       </div>
 
       {/* Main Content */}
       <div style={{ display: 'flex', flex: 1, overflow: 'hidden' }}>
-        {/* Left Panel */}
-        <div style={{ width: '25%', backgroundColor: '#FEF08A', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', padding: '24px', overflow: 'auto', minWidth: '200px' }}>
-          <div style={{ width: '140px', height: '140px', borderRadius: '50%', overflow: 'hidden', marginBottom: '16px', backgroundColor: 'white', boxShadow: '0 2px 4px rgba(0,0,0,0.1)' }}>
+        {/* Left Panel - Enlarged */}
+        <div style={{ width: '28%', backgroundColor: '#FEF08A', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', padding: '40px 24px', overflow: 'auto', minWidth: '260px' }}>
+          <div style={{ width: '180px', height: '180px', borderRadius: '50%', overflow: 'hidden', marginBottom: '24px', backgroundColor: 'white', boxShadow: '0 4px 12px rgba(0,0,0,0.15)' }}>
             <img src="/avatars/michael_teresa.jpg" style={{ width: '100%', height: '100%', objectFit: 'cover' }} alt="Michael & Teresa" />
           </div>
-          <h3 style={{ fontWeight: 'bold', color: '#1F2937', fontSize: '16px', textAlign: 'center', margin: '0' }}>Michael & Teresa</h3>
-          <p style={{ fontSize: '12px', fontWeight: 'bold', color: '#2563EB', textAlign: 'center', marginTop: '8px' }}>{text.financeText}</p>
-          <p style={{ fontSize: '9px', color: '#6B7280', textAlign: 'center', marginTop: '8px' }}>{systemState.os} Environment</p>
+          <h2 style={{ fontWeight: 'bold', color: '#1F2937', fontSize: '22px', textAlign: 'center', margin: '0 0 8px 0' }}>Michael & Teresa</h2>
+          <p style={{ fontSize: '15px', fontWeight: '600', color: '#2563EB', textAlign: 'center', margin: '0' }}>{text.financeText}</p>
         </div>
 
         {/* Right Panel */}
-        <div style={{ width: '80%', backgroundColor: '#E0F2FE', display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
+        <div style={{ width: '72%', backgroundColor: '#E0F2FE', display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
           {/* Scrollable Content */}
           <div style={{ flex: 1, overflowY: 'auto', padding: '20px' }}>
             {currentView === "analysis" && <StockAnalysisModule t={t} data={analysisData} isLoading={isLoading} langKey={language} />}
@@ -231,11 +233,11 @@ export default function VibeAiMaster() {
 
           {/* Footer */}
           <div style={{ backgroundColor: 'white', padding: '8px 20px', borderTop: '1px solid #E5E7EB', display: 'flex', justifyContent: 'center', gap: '24px', flexWrap: 'wrap', flexShrink: 0 }}>
-            <button onClick={() => setLegalTitle('DISCLAIMER')} style={{ fontSize: '9px', color: '#3B82F6', background: 'none', border: 'none', cursor: 'pointer' }}>{text.disclaimer}</button>
-            <button onClick={() => setLegalTitle('服務條款')} style={{ fontSize: '9px', color: '#3B82F6', background: 'none', border: 'none', cursor: 'pointer' }}>{text.terms}</button>
-            <button onClick={() => setLegalTitle('隱私政策')} style={{ fontSize: '9px', color: '#3B82F6', background: 'none', border: 'none', cursor: 'pointer' }}>{text.privacy}</button>
-            <button onClick={() => setLegalTitle('退款政策')} style={{ fontSize: '9px', color: '#3B82F6', background: 'none', border: 'none', cursor: 'pointer' }}>{text.refund}</button>
-            <button onClick={() => setLegalTitle('聯絡我們')} style={{ fontSize: '9px', color: '#3B82F6', background: 'none', border: 'none', cursor: 'pointer' }}>{text.contact}</button>
+            <button onClick={() => setLegalTitle('DISCLAIMER')} style={{ fontSize: '10px', color: '#3B82F6', background: 'none', border: 'none', cursor: 'pointer' }}>{text.disclaimer}</button>
+            <button onClick={() => setLegalTitle('服務條款')} style={{ fontSize: '10px', color: '#3B82F6', background: 'none', border: 'none', cursor: 'pointer' }}>{text.terms}</button>
+            <button onClick={() => setLegalTitle('隱私政策')} style={{ fontSize: '10px', color: '#3B82F6', background: 'none', border: 'none', cursor: 'pointer' }}>{text.privacy}</button>
+            <button onClick={() => setLegalTitle('退款政策')} style={{ fontSize: '10px', color: '#3B82F6', background: 'none', border: 'none', cursor: 'pointer' }}>{text.refund}</button>
+            <button onClick={() => setLegalTitle('聯絡我們')} style={{ fontSize: '10px', color: '#3B82F6', background: 'none', border: 'none', cursor: 'pointer' }}>{text.contact}</button>
           </div>
         </div>
       </div>

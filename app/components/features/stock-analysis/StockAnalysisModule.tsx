@@ -1,6 +1,7 @@
 "use client";
 import React, { useState, useEffect } from 'react';
 import { Activity, Globe, BarChart3, TrendingUp, TrendingDown } from 'lucide-react';
+import { LineChart, Line, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid } from 'recharts';
 
 interface Props {
   data: any;
@@ -11,6 +12,7 @@ interface Props {
 
 export const StockAnalysisModule: React.FC<Props> = ({ data, isLoading, langKey, t }) => {
   const [isMobile, setIsMobile] = useState(false);
+  const [period, setPeriod] = useState<'1M' | '3M' | '1Y'>('1M');
   
   useEffect(() => {
     setIsMobile(window.innerWidth <= 768);
@@ -27,6 +29,28 @@ export const StockAnalysisModule: React.FC<Props> = ({ data, isLoading, langKey,
 
   const row1Indices = globalIndices.slice(0, 3);
   const row2Indices = globalIndices.slice(3, 6);
+
+  // Generate mock chart data
+  const generateChartData = () => {
+    const currentPrice = data?.price || 100;
+    const dataPoints = [];
+    let price = currentPrice * 0.85;
+    for (let i = 30; i >= 0; i--) {
+      const change = (Math.random() - 0.5) * 8;
+      price = price + change;
+      const date = new Date();
+      date.setDate(date.getDate() - i);
+      dataPoints.push({
+        date: date.toLocaleDateString(),
+        price: Math.max(50, price),
+      });
+    }
+    return dataPoints;
+  };
+
+  const chartData = generateChartData();
+  const minPrice = Math.min(...chartData.map(d => d.price));
+  const maxPrice = Math.max(...chartData.map(d => d.price));
 
   if (isLoading) {
     return (
@@ -47,6 +71,7 @@ export const StockAnalysisModule: React.FC<Props> = ({ data, isLoading, langKey,
 
   return (
     <div style={{ maxWidth: '100%' }}>
+      {/* Global Market Indices */}
       <div style={{ backgroundColor: '#FEF08A', borderRadius: '12px', padding: '12px', marginBottom: '16px' }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '10px' }}>
           <Globe size={14} style={{ color: '#B45309' }} />
@@ -74,6 +99,7 @@ export const StockAnalysisModule: React.FC<Props> = ({ data, isLoading, langKey,
         </div>
       </div>
 
+      {/* Stock Info Bar */}
       <div style={{ backgroundColor: '#FEF08A', borderRadius: '12px', padding: '12px', marginBottom: '16px' }}>
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '12px' }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
@@ -108,6 +134,35 @@ export const StockAnalysisModule: React.FC<Props> = ({ data, isLoading, langKey,
         </div>
       </div>
 
+      {/* Price Chart */}
+      <div style={{ backgroundColor: 'white', borderRadius: '12px', padding: '12px', marginBottom: '16px', border: '1px solid #E5E7EB' }}>
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '12px' }}>
+          <h4 style={{ fontSize: '12px', fontWeight: 'bold', margin: 0 }}>Price Trend</h4>
+          <div style={{ display: 'flex', gap: '8px' }}>
+            {['1M', '3M', '1Y'].map((p) => (
+              <button key={p} onClick={() => setPeriod(p as any)} style={{ padding: '2px 8px', fontSize: '10px', borderRadius: '4px', border: period === p ? '1px solid #3B82F6' : '1px solid #E5E7EB', backgroundColor: period === p ? '#EFF6FF' : 'white', color: period === p ? '#3B82F6' : '#6B7280', cursor: 'pointer' }}>{p}</button>
+            ))}
+          </div>
+        </div>
+        <div style={{ height: '200px' }}>
+          <ResponsiveContainer width="100%" height="100%">
+            <LineChart data={chartData}>
+              <CartesianGrid strokeDasharray="3 3" stroke="#E5E7EB" />
+              <XAxis dataKey="date" hide />
+              <YAxis domain={['auto', 'auto']} fontSize={10} width={35} />
+              <Tooltip />
+              <Line type="monotone" dataKey="price" stroke="#3B82F6" strokeWidth={2} dot={false} />
+            </LineChart>
+          </ResponsiveContainer>
+        </div>
+        <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '10px', color: '#9CA3AF', marginTop: '8px' }}>
+          <span>${minPrice.toFixed(2)}</span>
+          <span style={{ color: '#3B82F6' }}>${data.price?.toFixed(2) || 'N/A'}</span>
+          <span>${maxPrice.toFixed(2)}</span>
+        </div>
+      </div>
+
+      {/* Analysis Report */}
       <div style={{ backgroundColor: 'white', borderRadius: '12px', padding: '20px', border: '1px solid #E5E7EB' }}>
         <div style={{ whiteSpace: 'pre-wrap', lineHeight: 1.6, fontSize: '13px' }}>
           {typeof data.summary === 'string' ? data.summary : JSON.stringify(data.summary)}
