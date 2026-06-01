@@ -1,8 +1,6 @@
 import { NextResponse } from 'next/server';
-import { GoogleGenerativeAI } from "@google/generative-ai";
+import { callAI } from '../../lib/ai/gateway';
 import { buildAnalysisPrompt } from '../../lib/ai/promptBuilder';
-
-const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY || "");
 
 const COMPANY_NAMES: Record<string, string> = {
   "0700.HK": "騰訊控股",
@@ -13,7 +11,6 @@ const COMPANY_NAMES: Record<string, string> = {
   "MSFT": "微軟",
   "AMZN": "亞馬遜",
   "CVX": "雪佛龍",
-  "GOOGL": "谷歌",
 };
 
 function getCompanyName(symbol: string): string {
@@ -123,13 +120,6 @@ async function fetchUrlContent(url: string): Promise<string> {
   }
 }
 
-async function callGemini(prompt: string): Promise<string> {
-  const model = genAI.getGenerativeModel({ model: "gemini-1.5-flash" });
-  const result = await model.generateContent(prompt);
-  const response = await result.response;
-  return response.text();
-}
-
 export async function POST(req: Request) {
   try {
     const contentType = req.headers.get('content-type') || '';
@@ -137,19 +127,12 @@ export async function POST(req: Request) {
     let message = '';
     let language = 'ZH';
     let urlParam = null;
-    let fileContent = null;
     
     if (contentType.includes('multipart/form-data')) {
       const formData = await req.formData();
       message = formData.get('message') as string || '';
       language = formData.get('language') as string || 'ZH';
       urlParam = formData.get('url') as string || null;
-      const file = formData.get('file') as File || null;
-      if (file) {
-        const bytes = await file.arrayBuffer();
-        const buffer = Buffer.from(bytes);
-        fileContent = buffer.toString('utf-8').substring(0, 1500);
-      }
     } else {
       const body = await req.json();
       message = body.message || '';
@@ -171,7 +154,7 @@ export async function POST(req: Request) {
     let urlContent = null;
     if (urlParam) {
       urlContent = await fetchUrlContent(urlParam);
-      console.log(`📄 URL content fetched, length: ${urlContent.length}`);
+      console.log(`📄 URL content length: ${urlContent.length}`);
     }
     
     const stockData = await fetchStockData(symbol);
@@ -189,12 +172,16 @@ export async function POST(req: Request) {
       stockData.price, stockData.changePercent,
       stockData.rsi, stockData.macdStatus,
       stockData.sma20, stockData.sma50,
-      urlContent, fileContent,
+      urlContent, null,
       language
     );
     
-    console.log('🤖 Calling Gemini AI...');
-    const aiAnalysis = await callGemini(prompt);
+    console.log('🤖 Calling AI Gateway...');
+    const aiAnalysis = await callAI(
+      prompt, symbol, companyName,
+      stockData.price, stockData.changePercent,
+      stockData.rsi, !!urlParam
+    );
     
     return NextResponse.json({
       success: true,
