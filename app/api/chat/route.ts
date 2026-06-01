@@ -1,30 +1,20 @@
 import { NextResponse } from 'next/server';
+import { GoogleGenerativeAI } from "@google/generative-ai";
+
+const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY || "");
 
 // Stock symbol to company name mapping
 const COMPANY_NAMES: Record<string, string> = {
-  // Taiwan stocks
-  "2330.TW": "台灣積體電路製造股份有限公司 (TSMC)",
-  "2454.TW": "聯發科技股份有限公司 (MediaTek)",
-  "2317.TW": "鴻海精密工業股份有限公司 (Foxconn)",
-  
-  // Hong Kong stocks
-  "0700.HK": "騰訊控股有限公司 (Tencent Holdings)",
-  "1211.HK": "比亞迪股份有限公司 (BYD)",
-  "0388.HK": "香港交易及結算所有限公司 (HKEX)",
-  "0005.HK": "滙豐控股有限公司 (HSBC Holdings)",
-  "9988.HK": "阿里巴巴集團控股有限公司 (Alibaba Group)",
-  "3690.HK": "美團 (Meituan)",
-  "1810.HK": "小米集團 (Xiaomi)",
-  
-  // US stocks
-  "TSLA": "特斯拉公司 (Tesla, Inc.)",
-  "AAPL": "蘋果公司 (Apple Inc.)",
-  "NVDA": "英偉達公司 (NVIDIA Corporation)",
-  "MSFT": "微軟公司 (Microsoft Corporation)",
-  "AMZN": "亞馬遜公司 (Amazon.com, Inc.)",
-  "GOOGL": "谷歌公司 (Alphabet Inc.)",
-  "META": "Meta Platforms, Inc.",
-  "AMD": "超微半導體公司 (Advanced Micro Devices, Inc.)",
+  "2330.TW": "台積電 (TSMC)",
+  "0700.HK": "騰訊控股 (Tencent)",
+  "TSLA": "特斯拉 (Tesla)",
+  "NVDA": "英偉達 (NVIDIA)",
+  "AAPL": "蘋果 (Apple)",
+  "MSFT": "微軟 (Microsoft)",
+  "AMZN": "亞馬遜 (Amazon)",
+  "GOOGL": "谷歌 (Google)",
+  "META": "Meta",
+  "AMD": "超微半導體 (AMD)",
 };
 
 function getCompanyName(symbol: string): string {
@@ -45,7 +35,8 @@ function detectStock(input: string): string | null {
     "台積電": "2330.TW", "台积电": "2330.TW", "TSMC": "2330.TW",
     "騰訊": "0700.HK", "腾讯": "0700.HK", "Tencent": "0700.HK",
     "特斯拉": "TSLA", "Tesla": "TSLA",
-    "比亞迪": "1211.HK", "比亚迪": "1211.HK", "BYD": "1211.HK",
+    "英偉達": "NVDA", "輝達": "NVDA", "NVIDIA": "NVDA",
+    "蘋果": "AAPL", "苹果": "AAPL", "Apple": "AAPL",
   };
   
   for (const [name, symbol] of Object.entries(nameMap)) {
@@ -54,155 +45,35 @@ function detectStock(input: string): string | null {
   return null;
 }
 
-// Fetch news from Finnhub
-async function fetchNews(symbol: string): Promise<Array<{title: string; summary: string; source: string}>> {
+// Fetch news from multiple sources
+async function fetchNews(symbol: string): Promise<string> {
+  const newsItems: string[] = [];
+  
   try {
+    // Finnhub news
     const apiKey = process.env.FINNHUB_API_KEY;
-    if (!apiKey) return [];
-    
-    let finnhubSymbol = symbol;
-    if (symbol.endsWith('.HK')) finnhubSymbol = symbol.replace('.HK', '');
-    if (symbol.endsWith('.TW')) finnhubSymbol = symbol.replace('.TW', '');
-    
-    const from = new Date();
-    from.setDate(from.getDate() - 7);
-    const to = new Date();
-    const fromStr = from.toISOString().split('T')[0];
-    const toStr = to.toISOString().split('T')[0];
-    
-    const url = `https://finnhub.io/api/v1/company-news?symbol=${finnhubSymbol}&from=${fromStr}&to=${toStr}&token=${apiKey}`;
-    const res = await fetch(url);
-    if (!res.ok) return [];
-    
-    const data = await res.json();
-    if (!Array.isArray(data)) return [];
-    
-    return data.slice(0, 5).map((item: any) => ({
-      title: item.headline || '',
-      summary: item.summary || '',
-      source: item.source || 'Financial News',
-    }));
+    if (apiKey) {
+      let finnhubSymbol = symbol;
+      if (symbol.endsWith('.HK')) finnhubSymbol = symbol.replace('.HK', '');
+      if (symbol.endsWith('.TW')) finnhubSymbol = symbol.replace('.TW', '');
+      
+      const from = new Date();
+      from.setDate(from.getDate() - 7);
+      const to = new Date();
+      const url = `https://finnhub.io/api/v1/company-news?symbol=${finnhubSymbol}&from=${from.toISOString().split('T')[0]}&to=${to.toISOString().split('T')[0]}&token=${apiKey}`;
+      const res = await fetch(url);
+      if (res.ok) {
+        const data = await res.json();
+        data.slice(0, 5).forEach((item: any) => {
+          newsItems.push(`${item.headline} - ${item.summary?.substring(0, 150) || ''}`);
+        });
+      }
+    }
   } catch (err) {
-    return [];
+    console.log('News fetch error:', err);
   }
-}
-
-// Calculate RSI
-function calculateRSI(prices: number[], period: number = 14): number | null {
-  if (prices.length < period + 1) return null;
-  let gains = 0, losses = 0;
-  for (let i = prices.length - period; i < prices.length; i++) {
-    const change = prices[i] - (prices[i-1] || prices[i]);
-    if (change >= 0) gains += change;
-    else losses -= change;
-  }
-  const avgGain = gains / period;
-  const avgLoss = losses / period;
-  if (avgLoss === 0) return 100;
-  const rs = avgGain / avgLoss;
-  return 100 - (100 / (1 + rs));
-}
-
-// Determine trend
-function determineTrend(prices: number[]): string {
-  if (prices.length < 20) return 'Sideways';
-  const sma20 = prices.slice(-20).reduce((a, b) => a + b, 0) / 20;
-  const currentPrice = prices[prices.length - 1];
-  if (currentPrice > sma20 * 1.02) return 'Bullish 📈';
-  if (currentPrice < sma20 * 0.98) return 'Bearish 📉';
-  return 'Sideways ➡️';
-}
-
-// Generate structured analysis with company name
-function generateAnalysis(symbol: string, price: number, changePercent: number, rsi: number | null, trend: string, news: any[], userQuestion: string, language: string): string {
-  const isCantonese = language === 'Cantonese';
-  const isChinese = language === '简体中文';
-  const companyName = getCompanyName(symbol);
   
-  const rsiValue = rsi ? rsi.toFixed(1) : 'N/A';
-  const rsiStatus = rsi ? (rsi > 70 ? 'Overbought' : rsi < 30 ? 'Oversold' : 'Neutral') : 'N/A';
-  const changeDirection = changePercent > 0 ? 'gain' : changePercent < 0 ? 'loss' : 'stable';
-  const changeText = `${Math.abs(changePercent).toFixed(2)}%`;
-  
-  const newsText = news.length > 0 
-    ? news.map(n => `- **${n.source}**: ${n.title.substring(0, 100)}`).join('\n')
-    : 'No significant news for this stock recently.';
-  
-  if (isCantonese) {
-    return `## 📊 ${symbol} - ${companyName}
-
-### 1. 摘要
-${companyName} (${symbol}) 目前股價為 $${price.toFixed(2)}，${changePercent > 0 ? '上升' : changePercent < 0 ? '下跌' : '持平'} ${changeText}。RSI 為 ${rsiValue}，處於 ${rsiStatus === 'Overbought' ? '超買' : rsiStatus === 'Oversold' ? '超賣' : '中性'} 水平。整體趨勢 ${trend === 'Bullish 📈' ? '看好' : trend === 'Bearish 📉' ? '看淡' : '橫向整理'}。
-
-### 2. 技術分析
-- **RSI(14)**: ${rsiValue} - ${rsiStatus === 'Overbought' ? '超買區間，可能出現回調' : rsiStatus === 'Oversold' ? '超賣區間，可能出現反彈' : '中性區間，動能平衡'}
-- **趨勢**: ${trend}
-- **解讀**: 股價目前處於${trend === 'Bullish 📈' ? '上升通道' : trend === 'Bearish 📉' ? '下降通道' : '區間震盪'}。
-
-### 3. 基本面分析
-需要關注公司即將公佈嘅業績報告同行業趨勢。投資者應留意收入增長、利潤率同估值水平。
-
-### 4. 新聞情緒
-${newsText}
-
-### 5. 風險分析
-- 市場整體波動風險
-- 行業競爭加劇
-- 宏觀經濟不確定性
-- 監管政策變化
-
-### 6. 看好理由
-- ${rsi && rsi < 40 ? 'RSI處於超賣區間，技術性反彈可期' : '技術指標顯示中性，等待明確信號'}
-- ${trend !== 'Bearish 📉' ? '趨勢未有明顯轉差' : '需等待趨勢改善'}
-
-### 7. 看淡理由
-- ${rsi && rsi > 60 ? 'RSI處於偏高水平，短期可能受壓' : '動能有待確認'}
-- 市場情緒波動
-
-### 8. 最終建議
-**短期 (1-3個月)**: ${rsi && rsi < 30 ? '超賣區間，可小注博反彈' : rsi && rsi > 70 ? '超買區間，謹慎追高' : '中性觀望'}
-**中期 (3-12個月)**: 關注業績表現，等待更好入市時機
-**目標價區間**: $${(price * 0.95).toFixed(2)} - $${(price * 1.1).toFixed(2)}
-
-*⚠️ 以上分析僅供參考，不構成投資建議。*`;
-  } else {
-    return `## 📊 ${symbol} - ${companyName}
-
-### 1. SUMMARY
-${companyName} (${symbol}) is trading at $${price.toFixed(2)} with a ${changeDirection} of ${changeText}. RSI is at ${rsiValue} (${rsiStatus}). The overall trend is ${trend}.
-
-### 2. TECHNICAL ANALYSIS
-- **RSI(14)**: ${rsiValue} - ${rsiStatus === 'Overbought' ? 'Overbought territory, potential pullback' : rsiStatus === 'Oversold' ? 'Oversold territory, potential bounce' : 'Neutral zone, balanced momentum'}
-- **Trend**: ${trend}
-- **Interpretation**: Price is currently in ${trend === 'Bullish 📈' ? 'an uptrend' : trend === 'Bearish 📉' ? 'a downtrend' : 'a range-bound consolidation'}.
-
-### 3. FUNDAMENTAL ANALYSIS
-Monitor upcoming earnings reports and industry trends. Pay attention to revenue growth, profit margins, and valuation metrics.
-
-### 4. NEWS SENTIMENT
-${newsText}
-
-### 5. RISK ANALYSIS
-- Overall market volatility
-- Increasing industry competition
-- Macroeconomic uncertainty
-- Regulatory changes
-
-### 6. BULL CASE
-- ${rsi && rsi < 40 ? 'RSI in oversold territory suggests potential technical bounce' : 'Technical indicators showing neutral, waiting for clear signals'}
-- ${trend !== 'Bearish 📉' ? 'Trend remains constructive' : 'Wait for trend improvement'}
-
-### 7. BEAR CASE
-- ${rsi && rsi > 60 ? 'RSI at elevated levels, potential short-term pressure' : 'Momentum yet to confirm direction'}
-- Market sentiment fluctuations
-
-### 8. FINAL RECOMMENDATION
-**Short-term (1-3 months)**: ${rsi && rsi < 30 ? 'Oversold - consider small position' : rsi && rsi > 70 ? 'Overbought - be cautious' : 'Neutral - watch'}
-**Medium-term (3-12 months)**: Monitor earnings, wait for better entry points
-**Price Target Range**: $${(price * 0.95).toFixed(2)} - $${(price * 1.1).toFixed(2)}
-
-*⚠️ This analysis is for reference only. Not investment advice.*`;
-  }
+  return newsItems.join('\n');
 }
 
 // Fetch stock data from Yahoo
@@ -224,15 +95,94 @@ async function fetchStockData(symbol: string) {
     const closes = result.indicators?.quote?.[0]?.close || [];
     const validCloses = closes.filter((c: number) => c !== null);
     
+    // Calculate RSI
+    let rsi = null;
+    if (validCloses.length >= 14) {
+      let gains = 0, losses = 0;
+      for (let i = validCloses.length - 14; i < validCloses.length; i++) {
+        const change = validCloses[i] - (validCloses[i-1] || validCloses[i]);
+        if (change >= 0) gains += change;
+        else losses -= change;
+      }
+      const avgGain = gains / 14;
+      const avgLoss = losses / 14;
+      if (avgLoss !== 0) {
+        const rs = avgGain / avgLoss;
+        rsi = 100 - (100 / (1 + rs));
+      }
+    }
+    
     return {
       price: meta.regularMarketPrice,
       previousClose: meta.previousClose,
       changePercent: ((meta.regularMarketPrice - meta.previousClose) / meta.previousClose) * 100,
-      closes: validCloses,
+      rsi: rsi,
     };
   } catch (err) {
     return null;
   }
+}
+
+// Build the AI prompt
+function buildPrompt(symbol: string, companyName: string, price: number, changePercent: number, rsi: number | null, news: string, userUrl: string | null, language: string): string {
+  const isChinese = language === '简体中文' || language === 'Cantonese';
+  
+  const rsiText = rsi ? rsi.toFixed(1) : 'N/A';
+  const rsiAdvice = rsi ? (rsi > 70 ? '超買區間，短期可能回調' : rsi < 30 ? '超賣區間，可能出現反彈' : '中性區間，動能平衡') : '';
+  
+  const urlSection = userUrl ? `
+用戶提供的分析連結:
+${userUrl}
+
+請對這篇文章的觀點進行獨立分析，不要完全同意文章的結論，而是給出AI自己的專業判斷。
+` : '';
+
+  return `你是一位頂尖的金融分析師。請對${symbol} (${companyName}) 進行專業的股票分析。
+
+【市場數據】
+股價: $${price.toFixed(2)}
+日漲跌幅: ${changePercent > 0 ? '+' : ''}${changePercent.toFixed(2)}%
+RSI(14): ${rsiText} - ${rsiAdvice}
+
+【近期新聞摘要】
+${news || '無重大新聞'}
+
+${urlSection}
+
+請提供以下格式的分析（不要使用markdown符號如##或**，使用純文字）：
+
+【1. 技術分析】
+RSI(14)為${rsiText}，${rsiAdvice}。
+趨勢方向及技術面解讀。
+
+【2. 基本面分析】
+分析公司估值(PE Ratio)、每股盈利(EPS)、近幾季業績表現、成長動能。
+
+【3. 新聞分析】
+綜合分析近期新聞對股價的影響。${userUrl ? '特別針對用戶提供的新聞連結進行獨立分析，給出AI的專業觀點。' : ''}
+
+【4. 市場氣氛判斷】
+Risk-On / Risk-Off / Neutral
+
+【5. 看好因素】
+列出2-3個支撐股價的理由
+
+【6. 看淡因素】
+列出2-3個壓制股價的風險
+
+【7. AI投資建議及信心評分】
+建議: 買入/賣出/持有
+信心評分: (0-100%)
+目標價區間: $${(price * 0.9).toFixed(2)} - $${(price * 1.15).toFixed(2)}
+
+請用${isChinese ? '繁體中文' : '英文'}回答，專業詳細。`;
+}
+
+// Call Gemini AI
+async function callGemini(prompt: string): Promise<string> {
+  const model = genAI.getGenerativeModel({ model: "gemini-1.5-flash" });
+  const result = await model.generateContent(prompt);
+  return result.response.text();
 }
 
 export async function POST(req: Request) {
@@ -258,30 +208,26 @@ export async function POST(req: Request) {
       });
     }
     
-    const rsi = calculateRSI(marketData.closes);
-    const trend = determineTrend(marketData.closes);
-    let news = await fetchNews(symbol);
+    const news = await fetchNews(symbol);
+    const companyName = getCompanyName(symbol);
     
-    if (url) {
-      news.unshift({
-        title: `User-provided article for analysis`,
-        summary: `URL: ${url.substring(0, 100)}...`,
-        source: 'User Input',
-      });
-    }
+    const prompt = buildPrompt(
+      symbol, companyName, marketData.price, 
+      marketData.changePercent, marketData.rsi, news, url || null, language
+    );
     
-    const analysis = generateAnalysis(symbol, marketData.price, marketData.changePercent, rsi, trend, news, message, language);
+    console.log('🤖 Calling Gemini AI...');
+    const aiAnalysis = await callGemini(prompt);
     
     return NextResponse.json({
       success: true,
       symbol: symbol,
-      companyName: getCompanyName(symbol),
+      companyName: companyName,
       price: marketData.price,
       changePercent: marketData.changePercent,
-      rsi: rsi,
-      trend: trend,
-      summary: analysis,
-      text: analysis,
+      rsi: marketData.rsi,
+      summary: aiAnalysis,
+      text: aiAnalysis,
     });
     
   } catch (error) {
