@@ -3,20 +3,11 @@ import { GoogleGenerativeAI } from "@google/generative-ai";
 
 const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY || "");
 
-// Stock symbol to company name mapping
 const COMPANY_NAMES: Record<string, string> = {
-  "2330.TW": "台積電 (TSMC)",
-  "0700.HK": "騰訊控股 (Tencent)",
-  "TSLA": "特斯拉 (Tesla)",
-  "NVDA": "英偉達 (NVIDIA)",
-  "AAPL": "蘋果 (Apple)",
-  "MSFT": "微軟 (Microsoft)",
-  "AMZN": "亞馬遜 (Amazon)",
-  "GOOGL": "谷歌 (Google)",
-  "META": "Meta",
-  "AMD": "超微半導體 (AMD)",
-  "CVX": "雪佛龍 (Chevron)",
-  "XOM": "埃克森美孚 (Exxon Mobil)",
+  "2330.TW": "台積電 (TSMC)", "0700.HK": "騰訊控股 (Tencent)", "TSLA": "特斯拉 (Tesla)",
+  "NVDA": "英偉達 (NVIDIA)", "AAPL": "蘋果 (Apple)", "MSFT": "微軟 (Microsoft)",
+  "AMZN": "亞馬遜 (Amazon)", "GOOGL": "谷歌 (Google)", "META": "Meta", "AMD": "超微半導體 (AMD)",
+  "CVX": "雪佛龍 (Chevron)", "XOM": "埃克森美孚 (Exxon Mobil)",
 };
 
 function getCompanyName(symbol: string): string {
@@ -47,31 +38,41 @@ function detectStock(input: string): string | null {
   return null;
 }
 
-// Fetch and extract content from URL
-async function fetchUrlContent(url: string): Promise<string> {
+// Fetch URL content with better headers
+async function fetchUrlContent(url: string): Promise<{ content: string; success: boolean }> {
   try {
-    const res = await fetch(url);
+    const res = await fetch(url, {
+      headers: {
+        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
+        'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,*/*;q=0.8',
+        'Accept-Language': 'zh-TW,zh;q=0.9,en;q=0.8',
+      },
+    });
+    
+    if (!res.ok) {
+      return { content: `HTTP ${res.status}: 無法訪問此連結 (${url})`, success: false };
+    }
+    
     const html = await res.text();
-    // Simple extraction - look for title and article content
     const titleMatch = html.match(/<title>(.*?)<\/title>/i);
     const title = titleMatch ? titleMatch[1] : '';
-    // Remove script and style tags
+    
     let text = html.replace(/<script\b[^<]*(?:(?!<\/script>)<[^<]*)*<\/script>/gi, ' ');
     text = text.replace(/<style\b[^<]*(?:(?!<\/style>)<[^<]*)*<\/style>/gi, ' ');
     text = text.replace(/<[^>]+>/g, ' ');
     text = text.replace(/\s+/g, ' ').trim();
-    // Take first 2000 characters
-    const content = text.substring(0, 2000);
-    return `標題: ${title}\n摘要: ${content.substring(0, 1000)}`;
+    
+    return { 
+      content: `標題: ${title}\n摘要: ${text.substring(0, 1500)}`,
+      success: true 
+    };
   } catch (err) {
     console.error('URL fetch error:', err);
-    return '無法獲取文章內容';
+    return { content: `無法獲取內容: ${err}`, success: false };
   }
 }
 
 async function fetchNews(symbol: string): Promise<string> {
-  const newsItems: string[] = [];
-  
   try {
     const apiKey = process.env.FINNHUB_API_KEY;
     if (apiKey) {
@@ -86,16 +87,11 @@ async function fetchNews(symbol: string): Promise<string> {
       const res = await fetch(url);
       if (res.ok) {
         const data = await res.json();
-        data.slice(0, 3).forEach((item: any) => {
-          newsItems.push(`${item.headline}`);
-        });
+        return data.slice(0, 3).map((item: any) => item.headline).join('\n');
       }
     }
-  } catch (err) {
-    console.log('News fetch error:', err);
-  }
-  
-  return newsItems.join('\n') || '近期無重大新聞';
+  } catch (err) {}
+  return '近期無重大新聞';
 }
 
 async function fetchStockData(symbol: string) {
@@ -134,7 +130,6 @@ async function fetchStockData(symbol: string) {
     
     return {
       price: meta.regularMarketPrice,
-      previousClose: meta.previousClose,
       changePercent: ((meta.regularMarketPrice - meta.previousClose) / meta.previousClose) * 100,
       rsi: rsi,
     };
@@ -143,78 +138,61 @@ async function fetchStockData(symbol: string) {
   }
 }
 
-async function callGemini(prompt: string): Promise<string> {
+async function callAI(prompt: string): Promise<string> {
   const model = genAI.getGenerativeModel({ model: "gemini-1.5-flash" });
   const result = await model.generateContent(prompt);
   return result.response.text();
 }
 
-async function callOpenAI(prompt: string): Promise<string> {
-  const apiKey = process.env.OPENAI_API_KEY;
-  if (!apiKey) throw new Error('OpenAI API key missing');
-  
-  const response = await fetch('https://api.openai.com/v1/chat/completions', {
-    method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-      'Authorization': `Bearer ${apiKey}`,
-    },
-    body: JSON.stringify({
-      model: 'gpt-4o-mini',
-      messages: [{ role: 'user', content: prompt }],
-      temperature: 0.7,
-    }),
-  });
-  
-  const data = await response.json();
-  return data.choices[0].message.content;
-}
-
-async function callAI(prompt: string): Promise<string> {
-  try {
-    console.log('🤖 Trying Gemini...');
-    return await callGemini(prompt);
-  } catch (err: any) {
-    console.log('Gemini failed:', err.message);
-  }
-  
-  try {
-    console.log('🤖 Trying OpenAI...');
-    return await callOpenAI(prompt);
-  } catch (err: any) {
-    console.log('OpenAI failed:', err.message);
-  }
-  
-  throw new Error('All AI providers failed');
-}
-
-function buildPrompt(symbol: string, companyName: string, price: number, changePercent: number, rsi: number | null, news: string, urlContent: string | null, language: string): string {
+function buildPrompt(symbol: string, companyName: string, price: number, changePercent: number, rsi: number | null, news: string, urlData: { content: string; success: boolean } | null, language: string): string {
   const isChinese = language === '简体中文' || language === 'Cantonese';
   
   const rsiText = rsi ? rsi.toFixed(1) : 'N/A';
   const rsiAdvice = rsi ? (rsi > 70 ? '超買區間，短期可能回調' : rsi < 30 ? '超賣區間，可能出現反彈' : '中性區間，動能平衡') : '';
   
-  const urlSection = urlContent ? `
-═══════════════════════════════════════
-【用戶提供的新聞連結 - 必須重點分析】
+  let urlSection = '';
+  if (urlData) {
+    if (urlData.success) {
+      urlSection = `
+═══════════════════════════════════════════════════════════
+【用戶提供的新聞連結 - 請重點分析此新聞對股價的影響】
 新聞內容:
-${urlContent}
-═══════════════════════════════════════
+${urlData.content}
+═══════════════════════════════════════════════════════════
 
-重要指示:
-1. 請先摘要這則新聞的核心內容 (2-3句話)
-2. 分析這則新聞對 ${symbol} (${companyName}) 股價的具體影響
-3. 給出AI的獨立判斷: 這則新聞是否真的會影響股價? 影響程度多大?
-4. 不要只是複述新聞，要提供有價值的分析觀點
-5. 如果用戶提供的新聞與市場主流觀點不同，請說明你的看法
+【分析此新聞的具體要求】
+請務必按照以下結構分析用戶提供的新聞:
 
-⚠️ 用戶提供了這個新聞連結，表示用戶關心這個資訊。請務必詳細分析!
-` : '';
+1. 新聞核心摘要: (用1-2句話總結這則新聞)
+2. 對${symbol} ($companyName)的影響評估:
+   - 短期影響 (1-4週): 正面/負面/中性? 為什麼?
+   - 長期影響 (3-12個月): 正面/負面/中性? 為什麼?
+3. AI獨立判斷: 
+   - 這則新聞是否真的會影響股價? 影響程度多大? (高/中/低)
+   - 如果影響較小,請說明為什麼市場可能不會對此新聞有強烈反應
+4. 給用戶的具體建議: 基於這則新聞,用戶應該如何調整投資決策?
+
+⚠️ 重要: 用戶專門提供了這個新聞連結,表示用戶認為這個資訊很重要。請務必詳細分析,不要忽略!
+`;
+    } else {
+      urlSection = `
+═══════════════════════════════════════════════════════════
+【用戶提供的新聞連結 - 無法獲取內容】
+用戶提供的連結: ${urlData.content.split(':')[1] || '無法訪問'}
+狀態: ${urlData.content}
+═══════════════════════════════════════════════════════════
+
+請注意: 用戶提供了這個新聞連結,但系統無法直接獲取內容。請根據連結的性質(如來源網站是香港經濟日報/信報等),推測這類新聞可能涉及的議題,並給予一般性的分析建議。
+
+請告知用戶: 由於無法訪問該連結,建議用戶手動查看新聞內容後再次提問。
+`;
+    }
+  }
 
   return `你是一位頂尖的金融分析師。請對${symbol} (${companyName}) 進行專業的股票分析。
 
 【市場數據】
-股價: $${price.toFixed(2)}
+${companyName} (${symbol}) 股價: $${price.toFixed(2)}
 日漲跌幅: ${changePercent > 0 ? '+' : ''}${changePercent.toFixed(2)}%
 RSI(14): ${rsiText} - ${rsiAdvice}
 
@@ -223,17 +201,16 @@ ${news || '無其他重大新聞'}
 
 ${urlSection}
 
-請嚴格按照以下格式輸出分析（不要使用markdown符號如##或**）：
+請嚴格按照以下格式輸出分析:
 
 【1. 技術分析】
-RSI(14)為${rsiText}，${rsiAdvice}。
-趨勢方向及技術面解讀。
+RSI(14)為${rsiText}，${rsiAdvice}。趨勢方向及技術面解讀。
 
 【2. 基本面分析】
 分析公司估值、每股盈利、業績表現、成長動能。
 
-【3. 新聞分析】
-${urlContent ? '請在此部分重點分析用戶提供的新聞連結，包括新聞摘要、對股價影響、AI獨立判斷。' : '分析近期新聞對股價的影響。'}
+【3. 用戶提供新聞的分析】
+${urlData ? '請在此部分詳細分析用戶提供的新聞,包括新聞摘要、對股價的影響評估、以及AI的獨立判斷。' : '分析近期新聞對股價的影響。'}
 
 【4. 市場氣氛判斷】
 Risk-On / Risk-Off / Neutral
@@ -249,31 +226,30 @@ Risk-On / Risk-Off / Neutral
 信心評分: (0-100%)
 目標價區間: $${(price * 0.9).toFixed(2)} - $${(price * 1.15).toFixed(2)}
 
-請用${isChinese ? '繁體中文' : '英文'}回答，專業詳細。`;
+請用${isChinese ? '繁體中文' : '英文'}回答,專業詳細。`;
 }
 
 export async function POST(req: Request) {
   try {
     const { message, language = 'EN', url } = await req.json();
     console.log(`📝 Analyzing: ${message}`);
-    console.log(`🔗 URL provided: ${url || 'none'}`);
+    console.log(`🔗 URL: ${url || 'none'}`);
     
     const symbol = detectStock(message);
     if (!symbol) {
       return NextResponse.json({
         success: false,
-        summary: `無法識別股票代號。請嘗試: TSLA, 0700.HK, CVX, 或 台積電`
+        summary: `無法識別股票代號。請嘗試: TSLA, 0700.HK, CVX, AMZN`
       });
     }
     
     console.log(`📊 Symbol: ${symbol}`);
     
-    // Fetch URL content if provided
-    let urlContent = null;
+    let urlData = null;
     if (url) {
-      console.log(`🌐 Fetching URL content: ${url}`);
-      urlContent = await fetchUrlContent(url);
-      console.log(`📄 URL content fetched, length: ${urlContent?.length || 0}`);
+      console.log(`🌐 Fetching URL: ${url}`);
+      urlData = await fetchUrlContent(url);
+      console.log(`📄 URL fetch success: ${urlData.success}`);
     }
     
     const marketData = await fetchStockData(symbol);
@@ -289,7 +265,7 @@ export async function POST(req: Request) {
     
     const prompt = buildPrompt(
       symbol, companyName, marketData.price, 
-      marketData.changePercent, marketData.rsi, news, urlContent, language
+      marketData.changePercent, marketData.rsi, news, urlData, language
     );
     
     console.log('🤖 Calling AI...');
