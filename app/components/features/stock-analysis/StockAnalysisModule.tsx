@@ -28,50 +28,21 @@ export const StockAnalysisModule: React.FC<Props> = ({ data, isLoading, langKey,
     );
   }
 
-  // Display real price if available
-  const priceDisplay = data.price ? `${data.price.toFixed(2)}` : 'N/A';
-  const changeDisplay = data.changePercent ? `${data.changePercent > 0 ? '+' : ''}${data.changePercent.toFixed(2)}%` : 'N/A';
-  const rsiDisplay = data.rsi ? data.rsi.toFixed(1) : 'N/A';
-  const macdDisplay = data.macd || 'N/A';
-  const trendDisplay = data.trend || 'N/A';
+  // Format the analysis with proper markdown to HTML conversion
+  const formattedSummary = data.summary
+    .replace(/^## /gm, '<h2 style="font-size: 16px; font-weight: bold; margin: 16px 0 8px 0;">')
+    .replace(/^### /gm, '<h3 style="font-size: 14px; font-weight: bold; margin: 12px 0 6px 0;">')
+    .replace(/^- /gm, '<li style="margin-left: 20px;">')
+    .replace(/\n/g, '<br/>');
 
   return (
-    <div style={{ maxWidth: '100%' }}>
-      {/* Price Info Bar */}
-      <div style={{ backgroundColor: '#FEF08A', borderRadius: '12px', padding: '12px', marginBottom: '16px' }}>
-        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '12px' }}>
-          <div>
-            <h3 style={{ fontSize: '16px', fontWeight: 'bold', margin: 0 }}>{data.symbol}</h3>
-            <p style={{ fontSize: '24px', fontWeight: 'bold', margin: '4px 0 0 0' }}>${priceDisplay}</p>
-            <p style={{ fontSize: '14px', color: data.changePercent >= 0 ? '#10B981' : '#EF4444', margin: 0 }}>
-              {changeDisplay}
-            </p>
-          </div>
-          <div style={{ display: 'flex', gap: '20px' }}>
-            <div style={{ textAlign: 'center' }}>
-              <p style={{ fontSize: '10px', color: '#6B7280', margin: 0 }}>RSI(14)</p>
-              <p style={{ fontSize: '16px', fontWeight: 'bold', color: '#3B82F6', margin: 0 }}>{rsiDisplay}</p>
-            </div>
-            <div style={{ textAlign: 'center' }}>
-              <p style={{ fontSize: '10px', color: '#6B7280', margin: 0 }}>MACD</p>
-              <p style={{ fontSize: '14px', fontWeight: 'bold', margin: 0 }}>{macdDisplay}</p>
-            </div>
-            <div style={{ textAlign: 'center' }}>
-              <p style={{ fontSize: '10px', color: '#6B7280', margin: 0 }}>Trend</p>
-              <p style={{ fontSize: '14px', fontWeight: 'bold', margin: 0 }}>{trendDisplay}</p>
-            </div>
-          </div>
-        </div>
-      </div>
-
-      {/* Analysis Report */}
-      <div style={{ backgroundColor: 'white', borderRadius: '12px', padding: '20px', border: '1px solid #E5E7EB' }}>
-        <div style={{ whiteSpace: 'pre-wrap', lineHeight: 1.6, fontSize: '13px' }}>
-          {data.summary}
-        </div>
-        <div style={{ borderTop: '1px solid #E5E7EB', marginTop: '16px', paddingTop: '12px', fontSize: '11px', color: '#9CA3AF' }}>
-          <span>AI Analysis • {new Date().toLocaleString()}</span>
-        </div>
+    <div style={{ backgroundColor: 'white', borderRadius: '12px', padding: '20px', border: '1px solid #E5E7EB' }}>
+      <div 
+        dangerouslySetInnerHTML={{ __html: formattedSummary }}
+        style={{ lineHeight: 1.6, fontSize: '13px' }}
+      />
+      <div style={{ borderTop: '1px solid #E5E7EB', marginTop: '16px', paddingTop: '12px', fontSize: '11px', color: '#9CA3AF' }}>
+        <span>AI Analysis • {new Date().toLocaleString()}</span>
       </div>
     </div>
   );
