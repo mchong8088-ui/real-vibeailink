@@ -11,6 +11,7 @@ interface Props {
 
 export const StockAnalysisModule: React.FC<Props> = ({ data, isLoading, langKey, t }) => {
   const [period, setPeriod] = useState<'1M' | '3M' | '1Y'>('1M');
+  const [chartData, setChartData] = useState<any[]>([]);
   
   const globalIndices = [
     { name: "S&P 500", value: "5,234.18", change: "+0.8%", positive: true },
@@ -24,6 +25,7 @@ export const StockAnalysisModule: React.FC<Props> = ({ data, isLoading, langKey,
   const row1Indices = globalIndices.slice(0, 3);
   const row2Indices = globalIndices.slice(3, 6);
 
+  // 計算保力加通道
   const calculateBollingerBands = (prices: number[], period: number = 20, multiplier: number = 2) => {
     if (prices.length < period) return { upper: [], middle: [], lower: [] };
     const middle = [];
@@ -41,7 +43,26 @@ export const StockAnalysisModule: React.FC<Props> = ({ data, isLoading, langKey,
     return { upper, middle, lower };
   };
 
-  const getChartData = () => {
+  // 當 data 或 period 改變時，重新計算圖表數據
+  useEffect(() => {
+    if (!data?.historical || data.historical.length === 0) {
+      // 如果沒有歷史數據，生成模擬數據
+      const currentPrice = data?.price || 100;
+      const mockData = [];
+      let price = currentPrice * 0.85;
+      for (let i = 30; i >= 0; i--) {
+        const change = (Math.random() - 0.5) * 8;
+        price = price + change;
+        const date = new Date();
+        date.setDate(date.getDate() - i);
+        mockData.push({
+          date: date.toISOString().split('T')[0],
+          close: Math.max(50, price),
+        });
+      }
+      data.historical = mockData;
+    }
+    
     if (data?.historical && data.historical.length > 0) {
       let historical = [...data.historical];
       const now = new Date();
@@ -51,12 +72,17 @@ export const StockAnalysisModule: React.FC<Props> = ({ data, isLoading, langKey,
       
       const cutoffDate = new Date();
       cutoffDate.setDate(now.getDate() - daysToShow);
-      historical = historical.filter(h => new Date(h.date) >= cutoffDate);
+      historical = historical.filter((h: any) => new Date(h.date) >= cutoffDate);
       
-      const prices = historical.map(h => h.close);
+      if (historical.length === 0) {
+        setChartData([]);
+        return;
+      }
+      
+      const prices = historical.map((h: any) => h.close);
       const bands = calculateBollingerBands(prices, 20, 2);
       
-      const chartData = [];
+      const formattedData = [];
       for (let i = 0; i < historical.length; i++) {
         const date = new Date(historical[i].date);
         let dateStr = '';
@@ -65,7 +91,7 @@ export const StockAnalysisModule: React.FC<Props> = ({ data, isLoading, langKey,
         } else {
           dateStr = date.toLocaleDateString(undefined, { month: 'short', day: 'numeric' });
         }
-        chartData.push({
+        formattedData.push({
           date: dateStr,
           fullDate: historical[i].date,
           price: historical[i].close,
@@ -75,38 +101,9 @@ export const StockAnalysisModule: React.FC<Props> = ({ data, isLoading, langKey,
         });
       }
       
-      const labelInterval = Math.max(1, Math.floor(chartData.length / 6));
-      return { chartData, labelInterval };
+      setChartData(formattedData);
     }
-    
-    const currentPrice = data?.price || 100;
-    const dataPoints = [];
-    let price = currentPrice * 0.85;
-    for (let i = 30; i >= 0; i--) {
-      const change = (Math.random() - 0.5) * 8;
-      price = price + change;
-      const date = new Date();
-      date.setDate(date.getDate() - i);
-      dataPoints.push({
-        date: date.toLocaleDateString(),
-        fullDate: date.toISOString(),
-        price: Math.max(50, price),
-        upper: null,
-        middle: null,
-        lower: null,
-      });
-    }
-    return { chartData: dataPoints, labelInterval: 5 };
-  };
-
-  const { chartData, labelInterval } = getChartData();
-  const minPrice = chartData.length > 0 ? Math.min(...chartData.map(d => d.price)) : 0;
-  const maxPrice = chartData.length > 0 ? Math.max(...chartData.map(d => d.price)) : 0;
-
-  const formatXTick = (value: string, index: number) => {
-    if (index % labelInterval === 0) return value;
-    return '';
-  };
+  }, [data, period]);
 
   if (isLoading) {
     return (
@@ -133,19 +130,6 @@ export const StockAnalysisModule: React.FC<Props> = ({ data, isLoading, langKey,
   const rsiDisplay = data.rsi ? data.rsi.toFixed(1) : 'N/A';
   const trendDisplay = data.trend || 'Sideways';
 
-  const CustomTooltip = ({ active, payload, label }: any) => {
-    if (active && payload && payload.length) {
-      return (
-        <div style={{ backgroundColor: 'white', border: '1px solid #E5E7EB', borderRadius: '8px', padding: '8px 12px', boxShadow: '0 2px 8px rgba(0,0,0,0.1)' }}>
-          <p style={{ margin: '0 0 4px 0', fontSize: '11px', color: '#6B7280' }}>{label}</p>
-          <p style={{ margin: '0', fontSize: '14px', fontWeight: 'bold', color: '#2563EB' }}>${payload[0]?.value?.toFixed(2)}</p>
-        </div>
-      );
-    }
-    return null;
-  };
-
-  // Determine currency symbol for display
   const getCurrencySymbol = () => {
     if (data.symbol?.endsWith('.TW')) return 'NT$';
     if (data.symbol?.endsWith('.HK')) return 'HK$';
@@ -153,9 +137,31 @@ export const StockAnalysisModule: React.FC<Props> = ({ data, isLoading, langKey,
   };
   const currencySymbol = getCurrencySymbol();
 
+  const minPrice = chartData.length > 0 ? Math.min(...chartData.map(d => d.price)) : 0;
+  const maxPrice = chartData.length > 0 ? Math.max(...chartData.map(d => d.price)) : 0;
+
+  const labelInterval = Math.max(1, Math.floor(chartData.length / 6));
+
+  const formatXTick = (value: string, index: number) => {
+    if (index % labelInterval === 0) return value;
+    return '';
+  };
+
+  const CustomTooltip = ({ active, payload, label }: any) => {
+    if (active && payload && payload.length) {
+      return (
+        <div style={{ backgroundColor: 'white', border: '1px solid #E5E7EB', borderRadius: '8px', padding: '8px 12px', boxShadow: '0 2px 8px rgba(0,0,0,0.1)' }}>
+          <p style={{ margin: '0 0 4px 0', fontSize: '11px', color: '#6B7280' }}>{label}</p>
+          <p style={{ margin: '0', fontSize: '14px', fontWeight: 'bold', color: '#2563EB' }}>{currencySymbol}{payload[0]?.value?.toFixed(2)}</p>
+        </div>
+      );
+    }
+    return null;
+  };
+
   return (
     <div style={{ maxWidth: '100%' }}>
-      {/* Global Market Indices */}
+      {/* 全球市場指數 */}
       <div style={{ backgroundColor: '#FEF08A', borderRadius: '12px', padding: '12px', marginBottom: '16px' }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '10px' }}>
           <span style={{ fontSize: '14px' }}>🌍</span>
@@ -181,7 +187,7 @@ export const StockAnalysisModule: React.FC<Props> = ({ data, isLoading, langKey,
         </div>
       </div>
 
-      {/* Stock Info Bar */}
+      {/* 股票資訊欄 */}
       <div style={{ backgroundColor: '#FEF08A', borderRadius: '12px', padding: '12px', marginBottom: '16px' }}>
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '12px' }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
@@ -211,7 +217,7 @@ export const StockAnalysisModule: React.FC<Props> = ({ data, isLoading, langKey,
         </div>
       </div>
 
-      {/* Price Chart */}
+      {/* 價格走勢圖 */}
       <div style={{ backgroundColor: 'white', borderRadius: '12px', padding: '12px', marginBottom: '16px', border: '1px solid #E5E7EB' }}>
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '12px', flexWrap: 'wrap', gap: '8px' }}>
           <h4 style={{ fontSize: '12px', fontWeight: 'bold', margin: 0 }}>價格走勢圖 (保力加通道)</h4>
@@ -226,12 +232,6 @@ export const StockAnalysisModule: React.FC<Props> = ({ data, isLoading, langKey,
             <div style={{ height: '280px' }}>
               <ResponsiveContainer width="100%" height="100%">
                 <ComposedChart data={chartData}>
-                  <defs>
-                    <linearGradient id="colorPrice" x1="0" y1="0" x2="0" y2="1">
-                      <stop offset="5%" stopColor="#2563eb" stopOpacity={0.1}/>
-                      <stop offset="95%" stopColor="#2563eb" stopOpacity={0}/>
-                    </linearGradient>
-                  </defs>
                   <CartesianGrid strokeDasharray="3 3" stroke="#E5E7EB" />
                   <XAxis dataKey="date" tickFormatter={formatXTick} fontSize={10} interval={0} tick={{ fill: '#6B7280' }} />
                   <YAxis domain={[minPrice * 0.95, maxPrice * 1.05]} fontSize={10} width={45} tick={{ fill: '#6B7280' }} tickFormatter={(value) => `${currencySymbol}${value.toFixed(0)}`} />
@@ -249,18 +249,22 @@ export const StockAnalysisModule: React.FC<Props> = ({ data, isLoading, langKey,
                 <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}><div style={{ width: '12px', height: '2px', backgroundColor: '#F59E0B', borderStyle: 'dashed' }} /><span>中軌線(SMA20)</span></div>
                 <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}><div style={{ width: '12px', height: '1px', backgroundColor: '#E5E7EB' }} /><span>保力加通道</span></div>
               </div>
-              <div><span>區間: ${currencySymbol}{minPrice.toFixed(2)} - ${currencySymbol}{maxPrice.toFixed(2)}</span></div>
+              <div><span>區間: {currencySymbol}{minPrice.toFixed(2)} - {currencySymbol}{maxPrice.toFixed(2)}</span></div>
             </div>
           </>
         ) : (
-          <div style={{ height: '200px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}><p style={{ color: '#9CA3AF' }}>圖表數據載入中...</p></div>
+          <div style={{ height: '200px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+            <p style={{ color: '#9CA3AF' }}>圖表數據載入中...</p>
+          </div>
         )}
       </div>
 
-      {/* Analysis Report */}
+      {/* 分析報告 */}
       <div style={{ backgroundColor: 'white', borderRadius: '12px', padding: '20px', border: '1px solid #E5E7EB' }}>
         <div style={{ whiteSpace: 'pre-wrap', lineHeight: 1.6, fontSize: '13px' }}>{data.summary}</div>
-        <div style={{ borderTop: '1px solid #E5E7EB', marginTop: '16px', paddingTop: '12px', fontSize: '11px', color: '#9CA3AF' }}><span>AI Analysis • {new Date().toLocaleString()}</span></div>
+        <div style={{ borderTop: '1px solid #E5E7EB', marginTop: '16px', paddingTop: '12px', fontSize: '11px', color: '#9CA3AF' }}>
+          <span>AI Analysis • {new Date().toLocaleString()}</span>
+        </div>
       </div>
     </div>
   );
