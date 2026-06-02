@@ -29,28 +29,67 @@ export const SmartInputSystem: React.FC<SmartInputSystemProps> = ({
     let result = text;
     
     if (langKey === 'Cantonese') {
-      // Replace currency symbols with spoken Cantonese
+      // Remove markdown symbols
+      result = result.replace(/##?\s*📊\s*/g, '');
+      result = result.replace(/###\s*/g, '');
+      result = result.replace(/\*\*/g, '');
+      result = result.replace(/##/g, '');
+      result = result.replace(/\*/g, '');
+      
+      // Convert numbered list markers
+      result = result.replace(/### (\d+)\./g, '第$1部分');
+      result = result.replace(/^(\d+)\./gm, '第$1部分');
+      
+      // Convert section numbers to Chinese
+      result = result.replace(/1\. 摘要/g, '第一，摘要');
+      result = result.replace(/2\. 技術分析/g, '第二，技術分析');
+      result = result.replace(/3\. 基本面分析/g, '第三，基本面分析');
+      result = result.replace(/4\. 新聞與風險分析/g, '第四，新聞與風險分析');
+      result = result.replace(/5\. 看好因素/g, '第五，看好因素');
+      result = result.replace(/6\. 看淡因素/g, '第六，看淡因素');
+      result = result.replace(/7\. 買賣建議/g, '第七，買賣建議');
+      result = result.replace(/8\. 最終建議及信心評分/g, '第八，最終建議及信心評分');
+      
+      // Replace currency symbols
       result = result.replace(/HK\$(\d+\.?\d*)/g, '港幣$1元');
       result = result.replace(/NT\$(\d+\.?\d*)/g, '新台幣$1元');
       result = result.replace(/\$(\d+\.?\d*)/g, '美元$1元');
       result = result.replace(/HK\$/, '港幣');
       result = result.replace(/NT\$/, '新台幣');
       
-      // Replace other symbols
+      // Replace percentage
+      result = result.replace(/(\d+(?:\.\d+)?)%/g, (match, num) => {
+        return `${num}個巴仙`;
+      });
+      
+      // Replace dash and bullet points
+      result = result.replace(/-\s*\*\*/g, '');
+      result = result.replace(/-\s*/g, '');
+      result = result.replace(/•/g, '');
+      result = result.replace(/➡️/g, '向右');
+      result = result.replace(/📈/g, '上升');
+      result = result.replace(/📉/g, '下跌');
+      
+      // Replace common symbols
       result = result.replace(/\+/g, '加');
       result = result.replace(/-/g, '減');
-      result = result.replace(/%/g, '巴仙');
       result = result.replace(/\./g, '點');
+      result = result.replace(/:/g, '係');
+      result = result.replace(/\|/g, '');
       
-      // Replace common terms
-      result = result.replace(/買入/g, '買入');
-      result = result.replace(/賣出/g, '賣出');
-      result = result.replace(/持有/g, '持有');
+      // Clean up multiple spaces
+      result = result.replace(/\s+/g, ' ');
+      result = result.trim();
+      
+      console.log('TTS prepared text:', result.substring(0, 200));
     } else if (langKey === '简体中文') {
+      result = result.replace(/##?\s*📊\s*/g, '');
+      result = result.replace(/###\s*/g, '');
+      result = result.replace(/\*\*/g, '');
       result = result.replace(/HK\$(\d+\.?\d*)/g, '港币$1元');
       result = result.replace(/NT\$(\d+\.?\d*)/g, '新台币$1元');
       result = result.replace(/\$(\d+\.?\d*)/g, '美元$1元');
-      result = result.replace(/%/g, '百分之');
+      result = result.replace(/(\d+(?:\.\d+)?)%/g, '$1百分之');
     }
     
     return result;
@@ -62,7 +101,8 @@ export const SmartInputSystem: React.FC<SmartInputSystemProps> = ({
       const textToSpeak = prepareTextForTTS(analysisText);
       const utterance = new SpeechSynthesisUtterance(textToSpeak);
       utterance.lang = langKey === 'Cantonese' ? 'zh-HK' : langKey === '简体中文' ? 'zh-CN' : 'en-US';
-      utterance.rate = 0.9;
+      utterance.rate = 0.85;
+      utterance.pitch = 1.0;
       utterance.onend = () => { utteranceRef.current = null; };
       utterance.onerror = () => { utteranceRef.current = null; };
       utteranceRef.current = utterance;
@@ -71,7 +111,7 @@ export const SmartInputSystem: React.FC<SmartInputSystemProps> = ({
     return () => { if (utteranceRef.current) window.speechSynthesis.cancel(); };
   }, [analysisText, isSpeaking, isPaused, langKey]);
 
-  // Rest of the component remains the same...
+  // Rest of the component...
   const handleMicToggle = () => {
     if (recognition && !isListening) {
       recognition.start();
