@@ -24,13 +24,9 @@ export const StockAnalysisModule: React.FC<Props> = ({ data, isLoading, langKey,
   const row1Indices = globalIndices.slice(0, 3);
   const row2Indices = globalIndices.slice(3, 6);
 
-  // Use real historical data from API if available
   const getChartData = () => {
     if (data?.historical && data.historical.length > 0) {
-      // Use real historical data
       let historical = [...data.historical];
-      
-      // Filter by period
       const now = new Date();
       let daysToShow = 30;
       if (period === '3M') daysToShow = 90;
@@ -46,7 +42,6 @@ export const StockAnalysisModule: React.FC<Props> = ({ data, isLoading, langKey,
       }));
     }
     
-    // Fallback: generate mock data based on current price
     const currentPrice = data?.price || 100;
     const dataPoints = [];
     let price = currentPrice * 0.85;
@@ -90,7 +85,6 @@ export const StockAnalysisModule: React.FC<Props> = ({ data, isLoading, langKey,
   const priceDisplay = data.price ? `${data.price.toFixed(2)}` : 'N/A';
   const changeDisplay = data.changePercent ? `${isPositive ? '+' : ''}${data.changePercent.toFixed(2)}%` : 'N/A';
   const rsiDisplay = data.rsi ? data.rsi.toFixed(1) : 'N/A';
-  const macdDisplay = data.macd || 'N/A';
   const trendDisplay = data.trend || 'Sideways';
 
   return (
@@ -130,6 +124,7 @@ export const StockAnalysisModule: React.FC<Props> = ({ data, isLoading, langKey,
             </div>
             <div>
               <h3 style={{ fontSize: '14px', fontWeight: 'bold', margin: 0 }}>{data.symbol}</h3>
+              {data.companyName && <p style={{ fontSize: '10px', color: '#6B7280', margin: 0 }}>{data.companyName}</p>}
             </div>
             <span style={{ fontSize: '13px', fontWeight: 'bold', color: isPositive ? '#10B981' : '#EF4444' }}>{changeDisplay}</span>
           </div>
@@ -150,7 +145,7 @@ export const StockAnalysisModule: React.FC<Props> = ({ data, isLoading, langKey,
         </div>
       </div>
 
-      {/* Price Chart with Real Data */}
+      {/* Price Chart */}
       <div style={{ backgroundColor: 'white', borderRadius: '12px', padding: '12px', marginBottom: '16px', border: '1px solid #E5E7EB' }}>
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '12px' }}>
           <h4 style={{ fontSize: '12px', fontWeight: 'bold', margin: 0 }}>Price Trend</h4>
@@ -186,9 +181,9 @@ export const StockAnalysisModule: React.FC<Props> = ({ data, isLoading, langKey,
         )}
       </div>
 
-      {/* Analysis Report */}
+      {/* Analysis Report - Display as plain text */}
       <div style={{ backgroundColor: 'white', borderRadius: '12px', padding: '20px', border: '1px solid #E5E7EB' }}>
-        <div style={{ whiteSpace: 'pre-wrap', lineHeight: 1.6, fontSize: '13px' }}>
+        <div style={{ whiteSpace: 'pre-wrap', lineHeight: 1.6, fontSize: '13px', fontFamily: 'monospace' }}>
           {data.summary}
         </div>
         <div style={{ borderTop: '1px solid #E5E7EB', marginTop: '16px', paddingTop: '12px', fontSize: '11px', color: '#9CA3AF' }}>

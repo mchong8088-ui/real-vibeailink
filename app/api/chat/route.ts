@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server';
 
+// Stock symbol detection
 function detectStock(input: string): string | null {
   if (!input || input.trim() === '') return null;
   const cleanInput = input.trim().toUpperCase();
@@ -19,6 +20,54 @@ function detectStock(input: string): string | null {
     if (input.includes(name)) return symbol;
   }
   return null;
+}
+
+// Fetch company name from Yahoo Finance
+async function fetchCompanyName(symbol: string): Promise<string> {
+  try {
+    let yahooSymbol = symbol;
+    if (symbol.endsWith('.HK')) yahooSymbol = `${symbol.replace('.HK', '')}.HK`;
+    if (symbol.endsWith('.TW')) yahooSymbol = `${symbol.replace('.TW', '')}.TW`;
+    
+    const url = `https://query1.finance.yahoo.com/v8/finance/chart/${yahooSymbol}`;
+    const res = await fetch(url);
+    if (!res.ok) return symbol;
+    
+    const data = await res.json();
+    const result = data.chart?.result?.[0];
+    const meta = result?.meta;
+    
+    // Try to get long name from different sources
+    const longName = meta?.longName || meta?.shortName || meta?.regularMarketName;
+    
+    if (longName) return longName;
+    
+    // Fallback common names
+    const commonNames: Record<string, string> = {
+      'LSCC': 'Lattice Semiconductor Corporation',
+      'NVDA': 'NVIDIA Corporation',
+      'AAPL': 'Apple Inc.',
+      'MSFT': 'Microsoft Corporation',
+      'AMZN': 'Amazon.com, Inc.',
+      'GOOGL': 'Alphabet Inc.',
+      'TSLA': 'Tesla, Inc.',
+      '0700.HK': 'Tencent Holdings Limited',
+      '2330.TW': 'Taiwan Semiconductor Manufacturing Company Limited',
+    };
+    
+    return commonNames[symbol] || symbol;
+  } catch (err) {
+    const commonNames: Record<string, string> = {
+      'LSCC': 'Lattice Semiconductor Corporation',
+      'NVDA': 'NVIDIA Corporation',
+      'AAPL': 'Apple Inc.',
+      'MSFT': 'Microsoft Corporation',
+      'AMZN': 'Amazon.com, Inc.',
+      'GOOGL': 'Alphabet Inc.',
+      'TSLA': 'Tesla, Inc.',
+    };
+    return commonNames[symbol] || symbol;
+  }
 }
 
 function calculateRSI(prices: number[], period: number = 14): number | null {
@@ -56,7 +105,6 @@ function determineTrend(prices: number[]): string {
   return 'Sideways';
 }
 
-// Fetch real stock data including historical prices for chart
 async function fetchRealStockData(symbol: string) {
   try {
     let yahooSymbol = symbol;
@@ -76,7 +124,6 @@ async function fetchRealStockData(symbol: string) {
     const closes = result.indicators?.quote?.[0]?.close || [];
     const volumes = result.indicators?.quote?.[0]?.volume || [];
     
-    // Build historical data for chart
     const historical = [];
     for (let i = 0; i < timestamps.length; i++) {
       if (closes[i] && closes[i] > 0) {
@@ -106,15 +153,6 @@ async function fetchRealStockData(symbol: string) {
   }
 }
 
-function getCompanyName(symbol: string): string {
-  const names: Record<string, string> = {
-    '0700.HK': '騰訊控股有限公司',
-    '2330.TW': '台灣積體電路製造股份有限公司',
-    'TSLA': '特斯拉公司',
-  };
-  return names[symbol] || symbol;
-}
-
 export async function POST(req: Request) {
   try {
     const { message } = await req.json();
@@ -126,7 +164,11 @@ export async function POST(req: Request) {
       });
     }
     
-    const stockData = await fetchRealStockData(symbol);
+    const [stockData, companyName] = await Promise.all([
+      fetchRealStockData(symbol),
+      fetchCompanyName(symbol)
+    ]);
+    
     if (!stockData) {
       return NextResponse.json({
         success: false,
@@ -134,53 +176,54 @@ export async function POST(req: Request) {
       });
     }
     
-    const companyName = getCompanyName(symbol);
     const isPositive = stockData.changePercent >= 0;
     const rsiText = stockData.rsi ? stockData.rsi.toFixed(1) : 'N/A';
     const rsiInterpret = stockData.rsi ? (stockData.rsi > 70 ? '超買區間，短期可能回調' : stockData.rsi < 30 ? '超賣區間，可能出現反彈' : '中性區間，動能平衡') : '';
     const macdInterpret = stockData.macd === 'Bullish' ? '看漲信號，多頭動能增強' : stockData.macd === 'Bearish' ? '看跌信號，空頭動能增強' : '中性信號，方向未明';
     
-    const analysis = `## 📊 ${companyName} (${symbol}) 投資分析
+    // Clean report without markdown symbols at the beginning
+    const analysis = `${companyName} (${symbol}) 投資分析
 
-### 1. 摘要
+1. 摘要
 ${companyName} (${symbol}) 目前股價為 ${stockData.currency}${stockData.price.toFixed(2)}，日漲跌幅 ${isPositive ? '+' : ''}${stockData.changePercent.toFixed(2)}%。RSI為${rsiText}，處於${stockData.rsi ? (stockData.rsi > 70 ? '超買' : stockData.rsi < 30 ? '超賣' : '中性') : '中性'}水平。整體趨勢${stockData.trend === 'Uptrend' ? '看好' : stockData.trend === 'Downtrend' ? '看淡' : '橫向整理'}。
 
-### 2. 技術分析
-- **RSI(14)**: ${rsiText} - ${rsiInterpret}
-- **MACD**: ${stockData.macd} - ${macdInterpret}
-- **趨勢**: ${stockData.trend === 'Uptrend' ? '上升通道 📈' : stockData.trend === 'Downtrend' ? '下降通道 📉' : '區間震盪 ➡️'}
+2. 技術分析
+RSI(14): ${rsiText} - ${rsiInterpret}
+MACD: ${stockData.macd} - ${macdInterpret}
+趨勢: ${stockData.trend === 'Uptrend' ? '上升通道' : stockData.trend === 'Downtrend' ? '下降通道' : '區間震盪'}
 
-### 3. 基本面分析
-${companyName}作為${symbol.includes('TW') ? '全球晶圓代工龍頭' : symbol.includes('HK') ? '互聯網巨頭' : '科技龍頭'}，財務狀況穩健。建議關注即將公布的業績報告。
+3. 基本面分析
+${companyName}作為${symbol.includes('TW') ? '全球晶圓代工龍頭' : symbol.includes('HK') ? '互聯網巨頭' : '科技公司'}，財務狀況穩健。建議關注即將公布的業績報告。
 
-### 4. 新聞與風險分析
+4. 新聞與風險分析
 近期市場關注全球經濟走勢及行業政策變化。主要風險包括宏觀經濟不確定性、市場競爭加劇及監管政策變化。
 
-### 5. 看好因素
+5. 看好因素
 1. 行業龍頭地位穩固
 2. 技術領先優勢明顯
 3. 長期增長趨勢不變
 
-### 6. 看淡因素
+6. 看淡因素
 1. 市場競爭加劇
 2. 宏觀經濟不確定性
 3. 短線漲多可能回調
 
-### 7. 買賣建議
-- **理想買入區間**: ${stockData.currency}${(stockData.price * 0.95).toFixed(2)} - ${stockData.currency}${stockData.price.toFixed(2)}
-- **短期目標價**: ${stockData.currency}${(stockData.price * 1.08).toFixed(2)}
-- **中期目標價**: ${stockData.currency}${(stockData.price * 1.15).toFixed(2)}
-- **止蝕位**: ${stockData.currency}${(stockData.price * 0.92).toFixed(2)}
+7. 買賣建議
+理想買入區間: ${stockData.currency}${(stockData.price * 0.95).toFixed(2)} - ${stockData.currency}${stockData.price.toFixed(2)}
+短期目標價: ${stockData.currency}${(stockData.price * 1.08).toFixed(2)}
+中期目標價: ${stockData.currency}${(stockData.price * 1.15).toFixed(2)}
+止蝕位: ${stockData.currency}${(stockData.price * 0.92).toFixed(2)}
 
-### 8. 最終建議及信心評分
-**建議**: ${stockData.rsi && stockData.rsi < 35 ? '分批買入' : stockData.rsi && stockData.rsi > 65 ? '分批獲利' : '持有觀望'}
-**信心評分**: ${stockData.rsi ? (stockData.rsi < 35 ? 75 : stockData.rsi > 65 ? 65 : 70) : 70}%
+8. 最終建議及信心評分
+建議: ${stockData.rsi && stockData.rsi < 35 ? '分批買入' : stockData.rsi && stockData.rsi > 65 ? '分批獲利' : '持有觀望'}
+信心評分: ${stockData.rsi ? (stockData.rsi < 35 ? 75 : stockData.rsi > 65 ? 65 : 70) : 70}%
 
-*⚠️ 以上分析僅供參考，不構成投資建議。*`;
+以上分析僅供參考，不構成投資建議。`;
     
     return NextResponse.json({
       success: true,
       symbol: symbol,
+      companyName: companyName,
       price: stockData.price,
       changePercent: stockData.changePercent,
       rsi: stockData.rsi,
