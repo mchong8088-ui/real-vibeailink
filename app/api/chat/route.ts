@@ -1,99 +1,198 @@
 import { NextResponse } from 'next/server';
 
-// Stock data mapping
-const stockData: Record<string, any> = {
-  '0700.HK': { name: '騰訊控股', price: 436.00, change: 2.06, currency: 'HK$' },
-  '2330.TW': { name: '台積電', price: 895.00, change: 1.20, currency: 'NT$' },
-  'TSLA': { name: '特斯拉', price: 185.50, change: -1.30, currency: 'US$' },
-  'NVDA': { name: '英偉達', price: 128.50, change: 2.50, currency: 'US$' },
-  'AAPL': { name: '蘋果', price: 192.50, change: 0.80, currency: 'US$' },
-  'MSFT': { name: '微軟', price: 428.50, change: 1.20, currency: 'US$' },
-  'AMZN': { name: '亞馬遜', price: 185.50, change: 0.50, currency: 'US$' },
-};
-
-function detectStock(input: string): string {
-  const upper = input.trim().toUpperCase();
+// Stock symbol detection
+function detectStock(input: string): string | null {
+  if (!input || input.trim() === '') return null;
+  const cleanInput = input.trim().toUpperCase();
   
-  // Direct symbol match
-  if (stockData[upper]) return upper;
-  
-  // HK stock (4 digits)
-  if (/^\d{4}$/.test(upper)) return `${upper}.HK`;
+  // Direct symbol with suffix
+  if (/^[A-Z0-9]+\.(HK|TW)$/i.test(cleanInput)) return cleanInput;
+  if (/^\d{4}$/.test(cleanInput)) return `${cleanInput}.HK`;
+  if (/^\d{5}$/.test(cleanInput)) return `${cleanInput}.TW`;
+  if (/^[A-Z]{1,5}$/i.test(cleanInput)) return cleanInput;
   
   // Chinese name mapping
-  if (input.includes('騰訊') || input.includes('腾讯')) return '0700.HK';
-  if (input.includes('台積電') || input.includes('台积电')) return '2330.TW';
-  if (input.includes('特斯拉')) return 'TSLA';
-  if (input.includes('英偉達') || input.includes('輝達')) return 'NVDA';
-  if (input.includes('蘋果')) return 'AAPL';
-  if (input.includes('微軟')) return 'MSFT';
-  if (input.includes('亞馬遜')) return 'AMZN';
+  const nameMap: Record<string, string> = {
+    "台積電": "2330.TW", "台积电": "2330.TW", "TSMC": "2330.TW",
+    "騰訊": "0700.HK", "腾讯": "0700.HK", "Tencent": "0700.HK",
+    "特斯拉": "TSLA", "Tesla": "TSLA",
+    "英偉達": "NVDA", "輝達": "NVDA", "NVIDIA": "NVDA",
+    "蘋果": "AAPL", "苹果": "AAPL", "Apple": "AAPL",
+  };
   
-  // Default - try to match as is
-  return upper;
+  for (const [name, symbol] of Object.entries(nameMap)) {
+    if (input.includes(name)) return symbol;
+  }
+  return null;
 }
 
-function generateAnalysis(symbol: string): string {
-  const data = stockData[symbol];
-  if (!data) {
-    return `無法找到股票 ${symbol} 的數據。請嘗試: 0700.HK, 2330.TW, TSLA`;
+// Calculate RSI
+function calculateRSI(prices: number[], period: number = 14): number | null {
+  if (prices.length < period + 1) return null;
+  let gains = 0, losses = 0;
+  for (let i = prices.length - period; i < prices.length; i++) {
+    const change = prices[i] - (prices[i-1] || prices[i]);
+    if (change >= 0) gains += change;
+    else losses -= change;
   }
-  
-  const isPositive = data.change > 0;
-  const entryPrice = data.price * 0.96;
-  const targetPrice = data.price * 1.05;
-  const stopLoss = data.price * 0.94;
-  
-  return `${data.name} (${symbol}) 目前股價為 ${data.currency}${data.price.toFixed(2)}，日漲跌幅 ${isPositive ? '+' : ''}${data.change.toFixed(2)}%。
+  const avgGain = gains / period;
+  const avgLoss = losses / period;
+  if (avgLoss === 0) return 100;
+  const rs = avgGain / avgLoss;
+  return 100 - (100 / (1 + rs));
+}
 
-【1. 技術分析】
-RSI(14): 52.5 - 中性區間，動能平衡。
-MACD: 快線高於慢線，輕微看漲。
-均線: 股價站穩20日及50日均線之上，技術面偏多。
+// Calculate MACD
+function calculateMACD(prices: number[]): string {
+  if (prices.length < 26) return 'Neutral';
+  const ema12 = prices.slice(-12).reduce((a, b) => a + b, 0) / 12;
+  const ema26 = prices.slice(-26).reduce((a, b) => a + b, 0) / 26;
+  const macd = ema12 - ema26;
+  const signal = prices.slice(-9).reduce((a, b) => a + b, 0) / 9;
+  if (macd > signal) return 'Bullish 📈';
+  if (macd < signal) return 'Bearish 📉';
+  return 'Neutral';
+}
 
-【2. 基本面分析】
-${data.name}作為${symbol.includes('TW') ? '全球晶圓代工龍頭' : symbol.includes('HK') ? '互聯網巨頭' : '科技龍頭'}，基本面穩健。最新財報顯示營收和獲利持續增長，毛利率維持高水平。
+// Determine trend
+function determineTrend(prices: number[]): string {
+  if (prices.length < 20) return 'Sideways';
+  const sma20 = prices.slice(-20).reduce((a, b) => a + b, 0) / 20;
+  const currentPrice = prices[prices.length - 1];
+  if (currentPrice > sma20 * 1.02) return 'Bullish 📈';
+  if (currentPrice < sma20 * 0.98) return 'Bearish 📉';
+  return 'Sideways ➡️';
+}
 
-【3. 市場氣氛判斷】
-Risk-On 🟢 市場情緒偏向樂觀
-
-【4. 看好因素】
-1. 🚀 行業龍頭地位穩固，護城河深
-2. 💰 持續的研發投入和技術領先
-3. 📈 AI及雲計算等新業務增長強勁
-
-【5. 看淡因素】
-1. ⚠️ 市場競爭加劇，新進入者威脅
-2. 🌍 全球宏觀經濟不確定性
-3. 📊 短期漲幅較大，可能有技術性回調
-
-【6. 買賣建議】
-📊 理想買入區間: ${data.currency}${entryPrice.toFixed(2)} - ${data.currency}${data.price.toFixed(2)}
-🎯 短期目標價: ${data.currency}${targetPrice.toFixed(2)}
-🛡️ 建議止蝕位: ${data.currency}${stopLoss.toFixed(2)}
-
-【7. AI信心評分】
-75%
-
-⚠️ 以上分析僅供參考，不構成投資建議。`;
+// Fetch real stock data from Yahoo Finance
+async function fetchRealStockData(symbol: string) {
+  try {
+    let yahooSymbol = symbol;
+    if (symbol.endsWith('.HK')) yahooSymbol = `${symbol.replace('.HK', '')}.HK`;
+    if (symbol.endsWith('.TW')) yahooSymbol = `${symbol.replace('.TW', '')}.TW`;
+    
+    const url = `https://query1.finance.yahoo.com/v8/finance/chart/${yahooSymbol}`;
+    console.log(`📊 Fetching: ${url}`);
+    
+    const res = await fetch(url, { next: { revalidate: 60 } });
+    if (!res.ok) return null;
+    
+    const data = await res.json();
+    const result = data.chart?.result?.[0];
+    if (!result) return null;
+    
+    const meta = result.meta;
+    const closes = result.indicators?.quote?.[0]?.close || [];
+    const validCloses = closes.filter((c: number) => c !== null && c > 0);
+    
+    if (validCloses.length === 0) return null;
+    
+    const price = meta.regularMarketPrice;
+    const previousClose = meta.previousClose || price;
+    const changePercent = ((price - previousClose) / previousClose) * 100;
+    const rsi = calculateRSI(validCloses);
+    const macd = calculateMACD(validCloses);
+    const trend = determineTrend(validCloses);
+    
+    // Determine currency
+    let currency = '$';
+    if (symbol.endsWith('.TW')) currency = 'NT$';
+    if (symbol.endsWith('.HK')) currency = 'HK$';
+    
+    console.log(`✅ ${symbol}: ${currency}${price} (${changePercent > 0 ? '+' : ''}${changePercent.toFixed(2)}%)`);
+    
+    return {
+      price,
+      changePercent,
+      rsi,
+      macd,
+      trend,
+      currency,
+    };
+  } catch (err) {
+    console.error(`❌ Error fetching ${symbol}:`, err);
+    return null;
+  }
 }
 
 export async function POST(req: Request) {
   try {
     const { message } = await req.json();
-    console.log(`📝 Analyzing: ${message}`);
+    console.log(`📝 Query: ${message}`);
     
     const symbol = detectStock(message);
-    console.log(`📊 Symbol: ${symbol}`);
+    if (!symbol) {
+      return NextResponse.json({
+        success: false,
+        summary: `無法識別股票代號。請嘗試: 0700.HK, 2330.TW, TSLA`
+      });
+    }
     
-    const analysis = generateAnalysis(symbol);
+    const stockData = await fetchRealStockData(symbol);
+    if (!stockData) {
+      return NextResponse.json({
+        success: false,
+        summary: `無法獲取 ${symbol} 的即時數據，請稍後再試。`
+      });
+    }
+    
+    const companyName = symbol === '0700.HK' ? '騰訊控股' : 
+                        symbol === '2330.TW' ? '台積電' : 
+                        symbol === 'TSLA' ? '特斯拉' : symbol;
+    
+    const isPositive = stockData.changePercent >= 0;
+    const rsiText = stockData.rsi ? stockData.rsi.toFixed(1) : 'N/A';
+    const rsiStatus = stockData.rsi ? (stockData.rsi > 70 ? '超買區間' : stockData.rsi < 30 ? '超賣區間' : '中性區間') : '';
+    
+    const entryPrice = stockData.price * 0.96;
+    const targetPrice = stockData.price * 1.05;
+    const stopLoss = stockData.price * 0.94;
+    
+    const analysis = `${companyName} (${symbol}) 目前股價為 ${stockData.currency}${stockData.price.toFixed(2)}，日漲跌幅 ${isPositive ? '+' : ''}${stockData.changePercent.toFixed(2)}%。
+
+【1. 技術分析】
+RSI(14): ${rsiText} - ${rsiStatus}
+MACD: ${stockData.macd}
+趨勢: ${stockData.trend}
+
+【2. 基本面分析】
+${companyName}作為${symbol.includes('TW') ? '全球晶圓代工龍頭' : symbol.includes('HK') ? '互聯網巨頭' : '科技龍頭'}，基本面穩健。
+
+【3. 市場氣氛判斷】
+${stockData.rsi ? (stockData.rsi > 65 ? 'Risk-Off (短期過熱)' : stockData.rsi < 35 ? 'Risk-On (短期超賣)' : '中性') : '中性'}
+
+【4. 看好因素】
+1. 行業龍頭地位穩固
+2. 技術領先優勢
+3. 長期需求增長
+
+【5. 看淡因素】
+1. 市場競爭加劇
+2. 宏觀經濟不確定性
+3. 短線漲多可能回調
+
+【6. 買賣建議】
+📊 理想買入區間: ${stockData.currency}${entryPrice.toFixed(2)} - ${stockData.currency}${stockData.price.toFixed(2)}
+🎯 短期目標價: ${stockData.currency}${targetPrice.toFixed(2)}
+🛡️ 止蝕位: ${stockData.currency}${stopLoss.toFixed(2)}
+
+【7. AI信心評分】
+${stockData.rsi ? (stockData.rsi < 35 ? 75 : stockData.rsi > 65 ? 65 : 70) : 70}%
+
+⚠️ 以上分析僅供參考，不構成投資建議。`;
     
     return NextResponse.json({
       success: true,
       symbol: symbol,
+      price: stockData.price,
+      changePercent: stockData.changePercent,
+      rsi: stockData.rsi,
+      macd: stockData.macd,
+      trend: stockData.trend,
       summary: analysis,
       text: analysis,
     });
+    
   } catch (error) {
     console.error('API Error:', error);
     return NextResponse.json({
