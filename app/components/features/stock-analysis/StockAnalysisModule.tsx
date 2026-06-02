@@ -1,6 +1,6 @@
 "use client";
 import React, { useState, useEffect } from 'react';
-import { LineChart, Line, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid } from 'recharts';
+import { LineChart, Line, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid, ComposedChart, Area } from 'recharts';
 
 interface Props {
   data: any;
@@ -24,24 +24,78 @@ export const StockAnalysisModule: React.FC<Props> = ({ data, isLoading, langKey,
   const row1Indices = globalIndices.slice(0, 3);
   const row2Indices = globalIndices.slice(3, 6);
 
+  // Calculate Bollinger Bands
+  const calculateBollingerBands = (prices: number[], period: number = 20, multiplier: number = 2) => {
+    if (prices.length < period) return { upper: [], middle: [], lower: [] };
+    
+    const middle = [];
+    const upper = [];
+    const lower = [];
+    
+    for (let i = period - 1; i < prices.length; i++) {
+      const slice = prices.slice(i - period + 1, i + 1);
+      const sma = slice.reduce((a, b) => a + b, 0) / period;
+      const variance = slice.reduce((a, b) => a + Math.pow(b - sma, 2), 0) / period;
+      const stdDev = Math.sqrt(variance);
+      middle.push(sma);
+      upper.push(sma + stdDev * multiplier);
+      lower.push(sma - stdDev * multiplier);
+    }
+    
+    return { upper, middle, lower };
+  };
+
   const getChartData = () => {
     if (data?.historical && data.historical.length > 0) {
       let historical = [...data.historical];
       const now = new Date();
       let daysToShow = 30;
-      if (period === '3M') daysToShow = 90;
-      if (period === '1Y') daysToShow = 365;
+      let dateFormat: Intl.DateTimeFormatOptions = { month: 'short', day: 'numeric' };
+      
+      if (period === '3M') {
+        daysToShow = 90;
+        dateFormat = { month: 'short', day: 'numeric' };
+      }
+      if (period === '1Y') {
+        daysToShow = 365;
+        dateFormat = { month: 'short' };
+      }
       
       const cutoffDate = new Date();
       cutoffDate.setDate(now.getDate() - daysToShow);
       historical = historical.filter(h => new Date(h.date) >= cutoffDate);
       
-      return historical.map(h => ({
-        date: new Date(h.date).toLocaleDateString(),
-        price: h.close,
-      }));
+      const prices = historical.map(h => h.close);
+      const bands = calculateBollingerBands(prices, 20, 2);
+      
+      // Create chart data with Bollinger Bands
+      const chartData = [];
+      for (let i = 0; i < historical.length; i++) {
+        const date = new Date(historical[i].date);
+        let dateStr = '';
+        if (period === '1Y') {
+          dateStr = date.toLocaleDateString(undefined, { month: 'short' });
+        } else {
+          dateStr = date.toLocaleDateString(undefined, { month: 'short', day: 'numeric' });
+        }
+        
+        chartData.push({
+          date: dateStr,
+          fullDate: historical[i].date,
+          price: historical[i].close,
+          upper: i >= 19 ? bands.upper[i - 19] : null,
+          middle: i >= 19 ? bands.middle[i - 19] : null,
+          lower: i >= 19 ? bands.lower[i - 19] : null,
+        });
+      }
+      
+      // Take every Nth point for X-axis labels to avoid crowding
+      const labelInterval = Math.max(1, Math.floor(chartData.length / 6));
+      
+      return { chartData, labelInterval };
     }
     
+    // Fallback mock data
     const currentPrice = data?.price || 100;
     const dataPoints = [];
     let price = currentPrice * 0.85;
@@ -52,15 +106,27 @@ export const StockAnalysisModule: React.FC<Props> = ({ data, isLoading, langKey,
       date.setDate(date.getDate() - i);
       dataPoints.push({
         date: date.toLocaleDateString(),
+        fullDate: date.toISOString(),
         price: Math.max(50, price),
+        upper: null,
+        middle: null,
+        lower: null,
       });
     }
-    return dataPoints;
+    return { chartData: dataPoints, labelInterval: 5 };
   };
 
-  const chartData = getChartData();
+  const { chartData, labelInterval } = getChartData();
   const minPrice = chartData.length > 0 ? Math.min(...chartData.map(d => d.price)) : 0;
   const maxPrice = chartData.length > 0 ? Math.max(...chartData.map(d => d.price)) : 0;
+
+  // Custom tick formatter for X-axis
+  const formatXTick = (value: string, index: number) => {
+    if (index % labelInterval === 0) {
+      return value;
+    }
+    return '';
+  };
 
   if (isLoading) {
     return (
@@ -86,6 +152,19 @@ export const StockAnalysisModule: React.FC<Props> = ({ data, isLoading, langKey,
   const changeDisplay = data.changePercent ? `${isPositive ? '+' : ''}${data.changePercent.toFixed(2)}%` : 'N/A';
   const rsiDisplay = data.rsi ? data.rsi.toFixed(1) : 'N/A';
   const trendDisplay = data.trend || 'Sideways';
+
+  // Custom tooltip component
+  const CustomTooltip = ({ active, payload, label }: any) => {
+    if (active && payload && payload.length) {
+      return (
+        <div style={{ backgroundColor: 'white', border: '1px solid #E5E7EB', borderRadius: '8px', padding: '8px 12px', boxShadow: '0 2px 8px rgba(0,0,0,0.1)' }}>
+          <p style={{ margin: '0 0 4px 0', fontSize: '11px', color: '#6B7280' }}>{label}</p>
+          <p style={{ margin: '0', fontSize: '14px', fontWeight: 'bold', color: '#2563EB' }}>${payload[0]?.value?.toFixed(2)}</p>
+        </div>
+      );
+    }
+    return null;
+  };
 
   return (
     <div style={{ maxWidth: '100%' }}>
@@ -145,33 +224,85 @@ export const StockAnalysisModule: React.FC<Props> = ({ data, isLoading, langKey,
         </div>
       </div>
 
-      {/* Price Chart */}
+      {/* Price Chart with Bollinger Bands */}
       <div style={{ backgroundColor: 'white', borderRadius: '12px', padding: '12px', marginBottom: '16px', border: '1px solid #E5E7EB' }}>
-        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '12px' }}>
-          <h4 style={{ fontSize: '12px', fontWeight: 'bold', margin: 0 }}>Price Trend</h4>
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '12px', flexWrap: 'wrap', gap: '8px' }}>
+          <h4 style={{ fontSize: '12px', fontWeight: 'bold', margin: 0 }}>價格走勢圖 (保力加通道)</h4>
           <div style={{ display: 'flex', gap: '8px' }}>
             {['1M', '3M', '1Y'].map((p) => (
-              <button key={p} onClick={() => setPeriod(p as any)} style={{ padding: '2px 8px', fontSize: '10px', borderRadius: '4px', border: period === p ? '1px solid #3B82F6' : '1px solid #E5E7EB', backgroundColor: period === p ? '#EFF6FF' : 'white', color: period === p ? '#3B82F6' : '#6B7280', cursor: 'pointer' }}>{p}</button>
+              <button 
+                key={p} 
+                onClick={() => setPeriod(p as any)} 
+                style={{ 
+                  padding: '4px 12px', 
+                  fontSize: '11px', 
+                  borderRadius: '6px', 
+                  border: period === p ? '1px solid #3B82F6' : '1px solid #E5E7EB', 
+                  backgroundColor: period === p ? '#EFF6FF' : 'white', 
+                  color: period === p ? '#3B82F6' : '#6B7280', 
+                  cursor: 'pointer',
+                  fontWeight: period === p ? '600' : '400'
+                }}
+              >
+                {p}
+              </button>
             ))}
           </div>
         </div>
         {chartData.length > 0 ? (
           <>
-            <div style={{ height: '200px' }}>
+            <div style={{ height: '280px' }}>
               <ResponsiveContainer width="100%" height="100%">
-                <LineChart data={chartData}>
+                <ComposedChart data={chartData}>
+                  <defs>
+                    <linearGradient id="colorPrice" x1="0" y1="0" x2="0" y2="1">
+                      <stop offset="5%" stopColor="#2563eb" stopOpacity={0.1}/>
+                      <stop offset="95%" stopColor="#2563eb" stopOpacity={0}/>
+                    </linearGradient>
+                  </defs>
                   <CartesianGrid strokeDasharray="3 3" stroke="#E5E7EB" />
-                  <XAxis dataKey="date" hide />
-                  <YAxis domain={['auto', 'auto']} fontSize={10} width={35} />
-                  <Tooltip />
-                  <Line type="monotone" dataKey="price" stroke="#3B82F6" strokeWidth={2} dot={false} />
-                </LineChart>
+                  <XAxis 
+                    dataKey="date" 
+                    tickFormatter={formatXTick}
+                    fontSize={10}
+                    interval={0}
+                    tick={{ fill: '#6B7280' }}
+                  />
+                  <YAxis 
+                    domain={[minPrice * 0.95, maxPrice * 1.05]} 
+                    fontSize={10} 
+                    width={45}
+                    tick={{ fill: '#6B7280' }}
+                    tickFormatter={(value) => `$${value.toFixed(0)}`}
+                  />
+                  <Tooltip content={<CustomTooltip />} />
+                  {/* Bollinger Bands Area */}
+                  <Area type="monotone" dataKey="upper" stroke="#E5E7EB" strokeWidth={1} fill="none" />
+                  <Area type="monotone" dataKey="lower" stroke="#E5E7EB" strokeWidth={1} fill="none" />
+                  <Area type="monotone" dataKey="middle" stroke="#F59E0B" strokeWidth={1.5} strokeDasharray="5 5" fill="none" />
+                  {/* Price Line */}
+                  <Line type="monotone" dataKey="price" stroke="#2563EB" strokeWidth={2} dot={false} activeDot={{ r: 4, fill: '#2563EB' }} />
+                </ComposedChart>
               </ResponsiveContainer>
             </div>
-            <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '10px', color: '#9CA3AF', marginTop: '8px' }}>
-              <span>${minPrice.toFixed(2)}</span>
-              <span style={{ color: '#3B82F6' }}>${priceDisplay}</span>
-              <span>${maxPrice.toFixed(2)}</span>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontSize: '10px', color: '#9CA3AF', marginTop: '8px', paddingTop: '8px', borderTop: '1px solid #E5E7EB' }}>
+              <div style={{ display: 'flex', gap: '16px' }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                  <div style={{ width: '12px', height: '2px', backgroundColor: '#2563EB' }} />
+                  <span>收盤價</span>
+                </div>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                  <div style={{ width: '12px', height: '2px', backgroundColor: '#F59E0B', borderStyle: 'dashed' }} />
+                  <span>中軌線(SMA20)</span>
+                </div>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                  <div style={{ width: '12px', height: '1px', backgroundColor: '#E5E7EB' }} />
+                  <span>保力加通道</span>
+                </div>
+              </div>
+              <div>
+                <span>區間: ${minPrice.toFixed(2)} - ${maxPrice.toFixed(2)}</span>
+              </div>
             </div>
           </>
         ) : (
@@ -181,9 +312,9 @@ export const StockAnalysisModule: React.FC<Props> = ({ data, isLoading, langKey,
         )}
       </div>
 
-      {/* Analysis Report - Display as plain text */}
+      {/* Analysis Report */}
       <div style={{ backgroundColor: 'white', borderRadius: '12px', padding: '20px', border: '1px solid #E5E7EB' }}>
-        <div style={{ whiteSpace: 'pre-wrap', lineHeight: 1.6, fontSize: '13px', fontFamily: 'monospace' }}>
+        <div style={{ whiteSpace: 'pre-wrap', lineHeight: 1.6, fontSize: '13px' }}>
           {data.summary}
         </div>
         <div style={{ borderTop: '1px solid #E5E7EB', marginTop: '16px', paddingTop: '12px', fontSize: '11px', color: '#9CA3AF' }}>
