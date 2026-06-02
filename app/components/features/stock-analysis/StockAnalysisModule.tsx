@@ -12,7 +12,6 @@ interface Props {
 export const StockAnalysisModule: React.FC<Props> = ({ data, isLoading, langKey, t }) => {
   const [period, setPeriod] = useState<'1M' | '3M' | '1Y'>('1M');
   
-  // Global market indices data
   const globalIndices = [
     { name: "S&P 500", value: "5,234.18", change: "+0.8%", positive: true },
     { name: "NASDAQ", value: "16,428.82", change: "+1.2%", positive: true },
@@ -25,8 +24,29 @@ export const StockAnalysisModule: React.FC<Props> = ({ data, isLoading, langKey,
   const row1Indices = globalIndices.slice(0, 3);
   const row2Indices = globalIndices.slice(3, 6);
 
-  // Generate chart data based on current price
-  const generateChartData = () => {
+  // Use real historical data from API if available
+  const getChartData = () => {
+    if (data?.historical && data.historical.length > 0) {
+      // Use real historical data
+      let historical = [...data.historical];
+      
+      // Filter by period
+      const now = new Date();
+      let daysToShow = 30;
+      if (period === '3M') daysToShow = 90;
+      if (period === '1Y') daysToShow = 365;
+      
+      const cutoffDate = new Date();
+      cutoffDate.setDate(now.getDate() - daysToShow);
+      historical = historical.filter(h => new Date(h.date) >= cutoffDate);
+      
+      return historical.map(h => ({
+        date: new Date(h.date).toLocaleDateString(),
+        price: h.close,
+      }));
+    }
+    
+    // Fallback: generate mock data based on current price
     const currentPrice = data?.price || 100;
     const dataPoints = [];
     let price = currentPrice * 0.85;
@@ -43,15 +63,15 @@ export const StockAnalysisModule: React.FC<Props> = ({ data, isLoading, langKey,
     return dataPoints;
   };
 
-  const chartData = generateChartData();
-  const minPrice = Math.min(...chartData.map(d => d.price));
-  const maxPrice = Math.max(...chartData.map(d => d.price));
+  const chartData = getChartData();
+  const minPrice = chartData.length > 0 ? Math.min(...chartData.map(d => d.price)) : 0;
+  const maxPrice = chartData.length > 0 ? Math.max(...chartData.map(d => d.price)) : 0;
 
   if (isLoading) {
     return (
       <div style={{ backgroundColor: 'white', borderRadius: '12px', padding: '20px', textAlign: 'center' }}>
         <div style={{ width: '24px', height: '24px', border: '2px solid #3B82F6', borderTopColor: 'transparent', borderRadius: '50%', animation: 'spin 1s linear infinite', margin: '0 auto 8px' }} />
-        <p style={{ color: '#6B7280' }}>{t?.analyzingMarket || '分析中...'}</p>
+        <p style={{ color: '#6B7280' }}>分析中...</p>
         <style>{`@keyframes spin { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }`}</style>
       </div>
     );
@@ -75,13 +95,11 @@ export const StockAnalysisModule: React.FC<Props> = ({ data, isLoading, langKey,
 
   return (
     <div style={{ maxWidth: '100%' }}>
-      {/* Section 1: Global Market Indices */}
+      {/* Global Market Indices */}
       <div style={{ backgroundColor: '#FEF08A', borderRadius: '12px', padding: '12px', marginBottom: '16px' }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '10px' }}>
           <span style={{ fontSize: '14px' }}>🌍</span>
-          <h3 style={{ fontSize: '12px', fontWeight: 'bold', color: '#B45309', margin: 0 }}>
-            {langKey === 'English' ? 'Global Market Indices' : langKey === 'Cantonese' ? '全球市場指數' : '全球市场指数'}
-          </h3>
+          <h3 style={{ fontSize: '12px', fontWeight: 'bold', color: '#B45309', margin: 0 }}>全球市場指數</h3>
         </div>
         <div style={{ display: 'flex', gap: '10px', marginBottom: '10px' }}>
           {row1Indices.map((idx, i) => (
@@ -103,7 +121,7 @@ export const StockAnalysisModule: React.FC<Props> = ({ data, isLoading, langKey,
         </div>
       </div>
 
-      {/* Section 2: Stock Info Bar */}
+      {/* Stock Info Bar */}
       <div style={{ backgroundColor: '#FEF08A', borderRadius: '12px', padding: '12px', marginBottom: '16px' }}>
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '12px' }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
@@ -112,11 +130,8 @@ export const StockAnalysisModule: React.FC<Props> = ({ data, isLoading, langKey,
             </div>
             <div>
               <h3 style={{ fontSize: '14px', fontWeight: 'bold', margin: 0 }}>{data.symbol}</h3>
-              <p style={{ fontSize: '11px', color: '#6B7280', margin: 0 }}>{data.symbol === '0700.HK' ? '騰訊' : data.symbol}</p>
             </div>
-            <span style={{ fontSize: '13px', fontWeight: 'bold', color: isPositive ? '#10B981' : '#EF4444' }}>
-              {changeDisplay}
-            </span>
+            <span style={{ fontSize: '13px', fontWeight: 'bold', color: isPositive ? '#10B981' : '#EF4444' }}>{changeDisplay}</span>
           </div>
           <div style={{ display: 'flex', gap: '20px' }}>
             <div style={{ textAlign: 'center' }}>
@@ -129,15 +144,13 @@ export const StockAnalysisModule: React.FC<Props> = ({ data, isLoading, langKey,
             </div>
             <div style={{ textAlign: 'center' }}>
               <p style={{ fontSize: '10px', color: '#6B7280', margin: 0 }}>Trend</p>
-              <p style={{ fontSize: '14px', fontWeight: 'bold', margin: 0 }}>
-                {trendDisplay === 'Uptrend' ? '📈' : trendDisplay === 'Downtrend' ? '📉' : '➡️'}
-              </p>
+              <p style={{ fontSize: '14px', fontWeight: 'bold', margin: 0 }}>{trendDisplay === 'Uptrend' ? '📈' : trendDisplay === 'Downtrend' ? '📉' : '➡️'}</p>
             </div>
           </div>
         </div>
       </div>
 
-      {/* Section 3: Price Chart */}
+      {/* Price Chart with Real Data */}
       <div style={{ backgroundColor: 'white', borderRadius: '12px', padding: '12px', marginBottom: '16px', border: '1px solid #E5E7EB' }}>
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '12px' }}>
           <h4 style={{ fontSize: '12px', fontWeight: 'bold', margin: 0 }}>Price Trend</h4>
@@ -147,25 +160,33 @@ export const StockAnalysisModule: React.FC<Props> = ({ data, isLoading, langKey,
             ))}
           </div>
         </div>
-        <div style={{ height: '200px' }}>
-          <ResponsiveContainer width="100%" height="100%">
-            <LineChart data={chartData}>
-              <CartesianGrid strokeDasharray="3 3" stroke="#E5E7EB" />
-              <XAxis dataKey="date" hide />
-              <YAxis domain={['auto', 'auto']} fontSize={10} width={35} />
-              <Tooltip />
-              <Line type="monotone" dataKey="price" stroke="#3B82F6" strokeWidth={2} dot={false} />
-            </LineChart>
-          </ResponsiveContainer>
-        </div>
-        <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '10px', color: '#9CA3AF', marginTop: '8px' }}>
-          <span>${minPrice.toFixed(2)}</span>
-          <span style={{ color: '#3B82F6' }}>${priceDisplay}</span>
-          <span>${maxPrice.toFixed(2)}</span>
-        </div>
+        {chartData.length > 0 ? (
+          <>
+            <div style={{ height: '200px' }}>
+              <ResponsiveContainer width="100%" height="100%">
+                <LineChart data={chartData}>
+                  <CartesianGrid strokeDasharray="3 3" stroke="#E5E7EB" />
+                  <XAxis dataKey="date" hide />
+                  <YAxis domain={['auto', 'auto']} fontSize={10} width={35} />
+                  <Tooltip />
+                  <Line type="monotone" dataKey="price" stroke="#3B82F6" strokeWidth={2} dot={false} />
+                </LineChart>
+              </ResponsiveContainer>
+            </div>
+            <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '10px', color: '#9CA3AF', marginTop: '8px' }}>
+              <span>${minPrice.toFixed(2)}</span>
+              <span style={{ color: '#3B82F6' }}>${priceDisplay}</span>
+              <span>${maxPrice.toFixed(2)}</span>
+            </div>
+          </>
+        ) : (
+          <div style={{ height: '200px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+            <p style={{ color: '#9CA3AF' }}>圖表數據載入中...</p>
+          </div>
+        )}
       </div>
 
-      {/* Section 4: Analysis Report */}
+      {/* Analysis Report */}
       <div style={{ backgroundColor: 'white', borderRadius: '12px', padding: '20px', border: '1px solid #E5E7EB' }}>
         <div style={{ whiteSpace: 'pre-wrap', lineHeight: 1.6, fontSize: '13px' }}>
           {data.summary}

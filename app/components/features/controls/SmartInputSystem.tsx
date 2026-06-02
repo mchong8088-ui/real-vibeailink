@@ -24,31 +24,43 @@ export const SmartInputSystem: React.FC<SmartInputSystemProps> = ({
   const [recognition, setRecognition] = useState<any>(null);
   const utteranceRef = useRef<SpeechSynthesisUtterance | null>(null);
 
-  useEffect(() => {
-    if (typeof window !== 'undefined') {
-      const SpeechRecognition = (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition;
-      if (SpeechRecognition) {
-        const recognitionInstance = new SpeechRecognition();
-        recognitionInstance.continuous = false;
-        recognitionInstance.interimResults = false;
-        recognitionInstance.lang = langKey === 'Cantonese' ? 'zh-HK' : langKey === '简体中文' ? 'zh-CN' : 'en-US';
-        
-        recognitionInstance.onresult = (event: any) => {
-          setInputValue(event.results[0][0].transcript);
-          setIsListening(false);
-        };
-        
-        recognitionInstance.onerror = () => setIsListening(false);
-        recognitionInstance.onend = () => setIsListening(false);
-        setRecognition(recognitionInstance);
-      }
+  // Convert text for better TTS pronunciation
+  const prepareTextForTTS = (text: string): string => {
+    let result = text;
+    
+    if (langKey === 'Cantonese') {
+      // Replace currency symbols with spoken Cantonese
+      result = result.replace(/HK\$(\d+\.?\d*)/g, '港幣$1元');
+      result = result.replace(/NT\$(\d+\.?\d*)/g, '新台幣$1元');
+      result = result.replace(/\$(\d+\.?\d*)/g, '美元$1元');
+      result = result.replace(/HK\$/, '港幣');
+      result = result.replace(/NT\$/, '新台幣');
+      
+      // Replace other symbols
+      result = result.replace(/\+/g, '加');
+      result = result.replace(/-/g, '減');
+      result = result.replace(/%/g, '巴仙');
+      result = result.replace(/\./g, '點');
+      
+      // Replace common terms
+      result = result.replace(/買入/g, '買入');
+      result = result.replace(/賣出/g, '賣出');
+      result = result.replace(/持有/g, '持有');
+    } else if (langKey === '简体中文') {
+      result = result.replace(/HK\$(\d+\.?\d*)/g, '港币$1元');
+      result = result.replace(/NT\$(\d+\.?\d*)/g, '新台币$1元');
+      result = result.replace(/\$(\d+\.?\d*)/g, '美元$1元');
+      result = result.replace(/%/g, '百分之');
     }
-  }, [langKey]);
+    
+    return result;
+  };
 
   useEffect(() => {
     if (analysisText && isSpeaking && !isPaused) {
       if (utteranceRef.current) window.speechSynthesis.cancel();
-      const utterance = new SpeechSynthesisUtterance(analysisText);
+      const textToSpeak = prepareTextForTTS(analysisText);
+      const utterance = new SpeechSynthesisUtterance(textToSpeak);
       utterance.lang = langKey === 'Cantonese' ? 'zh-HK' : langKey === '简体中文' ? 'zh-CN' : 'en-US';
       utterance.rate = 0.9;
       utterance.onend = () => { utteranceRef.current = null; };
@@ -59,6 +71,7 @@ export const SmartInputSystem: React.FC<SmartInputSystemProps> = ({
     return () => { if (utteranceRef.current) window.speechSynthesis.cancel(); };
   }, [analysisText, isSpeaking, isPaused, langKey]);
 
+  // Rest of the component remains the same...
   const handleMicToggle = () => {
     if (recognition && !isListening) {
       recognition.start();
@@ -103,6 +116,27 @@ export const SmartInputSystem: React.FC<SmartInputSystemProps> = ({
     if (langKey === '简体中文') return '输入股票代码 e.g.: 0700.hk, TSLA';
     return 'Enter stock symbol e.g.: 0700.hk, TSLA';
   };
+
+  useEffect(() => {
+    if (typeof window !== 'undefined') {
+      const SpeechRecognition = (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition;
+      if (SpeechRecognition) {
+        const recognitionInstance = new SpeechRecognition();
+        recognitionInstance.continuous = false;
+        recognitionInstance.interimResults = false;
+        recognitionInstance.lang = langKey === 'Cantonese' ? 'zh-HK' : langKey === '简体中文' ? 'zh-CN' : 'en-US';
+        
+        recognitionInstance.onresult = (event: any) => {
+          setInputValue(event.results[0][0].transcript);
+          setIsListening(false);
+        };
+        
+        recognitionInstance.onerror = () => setIsListening(false);
+        recognitionInstance.onend = () => setIsListening(false);
+        setRecognition(recognitionInstance);
+      }
+    }
+  }, [langKey]);
 
   const renderButton = (isActive: boolean, onClick: () => void, icon: React.ReactElement, activeColor: string, inactiveColor: string) => {
     return (

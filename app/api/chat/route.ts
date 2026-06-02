@@ -1,6 +1,5 @@
 import { NextResponse } from 'next/server';
 
-// Stock symbol detection
 function detectStock(input: string): string | null {
   if (!input || input.trim() === '') return null;
   const cleanInput = input.trim().toUpperCase();
@@ -14,8 +13,6 @@ function detectStock(input: string): string | null {
     "台積電": "2330.TW", "台积电": "2330.TW", "TSMC": "2330.TW",
     "騰訊": "0700.HK", "腾讯": "0700.HK", "Tencent": "0700.HK",
     "特斯拉": "TSLA", "Tesla": "TSLA",
-    "英偉達": "NVDA", "輝達": "NVDA", "NVIDIA": "NVDA",
-    "蘋果": "AAPL", "苹果": "AAPL", "Apple": "AAPL",
   };
   
   for (const [name, symbol] of Object.entries(nameMap)) {
@@ -24,7 +21,6 @@ function detectStock(input: string): string | null {
   return null;
 }
 
-// Calculate RSI
 function calculateRSI(prices: number[], period: number = 14): number | null {
   if (prices.length < period + 1) return null;
   let gains = 0, losses = 0;
@@ -40,7 +36,6 @@ function calculateRSI(prices: number[], period: number = 14): number | null {
   return 100 - (100 / (1 + rs));
 }
 
-// Calculate MACD
 function calculateMACD(prices: number[]): string {
   if (prices.length < 26) return 'Neutral';
   const ema12 = prices.slice(-12).reduce((a, b) => a + b, 0) / 12;
@@ -52,7 +47,6 @@ function calculateMACD(prices: number[]): string {
   return 'Neutral';
 }
 
-// Determine trend
 function determineTrend(prices: number[]): string {
   if (prices.length < 20) return 'Sideways';
   const sma20 = prices.slice(-20).reduce((a, b) => a + b, 0) / 20;
@@ -62,7 +56,7 @@ function determineTrend(prices: number[]): string {
   return 'Sideways';
 }
 
-// Fetch real stock data from Yahoo Finance
+// Fetch real stock data including historical prices for chart
 async function fetchRealStockData(symbol: string) {
   try {
     let yahooSymbol = symbol;
@@ -78,11 +72,23 @@ async function fetchRealStockData(symbol: string) {
     if (!result) return null;
     
     const meta = result.meta;
+    const timestamps = result.timestamp || [];
     const closes = result.indicators?.quote?.[0]?.close || [];
+    const volumes = result.indicators?.quote?.[0]?.volume || [];
+    
+    // Build historical data for chart
+    const historical = [];
+    for (let i = 0; i < timestamps.length; i++) {
+      if (closes[i] && closes[i] > 0) {
+        historical.push({
+          date: new Date(timestamps[i] * 1000).toISOString().split('T')[0],
+          close: closes[i],
+          volume: volumes[i] || 0,
+        });
+      }
+    }
+    
     const validCloses = closes.filter((c: number) => c !== null && c > 0);
-    
-    if (validCloses.length === 0) return null;
-    
     const price = meta.regularMarketPrice;
     const previousClose = meta.previousClose || price;
     const changePercent = ((price - previousClose) / previousClose) * 100;
@@ -94,21 +100,17 @@ async function fetchRealStockData(symbol: string) {
     if (symbol.endsWith('.TW')) currency = 'NT$';
     if (symbol.endsWith('.HK')) currency = 'HK$';
     
-    return { price, changePercent, rsi, macd, trend, currency };
+    return { price, changePercent, rsi, macd, trend, currency, historical };
   } catch (err) {
     return null;
   }
 }
 
-// Generate company name
 function getCompanyName(symbol: string): string {
   const names: Record<string, string> = {
     '0700.HK': '騰訊控股有限公司',
     '2330.TW': '台灣積體電路製造股份有限公司',
     'TSLA': '特斯拉公司',
-    'NVDA': '英偉達公司',
-    'AAPL': '蘋果公司',
-    'MSFT': '微軟公司',
   };
   return names[symbol] || symbol;
 }
@@ -116,8 +118,6 @@ function getCompanyName(symbol: string): string {
 export async function POST(req: Request) {
   try {
     const { message } = await req.json();
-    console.log(`📝 Query: ${message}`);
-    
     const symbol = detectStock(message);
     if (!symbol) {
       return NextResponse.json({
@@ -186,6 +186,7 @@ ${companyName}作為${symbol.includes('TW') ? '全球晶圓代工龍頭' : symbo
       rsi: stockData.rsi,
       macd: stockData.macd,
       trend: stockData.trend,
+      historical: stockData.historical,
       summary: analysis,
       text: analysis,
     });
