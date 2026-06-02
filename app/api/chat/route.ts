@@ -1,6 +1,5 @@
 import { NextResponse } from 'next/server';
 
-// Stock symbol detection
 function detectStock(input: string): string | null {
   if (!input || input.trim() === '') return null;
   const cleanInput = input.trim().toUpperCase();
@@ -22,52 +21,22 @@ function detectStock(input: string): string | null {
   return null;
 }
 
-// Fetch company name from Yahoo Finance
 async function fetchCompanyName(symbol: string): Promise<string> {
-  try {
-    let yahooSymbol = symbol;
-    if (symbol.endsWith('.HK')) yahooSymbol = `${symbol.replace('.HK', '')}.HK`;
-    if (symbol.endsWith('.TW')) yahooSymbol = `${symbol.replace('.TW', '')}.TW`;
-    
-    const url = `https://query1.finance.yahoo.com/v8/finance/chart/${yahooSymbol}`;
-    const res = await fetch(url);
-    if (!res.ok) return symbol;
-    
-    const data = await res.json();
-    const result = data.chart?.result?.[0];
-    const meta = result?.meta;
-    
-    // Try to get long name from different sources
-    const longName = meta?.longName || meta?.shortName || meta?.regularMarketName;
-    
-    if (longName) return longName;
-    
-    // Fallback common names
-    const commonNames: Record<string, string> = {
-      'LSCC': 'Lattice Semiconductor Corporation',
-      'NVDA': 'NVIDIA Corporation',
-      'AAPL': 'Apple Inc.',
-      'MSFT': 'Microsoft Corporation',
-      'AMZN': 'Amazon.com, Inc.',
-      'GOOGL': 'Alphabet Inc.',
-      'TSLA': 'Tesla, Inc.',
-      '0700.HK': 'Tencent Holdings Limited',
-      '2330.TW': 'Taiwan Semiconductor Manufacturing Company Limited',
-    };
-    
-    return commonNames[symbol] || symbol;
-  } catch (err) {
-    const commonNames: Record<string, string> = {
-      'LSCC': 'Lattice Semiconductor Corporation',
-      'NVDA': 'NVIDIA Corporation',
-      'AAPL': 'Apple Inc.',
-      'MSFT': 'Microsoft Corporation',
-      'AMZN': 'Amazon.com, Inc.',
-      'GOOGL': 'Alphabet Inc.',
-      'TSLA': 'Tesla, Inc.',
-    };
-    return commonNames[symbol] || symbol;
-  }
+  const commonNames: Record<string, string> = {
+    'LSCC': 'Lattice Semiconductor Corporation',
+    'NVDA': 'NVIDIA Corporation',
+    'AAPL': 'Apple Inc.',
+    'MSFT': 'Microsoft Corporation',
+    'AMZN': 'Amazon.com, Inc.',
+    'GOOGL': 'Alphabet Inc.',
+    'TSLA': 'Tesla, Inc.',
+    'META': 'Meta Platforms, Inc.',
+    'AMD': 'Advanced Micro Devices, Inc.',
+    'INTC': 'Intel Corporation',
+    '0700.HK': 'Tencent Holdings Limited',
+    '2330.TW': 'Taiwan Semiconductor Manufacturing Company Limited',
+  };
+  return commonNames[symbol] || symbol;
 }
 
 function calculateRSI(prices: number[], period: number = 14): number | null {
@@ -120,21 +89,7 @@ async function fetchRealStockData(symbol: string) {
     if (!result) return null;
     
     const meta = result.meta;
-    const timestamps = result.timestamp || [];
     const closes = result.indicators?.quote?.[0]?.close || [];
-    const volumes = result.indicators?.quote?.[0]?.volume || [];
-    
-    const historical = [];
-    for (let i = 0; i < timestamps.length; i++) {
-      if (closes[i] && closes[i] > 0) {
-        historical.push({
-          date: new Date(timestamps[i] * 1000).toISOString().split('T')[0],
-          close: closes[i],
-          volume: volumes[i] || 0,
-        });
-      }
-    }
-    
     const validCloses = closes.filter((c: number) => c !== null && c > 0);
     const price = meta.regularMarketPrice;
     const previousClose = meta.previousClose || price;
@@ -147,6 +102,19 @@ async function fetchRealStockData(symbol: string) {
     if (symbol.endsWith('.TW')) currency = 'NT$';
     if (symbol.endsWith('.HK')) currency = 'HK$';
     
+    const timestamps = result.timestamp || [];
+    const volumes = result.indicators?.quote?.[0]?.volume || [];
+    const historical = [];
+    for (let i = 0; i < timestamps.length; i++) {
+      if (closes[i] && closes[i] > 0) {
+        historical.push({
+          date: new Date(timestamps[i] * 1000).toISOString().split('T')[0],
+          close: closes[i],
+          volume: volumes[i] || 0,
+        });
+      }
+    }
+    
     return { price, changePercent, rsi, macd, trend, currency, historical };
   } catch (err) {
     return null;
@@ -158,10 +126,7 @@ export async function POST(req: Request) {
     const { message } = await req.json();
     const symbol = detectStock(message);
     if (!symbol) {
-      return NextResponse.json({
-        success: false,
-        summary: `無法識別股票代號。請嘗試: 0700.HK, 2330.TW, TSLA`
-      });
+      return NextResponse.json({ success: false, summary: `無法識別股票代號` });
     }
     
     const [stockData, companyName] = await Promise.all([
@@ -170,30 +135,29 @@ export async function POST(req: Request) {
     ]);
     
     if (!stockData) {
-      return NextResponse.json({
-        success: false,
-        summary: `無法獲取 ${symbol} 的即時數據，請稍後再試。`
-      });
+      return NextResponse.json({ success: false, summary: `無法獲取 ${symbol} 的即時數據` });
     }
     
     const isPositive = stockData.changePercent >= 0;
     const rsiText = stockData.rsi ? stockData.rsi.toFixed(1) : 'N/A';
+    const rsiStatus = stockData.rsi ? (stockData.rsi > 70 ? '超買' : stockData.rsi < 30 ? '超賣' : '中性') : '中性';
     const rsiInterpret = stockData.rsi ? (stockData.rsi > 70 ? '超買區間，短期可能回調' : stockData.rsi < 30 ? '超賣區間，可能出現反彈' : '中性區間，動能平衡') : '';
     const macdInterpret = stockData.macd === 'Bullish' ? '看漲信號，多頭動能增強' : stockData.macd === 'Bearish' ? '看跌信號，空頭動能增強' : '中性信號，方向未明';
+    const trendText = stockData.trend === 'Uptrend' ? '上升通道' : stockData.trend === 'Downtrend' ? '下降通道' : '區間震盪';
     
-    // Clean report without markdown symbols at the beginning
+    // Plain text analysis - NO MARKDOWN
     const analysis = `${companyName} (${symbol}) 投資分析
 
 1. 摘要
-${companyName} (${symbol}) 目前股價為 ${stockData.currency}${stockData.price.toFixed(2)}，日漲跌幅 ${isPositive ? '+' : ''}${stockData.changePercent.toFixed(2)}%。RSI為${rsiText}，處於${stockData.rsi ? (stockData.rsi > 70 ? '超買' : stockData.rsi < 30 ? '超賣' : '中性') : '中性'}水平。整體趨勢${stockData.trend === 'Uptrend' ? '看好' : stockData.trend === 'Downtrend' ? '看淡' : '橫向整理'}。
+${companyName} (${symbol}) 目前股價為 ${stockData.currency}${stockData.price.toFixed(2)}，日漲跌幅 ${isPositive ? '+' : ''}${stockData.changePercent.toFixed(2)}%。RSI為${rsiText}，處於${rsiStatus}水平。整體趨勢${stockData.trend === 'Uptrend' ? '看好' : stockData.trend === 'Downtrend' ? '看淡' : '橫向整理'}。
 
 2. 技術分析
 RSI(14): ${rsiText} - ${rsiInterpret}
 MACD: ${stockData.macd} - ${macdInterpret}
-趨勢: ${stockData.trend === 'Uptrend' ? '上升通道' : stockData.trend === 'Downtrend' ? '下降通道' : '區間震盪'}
+趨勢: ${trendText}
 
 3. 基本面分析
-${companyName}作為${symbol.includes('TW') ? '全球晶圓代工龍頭' : symbol.includes('HK') ? '互聯網巨頭' : '科技公司'}，財務狀況穩健。建議關注即將公布的業績報告。
+${companyName}作為${symbol.includes('TW') ? '全球晶圓代工龍頭' : symbol.includes('HK') ? '互聯網巨頭' : '科技公司'}，財務狀況穩健。
 
 4. 新聞與風險分析
 近期市場關注全球經濟走勢及行業政策變化。主要風險包括宏觀經濟不確定性、市場競爭加劇及監管政策變化。
@@ -236,10 +200,7 @@ ${companyName}作為${symbol.includes('TW') ? '全球晶圓代工龍頭' : symbo
     
   } catch (error) {
     console.error('API Error:', error);
-    return NextResponse.json({
-      success: false,
-      summary: "服務暫時不可用，請稍後再試。"
-    });
+    return NextResponse.json({ success: false, summary: "服務暫時不可用" });
   }
 }
 
