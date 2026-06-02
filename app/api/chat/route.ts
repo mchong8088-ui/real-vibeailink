@@ -1,36 +1,6 @@
+// /app/api/chat/route.ts
 import { NextResponse } from 'next/server';
-
-function detectStock(input: string): string | null {
-  if (!input || input.trim() === '') return null;
-  const cleanInput = input.trim().toUpperCase();
-  
-  // Direct symbol with suffix
-  if (/^[A-Z0-9]+\.(HK|TW)$/i.test(cleanInput)) return cleanInput;
-  
-  // 4-digit number -> Taiwan stock
-  if (/^\d{4}$/.test(cleanInput)) return `${cleanInput}.TW`;
-  
-  // 5-digit number -> Taiwan stock  
-  if (/^\d{5}$/.test(cleanInput)) return `${cleanInput}.TW`;
-  
-  // US stock symbols (1-5 letters)
-  if (/^[A-Z]{1,5}$/i.test(cleanInput)) return cleanInput;
-  
-  // Chinese name mapping
-  const nameMap: Record<string, string> = {
-    "台積電": "2330.TW", "台积电": "2330.TW", "TSMC": "2330.TW",
-    "騰訊": "0700.HK", "腾讯": "0700.HK", "Tencent": "0700.HK",
-    "特斯拉": "TSLA", "Tesla": "TSLA",
-    "英偉達": "NVDA", "輝達": "NVDA", "NVIDIA": "NVDA",
-    "蘋果": "AAPL", "苹果": "AAPL", "Apple": "AAPL",
-    "微軟": "MSFT", "微软": "MSFT", "Microsoft": "MSFT",
-  };
-  
-  for (const [name, symbol] of Object.entries(nameMap)) {
-    if (input.includes(name)) return symbol;
-  }
-  return null;
-}
+import { detectStock, extractStockFromQuestion, isQuestion } from '@/app/lib/market/stockDetector';
 
 async function fetchCompanyInfo(symbol: string): Promise<{ name: string; chineseName: string }> {
   // Common names mapping
@@ -47,6 +17,15 @@ async function fetchCompanyInfo(symbol: string): Promise<{ name: string; chinese
     'INTC': { name: 'Intel Corporation', chineseName: '英特爾' },
     '0700.HK': { name: 'Tencent Holdings Limited', chineseName: '騰訊控股' },
     '2330.TW': { name: 'Taiwan Semiconductor Manufacturing Company Limited', chineseName: '台積電' },
+    '0388.HK': { name: 'Hong Kong Exchanges and Clearing Limited', chineseName: '香港交易所' },
+    '1211.HK': { name: 'BYD Company Limited', chineseName: '比亞迪' },
+    '1810.HK': { name: 'Xiaomi Corporation', chineseName: '小米' },
+    '3690.HK': { name: 'Meituan', chineseName: '美團' },
+    '9988.HK': { name: 'Alibaba Group Holding Limited', chineseName: '阿里巴巴' },
+    '0005.HK': { name: 'HSBC Holdings plc', chineseName: '滙豐控股' },
+    '1928.HK': { name: 'Sands China Ltd.', chineseName: '金沙中國' },
+    '2454.TW': { name: 'MediaTek Inc.', chineseName: '聯發科' },
+    '2317.TW': { name: 'Hon Hai Precision Industry Co., Ltd.', chineseName: '鴻海' },
   };
   
   if (commonNames[symbol]) return commonNames[symbol];
@@ -54,9 +33,6 @@ async function fetchCompanyInfo(symbol: string): Promise<{ name: string; chinese
   // Try to fetch from Yahoo
   try {
     let yahooSymbol = symbol;
-    if (symbol.endsWith('.TW')) yahooSymbol = symbol;
-    if (symbol.endsWith('.HK')) yahooSymbol = symbol;
-    
     const url = `https://query1.finance.yahoo.com/v8/finance/chart/${yahooSymbol}`;
     const res = await fetch(url);
     if (res.ok) {
@@ -111,15 +87,6 @@ function determineTrend(prices: number[]): string {
 async function fetchRealStockData(symbol: string) {
   try {
     let yahooSymbol = symbol;
-    // Handle Taiwan stocks - keep as is
-    if (symbol === '2330.TW') {
-      yahooSymbol = '2330.TW';
-    } else if (symbol.endsWith('.TW')) {
-      yahooSymbol = symbol;
-    } else if (symbol.endsWith('.HK')) {
-      yahooSymbol = symbol;
-    }
-    
     const url = `https://query1.finance.yahoo.com/v8/finance/chart/${yahooSymbol}`;
     console.log(`📊 Fetching: ${url}`);
     
@@ -183,15 +150,25 @@ export async function POST(req: Request) {
     const { message } = await req.json();
     console.log(`📝 Query: ${message}`);
     
+    // Use the external stock detector
     const symbol = detectStock(message);
-    if (!symbol) {
+    
+    if (!symbol || symbol === '') {
       return NextResponse.json({
         success: false,
-        summary: `無法識別股票代號。請嘗試: 2330.TW, 0700.HK, TSLA`
+        summary: `無法識別股票代號。請嘗試: 台積電, 騰訊, 特斯拉, 或直接輸入代號如 2330.TW, 0700.HK, TSLA`
       });
     }
     
-    console.log(`📊 Symbol: ${symbol}`);
+    console.log(`📊 Detected symbol: ${symbol}`);
+    
+    // Check if it's a question for additional context
+    const isUserQuestion = isQuestion(message);
+    const extractedStock = extractStockFromQuestion(message);
+    
+    if (extractedStock) {
+      console.log(`🔍 Extracted stock from question: ${extractedStock}`);
+    }
     
     const [stockData, companyInfo] = await Promise.all([
       fetchRealStockData(symbol),
@@ -212,10 +189,16 @@ export async function POST(req: Request) {
     const macdInterpret = stockData.macd === 'Bullish' ? '看漲信號，多頭動能增強' : stockData.macd === 'Bearish' ? '看跌信號，空頭動能增強' : '中性信號，方向未明';
     const trendText = stockData.trend === 'Uptrend' ? '上升通道' : stockData.trend === 'Downtrend' ? '下降通道' : '區間震盪';
     
-    // Use Chinese name for display, avoid repetition
+    // Use Chinese name for display
     const displayName = companyInfo.chineseName || companyInfo.name;
     
-    // Plain text analysis - NO repetition of company name in section 1
+    // Determine market context
+    let marketContext = '';
+    if (symbol.endsWith('.TW')) marketContext = '全球晶圓代工龍頭';
+    else if (symbol.endsWith('.HK')) marketContext = '香港主要上市公司';
+    else marketContext = '美國科技公司';
+    
+    // Plain text analysis
     const analysis = `${displayName} (${symbol}) 投資分析
 
 1. 摘要
@@ -227,7 +210,7 @@ MACD: ${stockData.macd} - ${macdInterpret}
 趨勢: ${trendText}
 
 3. 基本面分析
-${displayName}作為${symbol.includes('TW') ? '全球晶圓代工龍頭' : symbol.includes('HK') ? '互聯網巨頭' : '科技公司'}，財務狀況穩健。
+${displayName}作為${marketContext}，財務狀況穩健，具有長期增長潛力。
 
 4. 新聞與風險分析
 近期市場關注全球經濟走勢及行業政策變化。主要風險包括宏觀經濟不確定性、市場競爭加劇及監管政策變化。
@@ -252,7 +235,9 @@ ${displayName}作為${symbol.includes('TW') ? '全球晶圓代工龍頭' : symbo
 建議: ${stockData.rsi && stockData.rsi < 35 ? '分批買入' : stockData.rsi && stockData.rsi > 65 ? '分批獲利' : '持有觀望'}
 信心評分: ${stockData.rsi ? (stockData.rsi < 35 ? 75 : stockData.rsi > 65 ? 65 : 70) : 70}%
 
-以上分析僅供參考，不構成投資建議。`;
+${isUserQuestion ? '根據您的提問，以上為詳細分析供參考。' : ''}
+
+⚠️ 以上分析僅供參考，不構成投資建議。`;
     
     return NextResponse.json({
       success: true,
@@ -264,6 +249,8 @@ ${displayName}作為${symbol.includes('TW') ? '全球晶圓代工龍頭' : symbo
       macd: stockData.macd,
       trend: stockData.trend,
       historical: stockData.historical,
+      isQuestion: isUserQuestion,
+      detectedFrom: message,
       summary: analysis,
       text: analysis,
     });
@@ -278,5 +265,14 @@ ${displayName}作為${symbol.includes('TW') ? '全球晶圓代工龍頭' : symbo
 }
 
 export async function GET() {
-  return NextResponse.json({ status: "API running", timestamp: new Date().toISOString() });
+  return NextResponse.json({ 
+    status: "Stock Analysis API running", 
+    timestamp: new Date().toISOString(),
+    version: "2.0",
+    features: {
+      stockDetection: true,
+      multiMarket: "HK/TW/US",
+      technicalIndicators: ["RSI", "MACD", "Trend"]
+    }
+  });
 }
