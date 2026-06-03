@@ -1,6 +1,6 @@
 "use client";
-import React, { useState, useEffect, useMemo } from 'react';
-import { LineChart, Line, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid, ComposedChart, Area } from 'recharts';
+import React, { useMemo } from 'react';
+import { LineChart, Line, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid } from 'recharts';
 
 interface Props {
   data: any;
@@ -10,7 +10,6 @@ interface Props {
 }
 
 export const StockAnalysisModule: React.FC<Props> = ({ data, isLoading, langKey, t }) => {
-  const [period, setPeriod] = useState<'1M' | '3M' | '1Y'>('1M');
   
   const globalIndices = [
     { name: "S&P 500", value: "5,234.18", change: "+0.8%", positive: true },
@@ -24,75 +23,21 @@ export const StockAnalysisModule: React.FC<Props> = ({ data, isLoading, langKey,
   const row1Indices = globalIndices.slice(0, 3);
   const row2Indices = globalIndices.slice(3, 6);
 
-  // 計算保力加通道
-  const calculateBollingerBands = (prices: number[], periodLength: number = 20, multiplier: number = 2) => {
-    if (prices.length < periodLength) return { upper: [], middle: [], lower: [] };
-    const middle = [];
-    const upper = [];
-    const lower = [];
-    for (let i = periodLength - 1; i < prices.length; i++) {
-      const slice = prices.slice(i - periodLength + 1, i + 1);
-      const sma = slice.reduce((a, b) => a + b, 0) / periodLength;
-      const variance = slice.reduce((a, b) => a + Math.pow(b - sma, 2), 0) / periodLength;
-      const stdDev = Math.sqrt(variance);
-      middle.push(sma);
-      upper.push(sma + stdDev * multiplier);
-      lower.push(sma - stdDev * multiplier);
-    }
-    return { upper, middle, lower };
-  };
-
-  // 使用 useMemo 來計算圖表數據，避免直接修改 props
+  // 固定顯示最近 3 個月的數據
   const chartData = useMemo(() => {
-    // 獲取歷史數據
-    let historical = data?.historical;
-    
-    // 如果沒有歷史數據，返回空數組
+    const historical = data?.historical;
     if (!historical || historical.length === 0) {
       return [];
     }
     
-    // 複製數組避免修改原數據
-    let historicalCopy = [...historical];
+    // 取最近 90 天數據 (約 3 個月)
+    const threeMonthsData = historical.slice(-90);
     
-    // 根據所選週期過濾數據
-    const now = new Date();
-    let daysToShow = 30;
-    if (period === '3M') daysToShow = 90;
-    if (period === '1Y') daysToShow = 365;
-    
-    const cutoffDate = new Date();
-    cutoffDate.setDate(now.getDate() - daysToShow);
-    historicalCopy = historicalCopy.filter((h: any) => new Date(h.date) >= cutoffDate);
-    
-    if (historicalCopy.length === 0) {
-      return [];
-    }
-    
-    const prices = historicalCopy.map((h: any) => h.close);
-    const bands = calculateBollingerBands(prices, 20, 2);
-    
-    const formattedData = [];
-    for (let i = 0; i < historicalCopy.length; i++) {
-      const date = new Date(historicalCopy[i].date);
-      let dateStr = '';
-      if (period === '1Y') {
-        dateStr = date.toLocaleDateString(undefined, { month: 'short' });
-      } else {
-        dateStr = date.toLocaleDateString(undefined, { month: 'short', day: 'numeric' });
-      }
-      formattedData.push({
-        date: dateStr,
-        fullDate: historicalCopy[i].date,
-        price: historicalCopy[i].close,
-        upper: i >= 19 ? bands.upper[i - 19] : null,
-        middle: i >= 19 ? bands.middle[i - 19] : null,
-        lower: i >= 19 ? bands.lower[i - 19] : null,
-      });
-    }
-    
-    return formattedData;
-  }, [data?.historical, period]);
+    return threeMonthsData.map((item: any) => ({
+      date: new Date(item.date).toLocaleDateString(undefined, { month: 'short', day: 'numeric' }),
+      price: item.close,
+    }));
+  }, [data?.historical]);
 
   if (isLoading) {
     return (
@@ -205,39 +150,25 @@ export const StockAnalysisModule: React.FC<Props> = ({ data, isLoading, langKey,
         </div>
       </div>
 
-      {/* 價格走勢圖 */}
+      {/* 價格走勢圖 - 固定 3 個月 */}
       <div style={{ backgroundColor: 'white', borderRadius: '12px', padding: '12px', marginBottom: '16px', border: '1px solid #E5E7EB' }}>
-        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '12px', flexWrap: 'wrap', gap: '8px' }}>
-          <h4 style={{ fontSize: '12px', fontWeight: 'bold', margin: 0 }}>價格走勢圖 (保力加通道)</h4>
-          <div style={{ display: 'flex', gap: '8px' }}>
-            {['1M', '3M', '1Y'].map((p) => (
-              <button key={p} onClick={() => setPeriod(p as any)} style={{ padding: '4px 12px', fontSize: '11px', borderRadius: '6px', border: period === p ? '1px solid #3B82F6' : '1px solid #E5E7EB', backgroundColor: period === p ? '#EFF6FF' : 'white', color: period === p ? '#3B82F6' : '#6B7280', cursor: 'pointer', fontWeight: period === p ? '600' : '400' }}>{p}</button>
-            ))}
-          </div>
-        </div>
+        <h4 style={{ fontSize: '12px', fontWeight: 'bold', marginBottom: '12px' }}>價格走勢圖 (最近3個月)</h4>
         {chartData.length > 0 ? (
           <>
-            <div style={{ height: '280px' }}>
+            <div style={{ height: '250px' }}>
               <ResponsiveContainer width="100%" height="100%">
-                <ComposedChart data={chartData}>
+                <LineChart data={chartData}>
                   <CartesianGrid strokeDasharray="3 3" stroke="#E5E7EB" />
                   <XAxis dataKey="date" tickFormatter={formatXTick} fontSize={10} interval={0} tick={{ fill: '#6B7280' }} />
                   <YAxis domain={[minPrice * 0.95, maxPrice * 1.05]} fontSize={10} width={45} tick={{ fill: '#6B7280' }} tickFormatter={(value) => `${currencySymbol}${value.toFixed(0)}`} />
                   <Tooltip content={<CustomTooltip />} />
-                  <Area type="monotone" dataKey="upper" stroke="#E5E7EB" strokeWidth={1} fill="none" />
-                  <Area type="monotone" dataKey="lower" stroke="#E5E7EB" strokeWidth={1} fill="none" />
-                  <Area type="monotone" dataKey="middle" stroke="#F59E0B" strokeWidth={1.5} strokeDasharray="5 5" fill="none" />
                   <Line type="monotone" dataKey="price" stroke="#2563EB" strokeWidth={2} dot={false} activeDot={{ r: 4, fill: '#2563EB' }} />
-                </ComposedChart>
+                </LineChart>
               </ResponsiveContainer>
             </div>
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontSize: '10px', color: '#9CA3AF', marginTop: '8px', paddingTop: '8px', borderTop: '1px solid #E5E7EB' }}>
-              <div style={{ display: 'flex', gap: '16px' }}>
-                <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}><div style={{ width: '12px', height: '2px', backgroundColor: '#2563EB' }} /><span>收盤價</span></div>
-                <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}><div style={{ width: '12px', height: '2px', backgroundColor: '#F59E0B', borderStyle: 'dashed' }} /><span>中軌線(SMA20)</span></div>
-                <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}><div style={{ width: '12px', height: '1px', backgroundColor: '#E5E7EB' }} /><span>保力加通道</span></div>
-              </div>
-              <div><span>區間: {currencySymbol}{minPrice.toFixed(2)} - {currencySymbol}{maxPrice.toFixed(2)}</span></div>
+            <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '10px', color: '#9CA3AF', marginTop: '8px', paddingTop: '8px', borderTop: '1px solid #E5E7EB' }}>
+              <span>區間: {currencySymbol}{minPrice.toFixed(2)} - {currencySymbol}{maxPrice.toFixed(2)}</span>
+              <span>數據期間: 最近90天</span>
             </div>
           </>
         ) : (
