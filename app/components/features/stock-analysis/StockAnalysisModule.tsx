@@ -1,5 +1,5 @@
 "use client";
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { LineChart, Line, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid, ComposedChart, Area } from 'recharts';
 
 interface Props {
@@ -11,7 +11,6 @@ interface Props {
 
 export const StockAnalysisModule: React.FC<Props> = ({ data, isLoading, langKey, t }) => {
   const [period, setPeriod] = useState<'1M' | '3M' | '1Y'>('1M');
-  const [chartData, setChartData] = useState<any[]>([]);
   
   const globalIndices = [
     { name: "S&P 500", value: "5,234.18", change: "+0.8%", positive: true },
@@ -26,15 +25,15 @@ export const StockAnalysisModule: React.FC<Props> = ({ data, isLoading, langKey,
   const row2Indices = globalIndices.slice(3, 6);
 
   // 計算保力加通道
-  const calculateBollingerBands = (prices: number[], period: number = 20, multiplier: number = 2) => {
-    if (prices.length < period) return { upper: [], middle: [], lower: [] };
+  const calculateBollingerBands = (prices: number[], periodLength: number = 20, multiplier: number = 2) => {
+    if (prices.length < periodLength) return { upper: [], middle: [], lower: [] };
     const middle = [];
     const upper = [];
     const lower = [];
-    for (let i = period - 1; i < prices.length; i++) {
-      const slice = prices.slice(i - period + 1, i + 1);
-      const sma = slice.reduce((a, b) => a + b, 0) / period;
-      const variance = slice.reduce((a, b) => a + Math.pow(b - sma, 2), 0) / period;
+    for (let i = periodLength - 1; i < prices.length; i++) {
+      const slice = prices.slice(i - periodLength + 1, i + 1);
+      const sma = slice.reduce((a, b) => a + b, 0) / periodLength;
+      const variance = slice.reduce((a, b) => a + Math.pow(b - sma, 2), 0) / periodLength;
       const stdDev = Math.sqrt(variance);
       middle.push(sma);
       upper.push(sma + stdDev * multiplier);
@@ -43,67 +42,57 @@ export const StockAnalysisModule: React.FC<Props> = ({ data, isLoading, langKey,
     return { upper, middle, lower };
   };
 
-  // 當 data 或 period 改變時，重新計算圖表數據
-  useEffect(() => {
-    if (!data?.historical || data.historical.length === 0) {
-      // 如果沒有歷史數據，生成模擬數據
-      const currentPrice = data?.price || 100;
-      const mockData = [];
-      let price = currentPrice * 0.85;
-      for (let i = 30; i >= 0; i--) {
-        const change = (Math.random() - 0.5) * 8;
-        price = price + change;
-        const date = new Date();
-        date.setDate(date.getDate() - i);
-        mockData.push({
-          date: date.toISOString().split('T')[0],
-          close: Math.max(50, price),
-        });
-      }
-      data.historical = mockData;
+  // 使用 useMemo 來計算圖表數據，避免直接修改 props
+  const chartData = useMemo(() => {
+    // 獲取歷史數據
+    let historical = data?.historical;
+    
+    // 如果沒有歷史數據，返回空數組
+    if (!historical || historical.length === 0) {
+      return [];
     }
     
-    if (data?.historical && data.historical.length > 0) {
-      let historical = [...data.historical];
-      const now = new Date();
-      let daysToShow = 30;
-      if (period === '3M') daysToShow = 90;
-      if (period === '1Y') daysToShow = 365;
-      
-      const cutoffDate = new Date();
-      cutoffDate.setDate(now.getDate() - daysToShow);
-      historical = historical.filter((h: any) => new Date(h.date) >= cutoffDate);
-      
-      if (historical.length === 0) {
-        setChartData([]);
-        return;
-      }
-      
-      const prices = historical.map((h: any) => h.close);
-      const bands = calculateBollingerBands(prices, 20, 2);
-      
-      const formattedData = [];
-      for (let i = 0; i < historical.length; i++) {
-        const date = new Date(historical[i].date);
-        let dateStr = '';
-        if (period === '1Y') {
-          dateStr = date.toLocaleDateString(undefined, { month: 'short' });
-        } else {
-          dateStr = date.toLocaleDateString(undefined, { month: 'short', day: 'numeric' });
-        }
-        formattedData.push({
-          date: dateStr,
-          fullDate: historical[i].date,
-          price: historical[i].close,
-          upper: i >= 19 ? bands.upper[i - 19] : null,
-          middle: i >= 19 ? bands.middle[i - 19] : null,
-          lower: i >= 19 ? bands.lower[i - 19] : null,
-        });
-      }
-      
-      setChartData(formattedData);
+    // 複製數組避免修改原數據
+    let historicalCopy = [...historical];
+    
+    // 根據所選週期過濾數據
+    const now = new Date();
+    let daysToShow = 30;
+    if (period === '3M') daysToShow = 90;
+    if (period === '1Y') daysToShow = 365;
+    
+    const cutoffDate = new Date();
+    cutoffDate.setDate(now.getDate() - daysToShow);
+    historicalCopy = historicalCopy.filter((h: any) => new Date(h.date) >= cutoffDate);
+    
+    if (historicalCopy.length === 0) {
+      return [];
     }
-  }, [data, period]);
+    
+    const prices = historicalCopy.map((h: any) => h.close);
+    const bands = calculateBollingerBands(prices, 20, 2);
+    
+    const formattedData = [];
+    for (let i = 0; i < historicalCopy.length; i++) {
+      const date = new Date(historicalCopy[i].date);
+      let dateStr = '';
+      if (period === '1Y') {
+        dateStr = date.toLocaleDateString(undefined, { month: 'short' });
+      } else {
+        dateStr = date.toLocaleDateString(undefined, { month: 'short', day: 'numeric' });
+      }
+      formattedData.push({
+        date: dateStr,
+        fullDate: historicalCopy[i].date,
+        price: historicalCopy[i].close,
+        upper: i >= 19 ? bands.upper[i - 19] : null,
+        middle: i >= 19 ? bands.middle[i - 19] : null,
+        lower: i >= 19 ? bands.lower[i - 19] : null,
+      });
+    }
+    
+    return formattedData;
+  }, [data?.historical, period]);
 
   if (isLoading) {
     return (
@@ -139,7 +128,6 @@ export const StockAnalysisModule: React.FC<Props> = ({ data, isLoading, langKey,
 
   const minPrice = chartData.length > 0 ? Math.min(...chartData.map(d => d.price)) : 0;
   const maxPrice = chartData.length > 0 ? Math.max(...chartData.map(d => d.price)) : 0;
-
   const labelInterval = Math.max(1, Math.floor(chartData.length / 6));
 
   const formatXTick = (value: string, index: number) => {
