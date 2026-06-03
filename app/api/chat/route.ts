@@ -18,28 +18,83 @@ function getChineseNameFromSymbol(symbol: string): string | null {
 async function fetchCompanyInfo(symbol: string): Promise<{ name: string; chineseName: string }> {
   const chineseNameFromAlias = getChineseNameFromSymbol(symbol);
   
+  // First, try to get from Yahoo Finance
   try {
     let yahooSymbol = symbol;
+    // For HK stocks, Yahoo sometimes needs the code without .HK for long name
+    if (symbol.endsWith('.HK')) {
+      yahooSymbol = symbol.replace('.HK', '');
+    }
+    if (symbol.endsWith('.TW')) {
+      yahooSymbol = symbol.replace('.TW', '');
+    }
+    
     const url = `https://query1.finance.yahoo.com/v8/finance/chart/${yahooSymbol}`;
     const res = await fetch(url, {
       headers: {
         "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36",
       },
     });
+    
     if (res.ok) {
       const data = await res.json();
-      const longName = data.chart?.result?.[0]?.meta?.longName;
+      const result = data.chart?.result?.[0];
+      const meta = result?.meta;
+      
+      // Try to get long name, then short name
+      let longName = meta?.longName || meta?.shortName || null;
+      
       if (longName) {
+        // For HK stocks, try to get Chinese name from API
+        let chineseName = chineseNameFromAlias;
+        
+        // If we have a long name but no Chinese alias, use the long name
+        if (!chineseName && longName) {
+          chineseName = longName;
+        }
+        
+        console.log(`✅ Found company: ${longName} (${symbol})`);
         return { 
           name: longName, 
-          chineseName: chineseNameFromAlias || symbol 
+          chineseName: chineseName || longName
         };
       }
     }
   } catch (err) {
-    console.log('Error fetching company info:', err);
+    console.log('Error fetching company info from Yahoo:', err);
   }
   
+  // Fallback: Try to get from a secondary source (Yahoo quote summary)
+  try {
+    let yahooSymbol = symbol;
+    if (symbol.endsWith('.HK')) yahooSymbol = symbol.replace('.HK', '');
+    if (symbol.endsWith('.TW')) yahooSymbol = symbol.replace('.TW', '');
+    
+    const quoteUrl = `https://query1.finance.yahoo.com/v10/finance/quoteSummary/${yahooSymbol}?modules=price,summaryProfile`;
+    const quoteRes = await fetch(quoteUrl, {
+      headers: {
+        "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36",
+      },
+    });
+    
+    if (quoteRes.ok) {
+      const quoteData = await quoteRes.json();
+      const longName = quoteData?.quoteSummary?.result?.[0]?.price?.longName ||
+                       quoteData?.quoteSummary?.result?.[0]?.price?.shortName;
+      
+      if (longName) {
+        console.log(`✅ Found company via quoteSummary: ${longName} (${symbol})`);
+        return { 
+          name: longName, 
+          chineseName: chineseNameFromAlias || longName
+        };
+      }
+    }
+  } catch (err) {
+    console.log('Error fetching from quoteSummary:', err);
+  }
+  
+  // Final fallback: use symbol or alias
   return { 
     name: symbol, 
     chineseName: chineseNameFromAlias || symbol 
@@ -579,47 +634,48 @@ function generateSpecificAnalysis(stockData: any, fundamentals: any, symbol: str
   }
   
   // Determine recommendation
-  let specificRecommendation = '';
-  let targetPrice = price;
-  let stopLoss = price;
-  
-  if (stockQuality === 'very-poor') {
-    specificRecommendation = language === 'Cantonese' ? '強烈建議：避開此股票，風險極高，不適合長線持有' :
-                              language === '简体中文' ? '强烈建议：避开此股票，风险极高，不适合长线持有' :
-                              'STRONG AVOID: Extremely high risk, not suitable for long-term holding';
-    targetPrice = price * 0.9;
-    stopLoss = price * 0.85;
-  } else if (stockQuality === 'poor') {
-    specificRecommendation = language === 'Cantonese' ? '建議：謹慎操作，僅適合短線投機，嚴格控制止蝕' :
-                              language === '简体中文' ? '建议：谨慎操作，仅适合短线投机，严格控制止损' :
-                              'CAUTION: Speculative only, strict stop loss required';
-    targetPrice = price * 1.05;
-    stopLoss = price * 0.92;
-  } else if (rsi !== null && rsi < 30) {
-    specificRecommendation = language === 'Cantonese' ? '建議：超賣區間，可小注買入博反彈，嚴守止蝕' :
-                              language === '简体中文' ? '建议：超卖区间，可小注买入博反弹，严守止损' :
-                              'BUY on dips: Oversold zone, accumulate gradually with stop loss';
-    targetPrice = price * 1.12;
-    stopLoss = price * 0.92;
-  } else if (rsi !== null && rsi > 70) {
-    specificRecommendation = language === 'Cantonese' ? '建議：超買區間，分批獲利，不宜追高' :
-                              language === '简体中文' ? '建议：超买区间，分批获利，不宜追高' :
-                              'TAKE PROFIT: Overbought zone, reduce position gradually';
-    targetPrice = price * 1.03;
-    stopLoss = price * 0.96;
-  } else if (stockQuality === 'good' || stockQuality === 'excellent') {
-    specificRecommendation = language === 'Cantonese' ? '建議：基本面良好，可長期持有，逢低買入' :
-                              language === '简体中文' ? '建议：基本面良好，可长期持有，逢低买入' :
-                              'ACCUMULATE: Strong fundamentals, suitable for long-term holding';
-    targetPrice = price * 1.15;
-    stopLoss = price * 0.92;
-  } else {
-    specificRecommendation = language === 'Cantonese' ? '建議：持有觀望，等待更明確信號' :
-                              language === '简体中文' ? '建议：持有观望，等待更明确信号' :
-                              'HOLD: Wait for clearer signals';
-    targetPrice = price * 1.08;
-    stopLoss = price * 0.94;
-  }
+  // Determine recommendation
+let specificRecommendation = '';
+let targetPrice = price;
+let stopLoss = price;
+
+if (stockQuality === 'very-poor') {
+  specificRecommendation = language === 'Cantonese' ? '強烈建議：避開此股票，風險極高，不適合長線持有' :
+                            language === '简体中文' ? '强烈建议：避开此股票，风险极高，不适合长线持有' :
+                            'STRONG AVOID: Extremely high risk, not suitable for long-term holding';
+  targetPrice = price * 0.9;
+  stopLoss = price * 0.85;
+} else if (stockQuality === 'poor') {
+  specificRecommendation = language === 'Cantonese' ? '建議：謹慎操作，僅適合短線投機，嚴格控制止蝕' :
+                            language === '简体中文' ? '建议：谨慎操作，仅适合短线投机，严格控制止损' :
+                            'CAUTION: Speculative only, strict stop loss required';
+  targetPrice = price * 1.05;
+  stopLoss = price * 0.92;
+} else if (rsi !== null && rsi < 30) {
+  specificRecommendation = language === 'Cantonese' ? '建議：超賣區間，可小注買入博反彈，嚴守止蝕' :
+                            language === '简体中文' ? '建议：超卖区间，可小注买入博反弹，严守止损' :
+                            'BUY on dips: Oversold zone, accumulate gradually with stop loss';
+  targetPrice = price * 1.12;
+  stopLoss = price * 0.92;
+} else if (rsi !== null && rsi > 70) {
+  specificRecommendation = language === 'Cantonese' ? '建議：超買區間，分批獲利，不宜追高' :
+                            language === '简体中文' ? '建议：超买区间，分批获利，不宜追高' :
+                            'TAKE PROFIT: Overbought zone, reduce position gradually';
+  targetPrice = price * 1.03;
+  stopLoss = price * 0.96;
+} else if (stockQuality === 'excellent' || stockQuality === 'good') {
+  specificRecommendation = language === 'Cantonese' ? '建議：基本面良好，可長期持有，逢低買入' :
+                            language === '简体中文' ? '建议：基本面良好，可长期持有，逢低买入' :
+                            'ACCUMULATE: Strong fundamentals, suitable for long-term holding';
+  targetPrice = price * 1.15;
+  stopLoss = price * 0.92;
+} else {
+  specificRecommendation = language === 'Cantonese' ? '建議：持有觀望，等待更明確信號' :
+                            language === '简体中文' ? '建议：持有观望，等待更明确信号' :
+                            'HOLD: Wait for clearer signals';
+  targetPrice = price * 1.08;
+  stopLoss = price * 0.94;
+}
   
   // ============================================
   // CONFIDENCE SCORE CALCULATION
@@ -966,7 +1022,8 @@ export async function POST(req: Request) {
       avgVolumeLabel = 'Average Volume';
     }
     
-    const displayName = companyInfo.chineseName || companyInfo.name;
+    // Use the best available name
+    const displayName = companyInfo.chineseName || companyInfo.name || symbol;
     const overallTrend = stockData.trend === 'Uptrend' ? (language === 'Cantonese' ? '看好' : language === '简体中文' ? '看好' : 'Bullish') : 
                          stockData.trend === 'Downtrend' ? (language === 'Cantonese' ? '看淡' : language === '简体中文' ? '看淡' : 'Bearish') : 
                          (language === 'Cantonese' ? '橫向整理' : language === '简体中文' ? '横向整理' : 'Sideways');
