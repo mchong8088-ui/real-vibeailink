@@ -633,49 +633,63 @@ function generateSpecificAnalysis(stockData: any, fundamentals: any, symbol: str
     }
   }
   
-  // Determine recommendation
-  // Determine recommendation
-let specificRecommendation = '';
-let targetPrice = price;
-let stopLoss = price;
-
-if (stockQuality === 'very-poor') {
-  specificRecommendation = language === 'Cantonese' ? '強烈建議：避開此股票，風險極高，不適合長線持有' :
-                            language === '简体中文' ? '强烈建议：避开此股票，风险极高，不适合长线持有' :
-                            'STRONG AVOID: Extremely high risk, not suitable for long-term holding';
-  targetPrice = price * 0.9;
-  stopLoss = price * 0.85;
-} else if (stockQuality === 'poor') {
-  specificRecommendation = language === 'Cantonese' ? '建議：謹慎操作，僅適合短線投機，嚴格控制止蝕' :
-                            language === '简体中文' ? '建议：谨慎操作，仅适合短线投机，严格控制止损' :
-                            'CAUTION: Speculative only, strict stop loss required';
-  targetPrice = price * 1.05;
-  stopLoss = price * 0.92;
-} else if (rsi !== null && rsi < 30) {
-  specificRecommendation = language === 'Cantonese' ? '建議：超賣區間，可小注買入博反彈，嚴守止蝕' :
-                            language === '简体中文' ? '建议：超卖区间，可小注买入博反弹，严守止损' :
-                            'BUY on dips: Oversold zone, accumulate gradually with stop loss';
-  targetPrice = price * 1.12;
-  stopLoss = price * 0.92;
-} else if (rsi !== null && rsi > 70) {
-  specificRecommendation = language === 'Cantonese' ? '建議：超買區間，分批獲利，不宜追高' :
-                            language === '简体中文' ? '建议：超买区间，分批获利，不宜追高' :
-                            'TAKE PROFIT: Overbought zone, reduce position gradually';
-  targetPrice = price * 1.03;
-  stopLoss = price * 0.96;
-} else if (stockQuality === 'excellent' || stockQuality === 'good') {
-  specificRecommendation = language === 'Cantonese' ? '建議：基本面良好，可長期持有，逢低買入' :
-                            language === '简体中文' ? '建议：基本面良好，可长期持有，逢低买入' :
-                            'ACCUMULATE: Strong fundamentals, suitable for long-term holding';
-  targetPrice = price * 1.15;
-  stopLoss = price * 0.92;
-} else {
-  specificRecommendation = language === 'Cantonese' ? '建議：持有觀望，等待更明確信號' :
-                            language === '简体中文' ? '建议：持有观望，等待更明确信号' :
-                            'HOLD: Wait for clearer signals';
-  targetPrice = price * 1.08;
-  stopLoss = price * 0.94;
-}
+  // Calculate quality score for excellent/good classification
+  let qualityScore = 0;
+  if (pe !== null && pe >= 10 && pe <= 25) qualityScore += 2;
+  if (revenueGrowth !== null && revenueGrowth > 15) qualityScore += 2;
+  if (profitMargin !== null && profitMargin > 20) qualityScore += 2;
+  if (debtRatio !== null && debtRatio < 30) qualityScore += 1;
+  if (trend === 'Uptrend') qualityScore += 1;
+  if (macd === 'Bullish') qualityScore += 1;
+  
+  if (qualityScore >= 6) {
+    stockQuality = 'excellent';
+  } else if (qualityScore >= 4) {
+    stockQuality = 'good';
+  }
+  
+  // Determine recommendation - RSI conditions take priority
+  let specificRecommendation = '';
+  let targetPrice = price;
+  let stopLoss = price;
+  
+  if (stockQuality === 'very-poor') {
+    specificRecommendation = language === 'Cantonese' ? '強烈建議：避開此股票，風險極高，不適合長線持有' :
+                              language === '简体中文' ? '强烈建议：避开此股票，风险极高，不适合长线持有' :
+                              'STRONG AVOID: Extremely high risk, not suitable for long-term holding';
+    targetPrice = price * 0.9;
+    stopLoss = price * 0.85;
+  } else if (stockQuality === 'poor') {
+    specificRecommendation = language === 'Cantonese' ? '建議：謹慎操作，僅適合短線投機，嚴格控制止蝕' :
+                              language === '简体中文' ? '建议：谨慎操作，仅适合短线投机，严格控制止损' :
+                              'CAUTION: Speculative only, strict stop loss required';
+    targetPrice = price * 1.05;
+    stopLoss = price * 0.92;
+  } else if (rsi !== null && rsi < 30) {
+    specificRecommendation = language === 'Cantonese' ? '建議：超賣區間，可小注買入博反彈，嚴守止蝕' :
+                              language === '简体中文' ? '建议：超卖区间，可小注买入博反弹，严守止损' :
+                              'BUY on dips: Oversold zone, accumulate gradually with stop loss';
+    targetPrice = price * 1.12;
+    stopLoss = price * 0.92;
+  } else if (rsi !== null && rsi > 70) {
+    specificRecommendation = language === 'Cantonese' ? '建議：超買區間，分批獲利，不宜追高' :
+                              language === '简体中文' ? '建议：超买区间，分批获利，不宜追高' :
+                              'TAKE PROFIT: Overbought zone, reduce position gradually';
+    targetPrice = price * 1.03;
+    stopLoss = price * 0.96;
+  } else if (stockQuality === 'excellent' || stockQuality === 'good') {
+    specificRecommendation = language === 'Cantonese' ? '建議：基本面良好，可長期持有，逢低買入' :
+                              language === '简体中文' ? '建议：基本面良好，可长期持有，逢低买入' :
+                              'ACCUMULATE: Strong fundamentals, suitable for long-term holding';
+    targetPrice = price * 1.15;
+    stopLoss = price * 0.92;
+  } else {
+    specificRecommendation = language === 'Cantonese' ? '建議：持有觀望，等待更明確信號' :
+                              language === '简体中文' ? '建议：持有观望，等待更明确信号' :
+                              'HOLD: Wait for clearer signals';
+    targetPrice = price * 1.08;
+    stopLoss = price * 0.94;
+  }
   
   // ============================================
   // CONFIDENCE SCORE CALCULATION
@@ -1193,24 +1207,24 @@ No significant recent news.`;
     }
     
     // Generate trading advice with specific targets
-   // Generate trading advice with specific targets
-let tradingAdviceText = '';
-if (language === 'Cantonese') {
-  tradingAdviceText = `${tradingAdviceTitle}
+    let tradingAdviceText = '';
+    if (language === 'Cantonese') {
+      tradingAdviceText = `${tradingAdviceTitle}
 目標價: ${stockData.currency}${specificAnalysis.targetPrice.toFixed(2)}
 止蝕位: ${stockData.currency}${specificAnalysis.stopLoss.toFixed(2)}
 風險回報比: 1:${((specificAnalysis.targetPrice - stockData.price) / (stockData.price - specificAnalysis.stopLoss)).toFixed(1)}`;
-} else if (language === '简体中文') {
-  tradingAdviceText = `${tradingAdviceTitle}
+    } else if (language === '简体中文') {
+      tradingAdviceText = `${tradingAdviceTitle}
 目标价: ${stockData.currency}${specificAnalysis.targetPrice.toFixed(2)}
 止损位: ${stockData.currency}${specificAnalysis.stopLoss.toFixed(2)}
 风险回报比: 1:${((specificAnalysis.targetPrice - stockData.price) / (stockData.price - specificAnalysis.stopLoss)).toFixed(1)}`;
-} else {
-  tradingAdviceText = `${tradingAdviceTitle}
+    } else {
+      tradingAdviceText = `${tradingAdviceTitle}
 Target Price: ${stockData.currency}${specificAnalysis.targetPrice.toFixed(2)}
 Stop Loss: ${stockData.currency}${specificAnalysis.stopLoss.toFixed(2)}
 Risk/Reward Ratio: 1:${((specificAnalysis.targetPrice - stockData.price) / (stockData.price - specificAnalysis.stopLoss)).toFixed(1)}`;
-}
+    }
+    
     // Generate complete analysis
     const analysis = `${displayName} (${symbol}) ${analysisTitle}
 
