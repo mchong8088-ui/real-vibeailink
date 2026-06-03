@@ -23,13 +23,27 @@ export const LanguageToggle: React.FC<LanguageToggleProps> = ({ currentLang, onL
   const getFullName = (lang: string) => {
     switch (lang) {
       case 'English': return 'English';
-      case 'Cantonese': return '粵語 (繁體中文)';
+      case 'Cantonese': return '粵語 (廣東話)';
       case '简体中文': return '简体中文';
       default: return lang;
     }
   };
 
   const languages = ['English', 'Cantonese', '简体中文'];
+
+  // Save language preference to localStorage and update document language
+  useEffect(() => {
+    localStorage.setItem('preferredLanguage', currentLang);
+    
+    // Set HTML lang attribute for voice synthesis
+    if (currentLang === 'Cantonese') {
+      document.documentElement.lang = 'zh-HK';
+    } else if (currentLang === '简体中文') {
+      document.documentElement.lang = 'zh-CN';
+    } else {
+      document.documentElement.lang = 'en-US';
+    }
+  }, [currentLang]);
 
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
@@ -76,7 +90,7 @@ export const LanguageToggle: React.FC<LanguageToggleProps> = ({ currentLang, onL
           borderRadius: '8px',
           boxShadow: '0 4px 6px -1px rgba(0,0,0,0.1)',
           zIndex: 50,
-          minWidth: '120px',
+          minWidth: '140px',
           overflow: 'hidden'
         }}>
           {languages.map((lang) => (

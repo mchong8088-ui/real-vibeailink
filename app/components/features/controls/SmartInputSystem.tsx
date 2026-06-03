@@ -3,7 +3,7 @@ import React, { useState, useRef, useEffect } from 'react';
 
 interface SmartInputSystemProps {
   langKey: string;
-  onAnalyze: (ticker: string, attachments?: any[]) => void;
+  onAnalyze: (ticker: string, attachments?: any[], useAI?: boolean) => void;
   onPlusClick: () => void;
   systemInfo: any;
   analysisText?: string;
@@ -21,8 +21,43 @@ export const SmartInputSystem: React.FC<SmartInputSystemProps> = ({
   const [isListening, setIsListening] = useState(false);
   const [isSpeaking, setIsSpeaking] = useState(true);
   const [isPaused, setIsPaused] = useState(false);
+  const [attachments, setAttachments] = useState<any[]>([]);
+  const [useAIEnhancement, setUseAIEnhancement] = useState(false);
   const [recognition, setRecognition] = useState<any>(null);
   const utteranceRef = useRef<SpeechSynthesisUtterance | null>(null);
+
+  // Listen for source selections from SourceMenu
+  useEffect(() => {
+    const handleSourceSelect = (event: CustomEvent) => {
+      const { sourceType, sourceData } = event.detail;
+      console.log(`📎 Source selected: ${sourceType}`, sourceData);
+      
+      // Store attachment for analysis
+      setAttachments(prev => [...prev, {
+        type: sourceType,
+        data: sourceData,
+        timestamp: Date.now()
+      }]);
+      
+      // Show feedback to user
+      if (sourceType === 'url') {
+        const msg = langKey === 'Cantonese' ? `已添加連結: ${sourceData.substring(0, 50)}...` :
+                    langKey === '简体中文' ? `已添加链接: ${sourceData.substring(0, 50)}...` :
+                    `Added link: ${sourceData.substring(0, 50)}...`;
+        alert(msg);
+      } else if (sourceType === 'file' || sourceType === 'photo') {
+        const msg = langKey === 'Cantonese' ? `已添加文件: ${sourceData.name}` :
+                    langKey === '简体中文' ? `已添加文件: ${sourceData.name}` :
+                    `Added file: ${sourceData.name}`;
+        alert(msg);
+      }
+    };
+
+    window.addEventListener('source-select', handleSourceSelect as EventListener);
+    return () => {
+      window.removeEventListener('source-select', handleSourceSelect as EventListener);
+    };
+  }, [langKey]);
 
   // Convert text for better TTS pronunciation
   const prepareTextForTTS = (text: string): string => {
@@ -111,7 +146,6 @@ export const SmartInputSystem: React.FC<SmartInputSystemProps> = ({
     return () => { if (utteranceRef.current) window.speechSynthesis.cancel(); };
   }, [analysisText, isSpeaking, isPaused, langKey]);
 
-  // Rest of the component...
   const handleMicToggle = () => {
     if (recognition && !isListening) {
       recognition.start();
@@ -143,12 +177,38 @@ export const SmartInputSystem: React.FC<SmartInputSystemProps> = ({
     }
   };
 
-  const handleSubmit = () => {
+  const handleSubmit = async () => {
     if (!inputValue.trim() || isLoading) return;
+    
     setIsLoading(true);
-    onAnalyze(inputValue.trim(), []);
-    setInputValue('');
-    setTimeout(() => setIsLoading(false), 500);
+    
+    try {
+      // Process attachments to extract content
+      let userContent = null;
+      if (attachments.length > 0) {
+        // For URLs, send the URL directly
+        const urlAttachment = attachments.find(a => a.type === 'url');
+        if (urlAttachment) {
+          userContent = urlAttachment.data;
+        } else {
+          // For files/photos, try to extract text content
+          const fileAttachment = attachments.find(a => a.type === 'file' || a.type === 'photo');
+          if (fileAttachment && fileAttachment.data.content) {
+            // For base64 images, we'd need OCR - for now, send as text
+            userContent = `[File uploaded: ${fileAttachment.data.name}]`;
+          }
+        }
+      }
+      
+      // Call onAnalyze with ticker, user content, and AI enhancement flag
+      await onAnalyze(inputValue.trim(), userContent ? [{ content: userContent, type: attachments[0]?.type }] : [], useAIEnhancement);
+      
+      // Clear attachments after submission
+      setAttachments([]);
+      setInputValue('');
+    } finally {
+      setTimeout(() => setIsLoading(false), 500);
+    }
   };
 
   const getPlaceholder = () => {
@@ -187,13 +247,114 @@ export const SmartInputSystem: React.FC<SmartInputSystemProps> = ({
     );
   };
 
+  // Display attachments count
+  const attachmentCount = attachments.length;
+
   return (
     <div style={{ width: '100%' }}>
+      {/* AI Enhancement Toggle - Updated wording */}
+      <div style={{ 
+        marginBottom: '8px', 
+        padding: '6px 12px', 
+        backgroundColor: useAIEnhancement ? '#FEF3C7' : '#F3F4F6',
+        borderRadius: '8px',
+        fontSize: '11px',
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'space-between',
+        gap: '8px'
+      }}>
+        <label style={{ 
+          display: 'flex', 
+          alignItems: 'center', 
+          gap: '8px', 
+          cursor: 'pointer',
+          flex: 1
+        }}>
+          <input
+            type="checkbox"
+            checked={useAIEnhancement}
+            onChange={(e) => setUseAIEnhancement(e.target.checked)}
+            style={{ width: '16px', height: '16px', cursor: 'pointer' }}
+          />
+          <span style={{ fontSize: '11px', fontWeight: '500', color: '#374151' }}>
+            {langKey === 'Cantonese' ? '🤖 AI增強分析' : 
+             langKey === '简体中文' ? '🤖 AI增强分析' : 
+             '🤖 AI Enhancement'}
+          </span>
+          <span style={{ fontSize: '9px', color: '#6B7280' }}>
+            {langKey === 'Cantonese' ? '(網關選項)' : 
+             langKey === '简体中文' ? '(网关选项)' : 
+             '(Gateway option)'}
+          </span>
+        </label>
+        {useAIEnhancement && (
+          <div style={{ 
+            fontSize: '9px', 
+            color: '#D97706', 
+            backgroundColor: '#FEF3C7',
+            padding: '2px 6px',
+            borderRadius: '4px'
+          }}>
+            {langKey === 'Cantonese' ? '啟用中' : langKey === '简体中文' ? '启用中' : 'Active'}
+          </div>
+        )}
+      </div>
+      
+      {/* Attachments indicator */}
+      {attachmentCount > 0 && (
+        <div style={{ 
+          marginBottom: '8px', 
+          padding: '6px 12px', 
+          backgroundColor: '#EFF6FF', 
+          borderRadius: '8px',
+          fontSize: '11px',
+          color: '#2563EB',
+          display: 'flex',
+          alignItems: 'center',
+          gap: '8px'
+        }}>
+          <span>📎</span>
+          <span>{attachmentCount} {langKey === 'Cantonese' ? '個附件待分析' : langKey === '简体中文' ? '个附件待分析' : 'attachment(s) ready for analysis'}</span>
+          <button 
+            onClick={() => setAttachments([])}
+            style={{ marginLeft: 'auto', background: 'none', border: 'none', cursor: 'pointer', color: '#EF4444', fontSize: '12px' }}
+          >
+            ✕
+          </button>
+        </div>
+      )}
+      
       <div style={{ display: 'flex', gap: '8px', alignItems: 'center', marginBottom: '10px' }}>
         <button onClick={onPlusClick} style={{ width: '44px', height: '44px', borderRadius: '12px', backgroundColor: '#EF4444', color: 'white', border: 'none', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '20px', fontWeight: 'bold', flexShrink: 0 }}>+</button>
-        <input type="text" value={inputValue} onChange={(e) => setInputValue(e.target.value)} placeholder={getPlaceholder()} onKeyPress={(e) => e.key === 'Enter' && handleSubmit()} style={{ flex: 1, padding: '10px 14px', fontSize: '14px', color: '#1F2937', backgroundColor: '#F3F4F6', borderRadius: '24px', border: '1px solid #E5E7EB', outline: 'none', minWidth: 0 }} />
-        <button onClick={handleSubmit} disabled={!inputValue.trim() || isLoading} style={{ padding: '10px 20px', borderRadius: '24px', backgroundColor: (inputValue.trim() && !isLoading) ? '#22C55E' : '#D1D5DB', color: 'white', border: 'none', cursor: (inputValue.trim() && !isLoading) ? 'pointer' : 'not-allowed', fontWeight: '500', fontSize: '14px' }}>
-          {isLoading ? '分析中...' : 'Send'}
+        <input 
+          type="text" 
+          value={inputValue} 
+          onChange={(e) => setInputValue(e.target.value)} 
+          placeholder={getPlaceholder()} 
+          onKeyPress={(e) => e.key === 'Enter' && handleSubmit()} 
+          style={{ flex: 1, padding: '10px 14px', fontSize: '14px', color: '#1F2937', backgroundColor: '#F3F4F6', borderRadius: '24px', border: '1px solid #E5E7EB', outline: 'none', minWidth: 0 }} 
+        />
+        <button 
+          onClick={handleSubmit} 
+          disabled={!inputValue.trim() || isLoading} 
+          style={{ 
+            padding: '10px 20px', 
+            borderRadius: '24px', 
+            backgroundColor: (inputValue.trim() && !isLoading) 
+              ? (useAIEnhancement ? '#F59E0B' : '#22C55E') 
+              : '#D1D5DB', 
+            color: 'white', 
+            border: 'none', 
+            cursor: (inputValue.trim() && !isLoading) ? 'pointer' : 'not-allowed', 
+            fontWeight: '500', 
+            fontSize: '14px',
+            transition: 'background-color 0.2s'
+          }}
+        >
+          {isLoading 
+            ? (useAIEnhancement ? '🤖 分析中...' : '分析中...') 
+            : (useAIEnhancement ? '✨ AI分析' : '發送')}
         </button>
       </div>
 

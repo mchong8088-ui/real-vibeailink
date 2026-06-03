@@ -41,6 +41,7 @@ const MobileAnalysis: React.FC<MobileAnalysisProps> = ({
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const [showSpeakerMenu, setShowSpeakerMenu] = useState(false);
   const [useBluetooth, setUseBluetooth] = useState(false);
+  const [useAIEnhancement, setUseAIEnhancement] = useState(false);
 
   const t = {
     analyzingMarket: langKey === 'Cantonese' ? '分析市場中...' : langKey === '简体中文' ? '分析市场中...' : 'Analyzing Market...',
@@ -79,10 +80,15 @@ const MobileAnalysis: React.FC<MobileAnalysisProps> = ({
     if (!inputValue.trim()) return;
     setIsLoading(true);
     try {
-      const response = await fetch('/api/chat', {
+      const endpoint = useAIEnhancement ? '/api/chat/ai-enhanced' : '/api/chat';
+      const response = await fetch(endpoint, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ message: inputValue.trim(), language: langKey }),
+        body: JSON.stringify({ 
+          message: inputValue.trim(), 
+          language: langKey,
+          useAI: useAIEnhancement
+        }),
       });
       const data = await response.json();
       setAnalysisData({
@@ -126,6 +132,7 @@ const MobileAnalysis: React.FC<MobileAnalysisProps> = ({
   };
 
   const handleSpeakerClick = () => setShowSpeakerMenu(!showSpeakerMenu);
+  
   const handleBluetoothToggle = () => {
     const newValue = !useBluetooth;
     setUseBluetooth(newValue);
@@ -171,9 +178,15 @@ const MobileAnalysis: React.FC<MobileAnalysisProps> = ({
 
   const handleSourceSelect = (sourceType: string, sourceData?: any) => {
     if (sourceType === 'url' && sourceData) {
-      fetch('/api/chat', {
+      const endpoint = useAIEnhancement ? '/api/chat/ai-enhanced' : '/api/chat';
+      fetch(endpoint, {
         method: 'POST',
-        body: JSON.stringify({ url: sourceData, language: langKey }),
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ 
+          url: sourceData, 
+          language: langKey,
+          useAI: useAIEnhancement 
+        }),
       }).then(response => response.json()).then(data => {
         setAnalysisData((prev: any) => ({ ...prev, summary: prev?.summary + "\n\n📎 URL Analysis:\n" + (data.text || "URL analysis completed.") }));
       });
@@ -217,6 +230,7 @@ const MobileAnalysis: React.FC<MobileAnalysisProps> = ({
           <button onClick={onAuthOpen} style={{ color: '#2563EB', fontWeight: '600', fontSize: '11px', background: 'none', border: 'none', cursor: 'pointer', padding: '4px 0', minWidth: '44px' }}>{user ? 'Welcome' : (langKey === 'Cantonese' ? '登入' : langKey === '简体中文' ? '登录' : 'Login')}</button>
         </div>
       </div>
+      
       <div style={{ flex: 1, overflowY: 'auto', overflowX: 'hidden', WebkitOverflowScrolling: 'touch', padding: '12px', backgroundColor: '#F9FAFB', minHeight: 0 }}>
         {displayLegalTitle && <div style={{ backgroundColor: 'white', borderRadius: '8px', padding: '12px', marginBottom: '8px' }}><div style={{ fontSize: '12px', color: '#4B5563', lineHeight: 1.4 }}>{footerContent[displayLegalTitle]?.[langKey === "Cantonese" ? "粵語 (繁體中文)" : langKey] || "Content coming soon..."}</div></div>}
         {topicId === 'pricing' && <div style={{ backgroundColor: 'white', borderRadius: '8px', padding: '12px', marginBottom: '8px' }}><PricingModal isOpen={true} onClose={onBack} user={user} profile={null} onSelectPlan={handleSelectPlan} showRetentionOnly={false} /></div>}
@@ -224,14 +238,50 @@ const MobileAnalysis: React.FC<MobileAnalysisProps> = ({
         {topicId === 'features' && <FeaturesSection lang={langKey} />}
         {isAnalysisMode && !displayLegalTitle && <StockAnalysisModule t={t} data={analysisData} isLoading={isLoading} langKey={langKey} />}
       </div>
+      
       {isAnalysisMode && !displayLegalTitle && (
         <div style={{ backgroundColor: 'white', borderTop: '1px solid #E5E7EB', padding: '10px 12px', paddingBottom: 'max(10px, env(safe-area-inset-bottom))', flexShrink: 0, zIndex: 20, width: '100%', boxSizing: 'border-box', position: 'relative' }}>
+          
+          {/* AI Enhancement Toggle */}
+          <div style={{ 
+            marginBottom: '8px', 
+            padding: '6px 12px', 
+            backgroundColor: useAIEnhancement ? '#FEF3C7' : '#F3F4F6',
+            borderRadius: '8px',
+            fontSize: '11px',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'space-between'
+          }}>
+            <label style={{ display: 'flex', alignItems: 'center', gap: '8px', cursor: 'pointer', flex: 1 }}>
+              <input
+                type="checkbox"
+                checked={useAIEnhancement}
+                onChange={(e) => setUseAIEnhancement(e.target.checked)}
+                style={{ width: '16px', height: '16px', cursor: 'pointer' }}
+              />
+              <span style={{ fontSize: '11px', fontWeight: '500', color: '#374151' }}>
+                {langKey === 'Cantonese' ? '🤖 AI增強分析' : langKey === '简体中文' ? '🤖 AI增强分析' : '🤖 AI Enhancement'}
+              </span>
+              <span style={{ fontSize: '9px', color: '#6B7280' }}>
+                {langKey === 'Cantonese' ? '(網關選項)' : langKey === '简体中文' ? '(网关选项)' : '(Gateway option)'}
+              </span>
+            </label>
+            {useAIEnhancement && (
+              <div style={{ fontSize: '9px', color: '#D97706', backgroundColor: '#FEF3C7', padding: '2px 6px', borderRadius: '4px' }}>
+                {langKey === 'Cantonese' ? '啟用中' : langKey === '简体中文' ? '启用中' : 'Active'}
+              </div>
+            )}
+          </div>
+          
           <div style={{ display: 'flex', gap: '8px', alignItems: 'center', marginBottom: '10px' }}>
             <button onClick={() => setIsMenuOpen(true)} style={{ width: '44px', height: '44px', borderRadius: '12px', backgroundColor: '#EF4444', color: 'white', border: 'none', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '20px', fontWeight: 'bold', flexShrink: 0 }}>+</button>
             <input type="text" value={inputValue} onChange={(e) => setInputValue(e.target.value)} placeholder={exampleText} onKeyPress={(e) => e.key === 'Enter' && handleAnalyze()} style={{ flex: 1, padding: '10px 14px', fontSize: '14px', color: '#1F2937', backgroundColor: '#F3F4F6', borderRadius: '24px', border: '1px solid #E5E7EB', outline: 'none', minWidth: 0 }} />
           </div>
+          
           <div style={{ display: 'flex', gap: '8px', justifyContent: 'space-between' }}>
             {renderButtonWithCross(isListening, handleMicToggle, <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M19 11a7 7 0 01-7 7m0 0a7 7 0 01-7-7m7 7v4m0 0H8m4 0h4m-4-8a3 3 0 01-3-3V5a3 3 0 116 0v6a3 3 0 01-3 3z" /></svg>, '#3B82F6', '#EF4444')}
+            
             <div style={{ position: 'relative', flex: 1 }}>
               {renderButtonWithCross(isSpeakerActive, handleSpeakerClick, <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M15.536 8.464a5 5 0 010 7.072m2.828-9.9a9 9 0 010 12.728M5.586 15H4a1 1 0 01-1-1v-4a1 1 0 011-1h1.586l4.707-4.707C10.923 3.663 12 4.109 12 5v14c0 .891-1.077 1.337-1.707.707L5.586 15z" /></svg>, '#EF4444', '#9CA3AF')}
               {showSpeakerMenu && (<div style={{ position: 'absolute', bottom: '100%', left: 0, right: 0, marginBottom: '8px', backgroundColor: 'white', border: '1px solid #E5E7EB', borderRadius: '12px', boxShadow: '0 4px 12px rgba(0,0,0,0.15)', zIndex: 30, overflow: 'hidden' }}>
@@ -242,13 +292,40 @@ const MobileAnalysis: React.FC<MobileAnalysisProps> = ({
                 </button>
               </div>)}
             </div>
+            
             {renderButtonWithCross(isPaused, handlePauseToggle, <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M10 9v6m4-6v6m7-3a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>, '#EF4444', '#9CA3AF')}
-            <button onClick={handleAnalyze} disabled={!inputValue.trim()} style={{ flex: 1, height: '48px', borderRadius: '12px', display: 'flex', alignItems: 'center', justifyContent: 'center', backgroundColor: inputValue.trim() ? '#22C55E' : '#D1D5DB', color: 'white', border: 'none', cursor: inputValue.trim() ? 'pointer' : 'not-allowed', position: 'relative' }}>
-              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M7 7h10v10M17 7L7 17" /></svg>
+            
+            <button 
+              onClick={handleAnalyze} 
+              disabled={!inputValue.trim() || isLoading} 
+              style={{ 
+                flex: 1, 
+                height: '48px', 
+                borderRadius: '12px', 
+                display: 'flex', 
+                alignItems: 'center', 
+                justifyContent: 'center', 
+                backgroundColor: (inputValue.trim() && !isLoading) 
+                  ? (useAIEnhancement ? '#F59E0B' : '#22C55E') 
+                  : '#D1D5DB', 
+                color: 'white', 
+                border: 'none', 
+                cursor: (inputValue.trim() && !isLoading) ? 'pointer' : 'not-allowed', 
+                position: 'relative' 
+              }}
+            >
+              {isLoading 
+                ? (useAIEnhancement 
+                    ? (langKey === 'Cantonese' ? '🤖 AI思考中...' : langKey === '简体中文' ? '🤖 AI思考中...' : '🤖 Thinking...')
+                    : (langKey === 'Cantonese' ? '分析中...' : langKey === '简体中文' ? '分析中...' : 'Analyzing...'))
+                : (useAIEnhancement 
+                    ? (langKey === 'Cantonese' ? '✨ AI分析' : langKey === '简体中文' ? '✨ AI分析' : '✨ AI Analyze')
+                    : (langKey === 'Cantonese' ? '發送' : langKey === '简体中文' ? '发送' : 'Send'))}
             </button>
           </div>
         </div>
       )}
+      
       <SourceMenu isOpen={isMenuOpen} onClose={() => setIsMenuOpen(false)} onSelectSource={handleSourceSelect} langKey={langKey} />
     </div>
   );

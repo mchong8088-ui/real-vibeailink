@@ -62,7 +62,6 @@ export const SourceMenu: React.FC<SourceMenuProps> = ({
 
   const handleUrlSubmit = () => {
     if (urlInput.trim()) {
-      // Dispatch event for SmartInputSystem
       window.dispatchEvent(new CustomEvent('source-select', { 
         detail: { sourceType: 'url', sourceData: urlInput.trim() } 
       }));
@@ -84,7 +83,6 @@ export const SourceMenu: React.FC<SourceMenuProps> = ({
           content: e.target?.result,
           type: file.type,
         };
-        // Dispatch event for SmartInputSystem
         window.dispatchEvent(new CustomEvent('source-select', { 
           detail: { sourceType: type, sourceData } 
         }));

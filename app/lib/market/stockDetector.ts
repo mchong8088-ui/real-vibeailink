@@ -1,7 +1,7 @@
 // Stock symbol detection from natural language
 // This restores: 騰訊 → 0700.HK, 台積電 → 2330.TW, Tesla → TSLA
 
-const STOCK_ALIASES: Record<string, string> = {
+export const STOCK_ALIASES: Record<string, string> = {
   // Hong Kong Stocks
   "騰訊": "0700.HK",
   "腾讯": "0700.HK",
