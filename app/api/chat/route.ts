@@ -18,7 +18,7 @@ function getChineseNameFromSymbol(symbol: string): string | null {
 async function fetchCompanyInfo(symbol: string): Promise<{ name: string; chineseName: string }> {
   const chineseNameFromAlias = getChineseNameFromSymbol(symbol);
   
-  // First, try to get from Yahoo Finance
+  // First, try to get from Yahoo Finance chart endpoint
   try {
     let yahooSymbol = symbol;
     // For HK stocks, Yahoo sometimes needs the code without .HK for long name
@@ -45,15 +45,11 @@ async function fetchCompanyInfo(symbol: string): Promise<{ name: string; chinese
       let longName = meta?.longName || meta?.shortName || null;
       
       if (longName) {
-        // For HK stocks, try to get Chinese name from API
         let chineseName = chineseNameFromAlias;
-        
-        // If we have a long name but no Chinese alias, use the long name
         if (!chineseName && longName) {
           chineseName = longName;
         }
-        
-        console.log(`✅ Found company: ${longName} (${symbol})`);
+        console.log(`✅ Found company via chart: ${longName} (${symbol})`);
         return { 
           name: longName, 
           chineseName: chineseName || longName
@@ -61,16 +57,16 @@ async function fetchCompanyInfo(symbol: string): Promise<{ name: string; chinese
       }
     }
   } catch (err) {
-    console.log('Error fetching company info from Yahoo:', err);
+    console.log('Error fetching from chart endpoint:', err);
   }
   
-  // Fallback: Try to get from a secondary source (Yahoo quote summary)
+  // Try quoteSummary endpoint with more modules
   try {
     let yahooSymbol = symbol;
     if (symbol.endsWith('.HK')) yahooSymbol = symbol.replace('.HK', '');
     if (symbol.endsWith('.TW')) yahooSymbol = symbol.replace('.TW', '');
     
-    const quoteUrl = `https://query1.finance.yahoo.com/v10/finance/quoteSummary/${yahooSymbol}?modules=price,summaryProfile`;
+    const quoteUrl = `https://query1.finance.yahoo.com/v10/finance/quoteSummary/${yahooSymbol}?modules=price,summaryProfile,assetProfile`;
     const quoteRes = await fetch(quoteUrl, {
       headers: {
         "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36",
@@ -79,14 +75,22 @@ async function fetchCompanyInfo(symbol: string): Promise<{ name: string; chinese
     
     if (quoteRes.ok) {
       const quoteData = await quoteRes.json();
-      const longName = quoteData?.quoteSummary?.result?.[0]?.price?.longName ||
-                       quoteData?.quoteSummary?.result?.[0]?.price?.shortName;
+      const result = quoteData?.quoteSummary?.result?.[0];
+      const longName = result?.price?.longName || 
+                       result?.price?.shortName ||
+                       result?.summaryProfile?.longBusinessSummary?.split('.')[0] ||
+                       result?.assetProfile?.longName ||
+                       result?.assetProfile?.companyName;
       
       if (longName) {
         console.log(`✅ Found company via quoteSummary: ${longName} (${symbol})`);
+        let chineseName = chineseNameFromAlias;
+        if (!chineseName && longName) {
+          chineseName = longName;
+        }
         return { 
           name: longName, 
-          chineseName: chineseNameFromAlias || longName
+          chineseName: chineseName || longName
         };
       }
     }
@@ -94,7 +98,42 @@ async function fetchCompanyInfo(symbol: string): Promise<{ name: string; chinese
     console.log('Error fetching from quoteSummary:', err);
   }
   
+  // Try a third method - use the search API to get company info
+  try {
+    let searchSymbol = symbol;
+    if (symbol.endsWith('.HK')) searchSymbol = symbol.replace('.HK', '');
+    if (symbol.endsWith('.TW')) searchSymbol = symbol.replace('.TW', '');
+    
+    const searchUrl = `https://query1.finance.yahoo.com/v1/finance/search?q=${searchSymbol}&quotesCount=1`;
+    const searchRes = await fetch(searchUrl, {
+      headers: {
+        "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36",
+      },
+    });
+    
+    if (searchRes.ok) {
+      const searchData = await searchRes.json();
+      const quote = searchData?.quotes?.[0];
+      const longName = quote?.longname || quote?.shortname;
+      
+      if (longName) {
+        console.log(`✅ Found company via search: ${longName} (${symbol})`);
+        let chineseName = chineseNameFromAlias;
+        if (!chineseName && longName) {
+          chineseName = longName;
+        }
+        return { 
+          name: longName, 
+          chineseName: chineseName || longName
+        };
+      }
+    }
+  } catch (err) {
+    console.log('Error fetching from search:', err);
+  }
+  
   // Final fallback: use symbol or alias
+  console.log(`⚠️ No company name found for ${symbol}, using symbol as name`);
   return { 
     name: symbol, 
     chineseName: chineseNameFromAlias || symbol 
