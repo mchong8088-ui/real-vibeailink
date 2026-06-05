@@ -699,132 +699,151 @@ function generateSpecificAnalysis(stockData: any, fundamentals: any, symbol: str
   // ============================================
   // CONFIDENCE SCORE CALCULATION
   // ============================================
-  let confidenceScore = 50; // Start at neutral
-  
-  // Factors that INCREASE confidence (for good stocks)
-  if (stockQuality === 'excellent') {
-    confidenceScore += 30;
-  } else if (stockQuality === 'good') {
-    confidenceScore += 20;
-  } else if (stockQuality === 'average') {
-    confidenceScore += 10;
-  } else if (stockQuality === 'poor') {
-    confidenceScore -= 10;
-  } else if (stockQuality === 'very-poor') {
-    confidenceScore -= 25;
+  // ============================================
+// CONFIDENCE SCORE CALCULATION - REVISED
+// ============================================
+let confidenceScore = 50; // Start at neutral
+
+// 1. TECHNICAL FACTORS (most important - max impact)
+let technicalScore = 0;
+if (trend === 'Uptrend' && macd === 'Bullish') {
+  technicalScore += 30; // Strong bullish alignment
+} else if (trend === 'Uptrend' && macd === 'Bearish') {
+  technicalScore += 5; // Uptrend but divergence
+} else if (trend === 'Downtrend' && macd === 'Bearish') {
+  technicalScore -= 25; // Strong bearish alignment
+} else if (trend === 'Downtrend' && macd === 'Bullish') {
+  technicalScore -= 5; // Downtrend but potential reversal
+} else if (trend === 'Uptrend') {
+  technicalScore += 15; // Uptrend only
+} else if (trend === 'Downtrend') {
+  technicalScore -= 15; // Downtrend only
+}
+
+// RSI adjustment
+if (rsi !== null) {
+  if (rsi >= 40 && rsi <= 60) {
+    technicalScore += 10; // Ideal range
+  } else if (rsi >= 30 && rsi <= 70) {
+    technicalScore += 5; // Acceptable range
+  } else if (rsi < 25) {
+    technicalScore -= 15; // Extremely oversold
+  } else if (rsi > 75) {
+    technicalScore -= 15; // Extremely overbought
+  } else if (rsi < 30) {
+    technicalScore -= 5; // Oversold
+  } else if (rsi > 70) {
+    technicalScore -= 10; // Overbought
   }
-  
-  // RSI based adjustments (more nuanced)
-  if (rsi !== null) {
-    if (rsi >= 40 && rsi <= 60) {
-      confidenceScore += 10; // Ideal RSI range
-    } else if (rsi >= 30 && rsi <= 70) {
-      confidenceScore += 5; // Acceptable range
-    } else if (rsi < 25) {
-      confidenceScore -= 10; // Extremely oversold - risky
-    } else if (rsi > 75) {
-      confidenceScore -= 15; // Extremely overbought - correction risk
-    } else {
-      confidenceScore -= 5; // Moderately overbought/oversold
-    }
+}
+
+confidenceScore += technicalScore;
+
+// 2. FUNDAMENTAL FACTORS
+let fundamentalScore = 0;
+
+// Valuation (P/E)
+if (pe !== null) {
+  if (pe >= 10 && pe <= 20) {
+    fundamentalScore += 15; // Ideal valuation
+  } else if (pe > 20 && pe <= 30) {
+    fundamentalScore += 10; // Slightly high but acceptable
+  } else if (pe > 30 && pe <= 45) {
+    fundamentalScore += 0; // High but could be justified
+  } else if (pe > 45 && pe <= 60) {
+    fundamentalScore -= 10; // Very high
+  } else if (pe > 60) {
+    fundamentalScore -= 15; // Extremely high
+  } else if (pe < 10 && pe > 0) {
+    fundamentalScore += 10; // Undervalued
+  } else if (pe < 0) {
+    fundamentalScore -= 20; // Loss-making
   }
-  
-  // Trend and MACD alignment
-  if (trend === 'Uptrend' && macd === 'Bullish') {
-    confidenceScore += 25; // Strong bullish alignment
-  } else if (trend === 'Downtrend' && macd === 'Bearish') {
-    confidenceScore -= 20; // Strong bearish alignment
-  } else if (trend === 'Uptrend' && macd === 'Bearish') {
-    confidenceScore -= 5; // Divergence - less confident
-  } else if (trend === 'Downtrend' && macd === 'Bullish') {
-    confidenceScore += 10; // Potential reversal
-  } else if (trend === 'Uptrend') {
-    confidenceScore += 10; // Uptrend alone
-  } else if (trend === 'Downtrend') {
-    confidenceScore -= 10; // Downtrend alone
+}
+
+// Revenue Growth
+if (revenueGrowth !== null) {
+  if (revenueGrowth > 25) {
+    fundamentalScore += 20; // Exceptional growth
+  } else if (revenueGrowth > 15) {
+    fundamentalScore += 12; // Strong growth
+  } else if (revenueGrowth > 8) {
+    fundamentalScore += 5; // Good growth
+  } else if (revenueGrowth > 0) {
+    fundamentalScore += 0; // Moderate growth
+  } else if (revenueGrowth < 0 && revenueGrowth >= -10) {
+    fundamentalScore -= 10; // Mild contraction
+  } else if (revenueGrowth < -10) {
+    fundamentalScore -= 20; // Severe contraction
   }
-  
-  // Fundamental adjustments (more balanced)
-  if (pe !== null) {
-    if (pe >= 10 && pe <= 25) {
-      confidenceScore += 15; // Reasonable valuation
-    } else if (pe > 25 && pe <= 40) {
-      confidenceScore += 5; // Slightly high but acceptable
-    } else if (pe > 40 && pe <= 60) {
-      confidenceScore -= 5; // High valuation, but could be justified for growth
-    } else if (pe > 60) {
-      confidenceScore -= 10; // Very high valuation
-    } else if (pe < 0) {
-      confidenceScore -= 15; // Loss-making
-    } else if (pe < 10 && pe > 0) {
-      confidenceScore += 10; // Undervalued
-    }
+}
+
+// Profit Margin
+if (profitMargin !== null) {
+  if (profitMargin > 25) {
+    fundamentalScore += 15; // Excellent
+  } else if (profitMargin > 15) {
+    fundamentalScore += 10; // Good
+  } else if (profitMargin > 8) {
+    fundamentalScore += 5; // Acceptable
+  } else if (profitMargin > 0) {
+    fundamentalScore -= 5; // Thin
+  } else if (profitMargin < 0) {
+    fundamentalScore -= 20; // Loss-making
   }
-  
-  if (revenueGrowth !== null) {
-    if (revenueGrowth > 20) {
-      confidenceScore += 20; // Strong growth
-    } else if (revenueGrowth > 10 && revenueGrowth <= 20) {
-      confidenceScore += 10; // Good growth
-    } else if (revenueGrowth > 0 && revenueGrowth <= 10) {
-      confidenceScore += 5; // Moderate growth
-    } else if (revenueGrowth < 0 && revenueGrowth >= -10) {
-      confidenceScore -= 10; // Mild contraction
-    } else if (revenueGrowth < -10) {
-      confidenceScore -= 20; // Severe contraction
-    }
+}
+
+// Debt
+if (debtRatio !== null) {
+  if (debtRatio < 30) {
+    fundamentalScore += 10; // Healthy
+  } else if (debtRatio < 50) {
+    fundamentalScore += 5; // Moderate
+  } else if (debtRatio > 70) {
+    fundamentalScore -= 15; // High risk
+  } else if (debtRatio > 50) {
+    fundamentalScore -= 5; // Elevated
   }
-  
-  if (profitMargin !== null) {
-    if (profitMargin > 25) {
-      confidenceScore += 15; // Excellent margin
-    } else if (profitMargin > 15 && profitMargin <= 25) {
-      confidenceScore += 10; // Good margin
-    } else if (profitMargin > 5 && profitMargin <= 15) {
-      confidenceScore += 5; // Acceptable margin
-    } else if (profitMargin > 0 && profitMargin <= 5) {
-      confidenceScore -= 5; // Thin margin
-    } else if (profitMargin < 0) {
-      confidenceScore -= 20; // Loss-making
-    }
+}
+
+confidenceScore += fundamentalScore;
+
+// 3. VOLATILITY ADJUSTMENT
+if (volatility !== null) {
+  if (volatility > 0.6) {
+    confidenceScore -= 15; // Extreme volatility
+  } else if (volatility > 0.45) {
+    confidenceScore -= 8; // High volatility
+  } else if (volatility > 0.3) {
+    confidenceScore -= 3; // Moderate volatility
+  } else if (volatility < 0.2) {
+    confidenceScore += 5; // Low volatility
   }
-  
-  if (debtRatio !== null) {
-    if (debtRatio < 30) {
-      confidenceScore += 10; // Low debt - healthy
-    } else if (debtRatio < 50) {
-      confidenceScore += 5; // Moderate debt
-    } else if (debtRatio > 70) {
-      confidenceScore -= 15; // High debt
-    } else if (debtRatio > 50) {
-      confidenceScore -= 5; // Elevated debt
-    }
-  }
-  
-  // Volatility adjustment (more nuanced for growth stocks)
-  if (volatility !== null) {
-    if (volatility > 0.6) {
-      confidenceScore -= 15; // Extreme volatility
-    } else if (volatility > 0.45 && volatility <= 0.6) {
-      confidenceScore -= 8; // High volatility
-    } else if (volatility > 0.3 && volatility <= 0.45) {
-      confidenceScore -= 3; // Moderate volatility
-    } else if (volatility < 0.2) {
-      confidenceScore += 5; // Low volatility - stable
-    }
-  }
-  
-  // Additional bonus for positive news sentiment
-  // Note: newsSentiment is not available here, but will be added later in the main function
-  
-  // Ensure confidence score stays within 0-100 range
-  confidenceScore = Math.max(0, Math.min(100, Math.round(confidenceScore)));
-  
-  // For stocks with strong growth but high P/E, don't penalize too harshly
-  if (revenueGrowth !== null && revenueGrowth > 15 && pe !== null && pe > 40) {
-    // Growth stock adjustment - add back some points
-    confidenceScore = Math.min(85, confidenceScore + 10);
-  }
+}
+
+// 4. QUALITY ADJUSTMENT (based on stockQuality)
+if (stockQuality === 'excellent') {
+  confidenceScore += 5;
+} else if (stockQuality === 'good') {
+  confidenceScore += 0;
+} else if (stockQuality === 'average') {
+  confidenceScore -= 5;
+} else if (stockQuality === 'poor') {
+  confidenceScore -= 15;
+} else if (stockQuality === 'very-poor') {
+  confidenceScore -= 25;
+}
+
+// 5. NEWS SENTIMENT BONUS (applied later in main function)
+// Will add ±5 based on sentiment
+
+// Ensure confidence score stays within 0-100 range
+confidenceScore = Math.max(0, Math.min(100, Math.round(confidenceScore)));
+
+// For TSLA: technicalScore: -25 (downtrend + bearish MACD), RSI -5 = -30
+// fundamentalScore: -15 (high PE) +12 (growth) +10 (margin) +10 (debt) = +17
+// volatility: -8
+// Total: 50 - 30 + 17 - 8 = 29 → then news sentiment could add 5-10 = 34-39%
   
   // Map confidence score to rating text
   let confidenceRating = '';
