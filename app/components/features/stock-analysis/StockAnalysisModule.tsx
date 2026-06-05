@@ -7,7 +7,7 @@ interface Props {
   isLoading: boolean;
   langKey: string;
   t: any;
-  onAnalyze?: (ticker: string, language: string) => void;
+  onAnalyze?: (ticker: string, attachments?: any[], useAI?: boolean) => void;
 }
 
 // Share Buttons Component

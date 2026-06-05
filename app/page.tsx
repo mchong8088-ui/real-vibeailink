@@ -444,23 +444,29 @@ export default function VibeAiMaster() {
           <div style={{ width: '72%', backgroundColor: '#E0F2FE', display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
             <div id="analysis-content" style={{ flex: 1, overflowY: 'auto', padding: '20px' }}>
               {currentView === "analysis" && (
-                <>
-                  {stockOfTheDay && !analysisData && (
-                    <div style={{ backgroundColor: '#FEF3C7', border: '1px solid #FDE68A', borderRadius: '12px', padding: '12px 16px', marginBottom: '16px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '12px' }}>
-                      <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-                        <span style={{ fontSize: '24px' }}>⭐</span>
-                        <div>
-                          <div style={{ fontSize: '11px', fontWeight: 'bold', color: '#92400E' }}>{text.stockOfDay}</div>
-                          <div style={{ fontSize: '16px', fontWeight: 'bold', color: '#D97706' }}>{stockOfTheDay.symbol} - {stockOfTheDay.name}</div>
-                          {stockOfTheDay.price && <div style={{ fontSize: '12px', color: '#B45309' }}>Price: {stockOfTheDay.price}</div>}
-                        </div>
-                      </div>
-                      <button onClick={analyzeStockOfTheDay} style={{ backgroundColor: '#D97706', color: 'white', border: 'none', borderRadius: '8px', padding: '8px 16px', fontSize: '13px', fontWeight: 'bold', cursor: 'pointer' }}>{text.analyze}</button>
-                    </div>
-                  )}
-                  <StockAnalysisModule t={t} data={analysisData} isLoading={isLoading} langKey={language} onAnalyze={handleAnalyzeRequest} />
-                </>
-              )}
+  <>
+    {stockOfTheDay && !analysisData && (
+      <div style={{ backgroundColor: '#FEF3C7', border: '1px solid #FDE68A', borderRadius: '12px', padding: '12px 16px', marginBottom: '16px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '12px' }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+          <span style={{ fontSize: '24px' }}>⭐</span>
+          <div>
+            <div style={{ fontSize: '11px', fontWeight: 'bold', color: '#92400E' }}>{text.stockOfDay}</div>
+            <div style={{ fontSize: '16px', fontWeight: 'bold', color: '#D97706' }}>{stockOfTheDay.symbol} - {stockOfTheDay.name}</div>
+            {stockOfTheDay.price && <div style={{ fontSize: '12px', color: '#B45309' }}>Price: {stockOfTheDay.price}</div>}
+          </div>
+        </div>
+        <button onClick={analyzeStockOfTheDay} style={{ backgroundColor: '#D97706', color: 'white', border: 'none', borderRadius: '8px', padding: '8px 16px', fontSize: '13px', fontWeight: 'bold', cursor: 'pointer' }}>{text.analyze}</button>
+      </div>
+    )}
+    <StockAnalysisModule 
+      t={t} 
+      data={analysisData} 
+      isLoading={isLoading} 
+      langKey={language} 
+      onAnalyze={(symbol) => handleAnalyzeRequest(symbol, [], false)} 
+    />
+  </>
+)}
               {currentView === "portfolio" && <PortfolioModule langKey={language} onAnalyzeStock={(symbol) => handleAnalyzeRequest(symbol, [], false)} />}
               {currentView === "pricing" && <PricingModal isOpen={true} onClose={() => setCurrentView("analysis")} user={user} profile={null} onSelectPlan={handleSelectPlan} showRetentionOnly={false} />}
               {currentView === "about" && <AboutSection lang={language} />}
