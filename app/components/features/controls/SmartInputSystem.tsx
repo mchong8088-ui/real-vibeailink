@@ -212,10 +212,10 @@ export const SmartInputSystem: React.FC<SmartInputSystemProps> = ({
   };
 
   const getPlaceholder = () => {
-    if (langKey === 'Cantonese') return '輸入股票代號 e.g.: 0700.hk, TSLA';
-    if (langKey === '简体中文') return '输入股票代码 e.g.: 0700.hk, TSLA';
-    return 'Enter stock symbol e.g.: 0700.hk, TSLA';
-  };
+  if (langKey === 'Cantonese') return '輸入股票代號 e.g.: 0700.hk, 2330.tw, TSLA';
+  if (langKey === '简体中文') return '输入股票代码 e.g.: 0700.hk, 2330.tw, TSLA';
+  return 'Enter stock symbol e.g.: 0700.hk, 2330.tw, TSLA';
+};
 
   useEffect(() => {
     if (typeof window !== 'undefined') {

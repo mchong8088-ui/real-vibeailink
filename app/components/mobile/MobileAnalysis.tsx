@@ -203,7 +203,7 @@ const MobileAnalysis: React.FC<MobileAnalysisProps> = ({
     setIsMenuOpen(false);
   };
 
-  const exampleText = langKey === 'Cantonese' ? '輸入股票代號 e.g.: 0700.hk, TSLA' : langKey === '简体中文' ? '输入股票代码 e.g.: 0700.hk, TSLA' : 'Enter stock symbol e.g.: 0700.hk, TSLA';
+  const exampleText = langKey === 'Cantonese' ? '輸入股票代號 e.g.: 0700.hk, 2330.tw, TSLA' : langKey === '简体中文' ? '输入股票代码 e.g.: 0700.hk, 2330.tw, TSLA' : 'Enter stock symbol e.g.: 0700.hk, 2330.tw, TSLA';
   const isAnalysisMode = viewType === 'analysis';
 
   const getTitle = () => {
