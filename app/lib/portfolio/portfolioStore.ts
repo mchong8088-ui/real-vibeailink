@@ -20,23 +20,21 @@ class PortfolioStore {
   private watchlist: WatchlistItem[] = [];
 
   constructor() {
-    this.loadFromLocalStorage();
+    if (typeof window !== 'undefined') {
+      this.loadFromLocalStorage();
+    }
   }
 
   private loadFromLocalStorage() {
-    if (typeof window !== 'undefined') {
-      const savedPortfolio = localStorage.getItem('portfolio');
-      const savedWatchlist = localStorage.getItem('watchlist');
-      if (savedPortfolio) this.portfolios = JSON.parse(savedPortfolio);
-      if (savedWatchlist) this.watchlist = JSON.parse(savedWatchlist);
-    }
+    const savedPortfolio = localStorage.getItem('portfolio');
+    const savedWatchlist = localStorage.getItem('watchlist');
+    if (savedPortfolio) this.portfolios = JSON.parse(savedPortfolio);
+    if (savedWatchlist) this.watchlist = JSON.parse(savedWatchlist);
   }
 
   private saveToLocalStorage() {
-    if (typeof window !== 'undefined') {
-      localStorage.setItem('portfolio', JSON.stringify(this.portfolios));
-      localStorage.setItem('watchlist', JSON.stringify(this.watchlist));
-    }
+    localStorage.setItem('portfolio', JSON.stringify(this.portfolios));
+    localStorage.setItem('watchlist', JSON.stringify(this.watchlist));
   }
 
   getPortfolio(): PortfolioItem[] {
@@ -48,7 +46,12 @@ class PortfolioStore {
   }
 
   addToPortfolio(item: PortfolioItem) {
-    this.portfolios.push(item);
+    const existing = this.portfolios.find(p => p.symbol === item.symbol);
+    if (existing) {
+      existing.shares += item.shares;
+    } else {
+      this.portfolios.push(item);
+    }
     this.saveToLocalStorage();
   }
 
@@ -91,6 +94,14 @@ class PortfolioStore {
       const value = currentPrice * item.shares;
       return total + (value - cost);
     }, 0);
+  }
+
+  // Add this missing method
+  getProfitPercentage(currentPrices: Record<string, number>): number {
+    const totalValue = this.getTotalValue(currentPrices);
+    const totalCost = this.portfolios.reduce((sum, item) => sum + (item.buyPrice * item.shares), 0);
+    if (totalCost === 0) return 0;
+    return ((totalValue - totalCost) / totalCost) * 100;
   }
 }
 

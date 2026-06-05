@@ -117,39 +117,39 @@ export const PortfolioModule: React.FC<Props> = ({ langKey, onAnalyzeStock }) =>
   const profitPercent = portfolioStore.getProfitPercentage(currentPrices);
 
   return (
-    <div style={{ backgroundColor: 'var(--bg-card)', borderRadius: '12px', padding: '16px' }}>
+    <div style={{ backgroundColor: 'white', borderRadius: '12px', padding: '16px' }}>
       {/* Summary Cards */}
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '12px', marginBottom: '20px' }}>
-        <div style={{ backgroundColor: 'var(--bg-secondary)', padding: '12px', borderRadius: '8px', textAlign: 'center' }}>
-          <div style={{ fontSize: '11px', color: 'var(--text-secondary)' }}>{text.totalValue}</div>
-          <div style={{ fontSize: '18px', fontWeight: 'bold', color: 'var(--info-color)' }}>
+        <div style={{ backgroundColor: '#F3F4F6', padding: '12px', borderRadius: '8px', textAlign: 'center' }}>
+          <div style={{ fontSize: '11px', color: '#6B7280' }}>{text.totalValue}</div>
+          <div style={{ fontSize: '18px', fontWeight: 'bold', color: '#2563EB' }}>
             ${totalValue.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
           </div>
         </div>
-        <div style={{ backgroundColor: 'var(--bg-secondary)', padding: '12px', borderRadius: '8px', textAlign: 'center' }}>
-          <div style={{ fontSize: '11px', color: 'var(--text-secondary)' }}>{text.totalProfit}</div>
-          <div style={{ fontSize: '18px', fontWeight: 'bold', color: totalProfit >= 0 ? 'var(--success-color)' : 'var(--error-color)' }}>
+        <div style={{ backgroundColor: '#F3F4F6', padding: '12px', borderRadius: '8px', textAlign: 'center' }}>
+          <div style={{ fontSize: '11px', color: '#6B7280' }}>{text.totalProfit}</div>
+          <div style={{ fontSize: '18px', fontWeight: 'bold', color: totalProfit >= 0 ? '#10B981' : '#EF4444' }}>
             {totalProfit >= 0 ? '+' : ''}${Math.abs(totalProfit).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
           </div>
         </div>
-        <div style={{ backgroundColor: 'var(--bg-secondary)', padding: '12px', borderRadius: '8px', textAlign: 'center' }}>
-          <div style={{ fontSize: '11px', color: 'var(--text-secondary)' }}>{text.profitPercent}</div>
-          <div style={{ fontSize: '18px', fontWeight: 'bold', color: profitPercent >= 0 ? 'var(--success-color)' : 'var(--error-color)' }}>
+        <div style={{ backgroundColor: '#F3F4F6', padding: '12px', borderRadius: '8px', textAlign: 'center' }}>
+          <div style={{ fontSize: '11px', color: '#6B7280' }}>{text.profitPercent}</div>
+          <div style={{ fontSize: '18px', fontWeight: 'bold', color: profitPercent >= 0 ? '#10B981' : '#EF4444' }}>
             {profitPercent >= 0 ? '+' : ''}{profitPercent.toFixed(2)}%
           </div>
         </div>
       </div>
 
       {/* Tab Buttons */}
-      <div style={{ display: 'flex', gap: '8px', marginBottom: '16px', borderBottom: '1px solid var(--border-color)' }}>
+      <div style={{ display: 'flex', gap: '8px', marginBottom: '16px', borderBottom: '1px solid #E5E7EB' }}>
         <button
           onClick={() => setActiveTab('portfolio')}
           style={{
             padding: '8px 16px',
             backgroundColor: 'transparent',
             border: 'none',
-            borderBottom: activeTab === 'portfolio' ? '2px solid var(--info-color)' : 'none',
-            color: activeTab === 'portfolio' ? 'var(--info-color)' : 'var(--text-secondary)',
+            borderBottom: activeTab === 'portfolio' ? '2px solid #2563EB' : 'none',
+            color: activeTab === 'portfolio' ? '#2563EB' : '#6B7280',
             cursor: 'pointer',
             fontWeight: activeTab === 'portfolio' ? 'bold' : 'normal',
           }}
@@ -162,8 +162,8 @@ export const PortfolioModule: React.FC<Props> = ({ langKey, onAnalyzeStock }) =>
             padding: '8px 16px',
             backgroundColor: 'transparent',
             border: 'none',
-            borderBottom: activeTab === 'watchlist' ? '2px solid var(--info-color)' : 'none',
-            color: activeTab === 'watchlist' ? 'var(--info-color)' : 'var(--text-secondary)',
+            borderBottom: activeTab === 'watchlist' ? '2px solid #2563EB' : 'none',
+            color: activeTab === 'watchlist' ? '#2563EB' : '#6B7280',
             cursor: 'pointer',
             fontWeight: activeTab === 'watchlist' ? 'bold' : 'normal',
           }}
@@ -176,7 +176,7 @@ export const PortfolioModule: React.FC<Props> = ({ langKey, onAnalyzeStock }) =>
       <button
         onClick={() => setShowAddModal(true)}
         style={{
-          backgroundColor: 'var(--info-color)',
+          backgroundColor: '#2563EB',
           color: 'white',
           border: 'none',
           borderRadius: '8px',
@@ -194,7 +194,7 @@ export const PortfolioModule: React.FC<Props> = ({ langKey, onAnalyzeStock }) =>
         <div style={{ overflowX: 'auto' }}>
           <table style={{ width: '100%', borderCollapse: 'collapse' }}>
             <thead>
-              <tr style={{ borderBottom: '1px solid var(--border-color)', textAlign: 'left' }}>
+              <tr style={{ borderBottom: '1px solid #E5E7EB', textAlign: 'left' }}>
                 <th style={{ padding: '8px' }}>{text.symbol}</th>
                 <th style={{ padding: '8px' }}>{text.shares}</th>
                 <th style={{ padding: '8px' }}>{text.buyPrice}</th>
@@ -209,24 +209,24 @@ export const PortfolioModule: React.FC<Props> = ({ langKey, onAnalyzeStock }) =>
                 const profit = (currentPrice - item.buyPrice) * item.shares;
                 const profitPercent = ((currentPrice - item.buyPrice) / item.buyPrice) * 100;
                 return (
-                  <tr key={item.symbol} style={{ borderBottom: '1px solid var(--border-light)' }}>
+                  <tr key={item.symbol} style={{ borderBottom: '1px solid #E5E7EB' }}>
                     <td style={{ padding: '8px', fontWeight: 'bold' }}>{item.symbol}</td>
                     <td style={{ padding: '8px' }}>{item.shares}</td>
                     <td style={{ padding: '8px' }}>${item.buyPrice.toFixed(2)}</td>
-                    <td style={{ padding: '8px', color: 'var(--info-color)' }}>${currentPrice.toFixed(2)}</td>
-                    <td style={{ padding: '8px', color: profit >= 0 ? 'var(--success-color)' : 'var(--error-color)' }}>
+                    <td style={{ padding: '8px', color: '#2563EB' }}>${currentPrice.toFixed(2)}</td>
+                    <td style={{ padding: '8px', color: profit >= 0 ? '#10B981' : '#EF4444' }}>
                       {profit >= 0 ? '+' : ''}${profit.toFixed(2)} ({profitPercent >= 0 ? '+' : ''}{profitPercent.toFixed(1)}%)
                     </td>
                     <td style={{ padding: '8px' }}>
                       <button
                         onClick={() => onAnalyzeStock(item.symbol)}
-                        style={{ backgroundColor: 'var(--info-color)', color: 'white', border: 'none', borderRadius: '4px', padding: '4px 8px', marginRight: '8px', cursor: 'pointer', fontSize: '11px' }}
+                        style={{ backgroundColor: '#2563EB', color: 'white', border: 'none', borderRadius: '4px', padding: '4px 8px', marginRight: '8px', cursor: 'pointer', fontSize: '11px' }}
                       >
                         {text.analyze}
                       </button>
                       <button
                         onClick={() => handleRemoveFromPortfolio(item.symbol)}
-                        style={{ backgroundColor: 'var(--error-color)', color: 'white', border: 'none', borderRadius: '4px', padding: '4px 8px', cursor: 'pointer', fontSize: '11px' }}
+                        style={{ backgroundColor: '#EF4444', color: 'white', border: 'none', borderRadius: '4px', padding: '4px 8px', cursor: 'pointer', fontSize: '11px' }}
                       >
                         {text.remove}
                       </button>
@@ -236,7 +236,7 @@ export const PortfolioModule: React.FC<Props> = ({ langKey, onAnalyzeStock }) =>
               })}
               {portfolio.length === 0 && (
                 <tr>
-                  <td colSpan={6} style={{ textAlign: 'center', padding: '40px', color: 'var(--text-secondary)' }}>
+                  <td colSpan={6} style={{ textAlign: 'center', padding: '40px', color: '#9CA3AF' }}>
                     {langKey === 'Cantonese' ? '暫無股票，點擊「添加股票」開始' : langKey === '简体中文' ? '暂无股票，点击「添加股票」开始' : 'No stocks yet. Click "Add Stock" to start'}
                   </td>
                 </tr>
@@ -251,7 +251,7 @@ export const PortfolioModule: React.FC<Props> = ({ langKey, onAnalyzeStock }) =>
         <div style={{ overflowX: 'auto' }}>
           <table style={{ width: '100%', borderCollapse: 'collapse' }}>
             <thead>
-              <tr style={{ borderBottom: '1px solid var(--border-color)', textAlign: 'left' }}>
+              <tr style={{ borderBottom: '1px solid #E5E7EB', textAlign: 'left' }}>
                 <th style={{ padding: '8px' }}>{text.symbol}</th>
                 <th style={{ padding: '8px' }}>{text.currentPrice}</th>
                 <th style={{ padding: '8px' }}>{text.actions}</th>
@@ -261,19 +261,19 @@ export const PortfolioModule: React.FC<Props> = ({ langKey, onAnalyzeStock }) =>
               {watchlist.map((item) => {
                 const currentPrice = currentPrices[item.symbol];
                 return (
-                  <tr key={item.symbol} style={{ borderBottom: '1px solid var(--border-light)' }}>
+                  <tr key={item.symbol} style={{ borderBottom: '1px solid #E5E7EB' }}>
                     <td style={{ padding: '8px', fontWeight: 'bold' }}>{item.symbol}</td>
-                    <td style={{ padding: '8px', color: 'var(--info-color)' }}>{currentPrice ? `$${currentPrice.toFixed(2)}` : 'N/A'}</td>
+                    <td style={{ padding: '8px', color: '#2563EB' }}>{currentPrice ? `$${currentPrice.toFixed(2)}` : 'N/A'}</td>
                     <td style={{ padding: '8px' }}>
                       <button
                         onClick={() => onAnalyzeStock(item.symbol)}
-                        style={{ backgroundColor: 'var(--info-color)', color: 'white', border: 'none', borderRadius: '4px', padding: '4px 8px', marginRight: '8px', cursor: 'pointer', fontSize: '11px' }}
+                        style={{ backgroundColor: '#2563EB', color: 'white', border: 'none', borderRadius: '4px', padding: '4px 8px', marginRight: '8px', cursor: 'pointer', fontSize: '11px' }}
                       >
                         {text.analyze}
                       </button>
                       <button
                         onClick={() => handleRemoveFromWatchlist(item.symbol)}
-                        style={{ backgroundColor: 'var(--error-color)', color: 'white', border: 'none', borderRadius: '4px', padding: '4px 8px', cursor: 'pointer', fontSize: '11px' }}
+                        style={{ backgroundColor: '#EF4444', color: 'white', border: 'none', borderRadius: '4px', padding: '4px 8px', cursor: 'pointer', fontSize: '11px' }}
                       >
                         {text.remove}
                       </button>
@@ -283,7 +283,7 @@ export const PortfolioModule: React.FC<Props> = ({ langKey, onAnalyzeStock }) =>
               })}
               {watchlist.length === 0 && (
                 <tr>
-                  <td colSpan={3} style={{ textAlign: 'center', padding: '40px', color: 'var(--text-secondary)' }}>
+                  <td colSpan={3} style={{ textAlign: 'center', padding: '40px', color: '#9CA3AF' }}>
                     {langKey === 'Cantonese' ? '觀察列表為空' : langKey === '简体中文' ? '观察列表为空' : 'Watchlist is empty'}
                   </td>
                 </tr>
@@ -296,21 +296,21 @@ export const PortfolioModule: React.FC<Props> = ({ langKey, onAnalyzeStock }) =>
       {/* Add Modal */}
       {showAddModal && (
         <div style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, backgroundColor: 'rgba(0,0,0,0.5)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1000 }}>
-          <div style={{ backgroundColor: 'var(--bg-card)', borderRadius: '12px', padding: '20px', width: '300px' }}>
+          <div style={{ backgroundColor: 'white', borderRadius: '12px', padding: '20px', width: '300px' }}>
             <h3 style={{ marginBottom: '16px' }}>{text.addStock}</h3>
             <input
               type="text"
               placeholder={text.symbol}
               value={newItem.symbol}
               onChange={(e) => setNewItem({ ...newItem, symbol: e.target.value })}
-              style={{ width: '100%', padding: '8px', marginBottom: '12px', borderRadius: '6px', border: '1px solid var(--border-color)', backgroundColor: 'var(--bg-secondary)', color: 'var(--text-primary)' }}
+              style={{ width: '100%', padding: '8px', marginBottom: '12px', borderRadius: '6px', border: '1px solid #E5E7EB' }}
             />
             <input
               type="number"
               placeholder={text.shares}
               value={newItem.shares}
               onChange={(e) => setNewItem({ ...newItem, shares: parseInt(e.target.value) || 0 })}
-              style={{ width: '100%', padding: '8px', marginBottom: '12px', borderRadius: '6px', border: '1px solid var(--border-color)', backgroundColor: 'var(--bg-secondary)', color: 'var(--text-primary)' }}
+              style={{ width: '100%', padding: '8px', marginBottom: '12px', borderRadius: '6px', border: '1px solid #E5E7EB' }}
             />
             <input
               type="number"
@@ -318,11 +318,11 @@ export const PortfolioModule: React.FC<Props> = ({ langKey, onAnalyzeStock }) =>
               placeholder={text.buyPrice}
               value={newItem.buyPrice}
               onChange={(e) => setNewItem({ ...newItem, buyPrice: parseFloat(e.target.value) || 0 })}
-              style={{ width: '100%', padding: '8px', marginBottom: '12px', borderRadius: '6px', border: '1px solid var(--border-color)', backgroundColor: 'var(--bg-secondary)', color: 'var(--text-primary)' }}
+              style={{ width: '100%', padding: '8px', marginBottom: '12px', borderRadius: '6px', border: '1px solid #E5E7EB' }}
             />
             <div style={{ display: 'flex', gap: '8px' }}>
-              <button onClick={handleAddToPortfolio} style={{ flex: 1, backgroundColor: 'var(--success-color)', color: 'white', border: 'none', borderRadius: '6px', padding: '8px', cursor: 'pointer' }}>Add</button>
-              <button onClick={() => setShowAddModal(false)} style={{ flex: 1, backgroundColor: 'var(--border-color)', color: 'var(--text-primary)', border: 'none', borderRadius: '6px', padding: '8px', cursor: 'pointer' }}>Cancel</button>
+              <button onClick={handleAddToPortfolio} style={{ flex: 1, backgroundColor: '#10B981', color: 'white', border: 'none', borderRadius: '6px', padding: '8px', cursor: 'pointer' }}>Add</button>
+              <button onClick={() => setShowAddModal(false)} style={{ flex: 1, backgroundColor: '#E5E7EB', color: '#4B5563', border: 'none', borderRadius: '6px', padding: '8px', cursor: 'pointer' }}>Cancel</button>
             </div>
           </div>
         </div>
