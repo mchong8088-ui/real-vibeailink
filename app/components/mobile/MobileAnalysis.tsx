@@ -9,7 +9,6 @@ import { StockAnalysisModule } from '../features/stock-analysis/StockAnalysisMod
 import { footerContent } from '../../constants/content';
 import { speakText, stopSpeaking } from '../../utils/SimpleTTS';
 import { audioManager } from '../../utils/AudioManager';
-import { supabase } from '../../../lib/supabase';
 
 interface MobileAnalysisProps {
   langKey: string;
