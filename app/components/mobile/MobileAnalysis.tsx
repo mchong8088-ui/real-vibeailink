@@ -9,6 +9,7 @@ import { StockAnalysisModule } from '../features/stock-analysis/StockAnalysisMod
 import { footerContent } from '../../constants/content';
 import { speakText, stopSpeaking } from '../../utils/SimpleTTS';
 import { audioManager } from '../../utils/AudioManager';
+import { supabase } from '../../../lib/supabase';
 
 interface MobileAnalysisProps {
   langKey: string;
@@ -103,6 +104,15 @@ const MobileAnalysis: React.FC<MobileAnalysisProps> = ({
         historical: data.historical || [],
         change: data.change,
         changePercent: data.changePercent,
+        companyName: data.companyName,
+        currency: data.currency,
+        sma20: data.sma20,
+        sma50: data.sma50,
+        volatility: data.volatility,
+        avgVolume: data.avgVolume,
+        dayLow: data.dayLow,
+        dayHigh: data.dayHigh,
+        specificAnalysis: data.specificAnalysis
       });
     } catch (error) {
       setAnalysisData({
@@ -236,7 +246,14 @@ const MobileAnalysis: React.FC<MobileAnalysisProps> = ({
         {topicId === 'pricing' && <div style={{ backgroundColor: 'white', borderRadius: '8px', padding: '12px', marginBottom: '8px' }}><PricingModal isOpen={true} onClose={onBack} user={user} profile={null} onSelectPlan={handleSelectPlan} showRetentionOnly={false} /></div>}
         {topicId === 'about' && <AboutSection lang={langKey} />}
         {topicId === 'features' && <FeaturesSection lang={langKey} />}
-        {isAnalysisMode && !displayLegalTitle && <StockAnalysisModule t={t} data={analysisData} isLoading={isLoading} langKey={langKey} />}
+        {isAnalysisMode && !displayLegalTitle && (
+          <StockAnalysisModule 
+            t={t} 
+            data={analysisData} 
+            isLoading={isLoading} 
+            langKey={langKey} 
+          />
+        )}
       </div>
       
       {isAnalysisMode && !displayLegalTitle && (

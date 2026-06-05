@@ -18,10 +18,9 @@ function getChineseNameFromSymbol(symbol: string): string | null {
 async function fetchCompanyInfo(symbol: string): Promise<{ name: string; chineseName: string }> {
   const chineseNameFromAlias = getChineseNameFromSymbol(symbol);
   
-  // First, try to get from Yahoo Finance chart endpoint
+  // First, try to get from Yahoo Finance
   try {
     let yahooSymbol = symbol;
-    // For HK stocks, Yahoo sometimes needs the code without .HK for long name
     if (symbol.endsWith('.HK')) {
       yahooSymbol = symbol.replace('.HK', '');
     }
@@ -40,8 +39,6 @@ async function fetchCompanyInfo(symbol: string): Promise<{ name: string; chinese
       const data = await res.json();
       const result = data.chart?.result?.[0];
       const meta = result?.meta;
-      
-      // Try to get long name, then short name
       let longName = meta?.longName || meta?.shortName || null;
       
       if (longName) {
@@ -49,7 +46,7 @@ async function fetchCompanyInfo(symbol: string): Promise<{ name: string; chinese
         if (!chineseName && longName) {
           chineseName = longName;
         }
-        console.log(`✅ Found company via chart: ${longName} (${symbol})`);
+        console.log(`✅ Found company: ${longName} (${symbol})`);
         return { 
           name: longName, 
           chineseName: chineseName || longName
@@ -57,16 +54,16 @@ async function fetchCompanyInfo(symbol: string): Promise<{ name: string; chinese
       }
     }
   } catch (err) {
-    console.log('Error fetching from chart endpoint:', err);
+    console.log('Error fetching company info from Yahoo:', err);
   }
   
-  // Try quoteSummary endpoint with more modules
+  // Fallback: Try quoteSummary
   try {
     let yahooSymbol = symbol;
     if (symbol.endsWith('.HK')) yahooSymbol = symbol.replace('.HK', '');
     if (symbol.endsWith('.TW')) yahooSymbol = symbol.replace('.TW', '');
     
-    const quoteUrl = `https://query1.finance.yahoo.com/v10/finance/quoteSummary/${yahooSymbol}?modules=price,summaryProfile,assetProfile`;
+    const quoteUrl = `https://query1.finance.yahoo.com/v10/finance/quoteSummary/${yahooSymbol}?modules=price,summaryProfile`;
     const quoteRes = await fetch(quoteUrl, {
       headers: {
         "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36",
@@ -75,22 +72,14 @@ async function fetchCompanyInfo(symbol: string): Promise<{ name: string; chinese
     
     if (quoteRes.ok) {
       const quoteData = await quoteRes.json();
-      const result = quoteData?.quoteSummary?.result?.[0];
-      const longName = result?.price?.longName || 
-                       result?.price?.shortName ||
-                       result?.summaryProfile?.longBusinessSummary?.split('.')[0] ||
-                       result?.assetProfile?.longName ||
-                       result?.assetProfile?.companyName;
+      const longName = quoteData?.quoteSummary?.result?.[0]?.price?.longName ||
+                       quoteData?.quoteSummary?.result?.[0]?.price?.shortName;
       
       if (longName) {
         console.log(`✅ Found company via quoteSummary: ${longName} (${symbol})`);
-        let chineseName = chineseNameFromAlias;
-        if (!chineseName && longName) {
-          chineseName = longName;
-        }
         return { 
           name: longName, 
-          chineseName: chineseName || longName
+          chineseName: chineseNameFromAlias || longName
         };
       }
     }
@@ -98,42 +87,6 @@ async function fetchCompanyInfo(symbol: string): Promise<{ name: string; chinese
     console.log('Error fetching from quoteSummary:', err);
   }
   
-  // Try a third method - use the search API to get company info
-  try {
-    let searchSymbol = symbol;
-    if (symbol.endsWith('.HK')) searchSymbol = symbol.replace('.HK', '');
-    if (symbol.endsWith('.TW')) searchSymbol = symbol.replace('.TW', '');
-    
-    const searchUrl = `https://query1.finance.yahoo.com/v1/finance/search?q=${searchSymbol}&quotesCount=1`;
-    const searchRes = await fetch(searchUrl, {
-      headers: {
-        "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36",
-      },
-    });
-    
-    if (searchRes.ok) {
-      const searchData = await searchRes.json();
-      const quote = searchData?.quotes?.[0];
-      const longName = quote?.longname || quote?.shortname;
-      
-      if (longName) {
-        console.log(`✅ Found company via search: ${longName} (${symbol})`);
-        let chineseName = chineseNameFromAlias;
-        if (!chineseName && longName) {
-          chineseName = longName;
-        }
-        return { 
-          name: longName, 
-          chineseName: chineseName || longName
-        };
-      }
-    }
-  } catch (err) {
-    console.log('Error fetching from search:', err);
-  }
-  
-  // Final fallback: use symbol or alias
-  console.log(`⚠️ No company name found for ${symbol}, using symbol as name`);
   return { 
     name: symbol, 
     chineseName: chineseNameFromAlias || symbol 
@@ -859,7 +812,7 @@ function generateSpecificAnalysis(stockData: any, fundamentals: any, symbol: str
 export async function POST(req: Request) {
   try {
     const { message, language = 'English', userContent = null } = await req.json();
-    console.log(`📝 Query: ${message}, Language: ${language}, UserContent: ${userContent ? 'Yes' : 'No'}`);
+    console.log(`Query: ${message}, Language: ${language}, UserContent: ${userContent ? 'Yes' : 'No'}`);
     
     const symbol = detectStock(message);
     
@@ -879,17 +832,38 @@ export async function POST(req: Request) {
       });
     }
     
-    console.log(`📊 Detected symbol: ${symbol}`);
+    console.log(`Detected symbol: ${symbol}`);
     
     const isUserQuestion = isQuestion(message);
     
     // Fetch all data in parallel
-    const [stockData, companyInfo, fundamentals, news] = await Promise.all([
-      fetchRealStockData(symbol),
-      fetchCompanyInfo(symbol),
-      getFundamentals(symbol),
-      getNews(symbol)
-    ]);
+   // Fetch stock data and company info first
+const [stockData, companyInfo] = await Promise.all([
+  fetchRealStockData(symbol),
+  fetchCompanyInfo(symbol)
+]);
+
+if (!stockData) {
+  let errorMsg = '';
+  if (language === 'Cantonese') {
+    errorMsg = `無法獲取 ${symbol} 的即時數據，請稍後再試。`;
+  } else if (language === '简体中文') {
+    errorMsg = `无法获取 ${symbol} 的实时数据，请稍后再试。`;
+  } else {
+    errorMsg = `Unable to fetch real-time data for ${symbol}. Please try again.`;
+  }
+  return NextResponse.json({
+    success: false,
+    summary: errorMsg,
+    text: errorMsg
+  });
+}
+
+// Then fetch fundamentals and news with company name
+const [fundamentals, news] = await Promise.all([
+  getFundamentals(symbol),
+  getNews(symbol, companyInfo.name || symbol, language)
+]);
     
     if (!stockData) {
       let errorMsg = '';
@@ -913,13 +887,13 @@ export async function POST(req: Request) {
     
     if (userContent) {
       userContentAnalysis = await extractUserContent(userContent, language);
-      console.log(`📄 User content analyzed: ${userContentAnalysis.type}, Title: ${userContentAnalysis.title}`);
+      console.log(`User content analyzed: ${userContentAnalysis.type}, Title: ${userContentAnalysis.title}`);
     }
     
     // Analyze news sentiment
     if (news && news.length > 0) {
       newsSentiment = getSentiment(news);
-      console.log(`📰 News sentiment: ${newsSentiment.sentiment}, Score: ${newsSentiment.score}`);
+      console.log(`News sentiment: ${newsSentiment.sentiment}, Score: ${newsSentiment.score}`);
     }
     
     // Generate specific analysis based on actual data
@@ -1158,92 +1132,199 @@ ${specificAnalysis.qualityReason ? `⚠️ ${specificAnalysis.qualityReason}` : 
                      language === '简体中文' ? '• 暂无明显看淡因素' :
                      '• No significant bearish factors identified';
     }
-    
-    // Generate user content analysis section
-    let userContentText = '';
-    if (userContentAnalysis && userContentAnalysis.originalContent) {
-      const sentimentEmoji = userContentAnalysis.sentiment?.sentiment === 'Positive' ? '📈' : 
-                             userContentAnalysis.sentiment?.sentiment === 'Negative' ? '📉' : '📊';
-      const sentimentText = userContentAnalysis.sentiment?.sentiment === 'Positive' ? 
-                           (language === 'Cantonese' ? '正面' : language === '简体中文' ? '正面' : 'Positive') :
-                           userContentAnalysis.sentiment?.sentiment === 'Negative' ?
-                           (language === 'Cantonese' ? '負面' : language === '简体中文' ? '負面' : 'Negative') :
-                           (language === 'Cantonese' ? '中性' : language === '简体中文' ? '中性' : 'Neutral');
-      
-      if (language === 'Cantonese') {
-        userContentText = `
+// Generate user content analysis section with REAL news summaries
+let userContentText = '';
+if (userContentAnalysis && userContentAnalysis.originalContent) {
+  const sentimentEmoji = userContentAnalysis.sentiment?.sentiment === 'Positive' ? '📈' : 
+                         userContentAnalysis.sentiment?.sentiment === 'Negative' ? '📉' : '📊';
+  const sentimentText = userContentAnalysis.sentiment?.sentiment === 'Positive' ? 
+                       (language === 'Cantonese' ? '正面' : language === '简体中文' ? '正面' : 'Positive') :
+                       userContentAnalysis.sentiment?.sentiment === 'Negative' ?
+                       (language === 'Cantonese' ? '負面' : language === '简体中文' ? '負面' : 'Negative') :
+                       (language === 'Cantonese' ? '中性' : language === '简体中文' ? '中性' : 'Neutral');
+  
+  // Generate detailed AI analysis of the content
+  let aiContentAnalysis = '';
+  if (userContentAnalysis.sentiment?.sentiment === 'Positive') {
+    aiContentAnalysis = language === 'Cantonese' ? '📋 詳細分析：這份資料包含利好因素，可能支持股價向上。但建議結合技術面確認入市時機。' :
+                        language === '简体中文' ? '📋 详细分析：这份资料包含利好因素，可能支持股价向上。但建议结合技术面确认入市时机。' :
+                        'Detailed Analysis: This content contains positive factors that may support upward price movement. However, combine with technical analysis for entry timing.';
+  } else if (userContentAnalysis.sentiment?.sentiment === 'Negative') {
+    aiContentAnalysis = language === 'Cantonese' ? '📋 詳細分析：這份資料包含負面因素，可能對股價構成壓力。建議審慎評估風險。' :
+                        language === '简体中文' ? '📋 详细分析：这份资料包含负面因素，可能对股价构成压力。建议审慎评估风险。' :
+                        'Detailed Analysis: This content contains negative factors that may pressure the stock price. Carefully assess risks.';
+  } else {
+    aiContentAnalysis = language === 'Cantonese' ? '📋 詳細分析：這份資料影響中性，沒有明確方向。建議等待更多催化劑。' :
+                        language === '简体中文' ? '📋 详细分析：这份资料影响中性，没有明确方向。建议等待更多催化剂。' :
+                        'Detailed Analysis: This content has neutral impact with no clear direction. Wait for more catalysts.';
+  }
+  
+  if (language === 'Cantonese') {
+    userContentText = `
 ${userContentTitle}
 
-📰 文章標題: ${userContentAnalysis.title}
+文章標題: ${userContentAnalysis.title}
 
 ${summaryOfContent}:
 ${userContentAnalysis.summary}
 
 ${keyPointsTitle}:
 • 情緒傾向: ${sentimentEmoji} ${sentimentText} (分數: ${userContentAnalysis.sentiment?.score || 0})
-• 內容類型: ${userContentAnalysis.type === 'url' ? '網頁連結' : '用戶輸入文字'}`;
-      } else if (language === '简体中文') {
-        userContentText = `
+• 內容類型: ${userContentAnalysis.type === 'url' ? '網頁連結' : '用戶輸入文字'}
+
+AI內容分析:
+${aiContentAnalysis}`;
+  } else if (language === '简体中文') {
+    userContentText = `
 ${userContentTitle}
 
-📰 文章标题: ${userContentAnalysis.title}
+文章标题: ${userContentAnalysis.title}
 
 ${summaryOfContent}:
 ${userContentAnalysis.summary}
 
 ${keyPointsTitle}:
 • 情绪倾向: ${sentimentEmoji} ${sentimentText} (分数: ${userContentAnalysis.sentiment?.score || 0})
-• 内容类型: ${userContentAnalysis.type === 'url' ? '网页链接' : '用户输入文字'}`;
-      } else {
-        userContentText = `
+• 内容类型: ${userContentAnalysis.type === 'url' ? '网页链接' : '用户输入文字'}
+
+AI内容分析:
+${aiContentAnalysis}`;
+  } else {
+    userContentText = `
 ${userContentTitle}
 
-📰 Article Title: ${userContentAnalysis.title}
+Article Title: ${userContentAnalysis.title}
 
 ${summaryOfContent}:
 ${userContentAnalysis.summary}
 
 ${keyPointsTitle}:
 • Sentiment: ${sentimentEmoji} ${sentimentText} (Score: ${userContentAnalysis.sentiment?.score || 0})
-• Content Type: ${userContentAnalysis.type === 'url' ? 'URL Link' : 'User Input Text'}`;
-      }
-    } else if (news && news.length > 0 && newsSentiment) {
-      const sentimentEmoji = newsSentiment.sentiment === 'Positive' ? '📈' : 
-                             newsSentiment.sentiment === 'Negative' ? '📉' : '📊';
-      const sentimentText = newsSentiment.sentiment === 'Positive' ? 
-                           (language === 'Cantonese' ? '正面' : language === '简体中文' ? '正面' : 'Positive') :
-                           newsSentiment.sentiment === 'Negative' ?
-                           (language === 'Cantonese' ? '負面' : language === '简体中文' ? '負面' : 'Negative') :
-                           (language === 'Cantonese' ? '中性' : language === '简体中文' ? '中性' : 'Neutral');
-      
-      if (language === 'Cantonese') {
-        userContentText = `${newsTitle}
-${sentimentEmoji} 最新新聞情緒分析 (共${news.length}篇):
-• 整體情緒: ${sentimentText} (分數: ${newsSentiment.score})
-• 正面新聞: ${newsSentiment.positiveCount}篇 | 負面新聞: ${newsSentiment.negativeCount}篇 | 中性: ${newsSentiment.neutralCount}篇`;
-      } else if (language === '简体中文') {
-        userContentText = `${newsTitle}
-${sentimentEmoji} 最新新闻情绪分析 (共${news.length}篇):
-• 整体情绪: ${sentimentText} (分数: ${newsSentiment.score})
-• 正面新闻: ${newsSentiment.positiveCount}篇 | 负面新闻: ${newsSentiment.negativeCount}篇 | 中性: ${newsSentiment.neutralCount}篇`;
-      } else {
-        userContentText = `${newsTitle}
-${sentimentEmoji} Latest News Sentiment Analysis (${news.length} articles):
-• Overall Sentiment: ${sentimentText} (Score: ${newsSentiment.score})
-• Positive: ${newsSentiment.positiveCount} | Negative: ${newsSentiment.negativeCount} | Neutral: ${newsSentiment.neutralCount}`;
-      }
+• Content Type: ${userContentAnalysis.type === 'url' ? 'URL Link' : 'User Input Text'}
+
+AI Content Analysis:
+${aiContentAnalysis}`;
+  }
+} else if (news && news.length > 0 && newsSentiment) {
+  const sentimentEmoji = newsSentiment.sentiment === 'Positive' ? '📈' : 
+                         newsSentiment.sentiment === 'Negative' ? '📉' : '📊';
+  const sentimentText = newsSentiment.sentiment === 'Positive' ? 
+                       (language === 'Cantonese' ? '正面' : language === '简体中文' ? '正面' : 'Positive') :
+                       newsSentiment.sentiment === 'Negative' ?
+                       (language === 'Cantonese' ? '負面' : language === '简体中文' ? '負面' : 'Negative') :
+                       (language === 'Cantonese' ? '中性' : language === '简体中文' ? '中性' : 'Neutral');
+  
+  // Generate detailed news summaries and honest analysis
+  let aiNewsAnalysis = '';
+  let newsSummary = '';
+  
+  // Extract actual news headlines for summary
+  const headlines = news.slice(0, 3).map((item: any) => item.title).filter(Boolean);
+  if (headlines.length > 0) {
+    newsSummary = language === 'Cantonese' ? `近期主要新聞包括：${headlines.join('；')}` :
+                  language === '简体中文' ? `近期主要新闻包括：${headlines.join('；')}` :
+                  `Recent key news includes: ${headlines.join('; ')}`;
+  } else {
+    newsSummary = language === 'Cantonese' ? '暫無具體新聞標題' :
+                  language === '简体中文' ? '暂无具体新闻标题' :
+                  'No specific news headlines available';
+  }
+  
+  // Check if this is a poor/penny stock (based on price or symbol patterns)
+  const isPennyStock = (stockData.price < 1 && symbol.endsWith('.HK')) || 
+                       (stockData.price < 5 && symbol.endsWith('.HK') && stockData.volume < 10000000);
+  const isLowQualityStock = specificAnalysis.stockQuality === 'poor' || specificAnalysis.stockQuality === 'very-poor';
+  
+  // Generate honest analysis based on stock quality and sentiment
+  if (isPennyStock || isLowQualityStock) {
+    if (newsSentiment.sentiment === 'Positive') {
+      aiNewsAnalysis = language === 'Cantonese' ? 
+        `⚠️ 謹慎解讀：雖然近期新聞情緒正面，但此股票屬於低價股/仙股，風險極高。正面新聞可能是短期炒作，不建議作為投資依據。請優先關注基本面和流動性風險。` :
+        language === '简体中文' ? 
+        `⚠️ 谨慎解读：虽然近期新闻情绪正面，但此股票属于低价股/仙股，风险极高。正面新闻可能是短期炒作，不建议作为投资依据。请优先关注基本面和流动性风险。` :
+        `⚠️ CAUTION: Despite positive news sentiment, this is a penny/low-priced stock with extreme risk. Positive news may be short-term speculation. Prioritize fundamental and liquidity risks.`;
+    } else if (newsSentiment.sentiment === 'Negative') {
+      aiNewsAnalysis = language === 'Cantonese' ? 
+        `⚠️ 風險警告：負面新聞加上此股票本身風險極高（低價股/仙股），建議避開。此類股票容易受消息影響大幅波動，不適合長線持有。` :
+        language === '简体中文' ? 
+        `⚠️ 风险警告：负面新闻加上此股票本身风险极高（低价股/仙股），建议避开。此类股票容易受消息影响大幅波动，不适合长线持有。` :
+        `⚠️ RISK WARNING: Negative news combined with extremely high risk (penny stock). Avoid this stock as it's highly volatile and unsuitable for long-term holding.`;
     } else {
-      if (language === 'Cantonese') {
-        userContentText = `${newsTitle}
-近期暫無重大相關新聞。`;
-      } else if (language === '简体中文') {
-        userContentText = `${newsTitle}
-近期暂无重大相关新闻。`;
-      } else {
-        userContentText = `${newsTitle}
-No significant recent news.`;
-      }
+      aiNewsAnalysis = language === 'Cantonese' ? 
+        `⚠️ 注意：此股票屬於高風險低價股，即使新聞情緒中性，仍需謹慎。建議關注成交量變化，避免流動性陷阱。` :
+        language === '简体中文' ? 
+        `⚠️ 注意：此股票属于高风险低价股，即使新闻情绪中性，仍需谨慎。建议关注成交量变化，避免流动性陷阱。` :
+        `⚠️ NOTE: This is a high-risk low-priced stock. Even with neutral news sentiment, exercise caution. Monitor volume changes to avoid liquidity traps.`;
     }
+  } else {
+    // Normal stock analysis
+    if (newsSentiment.sentiment === 'Positive') {
+      aiNewsAnalysis = language === 'Cantonese' ? 
+        `詳細分析：近期新聞整體正面，${newsSummary}。這些消息對公司基本面有正面影響，可能支持股價繼續向好。建議關注後續業績表現。` :
+        language === '简体中文' ? 
+        `详细分析：近期新闻整体正面，${newsSummary}。这些消息对公司基本面有正面影响，可能支持股价继续向好。建议关注后续业绩表现。` :
+        `Detailed Analysis: Recent news is overall positive. ${newsSummary}. These developments positively impact fundamentals and may support continued price appreciation. Monitor upcoming earnings.`;
+    } else if (newsSentiment.sentiment === 'Negative') {
+      aiNewsAnalysis = language === 'Cantonese' ? 
+        `詳細分析：近期新聞整體負面，${newsSummary}。這些消息可能對公司構成壓力，需警惕下行風險。建議等待負面因素消化後再作部署。` :
+        language === '简体中文' ? 
+        `详细分析：近期新闻整体负面，${newsSummary}。这些消息可能对公司构成压力，需警惕下行风险。建议等待负面因素消化后再作部署。` :
+        `Detailed Analysis: Recent news is overall negative. ${newsSummary}. These developments may pressure the company. Be aware of downside risk. Wait for negative factors to be priced in.`;
+    } else {
+      aiNewsAnalysis = language === 'Cantonese' ? 
+        `詳細分析：近期新聞情緒中性，${newsSummary}。市場觀望氣氛濃厚，等待更多催化劑。建議關注公司公告和行業政策變化。` :
+        language === '简体中文' ? 
+        `详细分析：近期新闻情绪中性，${newsSummary}。市场观望气氛浓厚，等待更多催化剂。建议关注公司公告和行业政策变化。` :
+        `Detailed Analysis: Recent news sentiment is neutral. ${newsSummary}. Market is waiting for more catalysts. Monitor company announcements and industry policy changes.`;
+    }
+  }
+  
+  if (language === 'Cantonese') {
+    userContentText = `${newsTitle}
+最新新聞情緒分析 (共${news.length}篇):
+• 整體情緒: ${sentimentText} (分數: ${newsSentiment.score})
+• 正面新聞: ${newsSentiment.positiveCount}篇 | 負面新聞: ${newsSentiment.negativeCount}篇 | 中性: ${newsSentiment.neutralCount}篇
+
+新聞摘要:
+${newsSummary}
+
+AI新聞分析:
+${aiNewsAnalysis}`;
+  } else if (language === '简体中文') {
+    userContentText = `${newsTitle}
+最新新闻情绪分析 (共${news.length}篇):
+• 整体情绪: ${sentimentEmoji} ${sentimentText} (分数: ${newsSentiment.score})
+• 正面新闻: ${newsSentiment.positiveCount}篇 | 负面新闻: ${newsSentiment.negativeCount}篇 | 中性: ${newsSentiment.neutralCount}篇
+
+新闻摘要:
+${newsSummary}
+
+AI新闻分析:
+${aiNewsAnalysis}`;
+  } else {
+    userContentText = `${newsTitle}
+Latest News Sentiment Analysis (${news.length} articles):
+• Overall Sentiment: ${sentimentEmoji} ${sentimentText} (Score: ${newsSentiment.score})
+• Positive: ${newsSentiment.positiveCount} | Negative: ${newsSentiment.negativeCount} | Neutral: ${newsSentiment.neutralCount}
+
+News Summary:
+${newsSummary}
+
+AI News Analysis:
+${aiNewsAnalysis}`;
+  }
+} else {
+  if (language === 'Cantonese') {
+    userContentText = `${newsTitle}
+近期暫無重大相關新聞。建議關注公司公告和行業動態。`;
+  } else if (language === '简体中文') {
+    userContentText = `${newsTitle}
+近期暂无重大相关新闻。建议关注公司公告和行业动态。`;
+  } else {
+    userContentText = `${newsTitle}
+No significant recent news. Monitor company announcements and industry trends.`;
+  }
+}
     
     // Generate trading advice with specific targets
     let tradingAdviceText = '';
@@ -1262,6 +1343,36 @@ No significant recent news.`;
 Target Price: ${stockData.currency}${specificAnalysis.targetPrice.toFixed(2)}
 Stop Loss: ${stockData.currency}${specificAnalysis.stopLoss.toFixed(2)}
 Risk/Reward Ratio: 1:${((specificAnalysis.targetPrice - stockData.price) / (stockData.price - specificAnalysis.stopLoss)).toFixed(1)}`;
+    }
+    
+    // Generate confidence score display with Chinese star text (no emoji stars)
+    let confidenceDisplay = '';
+    if (language === 'Cantonese') {
+      if (specificAnalysis.confidenceScore >= 80) {
+        confidenceDisplay = `信心評分: ${specificAnalysis.confidenceScore}% 五顆星 (非常高)`;
+      } else if (specificAnalysis.confidenceScore >= 65) {
+        confidenceDisplay = `信心評分: ${specificAnalysis.confidenceScore}% 四顆星 (高)`;
+      } else if (specificAnalysis.confidenceScore >= 50) {
+        confidenceDisplay = `信心評分: ${specificAnalysis.confidenceScore}% 三顆星 (中等)`;
+      } else if (specificAnalysis.confidenceScore >= 35) {
+        confidenceDisplay = `信心評分: ${specificAnalysis.confidenceScore}% 兩顆星 (低)`;
+      } else {
+        confidenceDisplay = `信心評分: ${specificAnalysis.confidenceScore}% 一顆星 (極低)`;
+      }
+    } else if (language === '简体中文') {
+      if (specificAnalysis.confidenceScore >= 80) {
+        confidenceDisplay = `信心评分: ${specificAnalysis.confidenceScore}% 五颗星 (非常高)`;
+      } else if (specificAnalysis.confidenceScore >= 65) {
+        confidenceDisplay = `信心评分: ${specificAnalysis.confidenceScore}% 四颗星 (高)`;
+      } else if (specificAnalysis.confidenceScore >= 50) {
+        confidenceDisplay = `信心评分: ${specificAnalysis.confidenceScore}% 三颗星 (中等)`;
+      } else if (specificAnalysis.confidenceScore >= 35) {
+        confidenceDisplay = `信心评分: ${specificAnalysis.confidenceScore}% 两颗星 (低)`;
+      } else {
+        confidenceDisplay = `信心评分: ${specificAnalysis.confidenceScore}% 一颗星 (极低)`;
+      }
+    } else {
+      confidenceDisplay = `Confidence Score: ${specificAnalysis.confidenceScore}% ${specificAnalysis.confidenceEmoji} (${specificAnalysis.confidenceRating})`;
     }
     
     // Generate complete analysis
@@ -1294,7 +1405,7 @@ ${tradingAdviceText}
 ${finalAdviceTitle}
 ${specificAnalysis.specificRecommendation}
 ${riskLevelTitle}: ${riskText}
-${language === 'Cantonese' ? '信心評分' : language === '简体中文' ? '信心评分' : 'Confidence Score'}: ${specificAnalysis.confidenceScore}% ${specificAnalysis.confidenceEmoji} (${specificAnalysis.confidenceRating})
+${confidenceDisplay}
 
 ${disclaimer}`;
     

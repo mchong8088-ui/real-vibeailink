@@ -1,7 +1,6 @@
 import type { Metadata, Viewport } from "next";
 import { LanguageProvider } from "./context/LanguageContext";
 
-// Separate Metadata export
 export const metadata: Metadata = {
   title: "vibeAiLink - AI Financial Analysis",
   description: "AI-powered stock analysis with real-time market data",
@@ -10,7 +9,6 @@ export const metadata: Metadata = {
   },
 };
 
-// Separate Viewport export (moved here from metadata)
 export const viewport: Viewport = {
   width: "device-width",
   initialScale: 1,
@@ -29,6 +27,7 @@ export default function RootLayout({
     <html lang="zh-HK" suppressHydrationWarning>
       <head>
         <meta charSet="utf-8" />
+        <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=yes, viewport-fit=cover" />
         <link rel="preconnect" href="https://query1.finance.yahoo.com" />
         <link rel="dns-prefetch" href="https://query1.finance.yahoo.com" />
       </head>
