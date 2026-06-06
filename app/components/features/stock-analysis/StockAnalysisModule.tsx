@@ -14,34 +14,60 @@ interface Props {
 const ShareButtons = ({ data, langKey }: { data: any; langKey: string }) => {
   const [showShareMenu, setShowShareMenu] = useState(false);
 
-  const generateShareText = () => {
-    const isPositive = data.changePercent > 0;
-    const sentiment = isPositive ? '🚀' : '📉';
-    const changeText = `${isPositive ? '+' : ''}${data.changePercent?.toFixed(2)}%`;
-    const companyName = data.companyName || data.symbol;
-    const recommendation = data.specificAnalysis?.specificRecommendation?.substring(0, 60) || '分析完成';
+  // Replace the generateShareText function with this:
+const generateShareText = () => {
+  const isPositive = data.changePercent > 0;
+  const sentiment = isPositive ? '🚀' : '📉';
+  const changeText = `${isPositive ? '+' : ''}${data.changePercent?.toFixed(2)}%`;
+  const companyName = data.companyName || data.symbol;
+  
+  // Extract key information from the analysis
+  const confidenceScore = data.specificAnalysis?.confidenceScore || 0;
+  const recommendation = data.specificAnalysis?.specificRecommendation?.substring(0, 80) || 'Analysis completed';
+  const riskLevel = data.specificAnalysis?.riskLevel || 'Medium';
+  
+  let starsText = '';
+  if (confidenceScore >= 80) starsText = '⭐⭐⭐⭐⭐';
+  else if (confidenceScore >= 65) starsText = '⭐⭐⭐⭐';
+  else if (confidenceScore >= 50) starsText = '⭐⭐⭐';
+  else if (confidenceScore >= 35) starsText = '⭐⭐';
+  else starsText = '⭐';
+  
+  if (langKey === 'Cantonese') {
+    return `${sentiment} ${companyName} 現價 ${data.currency || '$'}${data.price} (${changeText})
+📊 分析摘要: ${recommendation}
+🎯 信心評分: ${confidenceScore}% ${starsText}
+⚠️ 風險等級: ${riskLevel}
 
-    if (langKey === 'Cantonese') {
-      return `${sentiment} ${companyName} 現價 ${data.currency || '$'}${data.price} (${changeText})
-RSI: ${data.rsi} | 建議: ${recommendation}...
+🔗 完整分析: vibeailink.com
 #股票分析 #投資 #vibeAiLink`;
-    } else if (langKey === '简体中文') {
-      return `${sentiment} ${companyName} 现价 ${data.currency || '$'}${data.price} (${changeText})
-RSI: ${data.rsi} | 建议: ${recommendation}...
+  } else if (langKey === '简体中文') {
+    return `${sentiment} ${companyName} 现价 ${data.currency || '$'}${data.price} (${changeText})
+📊 分析摘要: ${recommendation}
+🎯 信心评分: ${confidenceScore}% ${starsText}
+⚠️ 风险等级: ${riskLevel}
+
+🔗 完整分析: vibeailink.com
 #股票分析 #投资 #vibeAiLink`;
-    } else {
-      return `${sentiment} ${companyName} is at ${data.currency || '$'}${data.price} (${changeText})
-RSI: ${data.rsi} | Recommendation: ${recommendation}...
+  } else {
+    return `${sentiment} ${companyName} is at ${data.currency || '$'}${data.price} (${changeText})
+📊 Summary: ${recommendation}
+🎯 Confidence: ${confidenceScore}% ${starsText}
+⚠️ Risk Level: ${riskLevel}
+
+🔗 Full analysis: vibeailink.com
 #StockAnalysis #Investing #vibeAiLink`;
-    }
-  };
+  }
+};
 
-  const shareText = generateShareText();
-  const shareUrl = typeof window !== 'undefined' ? window.location.href : '';
-
-  const shareToFacebook = () => {
-    window.open(`https://www.facebook.com/sharer/sharer.php?u=${encodeURIComponent(shareUrl)}&quote=${encodeURIComponent(shareText)}`, '_blank', 'width=600,height=400');
-  };
+// Update shareToFacebook to share content instead of URL
+const shareToFacebook = () => {
+  const shareContent = generateShareText();
+  // Facebook doesn't allow pre-filled messages via API, so we open a share dialog with the text
+  // Users can copy the text or we open a new window with the content
+  navigator.clipboard.writeText(shareContent);
+  window.open(`https://www.facebook.com/sharer/sharer.php?u=${encodeURIComponent(shareUrl)}&quote=${encodeURIComponent(shareText)}`, '_blank', 'width=600,height=400');
+};
 
   const shareToTwitter = () => {
     window.open(`https://twitter.com/intent/tweet?text=${encodeURIComponent(shareText)}&url=${encodeURIComponent(shareUrl)}`, '_blank', 'width=600,height=400');
