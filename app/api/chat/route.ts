@@ -1408,32 +1408,3 @@ ${disclaimer}`;
       specificAnalysis: specificAnalysis
     });
     
-  } catch (error) {
-    console.error('API Error:', error);
-    const errorMsg = 'Service temporarily unavailable. Please try again later.';
-    return NextResponse.json({
-      success: false,
-      summary: errorMsg,
-      text: errorMsg
-    });
-  }
-}
-
-export async function GET() {
-  return NextResponse.json({ 
-    status: "Stock Analysis API running", 
-    timestamp: new Date().toISOString(),
-    version: "4.0",
-    features: {
-      stockDetection: true,
-      multiMarket: "HK/TW/US",
-      technicalIndicators: ["RSI", "MACD", "Trend", "SMA20", "SMA50", "Volatility"],
-      newsAnalysis: true,
-      sentimentAnalysis: true,
-      userContentIntegration: true,
-      contentSummarization: true,
-      specificAnalysis: true,
-      confidenceScoring: true
-    }
-  });
-}
