@@ -33,72 +33,43 @@ const MobileAnalysis: React.FC<MobileAnalysisProps> = ({
   const [inputValue, setInputValue] = useState('');
   const [analysisData, setAnalysisData] = useState<any>(null);
   const [isLoading, setIsLoading] = useState(false);
-  const [isSpeakerActive, setIsSpeakerActive] = useState(true); // Set to true by default
+  const [isSpeakerActive, setIsSpeakerActive] = useState(true);
   const [isPaused, setIsPaused] = useState(false);
   const [isListening, setIsListening] = useState(false);
   const [recognition, setRecognition] = useState<any>(null);
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const [useAIEnhancement, setUseAIEnhancement] = useState(false);
   const utteranceRef = useRef<SpeechSynthesisUtterance | null>(null);
+  const [isLanguageSwitching, setIsLanguageSwitching] = useState(false);
 
   const t = {
     analyzingMarket: langKey === 'Cantonese' ? '分析市場中...' : langKey === '简体中文' ? '分析市场中...' : 'Analyzing Market...',
   };
 
-  // Convert text for better TTS pronunciation
-  const prepareTextForTTS = (text: string): string => {
-    let result = text;
-    
-    if (langKey === 'Cantonese') {
-      result = result.replace(/##?\s*📊\s*/g, '');
-      result = result.replace(/###\s*/g, '');
-      result = result.replace(/\*\*/g, '');
-      result = result.replace(/##/g, '');
-      result = result.replace(/\*/g, '');
-      result = result.replace(/HK\$(\d+\.?\d*)/g, '港幣$1元');
-      result = result.replace(/NT\$(\d+\.?\d*)/g, '新台幣$1元');
-      result = result.replace(/\$(\d+\.?\d*)/g, '美元$1元');
-      result = result.replace(/(\d+(?:\.\d+)?)%/g, (match, num) => `${num}個巴仙`);
-      result = result.replace(/\+/g, '加');
-      result = result.replace(/-/g, '減');
-      result = result.replace(/\./g, '點');
-      result = result.replace(/:/g, '係');
-      result = result.replace(/\s+/g, ' ');
-      result = result.trim();
-    } else if (langKey === '简体中文') {
-      result = result.replace(/##?\s*📊\s*/g, '');
-      result = result.replace(/###\s*/g, '');
-      result = result.replace(/\*\*/g, '');
-      result = result.replace(/HK\$(\d+\.?\d*)/g, '港币$1元');
-      result = result.replace(/NT\$(\d+\.?\d*)/g, '新台币$1元');
-      result = result.replace(/\$(\d+\.?\d*)/g, '美元$1元');
-      result = result.replace(/(\d+(?:\.\d+)?)%/g, '$1百分之');
+  // Initialize speech synthesis on mount
+  useEffect(() => {
+    if (typeof window !== 'undefined' && window.speechSynthesis) {
+      const utterance = new SpeechSynthesisUtterance('');
+      utterance.volume = 0;
+      window.speechSynthesis.speak(utterance);
+      setTimeout(() => {
+        window.speechSynthesis.cancel();
+      }, 100);
     }
-    
-    return result;
-  };
+  }, []);
 
   // Auto-speak when analysis data arrives
   useEffect(() => {
     if (analysisData?.summary && isSpeakerActive && !isPaused) {
-      if (utteranceRef.current) {
-        window.speechSynthesis.cancel();
-      }
-      const textToSpeak = prepareTextForTTS(analysisData.summary);
-      const utterance = new SpeechSynthesisUtterance(textToSpeak);
-      utterance.lang = langKey === 'Cantonese' ? 'zh-HK' : langKey === '简体中文' ? 'zh-CN' : 'en-US';
-      utterance.rate = 0.85;
-      utterance.pitch = 1.0;
-      utterance.onend = () => {
-        utteranceRef.current = null;
-      };
-      utterance.onerror = () => {
-        utteranceRef.current = null;
-      };
-      utteranceRef.current = utterance;
-      window.speechSynthesis.speak(utterance);
+      setTimeout(() => {
+        if (utteranceRef.current) {
+          window.speechSynthesis.cancel();
+        }
+        speakText(analysisData.summary, langKey, () => {
+          utteranceRef.current = null;
+        });
+      }, 100);
     }
-    
     return () => {
       if (utteranceRef.current) {
         window.speechSynthesis.cancel();
@@ -106,6 +77,16 @@ const MobileAnalysis: React.FC<MobileAnalysisProps> = ({
     };
   }, [analysisData, isSpeakerActive, isPaused, langKey]);
 
+  // Re-fetch analysis when language changes
+  useEffect(() => {
+    if (analysisData && analysisData.symbol && !isLoading && !isLanguageSwitching) {
+      setIsLanguageSwitching(true);
+      console.log(`🔄 Mobile: Language changed to ${langKey}, re-fetching ${analysisData.symbol}...`);
+      reFetchAnalysis(analysisData.symbol);
+    }
+  }, [langKey]);
+
+  // Speech recognition setup
   useEffect(() => {
     if (typeof window !== 'undefined') {
       const SpeechRecognition = (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition;
@@ -126,6 +107,51 @@ const MobileAnalysis: React.FC<MobileAnalysisProps> = ({
       }
     }
   }, [langKey]);
+
+  const reFetchAnalysis = async (symbol: string) => {
+    if (!symbol) return;
+    setIsLoading(true);
+    try {
+      const endpoint = useAIEnhancement ? '/api/chat/ai-enhanced' : '/api/chat';
+      const response = await fetch(endpoint, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ 
+          message: symbol, 
+          language: langKey,
+          useAI: useAIEnhancement
+        }),
+      });
+      const data = await response.json();
+      setAnalysisData({
+        symbol: symbol,
+        summary: data.text || data.summary,
+        price: data.price || "N/A",
+        rsi: data.rsi || "N/A",
+        macd: data.macd || "N/A",
+        marketCap: data.marketCap || "N/A",
+        peRatio: data.peRatio || "N/A",
+        volume: data.volume || "N/A",
+        historical: data.historical || [],
+        change: data.change,
+        changePercent: data.changePercent,
+        companyName: data.companyName,
+        currency: data.currency,
+        sma20: data.sma20,
+        sma50: data.sma50,
+        volatility: data.volatility,
+        avgVolume: data.avgVolume,
+        dayLow: data.dayLow,
+        dayHigh: data.dayHigh,
+        specificAnalysis: data.specificAnalysis
+      });
+    } catch (error) {
+      console.error('Re-fetch error:', error);
+    } finally {
+      setIsLoading(false);
+      setIsLanguageSwitching(false);
+    }
+  };
 
   const handleAnalyze = async () => {
     if (!inputValue.trim()) return;
@@ -193,31 +219,19 @@ const MobileAnalysis: React.FC<MobileAnalysisProps> = ({
 
   const handleSpeakerToggle = () => {
     if (isSpeakerActive) {
-      // Turn off speaker
       window.speechSynthesis.cancel();
       setIsSpeakerActive(false);
       setIsPaused(false);
     } else {
-      // Turn on speaker and speak current analysis
       setIsSpeakerActive(true);
       setIsPaused(false);
       if (analysisData?.summary) {
         if (utteranceRef.current) {
           window.speechSynthesis.cancel();
         }
-        const textToSpeak = prepareTextForTTS(analysisData.summary);
-        const utterance = new SpeechSynthesisUtterance(textToSpeak);
-        utterance.lang = langKey === 'Cantonese' ? 'zh-HK' : langKey === '简体中文' ? 'zh-CN' : 'en-US';
-        utterance.rate = 0.85;
-        utterance.pitch = 1.0;
-        utterance.onend = () => {
+        speakText(analysisData.summary, langKey, () => {
           utteranceRef.current = null;
-        };
-        utterance.onerror = () => {
-          utteranceRef.current = null;
-        };
-        utteranceRef.current = utterance;
-        window.speechSynthesis.speak(utterance);
+        });
       }
     }
   };
@@ -226,24 +240,12 @@ const MobileAnalysis: React.FC<MobileAnalysisProps> = ({
     if (!analysisData?.summary) return;
     
     if (isSpeakerActive && !isPaused) {
-      // Pause speaking
       window.speechSynthesis.cancel();
       setIsPaused(true);
     } else if (isPaused && isSpeakerActive) {
-      // Resume speaking
-      const textToSpeak = prepareTextForTTS(analysisData.summary);
-      const utterance = new SpeechSynthesisUtterance(textToSpeak);
-      utterance.lang = langKey === 'Cantonese' ? 'zh-HK' : langKey === '简体中文' ? 'zh-CN' : 'en-US';
-      utterance.rate = 0.85;
-      utterance.pitch = 1.0;
-      utterance.onend = () => {
+      speakText(analysisData.summary, langKey, () => {
         utteranceRef.current = null;
-      };
-      utterance.onerror = () => {
-        utteranceRef.current = null;
-      };
-      utteranceRef.current = utterance;
-      window.speechSynthesis.speak(utterance);
+      });
       setIsPaused(false);
     }
   };
