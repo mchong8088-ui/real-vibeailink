@@ -50,7 +50,134 @@ function addPauses(text: string): string {
   
   return result;
 }
+// app/utils/SimpleTTS.ts
+// Add pauses after punctuation and fix the Trend: issue
+function addPauses(text: string): string {
+  let result = text;
+  
+  // Add period after "Trend:" when followed by newline
+  result = result.replace(/Trend:\n/g, 'Trend. ');
+  result = result.replace(/趋势:\n/g, '趋势。 ');
+  result = result.replace(/趨勢:\n/g, '趨勢。 ');
+  
+  // Add period after colons that are followed by a newline or space
+  result = result.replace(/([A-Za-z]+):\n/g, '$1. ');
+  result = result.replace(/([\\u4e00-\\u9fa5]+):\n/g, '$1。 ');
+  
+  // Add pause after section numbers
+  result = result.replace(/(\d+\.\s+[A-Za-z\s]+):/g, '$1. ');
+  result = result.replace(/(\d+\.\s+[\\u4e00-\\u9fa5\s]+):/g, '$1。 ');
+  
+  // Add explicit period after each line that doesn't end with punctuation
+  result = result.replace(/([^.!?。！？]\n)/g, '$1. ');
+  
+  // Add pause after each numbered section
+  result = result.replace(/(\d+\.\s+[^\n]+)\n/g, '$1. ');
+  
+  return result;
+}
 
+// Prepare text for TTS - enhanced version
+function prepareTextForTTS(text: string, langKey: string): string {
+  let result = text;
+  
+  // First, add pauses
+  result = addPauses(result);
+  
+  // Remove all emojis
+  result = result.replace(/[\u{1F600}-\u{1F6FF}]/gu, '');
+  result = result.replace(/[\u{1F300}-\u{1F5FF}]/gu, '');
+  result = result.replace(/[⭐]/g, '');
+  result = result.replace(/📈/g, '');
+  result = result.replace(/📉/g, '');
+  result = result.replace(/📊/g, '');
+  result = result.replace(/⚠️/g, '');
+  result = result.replace(/✅/g, '');
+  result = result.replace(/📋/g, '');
+  result = result.replace(/🔗/g, '');
+  result = result.replace(/📤/g, '');
+  result = result.replace(/▶/g, '');
+  result = result.replace(/▼/g, '');
+  
+  // Remove markdown formatting
+  result = result.replace(/\*\*/g, '');
+  result = result.replace(/###/g, '');
+  result = result.replace(/##/g, '');
+  result = result.replace(/\*/g, '');
+  result = result.replace(/•/g, '');
+  
+  if (langKey === 'Cantonese') {
+    // Replace stars with text
+    result = result.replace(/信心評分: (\d+)% ⭐⭐⭐⭐⭐ \(非常高\)/g, '信心評分 $1 個巴仙，非常高，五星級');
+    result = result.replace(/信心評分: (\d+)% ⭐⭐⭐⭐ \(高\)/g, '信心評分 $1 個巴仙，高，四星級');
+    result = result.replace(/信心評分: (\d+)% ⭐⭐⭐ \(中等\)/g, '信心評分 $1 個巴仙，中等，三星級');
+    result = result.replace(/信心評分: (\d+)% ⭐⭐ \(低\)/g, '信心評分 $1 個巴仙，低，兩星級');
+    result = result.replace(/信心評分: (\d+)% ⭐ \(極低\)/g, '信心評分 $1 個巴仙，極低，一星級');
+    
+    // Add reading for numbers
+    result = result.replace(/1\. /g, '第一點 ');
+    result = result.replace(/2\. /g, '第二點 ');
+    result = result.replace(/3\. /g, '第三點 ');
+    result = result.replace(/4\. /g, '第四點 ');
+    result = result.replace(/5\. /g, '第五點 ');
+    result = result.replace(/6\. /g, '第六點 ');
+    result = result.replace(/7\. /g, '第七點 ');
+    result = result.replace(/8\. /g, '第八點 ');
+    
+    // Fix colon readings
+    result = result.replace(/:/g, '係');
+    result = result.replace(/：/g, '係');
+    
+  } else if (langKey === '简体中文') {
+    result = result.replace(/信心评分: (\d+)% ⭐⭐⭐⭐⭐ \(非常高\)/g, '信心评分 $1 百分之，非常高，五星级');
+    result = result.replace(/信心评分: (\d+)% ⭐⭐⭐⭐ \(高\)/g, '信心评分 $1 百分之，高，四星级');
+    result = result.replace(/信心评分: (\d+)% ⭐⭐⭐ \(中等\)/g, '信心评分 $1 百分之，中等，三星级');
+    result = result.replace(/信心评分: (\d+)% ⭐⭐ \(低\)/g, '信心评分 $1 百分之，低，两星级');
+    result = result.replace(/信心评分: (\d+)% ⭐ \(极低\)/g, '信心评分 $1 百分之，极低，一星级');
+    
+    result = result.replace(/1\. /g, '第一点 ');
+    result = result.replace(/2\. /g, '第二点 ');
+    result = result.replace(/3\. /g, '第三点 ');
+    result = result.replace(/4\. /g, '第四点 ');
+    result = result.replace(/5\. /g, '第五点 ');
+    result = result.replace(/6\. /g, '第六点 ');
+    result = result.replace(/7\. /g, '第七点 ');
+    result = result.replace(/8\. /g, '第八点 ');
+    
+    result = result.replace(/:/g, '是');
+    result = result.replace(/：/g, '是');
+    
+  } else {
+    // English - replace stars with text
+    result = result.replace(/Confidence Score: (\d+)% ⭐⭐⭐⭐⭐ \(Very High\)/g, 'Confidence score $1 percent, very high, five stars');
+    result = result.replace(/Confidence Score: (\d+)% ⭐⭐⭐⭐ \(High\)/g, 'Confidence score $1 percent, high, four stars');
+    result = result.replace(/Confidence Score: (\d+)% ⭐⭐⭐ \(Medium\)/g, 'Confidence score $1 percent, medium, three stars');
+    result = result.replace(/Confidence Score: (\d+)% ⭐⭐ \(Low\)/g, 'Confidence score $1 percent, low, two stars');
+    result = result.replace(/Confidence Score: (\d+)% ⭐ \(Very Low\)/g, 'Confidence score $1 percent, very low, one star');
+    
+    // Add reading for numbers (optional, for clarity)
+    result = result.replace(/1\. /g, 'Number one ');
+    result = result.replace(/2\. /g, 'Number two ');
+    result = result.replace(/3\. /g, 'Number three ');
+    result = result.replace(/4\. /g, 'Number four ');
+    result = result.replace(/5\. /g, 'Number five ');
+    result = result.replace(/6\. /g, 'Number six ');
+    result = result.replace(/7\. /g, 'Number seven ');
+    result = result.replace(/8\. /g, 'Number eight ');
+  }
+  
+  // Add periods at the end of each line for better pauses
+  result = result.replace(/\n/g, '. ');
+  
+  // Clean up multiple spaces and punctuation
+  result = result.replace(/\s+/g, ' ');
+  result = result.replace(/\.\./g, '.');
+  result = result.replace(/\. \./g, '.');
+  result = result.replace(/,\s*\./g, '.');
+  result = result.trim();
+  
+  return result;
+}
 // Prepare text for TTS
 function prepareTextForTTS(text: string, langKey: string): string {
   let result = text;

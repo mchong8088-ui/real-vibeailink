@@ -627,7 +627,7 @@ function generateSpecificAnalysis(stockData: any, fundamentals: any, symbol: str
   
   // Calculate quality score for excellent/good classification
   let qualityScore = 0;
-  if (pe !== null && pe >= 10 && pe <= 40) qualityScore += 1; // Wider range for growth stocks
+  if (pe !== null && pe >= 10 && pe <= 40) qualityScore += 1;
   if (revenueGrowth !== null && revenueGrowth > 15) qualityScore += 2;
   if (profitMargin !== null && profitMargin > 15) qualityScore += 2;
   if (debtRatio !== null && debtRatio < 40) qualityScore += 1;
@@ -646,14 +646,14 @@ function generateSpecificAnalysis(stockData: any, fundamentals: any, symbol: str
     stockQuality = 'very-poor';
   }
   
-  // Override for penny stocks (already set above)
+  // Override for penny stocks
   if (symbol.endsWith('.HK') && price < 0.5) {
     stockQuality = 'very-poor';
   } else if (symbol.endsWith('.HK') && price < 1) {
     stockQuality = 'poor';
   }
   
-  // Determine recommendation - RSI conditions take priority
+  // Determine recommendation
   let specificRecommendation = '';
   let targetPrice = price;
   let stopLoss = price;
@@ -696,156 +696,138 @@ function generateSpecificAnalysis(stockData: any, fundamentals: any, symbol: str
     stopLoss = price * 0.94;
   }
   
-  // ============================================
   // CONFIDENCE SCORE CALCULATION
-  // ============================================
-  // ============================================
-// CONFIDENCE SCORE CALCULATION - REVISED
-// ============================================
-let confidenceScore = 50; // Start at neutral
-
-// 1. TECHNICAL FACTORS (most important - max impact)
-let technicalScore = 0;
-if (trend === 'Uptrend' && macd === 'Bullish') {
-  technicalScore += 30; // Strong bullish alignment
-} else if (trend === 'Uptrend' && macd === 'Bearish') {
-  technicalScore += 5; // Uptrend but divergence
-} else if (trend === 'Downtrend' && macd === 'Bearish') {
-  technicalScore -= 25; // Strong bearish alignment
-} else if (trend === 'Downtrend' && macd === 'Bullish') {
-  technicalScore -= 5; // Downtrend but potential reversal
-} else if (trend === 'Uptrend') {
-  technicalScore += 15; // Uptrend only
-} else if (trend === 'Downtrend') {
-  technicalScore -= 15; // Downtrend only
-}
-
-// RSI adjustment
-if (rsi !== null) {
-  if (rsi >= 40 && rsi <= 60) {
-    technicalScore += 10; // Ideal range
-  } else if (rsi >= 30 && rsi <= 70) {
-    technicalScore += 5; // Acceptable range
-  } else if (rsi < 25) {
-    technicalScore -= 15; // Extremely oversold
-  } else if (rsi > 75) {
-    technicalScore -= 15; // Extremely overbought
-  } else if (rsi < 30) {
-    technicalScore -= 5; // Oversold
-  } else if (rsi > 70) {
-    technicalScore -= 10; // Overbought
-  }
-}
-
-confidenceScore += technicalScore;
-
-// 2. FUNDAMENTAL FACTORS
-let fundamentalScore = 0;
-
-// Valuation (P/E)
-if (pe !== null) {
-  if (pe >= 10 && pe <= 20) {
-    fundamentalScore += 15; // Ideal valuation
-  } else if (pe > 20 && pe <= 30) {
-    fundamentalScore += 10; // Slightly high but acceptable
-  } else if (pe > 30 && pe <= 45) {
-    fundamentalScore += 0; // High but could be justified
-  } else if (pe > 45 && pe <= 60) {
-    fundamentalScore -= 10; // Very high
-  } else if (pe > 60) {
-    fundamentalScore -= 15; // Extremely high
-  } else if (pe < 10 && pe > 0) {
-    fundamentalScore += 10; // Undervalued
-  } else if (pe < 0) {
-    fundamentalScore -= 20; // Loss-making
-  }
-}
-
-// Revenue Growth
-if (revenueGrowth !== null) {
-  if (revenueGrowth > 25) {
-    fundamentalScore += 20; // Exceptional growth
-  } else if (revenueGrowth > 15) {
-    fundamentalScore += 12; // Strong growth
-  } else if (revenueGrowth > 8) {
-    fundamentalScore += 5; // Good growth
-  } else if (revenueGrowth > 0) {
-    fundamentalScore += 0; // Moderate growth
-  } else if (revenueGrowth < 0 && revenueGrowth >= -10) {
-    fundamentalScore -= 10; // Mild contraction
-  } else if (revenueGrowth < -10) {
-    fundamentalScore -= 20; // Severe contraction
-  }
-}
-
-// Profit Margin
-if (profitMargin !== null) {
-  if (profitMargin > 25) {
-    fundamentalScore += 15; // Excellent
-  } else if (profitMargin > 15) {
-    fundamentalScore += 10; // Good
-  } else if (profitMargin > 8) {
-    fundamentalScore += 5; // Acceptable
-  } else if (profitMargin > 0) {
-    fundamentalScore -= 5; // Thin
-  } else if (profitMargin < 0) {
-    fundamentalScore -= 20; // Loss-making
-  }
-}
-
-// Debt
-if (debtRatio !== null) {
-  if (debtRatio < 30) {
-    fundamentalScore += 10; // Healthy
-  } else if (debtRatio < 50) {
-    fundamentalScore += 5; // Moderate
-  } else if (debtRatio > 70) {
-    fundamentalScore -= 15; // High risk
-  } else if (debtRatio > 50) {
-    fundamentalScore -= 5; // Elevated
-  }
-}
-
-confidenceScore += fundamentalScore;
-
-// 3. VOLATILITY ADJUSTMENT
-if (volatility !== null) {
-  if (volatility > 0.6) {
-    confidenceScore -= 15; // Extreme volatility
-  } else if (volatility > 0.45) {
-    confidenceScore -= 8; // High volatility
-  } else if (volatility > 0.3) {
-    confidenceScore -= 3; // Moderate volatility
-  } else if (volatility < 0.2) {
-    confidenceScore += 5; // Low volatility
-  }
-}
-
-// 4. QUALITY ADJUSTMENT (based on stockQuality)
-if (stockQuality === 'excellent') {
-  confidenceScore += 5;
-} else if (stockQuality === 'good') {
-  confidenceScore += 0;
-} else if (stockQuality === 'average') {
-  confidenceScore -= 5;
-} else if (stockQuality === 'poor') {
-  confidenceScore -= 15;
-} else if (stockQuality === 'very-poor') {
-  confidenceScore -= 25;
-}
-
-// 5. NEWS SENTIMENT BONUS (applied later in main function)
-// Will add ±5 based on sentiment
-
-// Ensure confidence score stays within 0-100 range
-confidenceScore = Math.max(0, Math.min(100, Math.round(confidenceScore)));
-
-// For TSLA: technicalScore: -25 (downtrend + bearish MACD), RSI -5 = -30
-// fundamentalScore: -15 (high PE) +12 (growth) +10 (margin) +10 (debt) = +17
-// volatility: -8
-// Total: 50 - 30 + 17 - 8 = 29 → then news sentiment could add 5-10 = 34-39%
+  let confidenceScore = 50;
   
-  // Map confidence score to rating text
+  // Technical factors
+  let technicalScore = 0;
+  if (trend === 'Uptrend' && macd === 'Bullish') {
+    technicalScore += 30;
+  } else if (trend === 'Uptrend' && macd === 'Bearish') {
+    technicalScore += 5;
+  } else if (trend === 'Downtrend' && macd === 'Bearish') {
+    technicalScore -= 25;
+  } else if (trend === 'Downtrend' && macd === 'Bullish') {
+    technicalScore -= 5;
+  } else if (trend === 'Uptrend') {
+    technicalScore += 15;
+  } else if (trend === 'Downtrend') {
+    technicalScore -= 15;
+  }
+  
+  // RSI adjustment
+  if (rsi !== null) {
+    if (rsi >= 40 && rsi <= 60) {
+      technicalScore += 10;
+    } else if (rsi >= 30 && rsi <= 70) {
+      technicalScore += 5;
+    } else if (rsi < 25) {
+      technicalScore -= 15;
+    } else if (rsi > 75) {
+      technicalScore -= 15;
+    } else if (rsi < 30) {
+      technicalScore -= 5;
+    } else if (rsi > 70) {
+      technicalScore -= 10;
+    }
+  }
+  
+  confidenceScore += technicalScore;
+  
+  // Fundamental factors
+  let fundamentalScore = 0;
+  
+  if (pe !== null) {
+    if (pe >= 10 && pe <= 20) {
+      fundamentalScore += 15;
+    } else if (pe > 20 && pe <= 30) {
+      fundamentalScore += 10;
+    } else if (pe > 30 && pe <= 45) {
+      fundamentalScore += 0;
+    } else if (pe > 45 && pe <= 60) {
+      fundamentalScore -= 10;
+    } else if (pe > 60) {
+      fundamentalScore -= 15;
+    } else if (pe < 10 && pe > 0) {
+      fundamentalScore += 10;
+    } else if (pe < 0) {
+      fundamentalScore -= 20;
+    }
+  }
+  
+  if (revenueGrowth !== null) {
+    if (revenueGrowth > 25) {
+      fundamentalScore += 20;
+    } else if (revenueGrowth > 15) {
+      fundamentalScore += 12;
+    } else if (revenueGrowth > 8) {
+      fundamentalScore += 5;
+    } else if (revenueGrowth > 0) {
+      fundamentalScore += 0;
+    } else if (revenueGrowth < 0 && revenueGrowth >= -10) {
+      fundamentalScore -= 10;
+    } else if (revenueGrowth < -10) {
+      fundamentalScore -= 20;
+    }
+  }
+  
+  if (profitMargin !== null) {
+    if (profitMargin > 25) {
+      fundamentalScore += 15;
+    } else if (profitMargin > 15) {
+      fundamentalScore += 10;
+    } else if (profitMargin > 8) {
+      fundamentalScore += 5;
+    } else if (profitMargin > 0) {
+      fundamentalScore -= 5;
+    } else if (profitMargin < 0) {
+      fundamentalScore -= 20;
+    }
+  }
+  
+  if (debtRatio !== null) {
+    if (debtRatio < 30) {
+      fundamentalScore += 10;
+    } else if (debtRatio < 50) {
+      fundamentalScore += 5;
+    } else if (debtRatio > 70) {
+      fundamentalScore -= 15;
+    } else if (debtRatio > 50) {
+      fundamentalScore -= 5;
+    }
+  }
+  
+  confidenceScore += fundamentalScore;
+  
+  // Volatility adjustment
+  if (volatility !== null) {
+    if (volatility > 0.6) {
+      confidenceScore -= 15;
+    } else if (volatility > 0.45) {
+      confidenceScore -= 8;
+    } else if (volatility > 0.3) {
+      confidenceScore -= 3;
+    } else if (volatility < 0.2) {
+      confidenceScore += 5;
+    }
+  }
+  
+  // Quality adjustment
+  if (stockQuality === 'excellent') {
+    confidenceScore += 5;
+  } else if (stockQuality === 'good') {
+    confidenceScore += 0;
+  } else if (stockQuality === 'average') {
+    confidenceScore -= 5;
+  } else if (stockQuality === 'poor') {
+    confidenceScore -= 15;
+  } else if (stockQuality === 'very-poor') {
+    confidenceScore -= 25;
+  }
+  
+  confidenceScore = Math.max(0, Math.min(100, Math.round(confidenceScore)));
+  
+  // Map confidence score to rating
   let confidenceRating = '';
   let confidenceEmoji = '';
   if (confidenceScore >= 80) {
@@ -966,7 +948,7 @@ export async function POST(req: Request) {
     const changePercentText = stockData.changePercent ? `${isPositive ? '+' : ''}${stockData.changePercent.toFixed(2)}%` : 'N/A';
     const rsiText = stockData.rsi ? stockData.rsi.toFixed(1) : 'N/A';
     
-    // Language-specific text
+    // Language-specific text with numbered sections
     let rsiStatus = '';
     let rsiInterpret = '';
     let macdText = '';
@@ -1011,14 +993,14 @@ export async function POST(req: Request) {
       trendText = stockData.trend === 'Uptrend' ? '上升通道' : stockData.trend === 'Downtrend' ? '下降通道' : '區間震盪';
       
       analysisTitle = '投資分析';
-      summaryTitle = '摘要';
-      technicalTitle = '技術分析';
-      fundamentalsTitle = '基本面分析';
-      newsTitle = '新聞與風險分析';
-      bullishTitle = '具體看好因素';
-      bearishTitle = '具體看淡因素';
-      tradingAdviceTitle = '買賣建議';
-      finalAdviceTitle = '最終建議及風險評級';
+      summaryTitle = '1. 摘要';
+      technicalTitle = '2. 技術分析';
+      fundamentalsTitle = '3. 基本面分析';
+      newsTitle = '4. 新聞與風險分析';
+      bullishTitle = '5. 看好因素';
+      bearishTitle = '6. 看淡因素';
+      tradingAdviceTitle = '7. 買賣建議';
+      finalAdviceTitle = '8. 最終建議及風險評級';
       disclaimer = '⚠️ 以上分析僅供參考，不構成投資建議。';
       userContentTitle = '用戶提供的新聞/內容分析';
       sentimentTitle = '市場情緒分析';
@@ -1047,14 +1029,14 @@ export async function POST(req: Request) {
       trendText = stockData.trend === 'Uptrend' ? '上升通道' : stockData.trend === 'Downtrend' ? '下降通道' : '区间震荡';
       
       analysisTitle = '投资分析';
-      summaryTitle = '摘要';
-      technicalTitle = '技术分析';
-      fundamentalsTitle = '基本面分析';
-      newsTitle = '新闻与风险分析';
-      bullishTitle = '具体看好因素';
-      bearishTitle = '具体看淡因素';
-      tradingAdviceTitle = '买卖建议';
-      finalAdviceTitle = '最终建议及风险评级';
+      summaryTitle = '1. 摘要';
+      technicalTitle = '2. 技术分析';
+      fundamentalsTitle = '3. 基本面分析';
+      newsTitle = '4. 新闻与风险分析';
+      bullishTitle = '5. 看好因素';
+      bearishTitle = '6. 看淡因素';
+      tradingAdviceTitle = '7. 买卖建议';
+      finalAdviceTitle = '8. 最终建议及风险评级';
       disclaimer = '⚠️ 以上分析仅供参考，不构成投资建议。';
       userContentTitle = '用户提供的内容分析';
       sentimentTitle = '市场情绪分析';
@@ -1083,14 +1065,14 @@ export async function POST(req: Request) {
       trendText = stockData.trend === 'Uptrend' ? 'Uptrend' : stockData.trend === 'Downtrend' ? 'Downtrend' : 'Sideways';
       
       analysisTitle = 'Investment Analysis';
-      summaryTitle = 'Summary';
-      technicalTitle = 'Technical Analysis';
-      fundamentalsTitle = 'Fundamental Analysis';
-      newsTitle = 'News & Risk Analysis';
-      bullishTitle = 'Specific Bullish Factors';
-      bearishTitle = 'Specific Bearish Factors';
-      tradingAdviceTitle = 'Trading Advice';
-      finalAdviceTitle = 'Final Recommendation & Risk Rating';
+      summaryTitle = '1. Summary';
+      technicalTitle = '2. Technical Analysis';
+      fundamentalsTitle = '3. Fundamental Analysis';
+      newsTitle = '4. News & Risk Analysis';
+      bullishTitle = '5. Bullish Factors';
+      bearishTitle = '6. Bearish Factors';
+      tradingAdviceTitle = '7. Trading Advice';
+      finalAdviceTitle = '8. Final Recommendation & Risk Rating';
       disclaimer = '⚠️ This analysis is for reference only and does not constitute investment advice.';
       userContentTitle = 'User-Provided Content Analysis';
       sentimentTitle = 'Market Sentiment Analysis';
@@ -1176,7 +1158,7 @@ ${specificAnalysis.qualityReason ? `⚠️ ${specificAnalysis.qualityReason}` : 
       }
     }
     
-    // Build bullish factors section (specific)
+    // Build bullish factors section
     let bullishText = `${bullishTitle}\n`;
     if (specificAnalysis.specificBullishFactors.length > 0) {
       bullishText += specificAnalysis.specificBullishFactors.join('\n');
@@ -1186,7 +1168,7 @@ ${specificAnalysis.qualityReason ? `⚠️ ${specificAnalysis.qualityReason}` : 
                      '• No significant bullish factors identified';
     }
     
-    // Build bearish factors section (specific)
+    // Build bearish factors section
     let bearishText = `${bearishTitle}\n`;
     if (specificAnalysis.specificBearishFactors.length > 0) {
       bearishText += specificAnalysis.specificBearishFactors.join('\n');
@@ -1209,21 +1191,20 @@ ${specificAnalysis.qualityReason ? `⚠️ ${specificAnalysis.qualityReason}` : 
       
       let aiContentAnalysis = '';
       if (userContentAnalysis.sentiment?.sentiment === 'Positive') {
-        aiContentAnalysis = language === 'Cantonese' ? '📋 詳細分析：這份資料包含利好因素，可能支持股價向上。但建議結合技術面確認入市時機。' :
-                            language === '简体中文' ? '📋 详细分析：这份资料包含利好因素，可能支持股价向上。但建议结合技术面确认入市时机。' :
-                            'Detailed Analysis: This content contains positive factors that may support upward price movement. However, combine with technical analysis for entry timing.';
+        aiContentAnalysis = language === 'Cantonese' ? '這份資料包含利好因素，可能支持股價向上。但建議結合技術面確認入市時機。' :
+                            language === '简体中文' ? '这份资料包含利好因素，可能支持股价向上。但建议结合技术面确认入市时机。' :
+                            'This content contains positive factors that may support upward price movement. However, combine with technical analysis for entry timing.';
       } else if (userContentAnalysis.sentiment?.sentiment === 'Negative') {
-        aiContentAnalysis = language === 'Cantonese' ? '📋 詳細分析：這份資料包含負面因素，可能對股價構成壓力。建議審慎評估風險。' :
-                            language === '简体中文' ? '📋 详细分析：这份资料包含负面因素，可能对股价构成压力。建议审慎评估风险。' :
-                            'Detailed Analysis: This content contains negative factors that may pressure the stock price. Carefully assess risks.';
+        aiContentAnalysis = language === 'Cantonese' ? '這份資料包含負面因素，可能對股價構成壓力。建議審慎評估風險。' :
+                            language === '简体中文' ? '这份资料包含负面因素，可能对股价构成压力。建议审慎评估风险。' :
+                            'This content contains negative factors that may pressure the stock price. Carefully assess risks.';
       } else {
-        aiContentAnalysis = language === 'Cantonese' ? '📋 詳細分析：這份資料影響中性，沒有明確方向。建議等待更多催化劑。' :
-                            language === '简体中文' ? '📋 详细分析：这份资料影响中性，没有明确方向。建议等待更多催化剂。' :
-                            'Detailed Analysis: This content has neutral impact with no clear direction. Wait for more catalysts.';
+        aiContentAnalysis = language === 'Cantonese' ? '這份資料影響中性，沒有明確方向。建議等待更多催化劑。' :
+                            language === '简体中文' ? '这份资料影响中性，没有明确方向。建议等待更多催化剂。' :
+                            'This content has neutral impact with no clear direction. Wait for more catalysts.';
       }
       
-      if (language === 'Cantonese') {
-        userContentText = `
+      userContentText = `
 ${userContentTitle}
 
 文章標題: ${userContentAnalysis.title}
@@ -1237,40 +1218,7 @@ ${keyPointsTitle}:
 
 AI內容分析:
 ${aiContentAnalysis}`;
-      } else if (language === '简体中文') {
-        userContentText = `
-${userContentTitle}
-
-文章标题: ${userContentAnalysis.title}
-
-${summaryOfContent}:
-${userContentAnalysis.summary}
-
-${keyPointsTitle}:
-• 情绪倾向: ${sentimentEmoji} ${sentimentText} (分数: ${userContentAnalysis.sentiment?.score || 0})
-• 内容类型: ${userContentAnalysis.type === 'url' ? '网页链接' : '用户输入文字'}
-
-AI内容分析:
-${aiContentAnalysis}`;
-      } else {
-        userContentText = `
-${userContentTitle}
-
-Article Title: ${userContentAnalysis.title}
-
-${summaryOfContent}:
-${userContentAnalysis.summary}
-
-${keyPointsTitle}:
-• Sentiment: ${sentimentEmoji} ${sentimentText} (Score: ${userContentAnalysis.sentiment?.score || 0})
-• Content Type: ${userContentAnalysis.type === 'url' ? 'URL Link' : 'User Input Text'}
-
-AI Content Analysis:
-${aiContentAnalysis}`;
-      }
     } else if (news && news.length > 0 && newsSentiment) {
-      const sentimentEmoji = newsSentiment.sentiment === 'Positive' ? '📈' : 
-                             newsSentiment.sentiment === 'Negative' ? '📉' : '📊';
       const sentimentText = newsSentiment.sentiment === 'Positive' ? 
                            (language === 'Cantonese' ? '正面' : language === '简体中文' ? '正面' : 'Positive') :
                            newsSentiment.sentiment === 'Negative' ?
@@ -1291,7 +1239,7 @@ ${aiContentAnalysis}`;
                       'No specific news headlines available';
       }
       
-      // Only apply penny stock warning for ACTUAL HK penny stocks (under $1)
+      // Only apply penny stock warning for ACTUAL HK penny stocks
       const isPennyStock = (symbol.endsWith('.HK') && stockData.price < 0.5);
       const isLowQualityStock = (symbol.endsWith('.HK') && stockData.price < 1);
       const isNormalStock = stockData.price > 10;
@@ -1319,27 +1267,26 @@ ${aiContentAnalysis}`;
       } else {
         if (newsSentiment.sentiment === 'Positive') {
           aiNewsAnalysis = language === 'Cantonese' ? 
-            `📋 詳細分析：近期新聞整體正面，${newsSummary}。這些消息對公司基本面有正面影響，可能支持股價繼續向好。建議關注後續業績表現。` :
+            `詳細分析：近期新聞整體正面，${newsSummary}。這些消息對公司基本面有正面影響，可能支持股價繼續向好。建議關注後續業績表現。` :
             language === '简体中文' ? 
-            `📋 详细分析：近期新闻整体正面，${newsSummary}。这些消息对公司基本面有正面影响，可能支持股价继续向好。建议关注后续业绩表现。` :
-            `📋 Detailed Analysis: Recent news is overall positive. ${newsSummary}. These developments positively impact fundamentals and may support continued price appreciation. Monitor upcoming earnings.`;
+            `详细分析：近期新闻整体正面，${newsSummary}。这些消息对公司基本面有正面影响，可能支持股价继续向好。建议关注后续业绩表现。` :
+            `Detailed Analysis: Recent news is overall positive. ${newsSummary}. These developments positively impact fundamentals and may support continued price appreciation. Monitor upcoming earnings.`;
         } else if (newsSentiment.sentiment === 'Negative') {
           aiNewsAnalysis = language === 'Cantonese' ? 
-            `📋 詳細分析：近期新聞整體負面，${newsSummary}。這些消息可能對公司構成壓力，需警惕下行風險。建議等待負面因素消化後再作部署。` :
+            `詳細分析：近期新聞整體負面，${newsSummary}。這些消息可能對公司構成壓力，需警惕下行風險。建議等待負面因素消化後再作部署。` :
             language === '简体中文' ? 
-            `📋 详细分析：近期新闻整体负面，${newsSummary}。这些消息可能对公司构成压力，需警惕下行风险。建议等待负面因素消化后再作部署。` :
-            `📋 Detailed Analysis: Recent news is overall negative. ${newsSummary}. These developments may pressure the company. Be aware of downside risk. Wait for negative factors to be priced in.`;
+            `详细分析：近期新闻整体负面，${newsSummary}。这些消息可能对公司构成压力，需警惕下行风险。建议等待负面因素消化后再作部署。` :
+            `Detailed Analysis: Recent news is overall negative. ${newsSummary}. These developments may pressure the company. Be aware of downside risk. Wait for negative factors to be priced in.`;
         } else {
           aiNewsAnalysis = language === 'Cantonese' ? 
-            `📋 詳細分析：近期新聞情緒中性，${newsSummary}。市場觀望氣氛濃厚，等待更多催化劑。建議關注公司公告和行業政策變化。` :
+            `詳細分析：近期新聞情緒中性，${newsSummary}。市場觀望氣氛濃厚，等待更多催化劑。建議關注公司公告和行業政策變化。` :
             language === '简体中文' ? 
-            `📋 详细分析：近期新闻情绪中性，${newsSummary}。市场观望气氛浓厚，等待更多催化剂。建议关注公司公告和行业政策变化。` :
-            `📋 Detailed Analysis: Recent news sentiment is neutral. ${newsSummary}. Market is waiting for more catalysts. Monitor company announcements and industry policy changes.`;
+            `详细分析：近期新闻情绪中性，${newsSummary}。市场观望气氛浓厚，等待更多催化剂。建议关注公司公告和行业政策变化。` :
+            `Detailed Analysis: Recent news sentiment is neutral. ${newsSummary}. Market is waiting for more catalysts. Monitor company announcements and industry policy changes.`;
         }
       }
       
-      if (language === 'Cantonese') {
-        userContentText = `${newsTitle}
+      userContentText = `${newsTitle}
 最新新聞情緒分析 (共${news.length}篇):
 • 整體情緒: ${sentimentText} (分數: ${newsSentiment.score})
 • 正面新聞: ${newsSentiment.positiveCount}篇 | 負面新聞: ${newsSentiment.negativeCount}篇 | 中性: ${newsSentiment.neutralCount}篇
@@ -1349,43 +1296,12 @@ ${newsSummary}
 
 AI新聞分析:
 ${aiNewsAnalysis}`;
-      } else if (language === '简体中文') {
-        userContentText = `${newsTitle}
-最新新闻情绪分析 (共${news.length}篇):
-• 整体情绪: ${sentimentText} (分数: ${newsSentiment.score})
-• 正面新闻: ${newsSentiment.positiveCount}篇 | 负面新闻: ${newsSentiment.negativeCount}篇 | 中性: ${newsSentiment.neutralCount}篇
-
-新闻摘要:
-${newsSummary}
-
-AI新闻分析:
-${aiNewsAnalysis}`;
-      } else {
-        userContentText = `${newsTitle}
-Latest News Sentiment Analysis (${news.length} articles):
-• Overall Sentiment: ${sentimentText} (Score: ${newsSentiment.score})
-• Positive: ${newsSentiment.positiveCount} | Negative: ${newsSentiment.negativeCount} | Neutral: ${newsSentiment.neutralCount}
-
-News Summary:
-${newsSummary}
-
-AI News Analysis:
-${aiNewsAnalysis}`;
-      }
     } else {
-      if (language === 'Cantonese') {
-        userContentText = `${newsTitle}
+      userContentText = `${newsTitle}
 近期暫無重大相關新聞。建議關注公司公告和行業動態。`;
-      } else if (language === '简体中文') {
-        userContentText = `${newsTitle}
-近期暂无重大相关新闻。建议关注公司公告和行业动态。`;
-      } else {
-        userContentText = `${newsTitle}
-No significant recent news. Monitor company announcements and industry trends.`;
-      }
     }
     
-    // Generate trading advice with specific targets
+    // Generate trading advice
     let tradingAdviceText = '';
     if (language === 'Cantonese') {
       tradingAdviceText = `${tradingAdviceTitle}
