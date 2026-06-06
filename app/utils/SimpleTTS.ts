@@ -1,173 +1,179 @@
 // app/utils/SimpleTTS.ts
 let currentUtterance: SpeechSynthesisUtterance | null = null;
 
-// Get available voices and select the best one
+// Get available voices
 function getBestVoice(langKey: string): SpeechSynthesisVoice | null {
   const voices = window.speechSynthesis.getVoices();
   
+  if (voices.length === 0) return null;
+  
   if (langKey === 'Cantonese') {
     const preferredVoices = [
-      voices.find(v => v.lang === 'zh-HK' && v.name.includes('Ting-Ting')),
-      voices.find(v => v.lang === 'zh-HK' && v.name.includes('Sin-Ji')),
       voices.find(v => v.lang === 'zh-HK'),
       voices.find(v => v.lang === 'zh-TW'),
+      voices.find(v => v.lang.includes('zh')),
     ];
     return preferredVoices.find(v => v !== undefined) || null;
   } 
   else if (langKey === '简体中文') {
     const preferredVoices = [
-      voices.find(v => v.lang === 'zh-CN' && v.name.includes('Ting-Ting')),
-      voices.find(v => v.lang === 'zh-CN' && v.name.includes('Yun-Yang')),
       voices.find(v => v.lang === 'zh-CN'),
-      voices.find(v => v.lang === 'zh-TW'),
+      voices.find(v => v.lang === 'zh-Hans'),
+      voices.find(v => v.lang.includes('zh')),
     ];
     return preferredVoices.find(v => v !== undefined) || null;
   }
   else {
     const preferredVoices = [
-      voices.find(v => v.lang === 'en-US' && v.name.includes('Google UK English Male')),
-      voices.find(v => v.lang === 'en-US' && !v.name.includes('Female')),
-      voices.find(v => v.lang === 'en-GB' && v.name.toLowerCase().includes('male')),
       voices.find(v => v.lang === 'en-US'),
+      voices.find(v => v.lang === 'en-GB'),
+      voices.find(v => v.lang === 'en-AU'),
     ];
     return preferredVoices.find(v => v !== undefined) || null;
   }
 }
 
-// Prepare text for TTS - Cantonese friendly
+// Add pauses after punctuation
+function addPauses(text: string): string {
+  // Add pause after periods, colons, and line breaks
+  let result = text;
+  
+  // Add pause after section titles (Summary, Technical Analysis, etc.)
+  result = result.replace(/(Summary|Technical Analysis|Fundamental Analysis|News & Risk Analysis|Specific Bullish Factors|Specific Bearish Factors|Trading Advice|Final Recommendation & Risk Rating)/g, '$1。');
+  result = result.replace(/(摘要|技術分析|基本面分析|新聞與風險分析|具體看好因素|具體看淡因素|買賣建議|最終建議及風險評級)/g, '$1。');
+  result = result.replace(/(摘要|技术分析|基本面分析|新闻与风险分析|具体看好因素|具体看淡因素|买卖建议|最终建议及风险评级)/g, '$1。');
+  
+  // Add pause after each sentence
+  result = result.replace(/\. /g, '. ');
+  result = result.replace(/。 /g, '。 ');
+  result = result.replace(/\n/g, '。 ');
+  
+  return result;
+}
+
+// Prepare text for TTS
 function prepareTextForTTS(text: string, langKey: string): string {
   let result = text;
   
-  // Remove all emojis and special characters
+  // First, add pauses
+  result = addPauses(result);
+  
+  // Remove all emojis
   result = result.replace(/[\u{1F600}-\u{1F6FF}]/gu, '');
   result = result.replace(/[\u{1F300}-\u{1F5FF}]/gu, '');
-  result = result.replace(/[\u{1F700}-\u{1F77F}]/gu, '');
-  result = result.replace(/[\u{1F780}-\u{1F7FF}]/gu, '');
-  result = result.replace(/[\u{1F800}-\u{1F8FF}]/gu, '');
-  result = result.replace(/[\u{1F900}-\u{1F9FF}]/gu, '');
-  result = result.replace(/📋/g, '');
   result = result.replace(/[⭐]/g, '');
   result = result.replace(/📈/g, '');
   result = result.replace(/📉/g, '');
   result = result.replace(/📊/g, '');
   result = result.replace(/⚠️/g, '');
   result = result.replace(/✅/g, '');
+  result = result.replace(/📋/g, '');
+  result = result.replace(/🔗/g, '');
+  result = result.replace(/📤/g, '');
   result = result.replace(/▶/g, '');
   result = result.replace(/▼/g, '');
   
-  // Remove markdown formatting
-  result = result.replace(/\*\*/g, '');
-  result = result.replace(/###/g, '');
-  result = result.replace(/##/g, '');
-  result = result.replace(/\*/g, '');
-  result = result.replace(/•/g, '點');
-  
   if (langKey === 'Cantonese') {
-    // Fix hyphen/dash reading
-    result = result.replace(/(\d+)%/, '$1個巴仙');
-    result = result.replace(/(\d+)%/, '$1個巴仙');
+    // Replace stars with text
+    result = result.replace(/信心評分: (\d+)% ⭐⭐⭐⭐⭐ \(非常高\)/g, '信心評分 $1 個巴仙，非常高，五星級');
+    result = result.replace(/信心評分: (\d+)% ⭐⭐⭐⭐ \(高\)/g, '信心評分 $1 個巴仙，高，四星級');
+    result = result.replace(/信心評分: (\d+)% ⭐⭐⭐ \(中等\)/g, '信心評分 $1 個巴仙，中等，三星級');
+    result = result.replace(/信心評分: (\d+)% ⭐⭐ \(低\)/g, '信心評分 $1 個巴仙，低，兩星級');
+    result = result.replace(/信心評分: (\d+)% ⭐ \(極低\)/g, '信心評分 $1 個巴仙，極低，一星級');
     
-    // Fix date and time format
-    result = result.replace(/(\d+)\/(\d+)\/(\d+)/g, '$1年$2月$3日');
-    
-    // Fix confidence score
-    result = result.replace(/信心評分: (\d+)% 五顆星 \(非常高\)/g, '我比呢隻股信心非常高，$1個巴仙，五粒星');
-    result = result.replace(/信心評分: (\d+)% 四顆星 \(高\)/g, '我比呢隻股信心高，$1個巴仙，四粒星');
-    result = result.replace(/信心評分: (\d+)% 三顆星 \(中等\)/g, '我比呢隻股信心中等，$1個巴仙，三粒星');
-    result = result.replace(/信心評分: (\d+)% 兩顆星 \(低\)/g, '我比呢隻股信心低，$1個巴仙，兩粒星');
-    result = result.replace(/信心評分: (\d+)% 一顆星 \(極低\)/g, '我比呢隻股信心極低，$1個巴仙，一粒星');
-    
-    // Fix section titles to add numbers
-    result = result.replace(/摘要/g, '第一，摘要');
-    result = result.replace(/技術分析/g, '第二，技術分析');
-    result = result.replace(/基本面分析/g, '第三，基本面分析');
-    result = result.replace(/新聞與風險分析/g, '第四，新聞與風險分析');
-    result = result.replace(/具體看好因素/g, '第五，看好因素');
-    result = result.replace(/具體看淡因素/g, '第六，看淡因素');
-    result = result.replace(/買賣建議/g, '第七，買賣建議');
-    result = result.replace(/最終建議及風險評級/g, '第八，最終建議同風險評級');
-    
-    // Fix common phrases
-    result = result.replace(/目前股價: /g, '目前股價係');
+    result = result.replace(/目前股價: /g, '目前股價');
     result = result.replace(/日漲跌幅: /g, '今日升跌');
-    result = result.replace(/-(\d+\.\d+)%/, '負$1個巴仙');
-    result = result.replace(/\+(\d+\.\d+)%/, '正$1個巴仙');
-    result = result.replace(/日內波幅: /g, '日內波幅係');
+    result = result.replace(/-(\d+\.\d+)%/, '負 $1 個巴仙');
+    result = result.replace(/日內波幅: /g, '日內波幅');
     result = result.replace(/ - /g, '至');
     result = result.replace(/HK\$/g, '港幣');
     result = result.replace(/NT\$/g, '新台幣');
     result = result.replace(/\$/g, '美元');
-    result = result.replace(/RSI: /g, 'RSI係');
-    result = result.replace(/整體趨勢: /g, '整體趨勢係');
-    
-    // Fix MACD and analysis text
-    result = result.replace(/MACD: 看淡 - 看淡信號，空頭動能增強/g, 'MACD係看淡，屬看淡信號，空頭動能增強');
-    result = result.replace(/MACD: 看好 - 看好信號，多頭動能增強/g, 'MACD係看好，屬看好信號，多頭動能增強');
-    result = result.replace(/趨勢: /g, '趨勢係');
-    result = result.replace(/波動率: /g, '波動率係');
-    result = result.replace(/平均成交量: /g, '平均成交量係');
-    result = result.replace(/目標價: /g, '目標價係');
-    result = result.replace(/止蝕位: /g, '止蝕位係');
-    result = result.replace(/風險回報比: /g, '風險回報比例係');
-    result = result.replace(/建議：/g, '建議係');
-    result = result.replace(/風險評級: /g, '風險評級係');
-    
-    // Fix RSI reading
-    result = result.replace(/RSI\(14\): (\d+\.?\d*) - (.*)/g, 'RSI14為$1，屬$2');
-    
-    // Fix percentage reading
-    result = result.replace(/(\d+\.?\d*)%/, '$1個巴仙');
-    
-    // Remove "📋 詳細分析：" prefix
-    result = result.replace(/📋 詳細分析：/g, '');
-    result = result.replace(/AI新聞分析:/g, '');
-    result = result.replace(/AI內容分析:/g, '');
+    result = result.replace(/RSI: /g, 'RSI');
+    result = result.replace(/整體趨勢: /g, '整體趨勢');
+    result = result.replace(/MACD: /g, 'MACD');
+    result = result.replace(/趨勢: /g, '趨勢');
+    result = result.replace(/波動率: /g, '波動率');
+    result = result.replace(/平均成交量: /g, '平均成交量');
+    result = result.replace(/目標價: /g, '目標價');
+    result = result.replace(/止蝕位: /g, '止蝕位');
+    result = result.replace(/風險回報比: /g, '風險回報比例');
     
   } else if (langKey === '简体中文') {
-    // Similar processing for Simplified Chinese
-    result = result.replace(/信心评分: (\d+)% 五颗星 \(非常高\)/g, '我对这只股票信心非常高，$1百分之，五颗星');
-    result = result.replace(/信心评分: (\d+)% 四颗星 \(高\)/g, '我对这只股票信心高，$1百分之，四颗星');
-    result = result.replace(/信心评分: (\d+)% 三颗星 \(中等\)/g, '我对这只股票信心中等，$1百分之，三颗星');
-    result = result.replace(/信心评分: (\d+)% 两颗星 \(低\)/g, '我对这只股票信心低，$1百分之，两颗星');
-    result = result.replace(/信心评分: (\d+)% 一颗星 \(极低\)/g, '我对这只股票信心极低，$1百分之，一颗星');
+    // Replace stars with text for Simplified Chinese
+    result = result.replace(/信心评分: (\d+)% ⭐⭐⭐⭐⭐ \(非常高\)/g, '信心评分 $1 百分之，非常高，五星级');
+    result = result.replace(/信心评分: (\d+)% ⭐⭐⭐⭐ \(高\)/g, '信心评分 $1 百分之，高，四星级');
+    result = result.replace(/信心评分: (\d+)% ⭐⭐⭐ \(中等\)/g, '信心评分 $1 百分之，中等，三星级');
+    result = result.replace(/信心评分: (\d+)% ⭐⭐ \(低\)/g, '信心评分 $1 百分之，低，两星级');
+    result = result.replace(/信心评分: (\d+)% ⭐ \(极低\)/g, '信心评分 $1 百分之，极低，一星级');
     
-    result = result.replace(/摘要/g, '第一，摘要');
-    result = result.replace(/技术分析/g, '第二，技术分析');
-    result = result.replace(/基本面分析/g, '第三，基本面分析');
-    result = result.replace(/新闻与风险分析/g, '第四，新闻与风险分析');
-    result = result.replace(/具体看好因素/g, '第五，看好因素');
-    result = result.replace(/具体看淡因素/g, '第六，看淡因素');
-    result = result.replace(/买卖建议/g, '第七，买卖建议');
-    result = result.replace(/最终建议及风险评级/g, '第八，最终建议同风险评级');
-    
-    result = result.replace(/📋 详细分析：/g, '');
-    result = result.replace(/AI新闻分析:/g, '');
+    result = result.replace(/目前股价: /g, '目前股价');
+    result = result.replace(/日涨跌幅: /g, '今日涨跌');
+    result = result.replace(/-(\d+\.\d+)%/, '负 $1 百分之');
+    result = result.replace(/日内波幅: /g, '日内波幅');
+    result = result.replace(/ - /g, '至');
+    result = result.replace(/HK\$/g, '港币');
+    result = result.replace(/NT\$/g, '新台币');
+    result = result.replace(/\$/g, '美元');
+    result = result.replace(/RSI: /g, 'RSI');
+    result = result.replace(/整体趋势: /g, '整体趋势');
+    result = result.replace(/MACD: /g, 'MACD');
+    result = result.replace(/趋势: /g, '趋势');
+    result = result.replace(/波动率: /g, '波动率');
+    result = result.replace(/平均成交量: /g, '平均成交量');
+    result = result.replace(/目标价: /g, '目标价');
+    result = result.replace(/止损位: /g, '止损位');
+    result = result.replace(/风险回报比: /g, '风险回报比例');
     
   } else {
-    // English
-    result = result.replace(/Confidence Score: (\d+)% ⭐⭐⭐⭐⭐ \(Very High\)/g, "I rate this stock 5 stars with $1 percent confidence!");
-    result = result.replace(/Confidence Score: (\d+)% ⭐⭐⭐⭐ \(High\)/g, "I rate this stock 4 stars with $1 percent confidence!");
-    result = result.replace(/Confidence Score: (\d+)% ⭐⭐⭐ \(Medium\)/g, "I rate this stock 3 stars with $1 percent confidence.");
-    result = result.replace(/Confidence Score: (\d+)% ⭐⭐ \(Low\)/g, "I rate this stock 2 stars with $1 percent confidence. Be careful.");
-    result = result.replace(/Confidence Score: (\d+)% ⭐ \(Very Low\)/g, "I rate this stock only 1 star with $1 percent confidence. High risk!");
+    // English - replace stars with text
+    result = result.replace(/Confidence Score: (\d+)% ⭐⭐⭐⭐⭐ \(Very High\)/g, 'Confidence score $1 percent, very high, five stars');
+    result = result.replace(/Confidence Score: (\d+)% ⭐⭐⭐⭐ \(High\)/g, 'Confidence score $1 percent, high, four stars');
+    result = result.replace(/Confidence Score: (\d+)% ⭐⭐⭐ \(Medium\)/g, 'Confidence score $1 percent, medium, three stars');
+    result = result.replace(/Confidence Score: (\d+)% ⭐⭐ \(Low\)/g, 'Confidence score $1 percent, low, two stars');
+    result = result.replace(/Confidence Score: (\d+)% ⭐ \(Very Low\)/g, 'Confidence score $1 percent, very low, one star');
     
-    result = result.replace(/📋 Detailed Analysis: /g, '');
-    result = result.replace(/AI News Analysis:/g, '');
-    result = result.replace(/AI Content Analysis:/g, '');
+    result = result.replace(/Current Price: /g, 'Current price');
+    result = result.replace(/Daily Change: /g, 'Daily change');
+    result = result.replace(/-(\d+\.\d+)%/, 'minus $1 percent');
+    result = result.replace(/Day Range: /g, 'Day range');
+    result = result.replace(/ - /g, ' to ');
+    result = result.replace(/RSI: /g, 'RSI');
+    result = result.replace(/Overall Trend: /g, 'Overall trend');
+    result = result.replace(/MACD: /g, 'MACD');
+    result = result.replace(/Trend: /g, 'Trend');
+    result = result.replace(/Volatility: /g, 'Volatility');
+    result = result.replace(/Average Volume: /g, 'Average volume');
+    result = result.replace(/Target Price: /g, 'Target price');
+    result = result.replace(/Stop Loss: /g, 'Stop loss');
+    result = result.replace(/Risk\/Reward Ratio: /g, 'Risk reward ratio');
   }
   
-  // Clean up multiple spaces
+  // Add explicit pauses between lines
+  result = result.replace(/\n\n/g, '. ');
+  result = result.replace(/\n/g, '. ');
+  
+  // Clean up multiple spaces and punctuation
   result = result.replace(/\s+/g, ' ');
+  result = result.replace(/\.\./g, '.');
+  result = result.replace(/\. \./g, '.');
   result = result.trim();
   
   return result;
 }
 
 export async function speakText(text: string, langKey: string, onEnd?: () => void) {
+  if (typeof window === 'undefined' || !window.speechSynthesis) {
+    console.log('Speech synthesis not supported');
+    return;
+  }
+  
+  // Cancel any ongoing speech
   if (currentUtterance) {
     window.speechSynthesis.cancel();
   }
   
+  // Wait for voices to be loaded
   if (window.speechSynthesis.getVoices().length === 0) {
     await new Promise<void>((resolve) => {
       window.speechSynthesis.onvoiceschanged = () => resolve();
@@ -177,6 +183,7 @@ export async function speakText(text: string, langKey: string, onEnd?: () => voi
   const processedText = prepareTextForTTS(text, langKey);
   const utterance = new SpeechSynthesisUtterance(processedText);
   
+  // Set language
   if (langKey === 'Cantonese') {
     utterance.lang = 'zh-HK';
   } else if (langKey === '简体中文') {
@@ -185,6 +192,7 @@ export async function speakText(text: string, langKey: string, onEnd?: () => voi
     utterance.lang = 'en-US';
   }
   
+  // Set voice
   const bestVoice = getBestVoice(langKey);
   if (bestVoice) {
     utterance.voice = bestVoice;
@@ -192,13 +200,15 @@ export async function speakText(text: string, langKey: string, onEnd?: () => voi
   
   utterance.rate = 0.85;
   utterance.pitch = 1.0;
+  utterance.volume = 1;
   
   utterance.onend = () => {
     currentUtterance = null;
     if (onEnd) onEnd();
   };
   
-  utterance.onerror = () => {
+  utterance.onerror = (event) => {
+    console.error('Speech error:', event);
     currentUtterance = null;
     if (onEnd) onEnd();
   };
@@ -208,7 +218,7 @@ export async function speakText(text: string, langKey: string, onEnd?: () => voi
 }
 
 export function stopSpeaking() {
-  if (currentUtterance) {
+  if (typeof window !== 'undefined' && window.speechSynthesis) {
     window.speechSynthesis.cancel();
     currentUtterance = null;
   }
