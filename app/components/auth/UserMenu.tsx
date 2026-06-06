@@ -25,6 +25,11 @@ const UserMenu: React.FC<UserMenuProps> = ({
   const [showUnsubscribe, setShowUnsubscribe] = useState(false);
   const [showDowngrade, setShowDowngrade] = useState(false);
 
+  // Move these INSIDE the component
+  const displayName = profile?.display_name || user?.email?.split('@')[0] || 'User';
+  const credits = profile?.credits ?? 0;
+  const plan = profile?.subscription_plan || 'Free Explorer';
+
   useEffect(() => {
     setMounted(true);
   }, []);
@@ -43,8 +48,6 @@ const UserMenu: React.FC<UserMenuProps> = ({
 
   const handleUnsubscribe = () => {
     console.log("🔴 Unsubscribe button clicked");
-    // Don't close the user menu immediately - let the modal open first
-    // Just set the state to show the modal
     setShowUnsubscribe(true);
     console.log("🟢 setShowUnsubscribe(true) called, new value: true");
   };
@@ -91,18 +94,18 @@ const UserMenu: React.FC<UserMenuProps> = ({
             Welcome Back,
           </h2>
           <p style={{ fontSize: '14px', color: '#F59E0B', fontWeight: '500', marginTop: '2px' }}>
-            {profile?.display_name || user?.email?.split('@')[0]}
+            {displayName}
           </p>
         </div>
 
         <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '8px 0', borderBottom: '1px solid #F3F4F6' }}>
             <span style={{ fontSize: '13px', fontWeight: '500', color: '#2563EB' }}>Credits</span>
-            <span style={{ fontSize: '16px', fontWeight: 'bold', color: '#F59E0B' }}>{profile?.credits || 0}</span>
+            <span style={{ fontSize: '16px', fontWeight: 'bold', color: '#F59E0B' }}>{credits}</span>
           </div>
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '8px 0', borderBottom: '1px solid #F3F4F6' }}>
             <span style={{ fontSize: '13px', fontWeight: '500', color: '#2563EB' }}>Plan</span>
-            <span style={{ fontSize: '13px', fontWeight: '500', color: '#F59E0B' }}>{profile?.subscription_plan || 'Free Explorer'}</span>
+            <span style={{ fontSize: '13px', fontWeight: '500', color: '#F59E0B' }}>{plan}</span>
           </div>
         </div>
 
