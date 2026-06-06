@@ -8,7 +8,6 @@ import { PricingModal } from '../features/pricing/PricingModal';
 import { StockAnalysisModule } from '../features/stock-analysis/StockAnalysisModule';
 import { footerContent } from '../../constants/content';
 import { speakText, stopSpeaking } from '../../utils/SimpleTTS';
-import { audioManager } from '../../utils/AudioManager';
 
 interface MobileAnalysisProps {
   langKey: string;
@@ -34,26 +33,78 @@ const MobileAnalysis: React.FC<MobileAnalysisProps> = ({
   const [inputValue, setInputValue] = useState('');
   const [analysisData, setAnalysisData] = useState<any>(null);
   const [isLoading, setIsLoading] = useState(false);
-  const [isSpeakerActive, setIsSpeakerActive] = useState(false);
+  const [isSpeakerActive, setIsSpeakerActive] = useState(true); // Set to true by default
   const [isPaused, setIsPaused] = useState(false);
   const [isListening, setIsListening] = useState(false);
   const [recognition, setRecognition] = useState<any>(null);
   const [isMenuOpen, setIsMenuOpen] = useState(false);
-  const [showSpeakerMenu, setShowSpeakerMenu] = useState(false);
-  const [useBluetooth, setUseBluetooth] = useState(false);
   const [useAIEnhancement, setUseAIEnhancement] = useState(false);
+  const utteranceRef = useRef<SpeechSynthesisUtterance | null>(null);
 
   const t = {
     analyzingMarket: langKey === 'Cantonese' ? '分析市場中...' : langKey === '简体中文' ? '分析市场中...' : 'Analyzing Market...',
   };
 
-  useEffect(() => {
-    const savedPref = localStorage.getItem('useBluetooth');
-    if (savedPref === 'true') {
-      setUseBluetooth(true);
-      audioManager.setUseBluetoothOutput(true);
+  // Convert text for better TTS pronunciation
+  const prepareTextForTTS = (text: string): string => {
+    let result = text;
+    
+    if (langKey === 'Cantonese') {
+      result = result.replace(/##?\s*📊\s*/g, '');
+      result = result.replace(/###\s*/g, '');
+      result = result.replace(/\*\*/g, '');
+      result = result.replace(/##/g, '');
+      result = result.replace(/\*/g, '');
+      result = result.replace(/HK\$(\d+\.?\d*)/g, '港幣$1元');
+      result = result.replace(/NT\$(\d+\.?\d*)/g, '新台幣$1元');
+      result = result.replace(/\$(\d+\.?\d*)/g, '美元$1元');
+      result = result.replace(/(\d+(?:\.\d+)?)%/g, (match, num) => `${num}個巴仙`);
+      result = result.replace(/\+/g, '加');
+      result = result.replace(/-/g, '減');
+      result = result.replace(/\./g, '點');
+      result = result.replace(/:/g, '係');
+      result = result.replace(/\s+/g, ' ');
+      result = result.trim();
+    } else if (langKey === '简体中文') {
+      result = result.replace(/##?\s*📊\s*/g, '');
+      result = result.replace(/###\s*/g, '');
+      result = result.replace(/\*\*/g, '');
+      result = result.replace(/HK\$(\d+\.?\d*)/g, '港币$1元');
+      result = result.replace(/NT\$(\d+\.?\d*)/g, '新台币$1元');
+      result = result.replace(/\$(\d+\.?\d*)/g, '美元$1元');
+      result = result.replace(/(\d+(?:\.\d+)?)%/g, '$1百分之');
     }
-  }, []);
+    
+    return result;
+  };
+
+  // Auto-speak when analysis data arrives
+  useEffect(() => {
+    if (analysisData?.summary && isSpeakerActive && !isPaused) {
+      if (utteranceRef.current) {
+        window.speechSynthesis.cancel();
+      }
+      const textToSpeak = prepareTextForTTS(analysisData.summary);
+      const utterance = new SpeechSynthesisUtterance(textToSpeak);
+      utterance.lang = langKey === 'Cantonese' ? 'zh-HK' : langKey === '简体中文' ? 'zh-CN' : 'en-US';
+      utterance.rate = 0.85;
+      utterance.pitch = 1.0;
+      utterance.onend = () => {
+        utteranceRef.current = null;
+      };
+      utterance.onerror = () => {
+        utteranceRef.current = null;
+      };
+      utteranceRef.current = utterance;
+      window.speechSynthesis.speak(utterance);
+    }
+    
+    return () => {
+      if (utteranceRef.current) {
+        window.speechSynthesis.cancel();
+      }
+    };
+  }, [analysisData, isSpeakerActive, isPaused, langKey]);
 
   useEffect(() => {
     if (typeof window !== 'undefined') {
@@ -140,43 +191,59 @@ const MobileAnalysis: React.FC<MobileAnalysisProps> = ({
     }
   };
 
-  const handleSpeakerClick = () => setShowSpeakerMenu(!showSpeakerMenu);
-  
-  const handleBluetoothToggle = () => {
-    const newValue = !useBluetooth;
-    setUseBluetooth(newValue);
-    audioManager.setUseBluetoothOutput(newValue);
-    localStorage.setItem('useBluetooth', String(newValue));
-    setShowSpeakerMenu(false);
-  };
-
-  const handleStartSpeaking = () => {
-    if (!analysisData?.summary) return;
+  const handleSpeakerToggle = () => {
     if (isSpeakerActive) {
-      stopSpeaking();
+      // Turn off speaker
+      window.speechSynthesis.cancel();
       setIsSpeakerActive(false);
+      setIsPaused(false);
     } else {
+      // Turn on speaker and speak current analysis
       setIsSpeakerActive(true);
-      speakText(analysisData.summary, langKey, () => setIsSpeakerActive(false));
+      setIsPaused(false);
+      if (analysisData?.summary) {
+        if (utteranceRef.current) {
+          window.speechSynthesis.cancel();
+        }
+        const textToSpeak = prepareTextForTTS(analysisData.summary);
+        const utterance = new SpeechSynthesisUtterance(textToSpeak);
+        utterance.lang = langKey === 'Cantonese' ? 'zh-HK' : langKey === '简体中文' ? 'zh-CN' : 'en-US';
+        utterance.rate = 0.85;
+        utterance.pitch = 1.0;
+        utterance.onend = () => {
+          utteranceRef.current = null;
+        };
+        utterance.onerror = () => {
+          utteranceRef.current = null;
+        };
+        utteranceRef.current = utterance;
+        window.speechSynthesis.speak(utterance);
+      }
     }
-    setShowSpeakerMenu(false);
   };
 
   const handlePauseToggle = () => {
-    if (!analysisData?.summary) {
-      setIsPaused(!isPaused);
-      return;
-    }
-    if (!isPaused && isSpeakerActive) {
-      stopSpeaking();
+    if (!analysisData?.summary) return;
+    
+    if (isSpeakerActive && !isPaused) {
+      // Pause speaking
+      window.speechSynthesis.cancel();
       setIsPaused(true);
-      setIsSpeakerActive(false);
-    } else if (isPaused && !isSpeakerActive && analysisData?.summary) {
-      setIsSpeakerActive(true);
-      speakText(analysisData.summary, langKey, () => {
-        setIsSpeakerActive(false);
-        setIsPaused(false);
-      });
+    } else if (isPaused && isSpeakerActive) {
+      // Resume speaking
+      const textToSpeak = prepareTextForTTS(analysisData.summary);
+      const utterance = new SpeechSynthesisUtterance(textToSpeak);
+      utterance.lang = langKey === 'Cantonese' ? 'zh-HK' : langKey === '简体中文' ? 'zh-CN' : 'en-US';
+      utterance.rate = 0.85;
+      utterance.pitch = 1.0;
+      utterance.onend = () => {
+        utteranceRef.current = null;
+      };
+      utterance.onerror = () => {
+        utteranceRef.current = null;
+      };
+      utteranceRef.current = utterance;
+      window.speechSynthesis.speak(utterance);
       setIsPaused(false);
     }
   };
@@ -296,20 +363,20 @@ const MobileAnalysis: React.FC<MobileAnalysisProps> = ({
           </div>
           
           <div style={{ display: 'flex', gap: '8px', justifyContent: 'space-between' }}>
-            {renderButtonWithCross(isListening, handleMicToggle, <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M19 11a7 7 0 01-7 7m0 0a7 7 0 01-7-7m7 7v4m0 0H8m4 0h4m-4-8a3 3 0 01-3-3V5a3 3 0 116 0v6a3 3 0 01-3 3z" /></svg>, '#3B82F6', '#EF4444')}
+            {renderButtonWithCross(isListening, handleMicToggle, 
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2}><path d="M19 11a7 7 0 01-7 7m0 0a7 7 0 01-7-7m7 7v4m0 0H8m4 0h4m-4-8a3 3 0 01-3-3V5a3 3 0 116 0v6a3 3 0 01-3 3z"/></svg>, 
+              '#3B82F6', '#EF4444'
+            )}
             
-            <div style={{ position: 'relative', flex: 1 }}>
-              {renderButtonWithCross(isSpeakerActive, handleSpeakerClick, <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M15.536 8.464a5 5 0 010 7.072m2.828-9.9a9 9 0 010 12.728M5.586 15H4a1 1 0 01-1-1v-4a1 1 0 011-1h1.586l4.707-4.707C10.923 3.663 12 4.109 12 5v14c0 .891-1.077 1.337-1.707.707L5.586 15z" /></svg>, '#EF4444', '#9CA3AF')}
-              {showSpeakerMenu && (<div style={{ position: 'absolute', bottom: '100%', left: 0, right: 0, marginBottom: '8px', backgroundColor: 'white', border: '1px solid #E5E7EB', borderRadius: '12px', boxShadow: '0 4px 12px rgba(0,0,0,0.15)', zIndex: 30, overflow: 'hidden' }}>
-                <button onClick={handleStartSpeaking} style={{ width: '100%', padding: '12px', textAlign: 'center', backgroundColor: 'white', border: 'none', borderBottom: '1px solid #E5E7EB', cursor: 'pointer', fontSize: '13px', fontWeight: '500', color: '#1F2937' }}>{isSpeakerActive ? 'Stop Speaking' : 'Start Speaking'}</button>
-                <button onClick={handleBluetoothToggle} style={{ width: '100%', padding: '12px', textAlign: 'center', backgroundColor: useBluetooth ? '#EFF6FF' : 'white', border: 'none', cursor: 'pointer', fontSize: '13px', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px', color: useBluetooth ? '#2563EB' : '#4B5563' }}>
-                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M12 18v-6m0 0l4-4-4-4m0 4L8 6l4-4" /><path strokeLinecap="round" strokeLinejoin="round" d="M12 12l4 4-4 4m0-8L8 6l4-4" /></svg>
-                  {useBluetooth ? '✓ Bluetooth Mode' : 'Bluetooth Mode'}
-                </button>
-              </div>)}
-            </div>
+            {renderButtonWithCross(isSpeakerActive, handleSpeakerToggle, 
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2}><path d="M15.536 8.464a5 5 0 010 7.072m2.828-9.9a9 9 0 010 12.728M5.586 15H4a1 1 0 01-1-1v-4a1 1 0 011-1h1.586l4.707-4.707C10.923 3.663 12 4.109 12 5v14c0 .891-1.077 1.337-1.707.707L5.586 15z"/></svg>, 
+              '#EF4444', '#9CA3AF'
+            )}
             
-            {renderButtonWithCross(isPaused, handlePauseToggle, <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M10 9v6m4-6v6m7-3a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>, '#EF4444', '#9CA3AF')}
+            {renderButtonWithCross(isPaused, handlePauseToggle, 
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2}><path d="M10 9v6m4-6v6m7-3a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>, 
+              '#EF4444', '#9CA3AF'
+            )}
             
             <button 
               onClick={handleAnalyze} 

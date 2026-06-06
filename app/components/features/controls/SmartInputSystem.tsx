@@ -60,75 +60,39 @@ export const SmartInputSystem: React.FC<SmartInputSystemProps> = ({
   }, [langKey]);
 
   // Convert text for better TTS pronunciation
-  const prepareTextForTTS = (text: string): string => {
-    let result = text;
-    
-    if (langKey === 'Cantonese') {
-      // Remove markdown symbols
-      result = result.replace(/##?\s*📊\s*/g, '');
-      result = result.replace(/###\s*/g, '');
-      result = result.replace(/\*\*/g, '');
-      result = result.replace(/##/g, '');
-      result = result.replace(/\*/g, '');
-      
-      // Convert numbered list markers
-      result = result.replace(/### (\d+)\./g, '第$1部分');
-      result = result.replace(/^(\d+)\./gm, '第$1部分');
-      
-      // Convert section numbers to Chinese
-      result = result.replace(/1\. 摘要/g, '第一，摘要');
-      result = result.replace(/2\. 技術分析/g, '第二，技術分析');
-      result = result.replace(/3\. 基本面分析/g, '第三，基本面分析');
-      result = result.replace(/4\. 新聞與風險分析/g, '第四，新聞與風險分析');
-      result = result.replace(/5\. 看好因素/g, '第五，看好因素');
-      result = result.replace(/6\. 看淡因素/g, '第六，看淡因素');
-      result = result.replace(/7\. 買賣建議/g, '第七，買賣建議');
-      result = result.replace(/8\. 最終建議及信心評分/g, '第八，最終建議及信心評分');
-      
-      // Replace currency symbols
-      result = result.replace(/HK\$(\d+\.?\d*)/g, '港幣$1元');
-      result = result.replace(/NT\$(\d+\.?\d*)/g, '新台幣$1元');
-      result = result.replace(/\$(\d+\.?\d*)/g, '美元$1元');
-      result = result.replace(/HK\$/, '港幣');
-      result = result.replace(/NT\$/, '新台幣');
-      
-      // Replace percentage
-      result = result.replace(/(\d+(?:\.\d+)?)%/g, (match, num) => {
-        return `${num}個巴仙`;
-      });
-      
-      // Replace dash and bullet points
-      result = result.replace(/-\s*\*\*/g, '');
-      result = result.replace(/-\s*/g, '');
-      result = result.replace(/•/g, '');
-      result = result.replace(/➡️/g, '向右');
-      result = result.replace(/📈/g, '上升');
-      result = result.replace(/📉/g, '下跌');
-      
-      // Replace common symbols
-      result = result.replace(/\+/g, '加');
-      result = result.replace(/-/g, '減');
-      result = result.replace(/\./g, '點');
-      result = result.replace(/:/g, '係');
-      result = result.replace(/\|/g, '');
-      
-      // Clean up multiple spaces
-      result = result.replace(/\s+/g, ' ');
-      result = result.trim();
-      
-      console.log('TTS prepared text:', result.substring(0, 200));
-    } else if (langKey === '简体中文') {
-      result = result.replace(/##?\s*📊\s*/g, '');
-      result = result.replace(/###\s*/g, '');
-      result = result.replace(/\*\*/g, '');
-      result = result.replace(/HK\$(\d+\.?\d*)/g, '港币$1元');
-      result = result.replace(/NT\$(\d+\.?\d*)/g, '新台币$1元');
-      result = result.replace(/\$(\d+\.?\d*)/g, '美元$1元');
-      result = result.replace(/(\d+(?:\.\d+)?)%/g, '$1百分之');
-    }
-    
-    return result;
-  };
+  // In SmartInputSystem.tsx, update the speech part
+const prepareTextForTTS = (text: string): string => {
+  let result = text;
+  
+  // Remove all emojis
+  result = result.replace(/[\u{1F600}-\u{1F6FF}]/gu, '');
+  result = result.replace(/[\u{1F300}-\u{1F5FF}]/gu, '');
+  result = result.replace(/[⭐]/g, '');
+  result = result.replace(/📈/g, '');
+  result = result.replace(/📉/g, '');
+  
+  if (langKey === 'Cantonese') {
+    result = result.replace(/信心評分: (\d+)% 五顆星 \(非常高\)/g, '我比呢隻股信心非常高 $1 個巴仙，同埋五粒星');
+    result = result.replace(/信心評分: (\d+)% 四顆星 \(高\)/g, '我比呢隻股信心高 $1 個巴仙，同埋四粒星');
+    result = result.replace(/信心評分: (\d+)% 三顆星 \(中等\)/g, '我比呢隻股信心中等 $1 個巴仙，同埋三粒星');
+    result = result.replace(/信心評分: (\d+)% 兩顆星 \(低\)/g, '我比呢隻股信心低 $1 個巴仙，同埋兩粒星');
+    result = result.replace(/信心評分: (\d+)% 一顆星 \(極低\)/g, '我比呢隻股信心極低 $1 個巴仙，同埋一粒星');
+  } else if (langKey === '简体中文') {
+    result = result.replace(/信心评分: (\d+)% 五颗星 \(非常高\)/g, '我对这只股票信心非常高 $1 百分之，五颗星');
+    result = result.replace(/信心评分: (\d+)% 四颗星 \(高\)/g, '我对这只股票信心高 $1 百分之，四颗星');
+    result = result.replace(/信心评分: (\d+)% 三颗星 \(中等\)/g, '我对这只股票信心中等 $1 百分之，三颗星');
+    result = result.replace(/信心评分: (\d+)% 两颗星 \(低\)/g, '我对这只股票信心低 $1 百分之，两颗星');
+    result = result.replace(/信心评分: (\d+)% 一颗星 \(极低\)/g, '我对这只股票信心极低 $1 百分之，一颗星');
+  } else {
+    result = result.replace(/Confidence Score: (\d+)% ⭐⭐⭐⭐⭐ \(Very High\)/g, "I rate this stock 5 stars with $1 percent confidence!");
+    result = result.replace(/Confidence Score: (\d+)% ⭐⭐⭐⭐ \(High\)/g, "I rate this stock 4 stars with $1 percent confidence!");
+    result = result.replace(/Confidence Score: (\d+)% ⭐⭐⭐ \(Medium\)/g, "I rate this stock 3 stars with $1 percent confidence.");
+    result = result.replace(/Confidence Score: (\d+)% ⭐⭐ \(Low\)/g, "I rate this stock 2 stars with $1 percent confidence. Be careful.");
+    result = result.replace(/Confidence Score: (\d+)% ⭐ \(Very Low\)/g, "I rate this stock only 1 star with $1 percent confidence. High risk!");
+  }
+  
+  return result;
+};
 
   useEffect(() => {
     if (analysisText && isSpeaking && !isPaused) {
