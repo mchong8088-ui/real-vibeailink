@@ -114,6 +114,16 @@ export default function VibeAiMaster() {
     
     fetchStockOfTheDay();
   }, []);
+  const [isLanguageSwitching, setIsLanguageSwitching] = useState(false);
+  // Re-fetch analysis when language changes
+useEffect(() => {
+  if (analysisData && analysisData.symbol && !isLoading && mounted) {
+    const currentSymbol = analysisData.symbol;
+    // Prevent re-fetch if the language just changed and we're already loading
+    console.log(`🔄 Language changed to ${language}, re-fetching ${currentSymbol}...`);
+    handleAnalyzeRequest(currentSymbol, [], false);
+  }
+}, [language]); // mounted prevents initial fetch on load
 
   const fetchStockOfTheDay = async () => {
     setLoadingStockOfDay(true);
