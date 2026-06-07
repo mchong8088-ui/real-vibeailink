@@ -95,20 +95,32 @@ const prepareTextForTTS = (text: string): string => {
 };
 
   useEffect(() => {
-    if (analysisText && isSpeaking && !isPaused) {
-      if (utteranceRef.current) window.speechSynthesis.cancel();
-      const textToSpeak = prepareTextForTTS(analysisText);
-      const utterance = new SpeechSynthesisUtterance(textToSpeak);
-      utterance.lang = langKey === 'Cantonese' ? 'zh-HK' : langKey === '简体中文' ? 'zh-CN' : 'en-US';
-      utterance.rate = 0.85;
-      utterance.pitch = 1.0;
-      utterance.onend = () => { utteranceRef.current = null; };
-      utterance.onerror = () => { utteranceRef.current = null; };
-      utteranceRef.current = utterance;
-      window.speechSynthesis.speak(utterance);
+  if (analysisText && isSpeaking && !isPaused) {
+    if (utteranceRef.current) window.speechSynthesis.cancel();
+    const textToSpeak = prepareTextForTTS(analysisText);
+    const utterance = new SpeechSynthesisUtterance(textToSpeak);
+    
+    // Get voice language from localStorage or default to English
+    let voiceLanguage = localStorage.getItem('preferredVoice') || 'English';
+    
+    // Use voiceLanguage for the voice
+    if (voiceLanguage === 'Cantonese') {
+      utterance.lang = 'zh-HK';
+    } else if (voiceLanguage === 'Mandarin') {
+      utterance.lang = 'zh-CN';
+    } else {
+      utterance.lang = 'en-US';
     }
-    return () => { if (utteranceRef.current) window.speechSynthesis.cancel(); };
-  }, [analysisText, isSpeaking, isPaused, langKey]);
+    
+    utterance.rate = 0.85;
+    utterance.pitch = 1.0;
+    utterance.onend = () => { utteranceRef.current = null; };
+    utterance.onerror = () => { utteranceRef.current = null; };
+    utteranceRef.current = utterance;
+    window.speechSynthesis.speak(utterance);
+  }
+  return () => { if (utteranceRef.current) window.speechSynthesis.cancel(); };
+}, [analysisText, isSpeaking, isPaused, langKey]);
 
   const handleMicToggle = () => {
     if (recognition && !isListening) {

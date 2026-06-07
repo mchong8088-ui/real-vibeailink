@@ -2,56 +2,37 @@
 let currentUtterance: SpeechSynthesisUtterance | null = null;
 
 // Get available voices
-function getBestVoice(langKey: string): SpeechSynthesisVoice | null {
+function getBestVoice(voiceLanguage: string): SpeechSynthesisVoice | null {
   const voices = window.speechSynthesis.getVoices();
   
   console.log("🎤 Available voices:", voices.map(v => `${v.name} (${v.lang})`).join(', '));
   
   if (voices.length === 0) return null;
   
-  if (langKey === 'Cantonese') {
-    // ONLY Hong Kong Cantonese - DO NOT fallback to zh-TW or zh-CN
+  if (voiceLanguage === 'Cantonese') {
+    // ONLY Hong Kong Cantonese
     const cantoneseVoice = voices.find(v => v.lang === 'zh-HK');
     if (cantoneseVoice) {
       console.log("🎤 Found Cantonese voice:", cantoneseVoice.name);
       return cantoneseVoice;
     }
-    // If no zh-HK, try any voice that says "Hong Kong" or "Cantonese" in name
-    const altCantonese = voices.find(v => 
-      v.name.toLowerCase().includes('hong kong') || 
-      v.name.toLowerCase().includes('cantonese')
-    );
-    if (altCantonese) {
-      console.log("🎤 Found alternative Cantonese voice:", altCantonese.name);
-      return altCantonese;
-    }
-    // Last resort: use default with zh-HK language code
     console.log("🎤 No Cantonese voice found, using default with zh-HK");
     return null;
   } 
-  else if (langKey === '简体中文') {
-    // ONLY Mainland Mandarin - DO NOT fallback to zh-HK or zh-TW
+  else if (voiceLanguage === 'Mandarin') {
+    // ONLY Mainland Mandarin
     const mandarinVoice = voices.find(v => v.lang === 'zh-CN');
     if (mandarinVoice) {
       console.log("🎤 Found Mandarin voice:", mandarinVoice.name);
       return mandarinVoice;
     }
-    // Try alternative Mandarin voices
-    const altMandarin = voices.find(v => 
-      v.name.toLowerCase().includes('mandarin') ||
-      (v.lang === 'zh' && v.name.toLowerCase().includes('china'))
-    );
-    if (altMandarin) {
-      console.log("🎤 Found alternative Mandarin voice:", altMandarin.name);
-      return altMandarin;
-    }
     console.log("🎤 No Mandarin voice found, using default with zh-CN");
     return null;
   }
   else {
-    // English
+    // English - try natural voices first
     const englishVoice = voices.find(v => 
-      v.lang === 'en-US' && (v.name === 'Samantha' || v.name === 'Alex')
+      v.lang === 'en-US' && (v.name === 'Samantha' || v.name === 'Alex' || v.name === 'Google US English')
     );
     if (englishVoice) {
       console.log("🎤 Found English voice:", englishVoice.name);
@@ -61,8 +42,8 @@ function getBestVoice(langKey: string): SpeechSynthesisVoice | null {
   }
 }
 
-// Prepare text for TTS
-function prepareTextForTTS(text: string, langKey: string): string {
+// Prepare text for TTS - Remove "fullstop" issue
+function prepareTextForTTS(text: string, textLanguage: string): string {
   let result = text;
   
   // Remove all emojis
@@ -94,7 +75,7 @@ function prepareTextForTTS(text: string, langKey: string): string {
   result = result.replace(/：/g, ', ');
   result = result.replace(/\n/g, '. ');
   
-  if (langKey === 'Cantonese') {
+  if (textLanguage === 'Cantonese') {
     result = result.replace(/信心評分: (\d+)% 五顆星 \(非常高\)/g, '信心評分 $1 個巴仙，非常高，五星級');
     result = result.replace(/信心評分: (\d+)% 四顆星 \(高\)/g, '信心評分 $1 個巴仙，高，四星級');
     result = result.replace(/信心評分: (\d+)% 三顆星 \(中等\)/g, '信心評分 $1 個巴仙，中等，三星級');
@@ -108,7 +89,7 @@ function prepareTextForTTS(text: string, langKey: string): string {
     result = result.replace(/-(\d+\.\d+)%/, '負 $1 個巴仙');
     result = result.replace(/ - /g, '至');
     
-  } else if (langKey === '简体中文') {
+  } else if (textLanguage === '简体中文') {
     result = result.replace(/信心评分: (\d+)% 五颗星 \(非常高\)/g, '信心评分 $1 百分之，非常高，五星级');
     result = result.replace(/信心评分: (\d+)% 四颗星 \(高\)/g, '信心评分 $1 百分之，高，四星级');
     result = result.replace(/信心评分: (\d+)% 三颗星 \(中等\)/g, '信心评分 $1 百分之，中等，三星级');
@@ -155,7 +136,7 @@ export function initSpeechSynthesis() {
   }
 }
 
-export async function speakText(text: string, langKey: string, onEnd?: () => void) {
+export async function speakText(text: string, textLanguage: string, voiceLanguage: string, onEnd?: () => void) {
   if (typeof window === 'undefined' || !window.speechSynthesis) {
     console.log('Speech synthesis not supported');
     return;
@@ -171,23 +152,22 @@ export async function speakText(text: string, langKey: string, onEnd?: () => voi
     });
   }
   
-  const processedText = prepareTextForTTS(text, langKey);
+  const processedText = prepareTextForTTS(text, textLanguage);
   const utterance = new SpeechSynthesisUtterance(processedText);
   
-  // Set language - this is the most important part
-  if (langKey === 'Cantonese') {
+  // IMPORTANT: Use voiceLanguage for the voice (not textLanguage)
+  if (voiceLanguage === 'Cantonese') {
     utterance.lang = 'zh-HK';
-  } else if (langKey === '简体中文') {
+  } else if (voiceLanguage === 'Mandarin') {
     utterance.lang = 'zh-CN';
   } else {
     utterance.lang = 'en-US';
   }
   
-  // Try to get a better voice, but don't override the language
-  const bestVoice = getBestVoice(langKey);
+  const bestVoice = getBestVoice(voiceLanguage);
   if (bestVoice) {
     utterance.voice = bestVoice;
-    console.log(`🎤 Using voice: ${bestVoice.name} (${bestVoice.lang}) for ${langKey}`);
+    console.log(`🎤 Using voice: ${bestVoice.name} (${bestVoice.lang}) for voice language: ${voiceLanguage}`);
   } else {
     console.log(`🎤 Using default voice for ${utterance.lang}`);
   }

@@ -39,22 +39,21 @@ const MobileAnalysis: React.FC<MobileAnalysisProps> = ({
   const [recognition, setRecognition] = useState<any>(null);
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const [useAIEnhancement, setUseAIEnhancement] = useState(false);
-  const [showSpeakerMenu, setShowSpeakerMenu] = useState(false);
-  const [useBluetooth, setUseBluetooth] = useState(false);
   const utteranceRef = useRef<SpeechSynthesisUtterance | null>(null);
   const [isLanguageSwitching, setIsLanguageSwitching] = useState(false);
+  const [voiceLanguage, setVoiceLanguage] = useState<string>('English');
+
+  // Load voice preference from localStorage
+  useEffect(() => {
+    const savedVoice = localStorage.getItem('preferredVoice');
+    if (savedVoice === 'Cantonese' || savedVoice === 'Mandarin' || savedVoice === 'English') {
+      setVoiceLanguage(savedVoice);
+    }
+  }, []);
 
   const t = {
     analyzingMarket: langKey === 'Cantonese' ? '分析市場中...' : langKey === '简体中文' ? '分析市场中...' : 'Analyzing Market...',
   };
-
-  // Load Bluetooth preference from localStorage
-  useEffect(() => {
-    const savedPref = localStorage.getItem('useBluetooth');
-    if (savedPref === 'true') {
-      setUseBluetooth(true);
-    }
-  }, []);
 
   // Initialize speech synthesis on mount
   useEffect(() => {
@@ -75,7 +74,7 @@ const MobileAnalysis: React.FC<MobileAnalysisProps> = ({
         if (utteranceRef.current) {
           window.speechSynthesis.cancel();
         }
-        speakText(analysisData.summary, langKey, () => {
+        speakText(analysisData.summary, langKey, voiceLanguage, () => {
           utteranceRef.current = null;
         });
       }, 100);
@@ -85,7 +84,7 @@ const MobileAnalysis: React.FC<MobileAnalysisProps> = ({
         window.speechSynthesis.cancel();
       }
     };
-  }, [analysisData, isSpeakerActive, isPaused, langKey]);
+  }, [analysisData, isSpeakerActive, isPaused, langKey, voiceLanguage]);
 
   // Re-fetch analysis when language changes
   useEffect(() => {
@@ -227,28 +226,23 @@ const MobileAnalysis: React.FC<MobileAnalysisProps> = ({
     }
   };
 
-  const handleSpeakerClick = () => setShowSpeakerMenu(!showSpeakerMenu);
-
-  const handleBluetoothToggle = () => {
-    const newValue = !useBluetooth;
-    setUseBluetooth(newValue);
-    localStorage.setItem('useBluetooth', String(newValue));
-    setShowSpeakerMenu(false);
-  };
-
-  const handleStartSpeaking = () => {
-    if (!analysisData?.summary) return;
+  const handleSpeakerToggle = () => {
     if (isSpeakerActive) {
-      stopSpeaking();
+      window.speechSynthesis.cancel();
       setIsSpeakerActive(false);
+      setIsPaused(false);
     } else {
       setIsSpeakerActive(true);
       setIsPaused(false);
-      speakText(analysisData.summary, langKey, () => {
-        utteranceRef.current = null;
-      });
+      if (analysisData?.summary) {
+        if (utteranceRef.current) {
+          window.speechSynthesis.cancel();
+        }
+        speakText(analysisData.summary, langKey, voiceLanguage, () => {
+          utteranceRef.current = null;
+        });
+      }
     }
-    setShowSpeakerMenu(false);
   };
 
   const handlePauseToggle = () => {
@@ -258,7 +252,7 @@ const MobileAnalysis: React.FC<MobileAnalysisProps> = ({
       window.speechSynthesis.cancel();
       setIsPaused(true);
     } else if (isPaused && isSpeakerActive) {
-      speakText(analysisData.summary, langKey, () => {
+      speakText(analysisData.summary, langKey, voiceLanguage, () => {
         utteranceRef.current = null;
       });
       setIsPaused(false);
@@ -385,23 +379,10 @@ const MobileAnalysis: React.FC<MobileAnalysisProps> = ({
               '#3B82F6', '#EF4444'
             )}
             
-            <div style={{ position: 'relative', flex: 1 }}>
-              {renderButtonWithCross(isSpeakerActive, handleSpeakerClick, 
-                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2}><path d="M15.536 8.464a5 5 0 010 7.072m2.828-9.9a9 9 0 010 12.728M5.586 15H4a1 1 0 01-1-1v-4a1 1 0 011-1h1.586l4.707-4.707C10.923 3.663 12 4.109 12 5v14c0 .891-1.077 1.337-1.707.707L5.586 15z"/></svg>, 
-                '#EF4444', '#9CA3AF'
-              )}
-              {showSpeakerMenu && (
-                <div style={{ position: 'absolute', bottom: '100%', left: 0, right: 0, marginBottom: '8px', backgroundColor: 'white', border: '1px solid #E5E7EB', borderRadius: '12px', boxShadow: '0 4px 12px rgba(0,0,0,0.15)', zIndex: 30, overflow: 'hidden' }}>
-                  <button onClick={handleStartSpeaking} style={{ width: '100%', padding: '12px', textAlign: 'center', backgroundColor: 'white', border: 'none', borderBottom: '1px solid #E5E7EB', cursor: 'pointer', fontSize: '13px', fontWeight: '500', color: '#1F2937' }}>
-                    {isSpeakerActive ? (langKey === 'Cantonese' ? '停止朗讀' : langKey === '简体中文' ? '停止朗读' : 'Stop Speaking') : (langKey === 'Cantonese' ? '開始朗讀' : langKey === '简体中文' ? '开始朗读' : 'Start Speaking')}
-                  </button>
-                  <button onClick={handleBluetoothToggle} style={{ width: '100%', padding: '12px', textAlign: 'center', backgroundColor: useBluetooth ? '#EFF6FF' : 'white', border: 'none', cursor: 'pointer', fontSize: '13px', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px', color: useBluetooth ? '#2563EB' : '#4B5563' }}>
-                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M12 18v-6m0 0l4-4-4-4m0 4L8 6l4-4" /><path strokeLinecap="round" strokeLinejoin="round" d="M12 12l4 4-4 4m0-8L8 6l4-4" /></svg>
-                    {useBluetooth ? '✓ Bluetooth Mode' : 'Bluetooth Mode'}
-                  </button>
-                </div>
-              )}
-            </div>
+            {renderButtonWithCross(isSpeakerActive, handleSpeakerToggle, 
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2}><path d="M15.536 8.464a5 5 0 010 7.072m2.828-9.9a9 9 0 010 12.728M5.586 15H4a1 1 0 01-1-1v-4a1 1 0 011-1h1.586l4.707-4.707C10.923 3.663 12 4.109 12 5v14c0 .891-1.077 1.337-1.707.707L5.586 15z"/></svg>, 
+              '#EF4444', '#9CA3AF'
+            )}
             
             {renderButtonWithCross(isPaused, handlePauseToggle, 
               <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2}><path d="M10 9v6m4-6v6m7-3a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>, 
