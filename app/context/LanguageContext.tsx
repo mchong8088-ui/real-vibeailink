@@ -1,7 +1,7 @@
 "use client";
 import React, { createContext, useContext, useState, useEffect } from 'react';
 
-type Language = 'English' | 'Traditional Chinese' | '简体中文';
+type Language = 'English' | 'Traditional Chinese' | 'Simplified Chinese';
 
 interface LanguageContextType {
   language: Language;
@@ -22,8 +22,13 @@ export function LanguageProvider({ children }: { children: React.ReactNode }) {
   useEffect(() => {
     setMounted(true);
     const savedLang = localStorage.getItem('language') as Language;
-    if (savedLang === 'English' || savedLang === 'Cantonese' || savedLang === '简体中文') {
+    // Update to use 'Traditional Chinese' instead of 'Cantonese'
+    if (savedLang === 'English' || savedLang === 'Traditional Chinese' || savedLang === 'Simplified Chinese') {
       setLanguage(savedLang);
+    } else if (savedLang === 'Cantonese') {
+      // Migrate old 'Cantonese' to 'Traditional Chinese'
+      setLanguage('Traditional Chinese');
+      localStorage.setItem('language', 'Traditional Chinese');
     }
   }, []);
 
@@ -38,12 +43,12 @@ export function LanguageProvider({ children }: { children: React.ReactNode }) {
       loading: 'Loading...',
       analyzingMarket: 'Analyzing Market...',
     },
-    Cantonese: {
+    'Traditional Chinese': {
       analyzing: '分析中...',
       loading: '載入中...',
       analyzingMarket: '分析市場中...',
     },
-    '简体中文': {
+    'Simplified Chinese': {
       analyzing: '分析中...',
       loading: '加载中...',
       analyzingMarket: '分析市场中...',
