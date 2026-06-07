@@ -39,7 +39,7 @@ function getBestVoice(voiceLanguage: string): SpeechSynthesisVoice | null {
   }
 }
 
-// Prepare text for TTS - Remove "句號" issue
+// Prepare text for TTS - Remove "句號" issue and fix dash handling
 function prepareTextForTTS(text: string, textLanguage: string): string {
   let result = text;
   
@@ -65,14 +65,24 @@ function prepareTextForTTS(text: string, textLanguage: string): string {
   result = result.replace(/\*/g, '');
   result = result.replace(/•/g, '');
   
-  // Replace line breaks with spaces (not periods) - this fixes the "句號" issue
+  // Replace line breaks with spaces
   result = result.replace(/\n/g, ' ');
   
-  // Replace colons with natural pauses (not saying "colon")
+  // Replace colons with natural pauses
   result = result.replace(/:/g, ' ');
   result = result.replace(/：/g, ' ');
   
   if (textLanguage === 'Traditional Chinese') {
+    // Handle dash differently based on context
+    // For day range (e.g., HK$452.20 - HK$466.20) - keep as "至"
+    // But for technical analysis (e.g., 48.9 - 中性區間) - remove the dash
+    // Pattern: number space dash space Chinese text - remove dash
+    result = result.replace(/(\d+\.?\d*)\s+-\s+([\u4e00-\u9fa5])/g, '$1 $2');
+    // Pattern: number dash number (for ranges) - keep as "至"
+    result = result.replace(/(\d+\.?\d*)\s*-\s*(\d+\.?\d*)/g, '$1至$2');
+    // Any remaining dashes with spaces become space
+    result = result.replace(/\s*-\s*/g, ' ');
+    
     // Replace stars with text
     result = result.replace(/信心評分: (\d+)% 五顆星 \(非常高\)/g, '信心評分 $1 個巴仙，非常高，五星級');
     result = result.replace(/信心評分: (\d+)% 四顆星 \(高\)/g, '信心評分 $1 個巴仙，高，四星級');
@@ -85,11 +95,15 @@ function prepareTextForTTS(text: string, textLanguage: string): string {
     result = result.replace(/\$/g, '美元');
     result = result.replace(/(\d+)%/, '$1 個巴仙');
     result = result.replace(/-(\d+\.\d+)%/, '負 $1 個巴仙');
-    result = result.replace(/ - /g, '至');
     result = result.replace(/\. /g, ' ');
     result = result.replace(/\.$/g, '');
     
   } else if (textLanguage === 'Simplified Chinese') {
+    // Handle dash similarly for Simplified Chinese
+    result = result.replace(/(\d+\.?\d*)\s+-\s+([\u4e00-\u9fa5])/g, '$1 $2');
+    result = result.replace(/(\d+\.?\d*)\s*-\s*(\d+\.?\d*)/g, '$1至$2');
+    result = result.replace(/\s*-\s*/g, ' ');
+    
     result = result.replace(/信心评分: (\d+)% 五颗星 \(非常高\)/g, '信心评分 $1 百分之，非常高，五星级');
     result = result.replace(/信心评分: (\d+)% 四颗星 \(高\)/g, '信心评分 $1 百分之，高，四星级');
     result = result.replace(/信心评分: (\d+)% 三颗星 \(中等\)/g, '信心评分 $1 百分之，中等，三星级');
@@ -101,12 +115,15 @@ function prepareTextForTTS(text: string, textLanguage: string): string {
     result = result.replace(/\$/g, '美元');
     result = result.replace(/(\d+)%/, '$1 百分之');
     result = result.replace(/-(\d+\.\d+)%/, '负 $1 百分之');
-    result = result.replace(/ - /g, '至');
     result = result.replace(/\. /g, ' ');
     result = result.replace(/\.$/g, '');
     
   } else {
     // English
+    result = result.replace(/(\d+\.?\d*)\s+-\s+([A-Za-z])/g, '$1 $2');
+    result = result.replace(/(\d+\.?\d*)\s*-\s*(\d+\.?\d*)/g, '$1 to $2');
+    result = result.replace(/\s*-\s*/g, ' ');
+    
     result = result.replace(/Confidence Score: (\d+)% ⭐⭐⭐⭐⭐ \(Very High\)/g, 'Confidence score $1 percent, very high, five stars');
     result = result.replace(/Confidence Score: (\d+)% ⭐⭐⭐⭐ \(High\)/g, 'Confidence score $1 percent, high, four stars');
     result = result.replace(/Confidence Score: (\d+)% ⭐⭐⭐ \(Medium\)/g, 'Confidence score $1 percent, medium, three stars');
@@ -118,7 +135,6 @@ function prepareTextForTTS(text: string, textLanguage: string): string {
     result = result.replace(/\$/g, 'US dollars');
     result = result.replace(/(\d+)%/, '$1 percent');
     result = result.replace(/-(\d+\.\d+)%/, 'minus $1 percent');
-    result = result.replace(/ - /g, ' to ');
     result = result.replace(/\. /g, ' ');
     result = result.replace(/\.$/g, '');
   }
