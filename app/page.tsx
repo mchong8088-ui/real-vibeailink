@@ -6,11 +6,13 @@ import { StockAnalysisModule } from './components/features/stock-analysis/StockA
 import { PortfolioModule } from './components/features/portfolio/PortfolioModule';
 import { AuthModal } from './components/modals/AuthModal';
 import { LanguageToggle } from './components/layout/LanguageToggle'; 
+import { VoiceSelector } from './components/layout/VoiceSelector';
 import { AboutSection } from './components/sections/AboutSection';
 import { FeaturesSection } from './components/sections/FeaturesSection';
 import { PricingModal } from './components/features/pricing/PricingModal';
 import MobileLanding from './components/mobile/MobileLanding';
 import MobileAnalysis from './components/mobile/MobileAnalysis';
+import UserMenu from './components/auth/UserMenu';
 import { supabase } from './lib/supabase';
 import { useLanguage } from './context/LanguageContext';
 
@@ -53,6 +55,7 @@ export default function VibeAiMaster() {
   const [mounted, setMounted] = useState(false);
   const [systemState, setSystemState] = useState({ os: "Detecting...", isMobile: false });
   const [user, setUser] = useState<any>(null);
+  const [profile, setProfile] = useState<any>(null);
 
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const [currentView, setCurrentView] = useState<"analysis" | "portfolio" | "about" | "features" | "pricing">("analysis");
@@ -77,22 +80,74 @@ export default function VibeAiMaster() {
   const [autoPostLoading, setAutoPostLoading] = useState(false);
   const [showAdminPanel, setShowAdminPanel] = useState(false);
 
+  // Voice language state
+  const [voiceLanguage, setVoiceLanguage] = useState<string>('English');
+
   const systemInfo = { system: `VibeAI-${systemState.os}`, voiceEngine: "Local Synthesis" };
 
   // Admin check using environment variable
   const adminEmails = (process.env.NEXT_PUBLIC_ADMIN_EMAILS || '').split(',').map(email => email.trim().toLowerCase());
   const isAdmin = user?.email ? adminEmails.includes(user.email.toLowerCase()) : false;
 
+  // Load voice preference
+  useEffect(() => {
+    const savedVoice = localStorage.getItem('preferredVoice');
+    if (savedVoice === 'Cantonese' || savedVoice === 'Mandarin' || savedVoice === 'English') {
+      setVoiceLanguage(savedVoice);
+    }
+  }, []);
+
+  // Fetch user profile
+  const fetchUserProfile = async (userId: string, email: string) => {
+    try {
+      const { data, error } = await supabase
+        .from('profiles')
+        .select('*')
+        .eq('id', userId)
+        .single();
+      
+      if (data && !error) {
+        setProfile(data);
+      } else {
+        const { data: newProfile, error: insertError } = await supabase
+          .from('profiles')
+          .insert({
+            id: userId,
+            email: email,
+            credits: 100,
+            subscription_plan: 'Free Explorer'
+          })
+          .select()
+          .single();
+        
+        if (newProfile && !insertError) {
+          setProfile(newProfile);
+        }
+      }
+    } catch (err) {
+      console.error('Error fetching profile:', err);
+    }
+  };
+
   // Auth effect
   useEffect(() => {
     supabase.auth.getSession().then(({ data: { session } }) => {
       console.log("Initial session:", session?.user?.email);
       setUser(session?.user || null);
+      if (session?.user) {
+        fetchUserProfile(session.user.id, session.user.email);
+      }
     });
     
     const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
       console.log("Auth event:", event, session?.user?.email);
       setUser(session?.user || null);
+      if (event === 'SIGNED_IN' && session?.user) {
+        fetchUserProfile(session.user.id, session.user.email);
+      }
+      if (event === 'SIGNED_OUT') {
+        setProfile(null);
+      }
     });
     
     return () => subscription.unsubscribe();
@@ -114,16 +169,15 @@ export default function VibeAiMaster() {
     
     fetchStockOfTheDay();
   }, []);
-  const [isLanguageSwitching, setIsLanguageSwitching] = useState(false);
+  
   // Re-fetch analysis when language changes
-useEffect(() => {
-  if (analysisData && analysisData.symbol && !isLoading && mounted) {
-    const currentSymbol = analysisData.symbol;
-    // Prevent re-fetch if the language just changed and we're already loading
-    console.log(`🔄 Language changed to ${language}, re-fetching ${currentSymbol}...`);
-    handleAnalyzeRequest(currentSymbol, [], false);
-  }
-}, [language]); // mounted prevents initial fetch on load
+  useEffect(() => {
+    if (analysisData && analysisData.symbol && !isLoading && mounted) {
+      const currentSymbol = analysisData.symbol;
+      console.log(`🔄 Language changed to ${language}, re-fetching ${currentSymbol}...`);
+      handleAnalyzeRequest(currentSymbol, [], false);
+    }
+  }, [language]);
 
   const fetchStockOfTheDay = async () => {
     setLoadingStockOfDay(true);
@@ -171,6 +225,8 @@ useEffect(() => {
   const handleLogout = async () => {
     await supabase.auth.signOut();
     setUser(null);
+    setProfile(null);
+    setShowUserMenu(false);
     window.location.href = '/';
   };
 
@@ -263,6 +319,7 @@ useEffect(() => {
   };
 
   const getUserDisplayName = () => {
+    if (profile?.display_name) return profile.display_name;
     if (user?.email) return user.email.split('@')[0].substring(0, 10);
     return 'User';
   };
@@ -339,6 +396,11 @@ useEffect(() => {
 
   const text = getTranslatedText();
 
+  // Debug log
+  console.log("🔍 Current user state:", user?.email);
+  console.log("🔍 Show user menu:", showUserMenu);
+  console.log("🔍 Voice language:", voiceLanguage);
+
   // Loading state
   if (!isHydrated || !mounted) {
     return (
@@ -411,12 +473,19 @@ useEffect(() => {
               </button>
             ))}
           </div>
-          <div style={{ display: 'flex', gap: '20px', alignItems: 'center' }}>
+          <div style={{ display: 'flex', gap: '12px', alignItems: 'center' }}>
+            <VoiceSelector 
+              currentVoice={voiceLanguage}
+              onVoiceChange={setVoiceLanguage}
+            />
             <LanguageToggle currentLang={language} onLangChange={setLanguage as any} />
             {user ? (
               <div style={{ position: 'relative' }}>
                 <button 
-                  onClick={() => setShowUserMenu(!showUserMenu)} 
+                  onClick={() => {
+                    console.log("🖱️ User button clicked, toggling menu");
+                    setShowUserMenu(!showUserMenu);
+                  }} 
                   style={{ display: 'flex', alignItems: 'center', gap: '8px', padding: '4px 12px', borderRadius: '20px', backgroundColor: '#F3F4F6', border: 'none', cursor: 'pointer' }}
                 >
                   <div style={{ width: '32px', height: '32px', borderRadius: '50%', backgroundColor: '#3B82F6', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'white', fontWeight: 'bold', fontSize: '14px' }}>
@@ -425,11 +494,18 @@ useEffect(() => {
                   <span style={{ fontSize: '14px' }}>{getUserDisplayName()}</span>
                 </button>
                 {showUserMenu && (
-                  <div style={{ position: 'absolute', top: '100%', right: 0, marginTop: '8px', backgroundColor: 'white', borderRadius: '8px', boxShadow: '0 4px 12px rgba(0,0,0,0.15)', zIndex: 100 }}>
-                    <button onClick={handleLogout} style={{ padding: '8px 16px', width: '100%', textAlign: 'left', background: 'none', border: 'none', cursor: 'pointer' }}>Logout</button>
-                    {isAdmin && (
-                      <button onClick={() => setShowAdminPanel(!showAdminPanel)} style={{ padding: '8px 16px', width: '100%', textAlign: 'left', background: 'none', border: 'none', borderTop: '1px solid #E5E7EB', cursor: 'pointer', color: '#D97706' }}>{text.adminPanel}</button>
-                    )}
+                  <div style={{ position: 'absolute', top: '100%', right: 0, marginTop: '8px', zIndex: 100 }}>
+                    <UserMenu 
+                      user={user}
+                      profile={profile}
+                      onLogout={handleLogout}
+                      onOpenPricingPage={() => {
+                        setShowUserMenu(false);
+                        setCurrentView('pricing');
+                      }}
+                      onSelectPlan={handleSelectPlan}
+                      onClose={() => setShowUserMenu(false)}
+                    />
                   </div>
                 )}
               </div>
@@ -454,38 +530,45 @@ useEffect(() => {
           <div style={{ width: '72%', backgroundColor: '#E0F2FE', display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
             <div id="analysis-content" style={{ flex: 1, overflowY: 'auto', padding: '20px' }}>
               {currentView === "analysis" && (
-  <>
-    {stockOfTheDay && !analysisData && (
-      <div style={{ backgroundColor: '#FEF3C7', border: '1px solid #FDE68A', borderRadius: '12px', padding: '12px 16px', marginBottom: '16px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '12px' }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-          <span style={{ fontSize: '24px' }}>⭐</span>
-          <div>
-            <div style={{ fontSize: '11px', fontWeight: 'bold', color: '#92400E' }}>{text.stockOfDay}</div>
-            <div style={{ fontSize: '16px', fontWeight: 'bold', color: '#D97706' }}>{stockOfTheDay.symbol} - {stockOfTheDay.name}</div>
-            {stockOfTheDay.price && <div style={{ fontSize: '12px', color: '#B45309' }}>Price: {stockOfTheDay.price}</div>}
-          </div>
-        </div>
-        <button onClick={analyzeStockOfTheDay} style={{ backgroundColor: '#D97706', color: 'white', border: 'none', borderRadius: '8px', padding: '8px 16px', fontSize: '13px', fontWeight: 'bold', cursor: 'pointer' }}>{text.analyze}</button>
-      </div>
-    )}
-    <StockAnalysisModule 
-      t={t} 
-      data={analysisData} 
-      isLoading={isLoading} 
-      langKey={language} 
-      onAnalyze={(symbol) => handleAnalyzeRequest(symbol, [], false)} 
-    />
-  </>
-)}
+                <>
+                  {stockOfTheDay && !analysisData && (
+                    <div style={{ backgroundColor: '#FEF3C7', border: '1px solid #FDE68A', borderRadius: '12px', padding: '12px 16px', marginBottom: '16px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '12px' }}>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+                        <span style={{ fontSize: '24px' }}>⭐</span>
+                        <div>
+                          <div style={{ fontSize: '11px', fontWeight: 'bold', color: '#92400E' }}>{text.stockOfDay}</div>
+                          <div style={{ fontSize: '16px', fontWeight: 'bold', color: '#D97706' }}>{stockOfTheDay.symbol} - {stockOfTheDay.name}</div>
+                          {stockOfTheDay.price && <div style={{ fontSize: '12px', color: '#B45309' }}>Price: {stockOfTheDay.price}</div>}
+                        </div>
+                      </div>
+                      <button onClick={analyzeStockOfTheDay} style={{ backgroundColor: '#D97706', color: 'white', border: 'none', borderRadius: '8px', padding: '8px 16px', fontSize: '13px', fontWeight: 'bold', cursor: 'pointer' }}>{text.analyze}</button>
+                    </div>
+                  )}
+                  <StockAnalysisModule 
+                    t={t} 
+                    data={analysisData} 
+                    isLoading={isLoading} 
+                    langKey={language} 
+                    onAnalyze={(symbol) => handleAnalyzeRequest(symbol, [], false)} 
+                  />
+                </>
+              )}
               {currentView === "portfolio" && <PortfolioModule langKey={language} onAnalyzeStock={(symbol) => handleAnalyzeRequest(symbol, [], false)} />}
-              {currentView === "pricing" && <PricingModal isOpen={true} onClose={() => setCurrentView("analysis")} user={user} profile={null} onSelectPlan={handleSelectPlan} showRetentionOnly={false} />}
+              {currentView === "pricing" && <PricingModal isOpen={true} onClose={() => setCurrentView("analysis")} user={user} profile={profile} onSelectPlan={handleSelectPlan} showRetentionOnly={false} />}
               {currentView === "about" && <AboutSection lang={language} />}
               {currentView === "features" && <FeaturesSection lang={language} />}
             </div>
 
             <div style={{ backgroundColor: 'white', padding: '12px 20px', borderTop: '1px solid #E5E7EB', flexShrink: 0 }}>
               <p style={{ fontSize: '12px', color: '#6B7280', textAlign: 'center', marginBottom: '8px' }}>{text.inputLabel}</p>
-              <SmartInputSystem langKey={language} onAnalyze={handleAnalyzeRequest} onPlusClick={() => setIsMenuOpen(true)} systemInfo={systemInfo} analysisText={analysisData?.summary} />
+              <SmartInputSystem 
+                langKey={language} 
+                onAnalyze={handleAnalyzeRequest} 
+                onPlusClick={() => setIsMenuOpen(true)} 
+                systemInfo={systemInfo} 
+                analysisText={analysisData?.summary}
+                voiceLanguage={voiceLanguage}
+              />
             </div>
 
             <div style={{ backgroundColor: 'white', padding: '8px 20px', borderTop: '1px solid #E5E7EB', display: 'flex', justifyContent: 'center', gap: '24px', flexWrap: 'wrap', flexShrink: 0 }}>

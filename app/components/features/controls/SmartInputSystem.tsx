@@ -1,5 +1,4 @@
 "use client";
-import { ZoomIn } from 'lucide-react';
 import React, { useState, useRef, useEffect } from 'react';
 
 interface SmartInputSystemProps {
@@ -8,7 +7,7 @@ interface SmartInputSystemProps {
   onPlusClick: () => void;
   systemInfo: any;
   analysisText?: string;
-  voiceLanguage?: string;  // Add this
+  voiceLanguage?: string;  // Add this prop
 }
 
 export const SmartInputSystem: React.FC<SmartInputSystemProps> = ({
@@ -17,6 +16,7 @@ export const SmartInputSystem: React.FC<SmartInputSystemProps> = ({
   onPlusClick,
   systemInfo,
   analysisText,
+  voiceLanguage = 'English',  // Default to English
 }) => {
   const [inputValue, setInputValue] = useState('');
   const [isLoading, setIsLoading] = useState(false);
@@ -34,14 +34,12 @@ export const SmartInputSystem: React.FC<SmartInputSystemProps> = ({
       const { sourceType, sourceData } = event.detail;
       console.log(`📎 Source selected: ${sourceType}`, sourceData);
       
-      // Store attachment for analysis
       setAttachments(prev => [...prev, {
         type: sourceType,
         data: sourceData,
         timestamp: Date.now()
       }]);
       
-      // Show feedback to user
       if (sourceType === 'url') {
         const msg = langKey === 'Cantonese' ? `已添加連結: ${sourceData.substring(0, 50)}...` :
                     langKey === '简体中文' ? `已添加链接: ${sourceData.substring(0, 50)}...` :
@@ -61,66 +59,66 @@ export const SmartInputSystem: React.FC<SmartInputSystemProps> = ({
     };
   }, [langKey]);
 
-  // Convert text for better TTS pronunciation
-  // In SmartInputSystem.tsx, update the speech part
-const prepareTextForTTS = (text: string): string => {
-  let result = text;
-  
-  // Remove all emojis
-  result = result.replace(/[\u{1F600}-\u{1F6FF}]/gu, '');
-  result = result.replace(/[\u{1F300}-\u{1F5FF}]/gu, '');
-  result = result.replace(/[⭐]/g, '');
-  result = result.replace(/📈/g, '');
-  result = result.replace(/📉/g, '');
-  
-  if (langKey === 'Cantonese') {
-    result = result.replace(/信心評分: (\d+)% 五顆星 \(非常高\)/g, '我比呢隻股信心非常高 $1 個巴仙，同埋五粒星');
-    result = result.replace(/信心評分: (\d+)% 四顆星 \(高\)/g, '我比呢隻股信心高 $1 個巴仙，同埋四粒星');
-    result = result.replace(/信心評分: (\d+)% 三顆星 \(中等\)/g, '我比呢隻股信心中等 $1 個巴仙，同埋三粒星');
-    result = result.replace(/信心評分: (\d+)% 兩顆星 \(低\)/g, '我比呢隻股信心低 $1 個巴仙，同埋兩粒星');
-    result = result.replace(/信心評分: (\d+)% 一顆星 \(極低\)/g, '我比呢隻股信心極低 $1 個巴仙，同埋一粒星');
-  } else if (langKey === '简体中文') {
-    result = result.replace(/信心评分: (\d+)% 五颗星 \(非常高\)/g, '我对这只股票信心非常高 $1 百分之，五颗星');
-    result = result.replace(/信心评分: (\d+)% 四颗星 \(高\)/g, '我对这只股票信心高 $1 百分之，四颗星');
-    result = result.replace(/信心评分: (\d+)% 三颗星 \(中等\)/g, '我对这只股票信心中等 $1 百分之，三颗星');
-    result = result.replace(/信心评分: (\d+)% 两颗星 \(低\)/g, '我对这只股票信心低 $1 百分之，两颗星');
-    result = result.replace(/信心评分: (\d+)% 一颗星 \(极低\)/g, '我对这只股票信心极低 $1 百分之，一颗星');
-  } else {
-    result = result.replace(/Confidence Score: (\d+)% ⭐⭐⭐⭐⭐ \(Very High\)/g, "I rate this stock 5 stars with $1 percent confidence!");
-    result = result.replace(/Confidence Score: (\d+)% ⭐⭐⭐⭐ \(High\)/g, "I rate this stock 4 stars with $1 percent confidence!");
-    result = result.replace(/Confidence Score: (\d+)% ⭐⭐⭐ \(Medium\)/g, "I rate this stock 3 stars with $1 percent confidence.");
-    result = result.replace(/Confidence Score: (\d+)% ⭐⭐ \(Low\)/g, "I rate this stock 2 stars with $1 percent confidence. Be careful.");
-    result = result.replace(/Confidence Score: (\d+)% ⭐ \(Very Low\)/g, "I rate this stock only 1 star with $1 percent confidence. High risk!");
-  }
-  
-  return result;
-};
-useEffect(() => {
-  if (analysisText && isSpeaking && !isPaused) {
-    if (utteranceRef.current) window.speechSynthesis.cancel();
-    const textToSpeak = prepareTextForTTS(analysisText);
-    const utterance = new SpeechSynthesisUtterance(textToSpeak);
+  // Prepare text for TTS
+  const prepareTextForTTS = (text: string): string => {
+    let result = text;
     
-    // Use voiceLanguage for the voice
-    const voiceLang = voiceLanguage || localStorage.getItem('preferredVoice') || 'English';
+    result = result.replace(/[\u{1F600}-\u{1F6FF}]/gu, '');
+    result = result.replace(/[\u{1F300}-\u{1F5FF}]/gu, '');
+    result = result.replace(/[⭐]/g, '');
+    result = result.replace(/📈/g, '');
+    result = result.replace(/📉/g, '');
     
-    if (voiceLang === 'Cantonese') {
-      utterance.lang = 'zh-HK';
-    } else if (voiceLang === 'Mandarin') {
-      utterance.lang = 'zh-CN';
+    if (langKey === 'Cantonese') {
+      result = result.replace(/信心評分: (\d+)% 五顆星 \(非常高\)/g, '我比呢隻股信心非常高 $1 個巴仙，同埋五粒星');
+      result = result.replace(/信心評分: (\d+)% 四顆星 \(高\)/g, '我比呢隻股信心高 $1 個巴仙，同埋四粒星');
+      result = result.replace(/信心評分: (\d+)% 三顆星 \(中等\)/g, '我比呢隻股信心中等 $1 個巴仙，同埋三粒星');
+      result = result.replace(/信心評分: (\d+)% 兩顆星 \(低\)/g, '我比呢隻股信心低 $1 個巴仙，同埋兩粒星');
+      result = result.replace(/信心評分: (\d+)% 一顆星 \(極低\)/g, '我比呢隻股信心極低 $1 個巴仙，同埋一粒星');
+    } else if (langKey === '简体中文') {
+      result = result.replace(/信心评分: (\d+)% 五颗星 \(非常高\)/g, '我对这只股票信心非常高 $1 百分之，五颗星');
+      result = result.replace(/信心评分: (\d+)% 四颗星 \(高\)/g, '我对这只股票信心高 $1 百分之，四颗星');
+      result = result.replace(/信心评分: (\d+)% 三颗星 \(中等\)/g, '我对这只股票信心中等 $1 百分之，三颗星');
+      result = result.replace(/信心评分: (\d+)% 两颗星 \(低\)/g, '我对这只股票信心低 $1 百分之，两颗星');
+      result = result.replace(/信心评分: (\d+)% 一颗星 \(极低\)/g, '我对这只股票信心极低 $1 百分之，一颗星');
     } else {
-      utterance.lang = 'en-US';
+      result = result.replace(/Confidence Score: (\d+)% ⭐⭐⭐⭐⭐ \(Very High\)/g, "I rate this stock 5 stars with $1 percent confidence!");
+      result = result.replace(/Confidence Score: (\d+)% ⭐⭐⭐⭐ \(High\)/g, "I rate this stock 4 stars with $1 percent confidence!");
+      result = result.replace(/Confidence Score: (\d+)% ⭐⭐⭐ \(Medium\)/g, "I rate this stock 3 stars with $1 percent confidence.");
+      result = result.replace(/Confidence Score: (\d+)% ⭐⭐ \(Low\)/g, "I rate this stock 2 stars with $1 percent confidence. Be careful.");
+      result = result.replace(/Confidence Score: (\d+)% ⭐ \(Very Low\)/g, "I rate this stock only 1 star with $1 percent confidence. High risk!");
     }
     
-    utterance.rate = 0.85;
-    utterance.pitch = 1.0;
-    utterance.onend = () => { utteranceRef.current = null; };
-    utterance.onerror = () => { utteranceRef.current = null; };
-    utteranceRef.current = utterance;
-    window.speechSynthesis.speak(utterance);
-  }
-  return () => { if (utteranceRef.current) window.speechSynthesis.cancel(); };
-}, [analysisText, isSpeaking, isPaused, voiceLanguage]);
+    return result;
+  };
+
+  // Auto-speak when analysis data arrives
+  useEffect(() => {
+    if (analysisText && isSpeaking && !isPaused) {
+      if (utteranceRef.current) window.speechSynthesis.cancel();
+      const textToSpeak = prepareTextForTTS(analysisText);
+      const utterance = new SpeechSynthesisUtterance(textToSpeak);
+      
+      // Use voiceLanguage for the voice
+      const voiceLang = voiceLanguage || localStorage.getItem('preferredVoice') || 'English';
+      
+      if (voiceLang === 'Cantonese') {
+        utterance.lang = 'zh-HK';
+      } else if (voiceLang === 'Mandarin') {
+        utterance.lang = 'zh-CN';
+      } else {
+        utterance.lang = 'en-US';
+      }
+      
+      utterance.rate = 0.85;
+      utterance.pitch = 1.0;
+      utterance.onend = () => { utteranceRef.current = null; };
+      utterance.onerror = () => { utteranceRef.current = null; };
+      utteranceRef.current = utterance;
+      window.speechSynthesis.speak(utterance);
+    }
+    return () => { if (utteranceRef.current) window.speechSynthesis.cancel(); };
+  }, [analysisText, isSpeaking, isPaused, voiceLanguage, langKey]);
 
   const handleMicToggle = () => {
     if (recognition && !isListening) {
@@ -159,27 +157,21 @@ useEffect(() => {
     setIsLoading(true);
     
     try {
-      // Process attachments to extract content
       let userContent = null;
       if (attachments.length > 0) {
-        // For URLs, send the URL directly
         const urlAttachment = attachments.find(a => a.type === 'url');
         if (urlAttachment) {
           userContent = urlAttachment.data;
         } else {
-          // For files/photos, try to extract text content
           const fileAttachment = attachments.find(a => a.type === 'file' || a.type === 'photo');
           if (fileAttachment && fileAttachment.data.content) {
-            // For base64 images, we'd need OCR - for now, send as text
             userContent = `[File uploaded: ${fileAttachment.data.name}]`;
           }
         }
       }
       
-      // Call onAnalyze with ticker, user content, and AI enhancement flag
       await onAnalyze(inputValue.trim(), userContent ? [{ content: userContent, type: attachments[0]?.type }] : [], useAIEnhancement);
       
-      // Clear attachments after submission
       setAttachments([]);
       setInputValue('');
     } finally {
@@ -188,10 +180,10 @@ useEffect(() => {
   };
 
   const getPlaceholder = () => {
-  if (langKey === 'Cantonese') return '輸入股票代號 e.g.: 0700.hk, 2330.tw, TSLA';
-  if (langKey === '简体中文') return '输入股票代码 e.g.: 0700.hk, 2330.tw, TSLA';
-  return 'Enter stock symbol e.g.: 0700.hk, 2330.tw, TSLA';
-};
+    if (langKey === 'Cantonese') return '輸入股票代號 e.g.: 0700.hk, 2330.tw, TSLA';
+    if (langKey === '简体中文') return '输入股票代码 e.g.: 0700.hk, 2330.tw, TSLA';
+    return 'Enter stock symbol e.g.: 0700.hk, 2330.tw, TSLA';
+  };
 
   useEffect(() => {
     if (typeof window !== 'undefined') {
@@ -223,12 +215,11 @@ useEffect(() => {
     );
   };
 
-  // Display attachments count
   const attachmentCount = attachments.length;
 
   return (
     <div style={{ width: '100%' }}>
-      {/* AI Enhancement Toggle - Updated wording */}
+      {/* AI Enhancement Toggle */}
       <div style={{ 
         marginBottom: '8px', 
         padding: '6px 12px', 
