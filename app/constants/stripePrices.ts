@@ -16,6 +16,12 @@ export const STRIPE_PRICE_IDS = {
   
   // Alias for backward compatibility
   TOPUP_100_CREDITS: 'price_1TVLFX2RTqNKntjqdZZOlKBj',
+
+  // Summer promotional prices (NEW)
+  PROMO_PRO_LITE_MONTHLY: 'price_1TfluY2RTqNKntjquZvsb168',
+  PROMO_PRO_LITE_ANNUAL: 'price_1Tflxs2RTqNKntjqVnt9mhdJ',
+  PROMO_INSTITUTIONAL_MONTHLY: 'price_1Tflvk2RTqNKntjqxRdasrgI',
+  PROMO_INSTITUTIONAL_ANNUAL: 'price_1TflzD2RTqNKntjql2QyONmY',
 };
 
 // Also export the alternative naming for compatibility
@@ -23,14 +29,9 @@ export const STRIPE_PRICES = STRIPE_PRICE_IDS;
 
 // Price amounts in USD (cents)
 export const PRICE_AMOUNTS = {
-  PRO_MONTHLY: 2900,
-  PRO_YEARLY: 29000,
-  ENTERPRISE: 9900,
-  COFFEE_MONTHLY: 1000,
-  COFFEE_TOPUP: 500,
-  // Summer promotional prices (new)
-  PROMO_PRO_LITE_MONTHLY: 'price_1TfluY2RTqNKntjquZvsb168',
-  PROMO_PRO_LITE_ANNUAL: 'price_1Tflxs2RTqNKntjqVnt9mhdJ',
-  PROMO_INSTITUTIONAL_MONTHLY: 'price_1Tflvk2RTqNKntjqxRdasrgI',
-  PROMO_INSTITUTIONAL_ANNUAL: 'price_1TflzD2RTqNKntjql2QyONmY',
+  PRO_MONTHLY: 2900,      // $29.00
+  PRO_YEARLY: 29000,      // $290.00
+  ENTERPRISE: 9900,       // $99.00
+  COFFEE_MONTHLY: 1000,   // $10.00
+  COFFEE_TOPUP: 500,      // $5.00
 };
