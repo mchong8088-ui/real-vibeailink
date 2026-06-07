@@ -1,4 +1,5 @@
 "use client";
+import { ZoomIn } from 'lucide-react';
 import React, { useState, useRef, useEffect } from 'react';
 
 interface SmartInputSystemProps {
@@ -7,6 +8,7 @@ interface SmartInputSystemProps {
   onPlusClick: () => void;
   systemInfo: any;
   analysisText?: string;
+  voiceLanguage?: string;  // Add this
 }
 
 export const SmartInputSystem: React.FC<SmartInputSystemProps> = ({
@@ -93,20 +95,18 @@ const prepareTextForTTS = (text: string): string => {
   
   return result;
 };
-
-  useEffect(() => {
+useEffect(() => {
   if (analysisText && isSpeaking && !isPaused) {
     if (utteranceRef.current) window.speechSynthesis.cancel();
     const textToSpeak = prepareTextForTTS(analysisText);
     const utterance = new SpeechSynthesisUtterance(textToSpeak);
     
-    // Get voice language from localStorage or default to English
-    let voiceLanguage = localStorage.getItem('preferredVoice') || 'English';
-    
     // Use voiceLanguage for the voice
-    if (voiceLanguage === 'Cantonese') {
+    const voiceLang = voiceLanguage || localStorage.getItem('preferredVoice') || 'English';
+    
+    if (voiceLang === 'Cantonese') {
       utterance.lang = 'zh-HK';
-    } else if (voiceLanguage === 'Mandarin') {
+    } else if (voiceLang === 'Mandarin') {
       utterance.lang = 'zh-CN';
     } else {
       utterance.lang = 'en-US';
@@ -120,7 +120,7 @@ const prepareTextForTTS = (text: string): string => {
     window.speechSynthesis.speak(utterance);
   }
   return () => { if (utteranceRef.current) window.speechSynthesis.cancel(); };
-}, [analysisText, isSpeaking, isPaused, langKey]);
+}, [analysisText, isSpeaking, isPaused, voiceLanguage]);
 
   const handleMicToggle = () => {
     if (recognition && !isListening) {
