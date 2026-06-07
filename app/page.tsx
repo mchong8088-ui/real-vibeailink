@@ -325,7 +325,7 @@ export default function VibeAiMaster() {
   };
 
   const getTranslatedText = () => {
-    if (language === 'Cantonese') {
+    if (language === 'Traditional Chinese') {
       return {
         financeText: '您的財務及市場分析師',
         inputLabel: '請在下方輸入股票代號',

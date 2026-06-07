@@ -1,7 +1,7 @@
 "use client";
 import React, { createContext, useContext, useState, useEffect } from 'react';
 
-type Language = 'English' | 'Cantonese' | '简体中文';
+type Language = 'English' | 'Traditional Chinese' | '简体中文';
 
 interface LanguageContextType {
   language: Language;

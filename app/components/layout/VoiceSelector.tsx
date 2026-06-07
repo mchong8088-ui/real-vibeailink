@@ -13,18 +13,18 @@ export const VoiceSelector: React.FC<VoiceSelectorProps> = ({ currentVoice, onVo
 
   const getDisplayName = (voice: string) => {
     switch (voice) {
-      case 'English': return '🎤 EN';
-      case 'Cantonese': return '🎤 粵語';
-      case 'Mandarin': return '🎤 普通話';
-      default: return '🎤 Voice';
+      case 'English': return '🔊 EN';
+      case 'Cantonese': return '🔊 粵語';
+      case 'Mandarin': return '🔊 普通話';
+      default: return '🔊 Voice';
     }
   };
 
   const getFullName = (voice: string) => {
     switch (voice) {
       case 'English': return 'English Voice';
-      case 'Cantonese': return '粵語語音';
-      case 'Mandarin': return '普通話語音';
+      case 'Cantonese': return '粵語語音 (Cantonese)';
+      case 'Mandarin': return '普通話語音 (Mandarin)';
       default: return voice;
     }
   };
@@ -76,7 +76,7 @@ export const VoiceSelector: React.FC<VoiceSelectorProps> = ({ currentVoice, onVo
           borderRadius: '8px',
           boxShadow: '0 4px 6px -1px rgba(0,0,0,0.1)',
           zIndex: 50,
-          minWidth: '150px',
+          minWidth: '200px',
           overflow: 'hidden'
         }}>
           {voiceOptions.map((voice) => (

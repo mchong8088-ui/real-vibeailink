@@ -14,8 +14,8 @@ export const LanguageToggle: React.FC<LanguageToggleProps> = ({ currentLang, onL
   const getDisplayName = (lang: string) => {
     switch (lang) {
       case 'English': return 'EN';
-      case 'Cantonese': return '粵語';
-      case '简体中文': return '简体';
+      case 'Traditional Chinese': return '繁體';
+      case 'Simplified Chinese': return '简体';
       default: return lang.substring(0, 2).toUpperCase();
     }
   };
@@ -23,22 +23,22 @@ export const LanguageToggle: React.FC<LanguageToggleProps> = ({ currentLang, onL
   const getFullName = (lang: string) => {
     switch (lang) {
       case 'English': return 'English';
-      case 'Cantonese': return '粵語 (廣東話)';
-      case '简体中文': return '简体中文';
+      case 'Traditional Chinese': return '繁體中文';
+      case 'Simplified Chinese': return '简体中文';
       default: return lang;
     }
   };
 
-  const languages = ['English', 'Cantonese', '简体中文'];
+  const languages = ['English', 'Traditional Chinese', 'Simplified Chinese'];
 
   // Save language preference to localStorage and update document language
   useEffect(() => {
     localStorage.setItem('preferredLanguage', currentLang);
     
-    // Set HTML lang attribute for voice synthesis
-    if (currentLang === 'Cantonese') {
-      document.documentElement.lang = 'zh-HK';
-    } else if (currentLang === '简体中文') {
+    // Set HTML lang attribute
+    if (currentLang === 'Traditional Chinese') {
+      document.documentElement.lang = 'zh-TW';
+    } else if (currentLang === 'Simplified Chinese') {
       document.documentElement.lang = 'zh-CN';
     } else {
       document.documentElement.lang = 'en-US';
@@ -90,7 +90,7 @@ export const LanguageToggle: React.FC<LanguageToggleProps> = ({ currentLang, onL
           borderRadius: '8px',
           boxShadow: '0 4px 6px -1px rgba(0,0,0,0.1)',
           zIndex: 50,
-          minWidth: '140px',
+          minWidth: '160px',
           overflow: 'hidden'
         }}>
           {languages.map((lang) => (
