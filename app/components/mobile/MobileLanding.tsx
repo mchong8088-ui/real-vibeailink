@@ -1,6 +1,7 @@
 "use client";
 import React from 'react';
 import { LanguageToggle } from '../layout/LanguageToggle';
+import { VoiceSelector } from '../layout/VoiceSelector';
 
 interface MobileLandingProps {
   langKey: string;
@@ -18,9 +19,20 @@ const MobileLanding: React.FC<MobileLandingProps> = ({
   onNavigate,
 }) => {
   const [showFooterMenu, setShowFooterMenu] = React.useState(false);
+  const [voiceLanguage, setVoiceLanguage] = React.useState<string>('English');
+
+  // Load voice preference from localStorage
+  React.useEffect(() => {
+    const savedVoice = localStorage.getItem('preferredVoice');
+    if (savedVoice === 'Cantonese' || savedVoice === 'Mandarin' || savedVoice === 'English') {
+      setVoiceLanguage(savedVoice);
+    } else {
+      setVoiceLanguage('English');
+    }
+  }, []);
 
   const getTranslatedText = () => {
-    if (langKey === 'Cantonese') {
+    if (langKey === 'Traditional Chinese') {
       return {
         startAnalysis: '開始分析',
         aboutUs: '關於',
@@ -35,7 +47,7 @@ const MobileLanding: React.FC<MobileLandingProps> = ({
         financeText: '金融與市場分析',
         description: '我哋係 Michael 同 Teresa，金融專員同數據分析助手。'
       };
-    } else if (langKey === '简体中文') {
+    } else if (langKey === 'Simplified Chinese') {
       return {
         startAnalysis: '开始分析',
         aboutUs: '关于',
@@ -102,6 +114,10 @@ const MobileLanding: React.FC<MobileLandingProps> = ({
       }}>
         <h1 style={{ fontSize: '18px', fontWeight: '900', fontStyle: 'italic', color: '#DC2626', margin: 0, flexShrink: 0 }}>vibeAiLink</h1>
         <div style={{ display: 'flex', gap: '12px', alignItems: 'center', flexShrink: 0 }}>
+          <VoiceSelector 
+            currentVoice={voiceLanguage}
+            onVoiceChange={setVoiceLanguage}
+          />
           <LanguageToggle currentLang={langKey} onLangChange={setLangKey} />
           <button
             onClick={onAuthOpen}
@@ -115,7 +131,7 @@ const MobileLanding: React.FC<MobileLandingProps> = ({
               whiteSpace: 'nowrap'
             }}
           >
-            {user ? t.welcome : (langKey === 'Cantonese' ? '登入' : langKey === '简体中文' ? '登录' : 'Login')}
+            {user ? t.welcome : (langKey === 'Traditional Chinese' ? '登入' : langKey === 'Simplified Chinese' ? '登录' : 'Login')}
           </button>
         </div>
       </div>

@@ -1,6 +1,7 @@
 "use client";
 import React, { useState, useEffect, useRef } from 'react';
 import { LanguageToggle } from '../layout/LanguageToggle';
+import { VoiceSelector } from '../layout/VoiceSelector';
 import { SourceMenu } from '../features/controls/SourceMenu';
 import { AboutSection } from '../sections/AboutSection';
 import { FeaturesSection } from '../sections/FeaturesSection';
@@ -48,11 +49,13 @@ const MobileAnalysis: React.FC<MobileAnalysisProps> = ({
     const savedVoice = localStorage.getItem('preferredVoice');
     if (savedVoice === 'Cantonese' || savedVoice === 'Mandarin' || savedVoice === 'English') {
       setVoiceLanguage(savedVoice);
+    } else {
+      setVoiceLanguage('English');
     }
   }, []);
 
   const t = {
-    analyzingMarket: langKey === 'Cantonese' ? '分析市場中...' : langKey === '简体中文' ? '分析市场中...' : 'Analyzing Market...',
+    analyzingMarket: langKey === 'Traditional Chinese' ? '分析市場中...' : langKey === 'Simplified Chinese' ? '分析市场中...' : 'Analyzing Market...',
   };
 
   // Initialize speech synthesis on mount
@@ -103,7 +106,7 @@ const MobileAnalysis: React.FC<MobileAnalysisProps> = ({
         const recognitionInstance = new SpeechRecognition();
         recognitionInstance.continuous = false;
         recognitionInstance.interimResults = false;
-        recognitionInstance.lang = langKey === 'Cantonese' ? 'zh-HK' : langKey === '简体中文' ? 'zh-CN' : 'en-US';
+        recognitionInstance.lang = langKey === 'Traditional Chinese' ? 'zh-TW' : langKey === 'Simplified Chinese' ? 'zh-CN' : 'en-US';
         
         recognitionInstance.onresult = (event: any) => {
           setInputValue(event.results[0][0].transcript);
@@ -281,15 +284,15 @@ const MobileAnalysis: React.FC<MobileAnalysisProps> = ({
     setIsMenuOpen(false);
   };
 
-  const exampleText = langKey === 'Cantonese' ? '輸入股票代號 e.g.: 0700.hk, 2330.tw, TSLA' : langKey === '简体中文' ? '输入股票代码 e.g.: 0700.hk, 2330.tw, TSLA' : 'Enter stock symbol e.g.: 0700.hk, 2330.tw, TSLA';
+  const exampleText = langKey === 'Traditional Chinese' ? '輸入股票代號 e.g.: 0700.hk, 2330.tw, TSLA' : langKey === 'Simplified Chinese' ? '输入股票代码 e.g.: 0700.hk, 2330.tw, TSLA' : 'Enter stock symbol e.g.: 0700.hk, 2330.tw, TSLA';
   const isAnalysisMode = viewType === 'analysis';
 
   const getTitle = () => {
     if (legalTitle) return legalTitle;
-    if (topicId === 'about') return langKey === 'Cantonese' ? '關於我們' : langKey === '简体中文' ? '关于我们' : 'About';
-    if (topicId === 'features') return langKey === 'Cantonese' ? '功能介紹' : langKey === '简体中文' ? '功能介绍' : 'Features';
-    if (topicId === 'pricing') return langKey === 'Cantonese' ? '服務定價' : langKey === '简体中文' ? '服务定价' : 'Pricing';
-    return langKey === 'Cantonese' ? 'AI 分析' : langKey === '简体中文' ? 'AI 分析' : 'AI Analysis';
+    if (topicId === 'about') return langKey === 'Traditional Chinese' ? '關於我們' : langKey === 'Simplified Chinese' ? '关于我们' : 'About';
+    if (topicId === 'features') return langKey === 'Traditional Chinese' ? '功能介紹' : langKey === 'Simplified Chinese' ? '功能介绍' : 'Features';
+    if (topicId === 'pricing') return langKey === 'Traditional Chinese' ? '服務定價' : langKey === 'Simplified Chinese' ? '服务定价' : 'Pricing';
+    return langKey === 'Traditional Chinese' ? 'AI 分析' : langKey === 'Simplified Chinese' ? 'AI 分析' : 'AI Analysis';
   };
 
   const renderButtonWithCross = (isActive: boolean, onClick: () => void, icon: React.ReactElement, color: string, inactiveColor: string) => {
@@ -313,13 +316,17 @@ const MobileAnalysis: React.FC<MobileAnalysisProps> = ({
         </button>
         <h2 style={{ fontSize: '15px', fontWeight: '600', color: '#1F2937', margin: 0 }}>{getTitle()}</h2>
         <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
+          <VoiceSelector 
+            currentVoice={voiceLanguage}
+            onVoiceChange={setVoiceLanguage}
+          />
           <LanguageToggle currentLang={langKey} onLangChange={setLangKey} />
-          <button onClick={onAuthOpen} style={{ color: '#2563EB', fontWeight: '600', fontSize: '11px', background: 'none', border: 'none', cursor: 'pointer', padding: '4px 0', minWidth: '44px' }}>{user ? 'Welcome' : (langKey === 'Cantonese' ? '登入' : langKey === '简体中文' ? '登录' : 'Login')}</button>
+          <button onClick={onAuthOpen} style={{ color: '#2563EB', fontWeight: '600', fontSize: '11px', background: 'none', border: 'none', cursor: 'pointer', padding: '4px 0', minWidth: '44px' }}>{user ? 'Welcome' : (langKey === 'Traditional Chinese' ? '登入' : langKey === 'Simplified Chinese' ? '登录' : 'Login')}</button>
         </div>
       </div>
       
       <div style={{ flex: 1, overflowY: 'auto', overflowX: 'hidden', WebkitOverflowScrolling: 'touch', padding: '12px', backgroundColor: '#F9FAFB', minHeight: 0 }}>
-        {displayLegalTitle && <div style={{ backgroundColor: 'white', borderRadius: '8px', padding: '12px', marginBottom: '8px' }}><div style={{ fontSize: '12px', color: '#4B5563', lineHeight: 1.4 }}>{footerContent[displayLegalTitle]?.[langKey === "Cantonese" ? "粵語 (繁體中文)" : langKey] || "Content coming soon..."}</div></div>}
+        {displayLegalTitle && <div style={{ backgroundColor: 'white', borderRadius: '8px', padding: '12px', marginBottom: '8px' }}><div style={{ fontSize: '12px', color: '#4B5563', lineHeight: 1.4 }}>{footerContent[displayLegalTitle]?.[langKey === "Traditional Chinese" ? "粵語 (繁體中文)" : langKey] || "Content coming soon..."}</div></div>}
         {topicId === 'pricing' && <div style={{ backgroundColor: 'white', borderRadius: '8px', padding: '12px', marginBottom: '8px' }}><PricingModal isOpen={true} onClose={onBack} user={user} profile={null} onSelectPlan={handleSelectPlan} showRetentionOnly={false} /></div>}
         {topicId === 'about' && <AboutSection lang={langKey} />}
         {topicId === 'features' && <FeaturesSection lang={langKey} />}
@@ -329,6 +336,7 @@ const MobileAnalysis: React.FC<MobileAnalysisProps> = ({
             data={analysisData} 
             isLoading={isLoading} 
             langKey={langKey} 
+            voiceLanguage={voiceLanguage}
           />
         )}
       </div>
@@ -355,15 +363,19 @@ const MobileAnalysis: React.FC<MobileAnalysisProps> = ({
                 style={{ width: '16px', height: '16px', cursor: 'pointer' }}
               />
               <span style={{ fontSize: '11px', fontWeight: '500', color: '#374151' }}>
-                {langKey === 'Cantonese' ? '🤖 AI增強分析' : langKey === '简体中文' ? '🤖 AI增强分析' : '🤖 AI Enhancement'}
+                {langKey === 'Traditional Chinese' ? '🤖 AI增強分析' : 
+                 langKey === 'Simplified Chinese' ? '🤖 AI增强分析' : 
+                 '🤖 AI Enhancement'}
               </span>
               <span style={{ fontSize: '9px', color: '#6B7280' }}>
-                {langKey === 'Cantonese' ? '(網關選項)' : langKey === '简体中文' ? '(网关选项)' : '(Gateway option)'}
+                {langKey === 'Traditional Chinese' ? '(網關選項)' : 
+                 langKey === 'Simplified Chinese' ? '(网关选项)' : 
+                 '(Gateway option)'}
               </span>
             </label>
             {useAIEnhancement && (
               <div style={{ fontSize: '9px', color: '#D97706', backgroundColor: '#FEF3C7', padding: '2px 6px', borderRadius: '4px' }}>
-                {langKey === 'Cantonese' ? '啟用中' : langKey === '简体中文' ? '启用中' : 'Active'}
+                {langKey === 'Traditional Chinese' ? '啟用中' : langKey === 'Simplified Chinese' ? '启用中' : 'Active'}
               </div>
             )}
           </div>
@@ -410,11 +422,11 @@ const MobileAnalysis: React.FC<MobileAnalysisProps> = ({
             >
               {isLoading 
                 ? (useAIEnhancement 
-                    ? (langKey === 'Cantonese' ? '🤖 AI思考中...' : langKey === '简体中文' ? '🤖 AI思考中...' : '🤖 Thinking...')
-                    : (langKey === 'Cantonese' ? '分析中...' : langKey === '简体中文' ? '分析中...' : 'Analyzing...'))
+                    ? (langKey === 'Traditional Chinese' ? '🤖 AI思考中...' : langKey === 'Simplified Chinese' ? '🤖 AI思考中...' : '🤖 Thinking...')
+                    : (langKey === 'Traditional Chinese' ? '分析中...' : langKey === 'Simplified Chinese' ? '分析中...' : 'Analyzing...'))
                 : (useAIEnhancement 
-                    ? (langKey === 'Cantonese' ? '✨ AI分析' : langKey === '简体中文' ? '✨ AI分析' : '✨ AI Analyze')
-                    : (langKey === 'Cantonese' ? '發送' : langKey === '简体中文' ? '发送' : 'Send'))}
+                    ? (langKey === 'Traditional Chinese' ? '✨ AI分析' : langKey === 'Simplified Chinese' ? '✨ AI分析' : '✨ AI Analyze')
+                    : (langKey === 'Traditional Chinese' ? '發送' : langKey === 'Simplified Chinese' ? '发送' : 'Send'))}
             </button>
           </div>
         </div>

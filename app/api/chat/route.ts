@@ -286,7 +286,7 @@ function simpleTranslate(text: string, targetLang: string): string {
   if (targetLang === 'English') return text;
   
   const translations: Record<string, Record<string, string>> = {
-    'Cantonese': {
+    'Traditional Chinese': {
       'Stock': '股票',
       'share': '股份',
       'price': '股價',
@@ -297,7 +297,7 @@ function simpleTranslate(text: string, targetLang: string): string {
       'billion': '十億',
       'trillion': '萬億',
     },
-    '简体中文': {
+    'Simplified Chinese': {
       'Stock': '股票',
       'share': '股份',
       'price': '股价',
@@ -414,30 +414,30 @@ function generateSpecificAnalysis(stockData: any, fundamentals: any, symbol: str
   if (symbol.endsWith('.HK') && price < 0.5) {
     stockQuality = 'very-poor';
     riskLevel = 'extreme';
-    qualityReason = language === 'Cantonese' ? '仙股，股價低於0.5港元，風險極高' :
-                    language === '简体中文' ? '仙股，股价低于0.5港元，风险极高' :
+    qualityReason = language === 'Traditional Chinese' ? '仙股，股價低於0.5港元，風險極高' :
+                    language === 'Simplified Chinese' ? '仙股，股价低于0.5港元，风险极高' :
                     'Penny stock below HKD 0.5, extremely high risk';
     
     specificBearishFactors.push(
-      language === 'Cantonese' ? '• 股價處於仙股水平，存在除牌風險' : 
-      language === '简体中文' ? '• 股价处于仙股水平，存在退市风险' :
+      language === 'Traditional Chinese' ? '• 股價處於仙股水平，存在除牌風險' : 
+      language === 'Simplified Chinese' ? '• 股价处于仙股水平，存在退市风险' :
       '• Stock price at penny stock level, delisting risk'
     );
     specificBearishFactors.push(
-      language === 'Cantonese' ? '• 流動性極差，買賣差價大，難以成交' :
-      language === '简体中文' ? '• 流动性极差，买卖差价大，难以成交' :
+      language === 'Traditional Chinese' ? '• 流動性極差，買賣差價大，難以成交' :
+      language === 'Simplified Chinese' ? '• 流动性极差，买卖差价大，难以成交' :
       '• Extremely poor liquidity, wide bid-ask spread'
     );
   } else if (symbol.endsWith('.HK') && price < 1) {
     stockQuality = 'poor';
     riskLevel = 'high';
-    qualityReason = language === 'Cantonese' ? '低價股，股價低於1港元，風險較高' :
-                    language === '简体中文' ? '低价股，股价低于1港元，风险较高' :
+    qualityReason = language === 'Traditional Chinese' ? '低價股，股價低於1港元，風險較高' :
+                    language === 'Simplified Chinese' ? '低价股，股价低于1港元，风险较高' :
                     'Low-priced stock below HKD 1, high risk';
     
     specificBearishFactors.push(
-      language === 'Cantonese' ? '• 低價股波動性大，適合短線投機' :
-      language === '简体中文' ? '• 低价股波动性大，适合短线投机' :
+      language === 'Traditional Chinese' ? '• 低價股波動性大，適合短線投機' :
+      language === 'Simplified Chinese' ? '• 低价股波动性大，适合短线投机' :
       '• Low-priced stocks have high volatility, suitable for speculation'
     );
   }
@@ -446,14 +446,14 @@ function generateSpecificAnalysis(stockData: any, fundamentals: any, symbol: str
   if (rsi !== null) {
     if (rsi < 25) {
       specificBullishFactors.push(
-        language === 'Cantonese' ? `• RSI處於${rsi.toFixed(1)}極度超賣水平，技術性反彈機會增加` :
-        language === '简体中文' ? `• RSI处于${rsi.toFixed(1)}极度超卖水平，技术性反弹机会增加` :
+        language === 'Traditional Chinese' ? `• RSI處於${rsi.toFixed(1)}極度超賣水平，技術性反彈機會增加` :
+        language === 'Simplified Chinese' ? `• RSI处于${rsi.toFixed(1)}极度超卖水平，技术性反弹机会增加` :
         `• RSI at ${rsi.toFixed(1)} - extremely oversold, technical rebound likely`
       );
     } else if (rsi > 75) {
       specificBearishFactors.push(
-        language === 'Cantonese' ? `• RSI處於${rsi.toFixed(1)}超買水平，短期回調風險增加` :
-        language === '简体中文' ? `• RSI处于${rsi.toFixed(1)}超买水平，短期回调风险增加` :
+        language === 'Traditional Chinese' ? `• RSI處於${rsi.toFixed(1)}超買水平，短期回調風險增加` :
+        language === 'Simplified Chinese' ? `• RSI处于${rsi.toFixed(1)}超买水平，短期回调风险增加` :
         `• RSI at ${rsi.toFixed(1)} - overbought, pullback risk increasing`
       );
     }
@@ -462,15 +462,15 @@ function generateSpecificAnalysis(stockData: any, fundamentals: any, symbol: str
   // Trend and MACD
   if (trend === 'Downtrend' && macd === 'Bearish') {
     specificBearishFactors.push(
-      language === 'Cantonese' ? '• 技術面雙重看淡信號（下降通道 + MACD看淡）' :
-      language === '简体中文' ? '• 技术面双重看淡信号（下降通道 + MACD看淡）' :
+      language === 'Traditional Chinese' ? '• 技術面雙重看淡信號（下降通道 + MACD看淡）' :
+      language === 'Simplified Chinese' ? '• 技术面双重看淡信号（下降通道 + MACD看淡）' :
       '• Double bearish technical signals (Downtrend + Bearish MACD)'
     );
     if (stockQuality !== 'very-poor') stockQuality = 'poor';
   } else if (trend === 'Uptrend' && macd === 'Bullish') {
     specificBullishFactors.push(
-      language === 'Cantonese' ? '• 技術面雙重看好信號（上升通道 + MACD看好）' :
-      language === '简体中文' ? '• 技术面双重看好信号（上升通道 + MACD看好）' :
+      language === 'Traditional Chinese' ? '• 技術面雙重看好信號（上升通道 + MACD看好）' :
+      language === 'Simplified Chinese' ? '• 技术面双重看好信号（上升通道 + MACD看好）' :
       '• Double bullish technical signals (Uptrend + Bullish MACD)'
     );
   }
@@ -479,20 +479,20 @@ function generateSpecificAnalysis(stockData: any, fundamentals: any, symbol: str
   if (pe !== null) {
     if (pe > 50) {
       specificBearishFactors.push(
-        language === 'Cantonese' ? `• 市盈率${pe.toFixed(1)}倍，估值過高，泡沫風險` :
-        language === '简体中文' ? `• 市盈率${pe.toFixed(1)}倍，估值过高，泡沫风险` :
+        language === 'Traditional Chinese' ? `• 市盈率${pe.toFixed(1)}倍，估值過高，泡沫風險` :
+        language === 'Simplified Chinese' ? `• 市盈率${pe.toFixed(1)}倍，估值过高，泡沫风险` :
         `• P/E ratio of ${pe.toFixed(1)}x - overvalued, bubble risk`
       );
     } else if (pe < 8 && pe > 0) {
       specificBullishFactors.push(
-        language === 'Cantonese' ? `• 市盈率${pe.toFixed(1)}倍，估值偏低，價值吸引` :
-        language === '简体中文' ? `• 市盈率${pe.toFixed(1)}倍，估值偏低，价值吸引` :
+        language === 'Traditional Chinese' ? `• 市盈率${pe.toFixed(1)}倍，估值偏低，價值吸引` :
+        language === 'Simplified Chinese' ? `• 市盈率${pe.toFixed(1)}倍，估值偏低，价值吸引` :
         `• P/E ratio of ${pe.toFixed(1)}x - undervalued, attractive valuation`
       );
     } else if (pe < 0) {
       specificBearishFactors.push(
-        language === 'Cantonese' ? '• 公司錄得虧損，盈利能力成疑' :
-        language === '简体中文' ? '• 公司录得亏损，盈利能力成疑' :
+        language === 'Traditional Chinese' ? '• 公司錄得虧損，盈利能力成疑' :
+        language === 'Simplified Chinese' ? '• 公司录得亏损，盈利能力成疑' :
         '• Company is loss-making, profitability questionable'
       );
     }
@@ -501,14 +501,14 @@ function generateSpecificAnalysis(stockData: any, fundamentals: any, symbol: str
   if (revenueGrowth !== null) {
     if (revenueGrowth > 20) {
       specificBullishFactors.push(
-        language === 'Cantonese' ? `• 收入增長${revenueGrowth.toFixed(1)}%，增長強勁` :
-        language === '简体中文' ? `• 收入增长${revenueGrowth.toFixed(1)}%，增长强劲` :
+        language === 'Traditional Chinese' ? `• 收入增長${revenueGrowth.toFixed(1)}%，增長強勁` :
+        language === 'Simplified Chinese' ? `• 收入增长${revenueGrowth.toFixed(1)}%，增长强劲` :
         `• Revenue growth of ${revenueGrowth.toFixed(1)}% - strong growth`
       );
     } else if (revenueGrowth < 0) {
       specificBearishFactors.push(
-        language === 'Cantonese' ? `• 收入負增長${Math.abs(revenueGrowth).toFixed(1)}%，業務收縮` :
-        language === '简体中文' ? `• 收入负增长${Math.abs(revenueGrowth).toFixed(1)}%，业务收缩` :
+        language === 'Traditional Chinese' ? `• 收入負增長${Math.abs(revenueGrowth).toFixed(1)}%，業務收縮` :
+        language === 'Simplified Chinese' ? `• 收入负增长${Math.abs(revenueGrowth).toFixed(1)}%，业务收缩` :
         `• Negative revenue growth of ${Math.abs(revenueGrowth).toFixed(1)}% - business contraction`
       );
     }
@@ -517,20 +517,20 @@ function generateSpecificAnalysis(stockData: any, fundamentals: any, symbol: str
   if (profitMargin !== null) {
     if (profitMargin > 30) {
       specificBullishFactors.push(
-        language === 'Cantonese' ? `• 利潤率${profitMargin.toFixed(1)}%，盈利能力優秀` :
-        language === '简体中文' ? `• 利润率${profitMargin.toFixed(1)}%，盈利能力优秀` :
+        language === 'Traditional Chinese' ? `• 利潤率${profitMargin.toFixed(1)}%，盈利能力優秀` :
+        language === 'Simplified Chinese' ? `• 利润率${profitMargin.toFixed(1)}%，盈利能力优秀` :
         `• Profit margin of ${profitMargin.toFixed(1)}% - excellent profitability`
       );
     } else if (profitMargin < 5 && profitMargin > 0) {
       specificBearishFactors.push(
-        language === 'Cantonese' ? `• 利潤率僅${profitMargin.toFixed(1)}%，盈利能力薄弱` :
-        language === '简体中文' ? `• 利润率仅${profitMargin.toFixed(1)}%，盈利能力薄弱` :
+        language === 'Traditional Chinese' ? `• 利潤率僅${profitMargin.toFixed(1)}%，盈利能力薄弱` :
+        language === 'Simplified Chinese' ? `• 利润率仅${profitMargin.toFixed(1)}%，盈利能力薄弱` :
         `• Profit margin of only ${profitMargin.toFixed(1)}% - weak profitability`
       );
     } else if (profitMargin < 0) {
       specificBearishFactors.push(
-        language === 'Cantonese' ? `• 處於虧損狀態，利潤率${profitMargin.toFixed(1)}%` :
-        language === '简体中文' ? `• 处于亏损状态，利润率${profitMargin.toFixed(1)}%` :
+        language === 'Traditional Chinese' ? `• 處於虧損狀態，利潤率${profitMargin.toFixed(1)}%` :
+        language === 'Simplified Chinese' ? `• 处于亏损状态，利润率${profitMargin.toFixed(1)}%` :
         `• In loss position with margin of ${profitMargin.toFixed(1)}%`
       );
     }
@@ -539,14 +539,14 @@ function generateSpecificAnalysis(stockData: any, fundamentals: any, symbol: str
   if (debtRatio !== null) {
     if (debtRatio > 100) {
       specificBearishFactors.push(
-        language === 'Cantonese' ? `• 負債權益比${debtRatio.toFixed(1)}%，負債水平偏高，財務風險大` :
-        language === '简体中文' ? `• 负债权益比${debtRatio.toFixed(1)}%，负债水平偏高，财务风险大` :
+        language === 'Traditional Chinese' ? `• 負債權益比${debtRatio.toFixed(1)}%，負債水平偏高，財務風險大` :
+        language === 'Simplified Chinese' ? `• 负债权益比${debtRatio.toFixed(1)}%，负债水平偏高，财务风险大` :
         `• Debt/Equity ratio of ${debtRatio.toFixed(1)}% - high debt level, significant financial risk`
       );
     } else if (debtRatio < 20 && debtRatio > 0) {
       specificBullishFactors.push(
-        language === 'Cantonese' ? `• 負債權益比${debtRatio.toFixed(1)}%，負債水平健康` :
-        language === '简体中文' ? `• 负债权益比${debtRatio.toFixed(1)}%，负债水平健康` :
+        language === 'Traditional Chinese' ? `• 負債權益比${debtRatio.toFixed(1)}%，負債水平健康` :
+        language === 'Simplified Chinese' ? `• 负债权益比${debtRatio.toFixed(1)}%，负债水平健康` :
         `• Debt/Equity ratio of ${debtRatio.toFixed(1)}% - healthy debt level`
       );
     }
@@ -556,14 +556,14 @@ function generateSpecificAnalysis(stockData: any, fundamentals: any, symbol: str
     if (volatility > 0.6) {
       riskLevel = 'high';
       specificBearishFactors.push(
-        language === 'Cantonese' ? `• 年化波動率${(volatility * 100).toFixed(1)}%，股價波動劇烈` :
-        language === '简体中文' ? `• 年化波动率${(volatility * 100).toFixed(1)}%，股价波动剧烈` :
+        language === 'Traditional Chinese' ? `• 年化波動率${(volatility * 100).toFixed(1)}%，股價波動劇烈` :
+        language === 'Simplified Chinese' ? `• 年化波动率${(volatility * 100).toFixed(1)}%，股价波动剧烈` :
         `• Annualized volatility of ${(volatility * 100).toFixed(1)}% - extremely volatile`
       );
     } else if (volatility > 0.4) {
       specificBearishFactors.push(
-        language === 'Cantonese' ? `• 波動率${(volatility * 100).toFixed(1)}%，風險中等偏高` :
-        language === '简体中文' ? `• 波动率${(volatility * 100).toFixed(1)}%，风险中等偏高` :
+        language === 'Traditional Chinese' ? `• 波動率${(volatility * 100).toFixed(1)}%，風險中等偏高` :
+        language === 'Simplified Chinese' ? `• 波动率${(volatility * 100).toFixed(1)}%，风险中等偏高` :
         `• Volatility of ${(volatility * 100).toFixed(1)}% - moderately high risk`
       );
     }
@@ -572,8 +572,8 @@ function generateSpecificAnalysis(stockData: any, fundamentals: any, symbol: str
   if (specificBullishFactors.length === 0) {
     if (trend === 'Uptrend') {
       specificBullishFactors.push(
-        language === 'Cantonese' ? '• 處於上升通道，技術面偏強' :
-        language === '简体中文' ? '• 处于上升通道，技术面偏强' :
+        language === 'Traditional Chinese' ? '• 處於上升通道，技術面偏強' :
+        language === 'Simplified Chinese' ? '• 处于上升通道，技术面偏强' :
         '• In uptrend channel, technical outlook positive'
       );
     }
@@ -582,8 +582,8 @@ function generateSpecificAnalysis(stockData: any, fundamentals: any, symbol: str
   if (specificBearishFactors.length === 0) {
     if (trend === 'Downtrend') {
       specificBearishFactors.push(
-        language === 'Cantonese' ? '• 處於下降通道，技術面偏弱' :
-        language === '简体中文' ? '• 处于下降通道，技术面偏弱' :
+        language === 'Traditional Chinese' ? '• 處於下降通道，技術面偏弱' :
+        language === 'Simplified Chinese' ? '• 处于下降通道，技术面偏弱' :
         '• In downtrend channel, technical outlook negative'
       );
     }
@@ -622,38 +622,38 @@ function generateSpecificAnalysis(stockData: any, fundamentals: any, symbol: str
   let stopLoss = price;
   
   if (stockQuality === 'very-poor') {
-    specificRecommendation = language === 'Cantonese' ? '強烈建議：避開此股票，風險極高，不適合長線持有' :
-                              language === '简体中文' ? '强烈建议：避开此股票，风险极高，不适合长线持有' :
+    specificRecommendation = language === 'Traditional Chinese' ? '強烈建議：避開此股票，風險極高，不適合長線持有' :
+                              language === 'Simplified Chinese' ? '强烈建议：避开此股票，风险极高，不适合长线持有' :
                               'STRONG AVOID: Extremely high risk, not suitable for long-term holding';
     targetPrice = price * 0.9;
     stopLoss = price * 0.85;
   } else if (stockQuality === 'poor') {
-    specificRecommendation = language === 'Cantonese' ? '建議：謹慎操作，僅適合短線投機，嚴格控制止蝕' :
-                              language === '简体中文' ? '建议：谨慎操作，仅适合短线投机，严格控制止损' :
+    specificRecommendation = language === 'Traditional Chinese' ? '建議：謹慎操作，僅適合短線投機，嚴格控制止蝕' :
+                              language === 'Simplified Chinese' ? '建议：谨慎操作，仅适合短线投机，严格控制止损' :
                               'CAUTION: Speculative only, strict stop loss required';
     targetPrice = price * 1.05;
     stopLoss = price * 0.92;
   } else if (rsi !== null && rsi < 30) {
-    specificRecommendation = language === 'Cantonese' ? '建議：超賣區間，可小注買入博反彈，嚴守止蝕' :
-                              language === '简体中文' ? '建议：超卖区间，可小注买入博反弹，严守止损' :
+    specificRecommendation = language === 'Traditional Chinese' ? '建議：超賣區間，可小注買入博反彈，嚴守止蝕' :
+                              language === 'Simplified Chinese' ? '建议：超卖区间，可小注买入博反弹，严守止损' :
                               'BUY on dips: Oversold zone, accumulate gradually with stop loss';
     targetPrice = price * 1.12;
     stopLoss = price * 0.92;
   } else if (rsi !== null && rsi > 70) {
-    specificRecommendation = language === 'Cantonese' ? '建議：超買區間，分批獲利，不宜追高' :
-                              language === '简体中文' ? '建议：超买区间，分批获利，不宜追高' :
+    specificRecommendation = language === 'Traditional Chinese' ? '建議：超買區間，分批獲利，不宜追高' :
+                              language === 'Simplified Chinese' ? '建议：超买区间，分批获利，不宜追高' :
                               'TAKE PROFIT: Overbought zone, reduce position gradually';
     targetPrice = price * 1.03;
     stopLoss = price * 0.96;
   } else if (stockQuality === 'excellent' || stockQuality === 'good') {
-    specificRecommendation = language === 'Cantonese' ? '建議：基本面良好，可長期持有，逢低買入' :
-                              language === '简体中文' ? '建议：基本面良好，可长期持有，逢低买入' :
+    specificRecommendation = language === 'Traditional Chinese' ? '建議：基本面良好，可長期持有，逢低買入' :
+                              language === 'Simplified Chinese' ? '建议：基本面良好，可长期持有，逢低买入' :
                               'ACCUMULATE: Strong fundamentals, suitable for long-term holding';
     targetPrice = price * 1.15;
     stopLoss = price * 0.92;
   } else {
-    specificRecommendation = language === 'Cantonese' ? '建議：持有觀望，等待更明確信號' :
-                              language === '简体中文' ? '建议：持有观望，等待更明确信号' :
+    specificRecommendation = language === 'Traditional Chinese' ? '建議：持有觀望，等待更明確信號' :
+                              language === 'Simplified Chinese' ? '建议：持有观望，等待更明确信号' :
                               'HOLD: Wait for clearer signals';
     targetPrice = price * 1.08;
     stopLoss = price * 0.94;
@@ -788,19 +788,19 @@ function generateSpecificAnalysis(stockData: any, fundamentals: any, symbol: str
   let confidenceRating = '';
   let confidenceEmoji = '';
   if (confidenceScore >= 80) {
-    confidenceRating = language === 'Cantonese' ? '非常高' : language === '简体中文' ? '非常高' : 'Very High';
+    confidenceRating = language === 'Traditional Chinese' ? '非常高' : language === 'Simplified Chinese' ? '非常高' : 'Very High';
     confidenceEmoji = '⭐⭐⭐⭐⭐';
   } else if (confidenceScore >= 65) {
-    confidenceRating = language === 'Cantonese' ? '高' : language === '简体中文' ? '高' : 'High';
+    confidenceRating = language === 'Traditional Chinese' ? '高' : language === 'Simplified Chinese' ? '高' : 'High';
     confidenceEmoji = '⭐⭐⭐⭐';
   } else if (confidenceScore >= 50) {
-    confidenceRating = language === 'Cantonese' ? '中等' : language === '简体中文' ? '中等' : 'Medium';
+    confidenceRating = language === 'Traditional Chinese' ? '中等' : language === 'Simplified Chinese' ? '中等' : 'Medium';
     confidenceEmoji = '⭐⭐⭐';
   } else if (confidenceScore >= 35) {
-    confidenceRating = language === 'Cantonese' ? '低' : language === '简体中文' ? '低' : 'Low';
+    confidenceRating = language === 'Traditional Chinese' ? '低' : language === 'Simplified Chinese' ? '低' : 'Low';
     confidenceEmoji = '⭐⭐';
   } else {
-    confidenceRating = language === 'Cantonese' ? '極低' : language === '简体中文' ? '极低' : 'Very Low';
+    confidenceRating = language === 'Traditional Chinese' ? '極低' : language === 'Simplified Chinese' ? '极低' : 'Very Low';
     confidenceEmoji = '⭐';
   }
   
@@ -828,9 +828,9 @@ export async function POST(req: Request) {
     
     if (!symbol || symbol === '') {
       let errorMsg = '';
-      if (language === 'Cantonese') {
+      if (language === 'Traditional Chinese') {
         errorMsg = '無法識別股票代號。請嘗試: 台積電, 騰訊, 特斯拉, 或直接輸入代號如 2330.TW, 0700.HK, TSLA';
-      } else if (language === '简体中文') {
+      } else if (language === 'Simplified Chinese') {
         errorMsg = '无法识别股票代码。请尝试: 台积电, 腾讯, 特斯拉, 或直接输入代码如 2330.TW, 0700.HK, TSLA';
       } else {
         errorMsg = 'Unable to recognize stock symbol. Please try: 2330.TW, 0700.HK, TSLA';
@@ -853,9 +853,9 @@ export async function POST(req: Request) {
     
     if (!stockData) {
       let errorMsg = '';
-      if (language === 'Cantonese') {
+      if (language === 'Traditional Chinese') {
         errorMsg = `無法獲取 ${symbol} 的即時數據，請稍後再試。`;
-      } else if (language === '简体中文') {
+      } else if (language === 'Simplified Chinese') {
         errorMsg = `无法获取 ${symbol} 的实时数据，请稍后再试。`;
       } else {
         errorMsg = `Unable to fetch real-time data for ${symbol}. Please try again.`;
@@ -933,7 +933,7 @@ export async function POST(req: Request) {
     let volatilityLabel = '';
     let avgVolumeLabel = '';
     
-    if (language === 'Cantonese') {
+    if (language === 'Traditional Chinese') {
       rsiStatus = stockData.rsi ? (stockData.rsi > 70 ? '超買' : stockData.rsi < 30 ? '超賣' : '中性') : '中性';
       rsiInterpret = stockData.rsi ? (stockData.rsi > 70 ? '超買區間，短期可能回調' : stockData.rsi < 30 ? '超賣區間，可能出現反彈' : '中性區間，動能平衡') : '';
       macdText = stockData.macd === 'Bullish' ? '看好' : stockData.macd === 'Bearish' ? '看淡' : '中性';
@@ -968,7 +968,7 @@ export async function POST(req: Request) {
       volatilityLabel = '波動率';
       avgVolumeLabel = '平均成交量';
       
-    } else if (language === '简体中文') {
+    } else if (language === 'Simplified Chinese') {
       rsiStatus = stockData.rsi ? (stockData.rsi > 70 ? '超买' : stockData.rsi < 30 ? '超卖' : '中性') : '中性';
       rsiInterpret = stockData.rsi ? (stockData.rsi > 70 ? '超买区间，短期可能回调' : stockData.rsi < 30 ? '超卖区间，可能出现反弹' : '中性区间，动能平衡') : '';
       macdText = stockData.macd === 'Bullish' ? '看好' : stockData.macd === 'Bearish' ? '看淡' : '中性';
@@ -1040,16 +1040,16 @@ export async function POST(req: Request) {
     }
     
     const displayName = companyInfo.chineseName || companyInfo.name || symbol;
-    const overallTrend = stockData.trend === 'Uptrend' ? (language === 'Cantonese' ? '看好' : language === '简体中文' ? '看好' : 'Bullish') : 
-                         stockData.trend === 'Downtrend' ? (language === 'Cantonese' ? '看淡' : language === '简体中文' ? '看淡' : 'Bearish') : 
-                         (language === 'Cantonese' ? '橫向整理' : language === '简体中文' ? '横向整理' : 'Sideways');
+    const overallTrend = stockData.trend === 'Uptrend' ? (language === 'Traditional Chinese' ? '看好' : language === 'Simplified Chinese' ? '看好' : 'Bullish') : 
+                         stockData.trend === 'Downtrend' ? (language === 'Traditional Chinese' ? '看淡' : language === 'Simplified Chinese' ? '看淡' : 'Bearish') : 
+                         (language === 'Traditional Chinese' ? '橫向整理' : language === 'Simplified Chinese' ? '横向整理' : 'Sideways');
     
     let riskText = '';
-    if (language === 'Cantonese') {
+    if (language === 'Traditional Chinese') {
       riskText = specificAnalysis.riskLevel === 'extreme' ? '⚠️ 極高風險' :
                  specificAnalysis.riskLevel === 'high' ? '⚠️ 高風險' :
                  specificAnalysis.riskLevel === 'medium' ? '⚠️ 中等風險' : '✅ 低風險';
-    } else if (language === '简体中文') {
+    } else if (language === 'Simplified Chinese') {
       riskText = specificAnalysis.riskLevel === 'extreme' ? '⚠️ 极高风险' :
                  specificAnalysis.riskLevel === 'high' ? '⚠️ 高风险' :
                  specificAnalysis.riskLevel === 'medium' ? '⚠️ 中等风险' : '✅ 低风险';
@@ -1069,12 +1069,12 @@ export async function POST(req: Request) {
       const debtRatio = fundamentals.debtRatio;
       const dividendYield = fundamentals.dividendYield;
       
-      if (language === 'Cantonese') {
+      if (language === 'Traditional Chinese') {
         fundamentalsText = `${fundamentalsTitle}
 市值: ${fundamentals.marketCap} | 市盈率: ${pe?.toFixed(2) || 'N/A'}倍 | EPS: ${eps?.toFixed(2) || 'N/A'}
 收入增長: ${revenueGrowth?.toFixed(2) || 'N/A'}% | 利潤率: ${profitMargin?.toFixed(2) || 'N/A'}%
 負債權益比: ${debtRatio?.toFixed(2) || 'N/A'} | 股息率: ${dividendYield?.toFixed(2) || 'N/A'}%`;
-      } else if (language === '简体中文') {
+      } else if (language === 'Simplified Chinese') {
         fundamentalsText = `${fundamentalsTitle}
 市值: ${fundamentals.marketCap} | 市盈率: ${pe?.toFixed(2) || 'N/A'}倍 | EPS: ${eps?.toFixed(2) || 'N/A'}
 收入增长: ${revenueGrowth?.toFixed(2) || 'N/A'}% | 利润率: ${profitMargin?.toFixed(2) || 'N/A'}%
@@ -1086,10 +1086,10 @@ Revenue Growth: ${revenueGrowth?.toFixed(2) || 'N/A'}% | Profit Margin: ${profit
 Debt/Equity: ${debtRatio?.toFixed(2) || 'N/A'} | Dividend Yield: ${dividendYield?.toFixed(2) || 'N/A'}%`;
       }
     } else {
-      if (language === 'Cantonese') {
+      if (language === 'Traditional Chinese') {
         fundamentalsText = `${fundamentalsTitle}
 ⚠️ 暫無詳細財務數據。請參考技術面分析。`;
-      } else if (language === '简体中文') {
+      } else if (language === 'Simplified Chinese') {
         fundamentalsText = `${fundamentalsTitle}
 ⚠️ 暂无详细财务数据。请参考技术面分析。`;
       } else {
@@ -1103,8 +1103,8 @@ Debt/Equity: ${debtRatio?.toFixed(2) || 'N/A'} | Dividend Yield: ${dividendYield
     if (specificAnalysis.specificBullishFactors.length > 0) {
       bullishText += specificAnalysis.specificBullishFactors.join('\n');
     } else {
-      bullishText += language === 'Cantonese' ? '• 暫無明顯看好因素' :
-                     language === '简体中文' ? '• 暂无明显看好因素' :
+      bullishText += language === 'Traditional Chinese' ? '• 暫無明顯看好因素' :
+                     language === 'Simplified Chinese' ? '• 暂无明显看好因素' :
                      '• No significant bullish factors identified';
     }
     
@@ -1113,8 +1113,8 @@ Debt/Equity: ${debtRatio?.toFixed(2) || 'N/A'} | Dividend Yield: ${dividendYield
     if (specificAnalysis.specificBearishFactors.length > 0) {
       bearishText += specificAnalysis.specificBearishFactors.join('\n');
     } else {
-      bearishText += language === 'Cantonese' ? '• 暫無明顯看淡因素' :
-                     language === '简体中文' ? '• 暂无明显看淡因素' :
+      bearishText += language === 'Traditional Chinese' ? '• 暫無明顯看淡因素' :
+                     language === 'Simplified Chinese' ? '• 暂无明显看淡因素' :
                      '• No significant bearish factors identified';
     }
     
@@ -1122,23 +1122,23 @@ Debt/Equity: ${debtRatio?.toFixed(2) || 'N/A'} | Dividend Yield: ${dividendYield
     let userContentText = '';
     if (userContentAnalysis && userContentAnalysis.originalContent) {
       const sentimentText = userContentAnalysis.sentiment?.sentiment === 'Positive' ? 
-                           (language === 'Cantonese' ? '正面' : language === '简体中文' ? '正面' : 'Positive') :
+                           (language === 'Traditional Chinese' ? '正面' : language === 'Simplified Chinese' ? '正面' : 'Positive') :
                            userContentAnalysis.sentiment?.sentiment === 'Negative' ?
-                           (language === 'Cantonese' ? '負面' : language === '简体中文' ? '負面' : 'Negative') :
-                           (language === 'Cantonese' ? '中性' : language === '简体中文' ? '中性' : 'Neutral');
+                           (language === 'Traditional Chinese' ? '負面' : language === 'Simplified Chinese' ? '負面' : 'Negative') :
+                           (language === 'Traditional Chinese' ? '中性' : language === 'Simplified Chinese' ? '中性' : 'Neutral');
       
       let aiContentAnalysis = '';
       if (userContentAnalysis.sentiment?.sentiment === 'Positive') {
-        aiContentAnalysis = language === 'Cantonese' ? '這份資料包含利好因素，可能支持股價向上。' :
-                            language === '简体中文' ? '这份资料包含利好因素，可能支持股价向上。' :
+        aiContentAnalysis = language === 'Traditional Chinese' ? '這份資料包含利好因素，可能支持股價向上。' :
+                            language === 'Simplified Chinese' ? '这份资料包含利好因素，可能支持股价向上。' :
                             'This content contains positive factors that may support upward price movement.';
       } else if (userContentAnalysis.sentiment?.sentiment === 'Negative') {
-        aiContentAnalysis = language === 'Cantonese' ? '這份資料包含負面因素，可能對股價構成壓力。' :
-                            language === '简体中文' ? '这份资料包含负面因素，可能对股价构成压力。' :
+        aiContentAnalysis = language === 'Traditional Chinese' ? '這份資料包含負面因素，可能對股價構成壓力。' :
+                            language === 'Simplified Chinese' ? '这份资料包含负面因素，可能对股价构成压力。' :
                             'This content contains negative factors that may pressure the stock price.';
       } else {
-        aiContentAnalysis = language === 'Cantonese' ? '這份資料影響中性，沒有明確方向。' :
-                            language === '简体中文' ? '这份资料影响中性，没有明确方向。' :
+        aiContentAnalysis = language === 'Traditional Chinese' ? '這份資料影響中性，沒有明確方向。' :
+                            language === 'Simplified Chinese' ? '这份资料影响中性，没有明确方向。' :
                             'This content has neutral impact with no clear direction.';
       }
       
@@ -1149,39 +1149,39 @@ AI內容分析: ${aiContentAnalysis}`;
       
     } else if (news && news.length > 0 && newsSentiment) {
       const sentimentText = newsSentiment.sentiment === 'Positive' ? 
-                           (language === 'Cantonese' ? '正面' : language === '简体中文' ? '正面' : 'Positive') :
+                           (language === 'Traditional Chinese' ? '正面' : language === 'Simplified Chinese' ? '正面' : 'Positive') :
                            newsSentiment.sentiment === 'Negative' ?
-                           (language === 'Cantonese' ? '負面' : language === '简体中文' ? '負面' : 'Negative') :
-                           (language === 'Cantonese' ? '中性' : language === '简体中文' ? '中性' : 'Neutral');
+                           (language === 'Traditional Chinese' ? '負面' : language === 'Simplified Chinese' ? '負面' : 'Negative') :
+                           (language === 'Traditional Chinese' ? '中性' : language === 'Simplified Chinese' ? '中性' : 'Neutral');
       
       const headlines = news.slice(0, 3).map((item: any) => item.title).filter(Boolean);
       let newsSummary = '';
       if (headlines.length > 0) {
-        newsSummary = language === 'Cantonese' ? `近期主要新聞包括：${headlines.join('；')}` :
-                      language === '简体中文' ? `近期主要新闻包括：${headlines.join('；')}` :
+        newsSummary = language === 'Traditional Chinese' ? `近期主要新聞包括：${headlines.join('；')}` :
+                      language === 'Simplified Chinese' ? `近期主要新闻包括：${headlines.join('；')}` :
                       `Recent key news includes: ${headlines.join('; ')}`;
       } else {
-        newsSummary = language === 'Cantonese' ? '暫無具體新聞標題' :
-                      language === '简体中文' ? '暂无具体新闻标题' :
+        newsSummary = language === 'Traditional Chinese' ? '暫無具體新聞標題' :
+                      language === 'Simplified Chinese' ? '暂无具体新闻标题' :
                       'No specific news headlines available';
       }
       
       let aiNewsAnalysis = '';
       if (newsSentiment.sentiment === 'Positive') {
-        aiNewsAnalysis = language === 'Cantonese' ? `詳細分析：近期新聞整體正面，${newsSummary}。` :
-                         language === '简体中文' ? `详细分析：近期新闻整体正面，${newsSummary}。` :
+        aiNewsAnalysis = language === 'Traditional Chinese' ? `詳細分析：近期新聞整體正面，${newsSummary}。` :
+                         language === 'Simplified Chinese' ? `详细分析：近期新闻整体正面，${newsSummary}。` :
                          `Detailed analysis: Recent news is overall positive. ${newsSummary}.`;
       } else if (newsSentiment.sentiment === 'Negative') {
-        aiNewsAnalysis = language === 'Cantonese' ? `詳細分析：近期新聞整體負面，${newsSummary}。` :
-                         language === '简体中文' ? `详细分析：近期新闻整体负面，${newsSummary}。` :
+        aiNewsAnalysis = language === 'Traditional Chinese' ? `詳細分析：近期新聞整體負面，${newsSummary}。` :
+                         language === 'Simplified Chinese' ? `详细分析：近期新闻整体负面，${newsSummary}。` :
                          `Detailed analysis: Recent news is overall negative. ${newsSummary}.`;
       } else {
-        aiNewsAnalysis = language === 'Cantonese' ? `詳細分析：近期新聞情緒中性，${newsSummary}。` :
-                         language === '简体中文' ? `详细分析：近期新闻情绪中性，${newsSummary}。` :
+        aiNewsAnalysis = language === 'Traditional Chinese' ? `詳細分析：近期新聞情緒中性，${newsSummary}。` :
+                         language === 'Simplified Chinese' ? `详细分析：近期新闻情绪中性，${newsSummary}。` :
                          `Detailed analysis: Recent news sentiment is neutral. ${newsSummary}.`;
       }
       
-      if (language === 'Cantonese') {
+      if (language === 'Traditional Chinese') {
         userContentText = `${newsTitle}
 最新新聞情緒分析 (共${news.length}篇):
 • 整體情緒: ${sentimentText} (分數: ${newsSentiment.score})
@@ -1192,7 +1192,7 @@ ${newsSummary}
 
 AI新聞分析:
 ${aiNewsAnalysis}`;
-      } else if (language === '简体中文') {
+      } else if (language === 'Simplified Chinese') {
         userContentText = `${newsTitle}
 最新新闻情绪分析 (共${news.length}篇):
 • 整体情绪: ${sentimentText} (分数: ${newsSentiment.score})
@@ -1222,12 +1222,12 @@ ${aiNewsAnalysis}`;
     
     // Generate trading advice
     let tradingAdviceText = '';
-    if (language === 'Cantonese') {
+    if (language === 'Traditional Chinese') {
       tradingAdviceText = `${tradingAdviceTitle}
 目標價: ${stockData.currency}${specificAnalysis.targetPrice.toFixed(2)}
 止蝕位: ${stockData.currency}${specificAnalysis.stopLoss.toFixed(2)}
 風險回報比: 1:${((specificAnalysis.targetPrice - stockData.price) / (stockData.price - specificAnalysis.stopLoss)).toFixed(1)}`;
-    } else if (language === '简体中文') {
+    } else if (language === 'Simplified Chinese') {
       tradingAdviceText = `${tradingAdviceTitle}
 目标价: ${stockData.currency}${specificAnalysis.targetPrice.toFixed(2)}
 止损位: ${stockData.currency}${specificAnalysis.stopLoss.toFixed(2)}
@@ -1241,7 +1241,7 @@ Risk/Reward Ratio: 1:${((specificAnalysis.targetPrice - stockData.price) / (stoc
     
     // Generate confidence display
     let confidenceDisplay = '';
-    if (language === 'Cantonese') {
+    if (language === 'Traditional Chinese') {
       if (specificAnalysis.confidenceScore >= 80) {
         confidenceDisplay = `信心評分: ${specificAnalysis.confidenceScore}% 五顆星 (非常高)`;
       } else if (specificAnalysis.confidenceScore >= 65) {
@@ -1253,7 +1253,7 @@ Risk/Reward Ratio: 1:${((specificAnalysis.targetPrice - stockData.price) / (stoc
       } else {
         confidenceDisplay = `信心評分: ${specificAnalysis.confidenceScore}% 一顆星 (極低)`;
       }
-    } else if (language === '简体中文') {
+    } else if (language === 'Simplified Chinese') {
       if (specificAnalysis.confidenceScore >= 80) {
         confidenceDisplay = `信心评分: ${specificAnalysis.confidenceScore}% 五颗星 (非常高)`;
       } else if (specificAnalysis.confidenceScore >= 65) {

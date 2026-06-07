@@ -8,9 +8,10 @@ interface Props {
   langKey: string;
   t: any;
   onAnalyze?: (ticker: string, attachments?: any[], useAI?: boolean) => void;
+  voiceLanguage?: string;  // Add this line
 }
 
-// Share Buttons Component
+// Share Buttons Component (same as before)
 const ShareButtons = ({ data, langKey }: { data: any; langKey: string }) => {
   const [showShareMenu, setShowShareMenu] = useState(false);
 
@@ -31,7 +32,7 @@ const ShareButtons = ({ data, langKey }: { data: any; langKey: string }) => {
     else if (confidenceScore >= 35) starsText = '⭐⭐';
     else starsText = '⭐';
     
-    if (langKey === 'Cantonese') {
+    if (langKey === 'Traditional Chinese') {
       return `${sentiment} ${companyName} 現價 ${data.currency || '$'}${data.price} (${changeText})
 📊 分析摘要: ${recommendation}
 🎯 信心評分: ${confidenceScore}% ${starsText}
@@ -39,7 +40,7 @@ const ShareButtons = ({ data, langKey }: { data: any; langKey: string }) => {
 
 🔗 完整分析: vibeailink.com
 #股票分析 #投資 #vibeAiLink`;
-    } else if (langKey === '简体中文') {
+    } else if (langKey === 'Simplified Chinese') {
       return `${sentiment} ${companyName} 现价 ${data.currency || '$'}${data.price} (${changeText})
 📊 分析摘要: ${recommendation}
 🎯 信心评分: ${confidenceScore}% ${starsText}
@@ -65,7 +66,7 @@ const ShareButtons = ({ data, langKey }: { data: any; langKey: string }) => {
     navigator.clipboard.writeText(shareText);
     window.open(`https://www.facebook.com/sharer/sharer.php?u=${encodeURIComponent(shareUrl)}`, '_blank', 'width=600,height=400');
     setTimeout(() => {
-      alert(langKey === 'Cantonese' ? '分析內容已複製，可貼上到Facebook！' : langKey === '简体中文' ? '分析内容已复制，可粘贴到Facebook！' : 'Analysis copied! You can paste it on Facebook.');
+      alert(langKey === 'Traditional Chinese' ? '分析內容已複製，可貼上到Facebook！' : langKey === 'Simplified Chinese' ? '分析内容已复制，可粘贴到Facebook！' : 'Analysis copied! You can paste it on Facebook.');
     }, 100);
   };
 
@@ -84,11 +85,11 @@ const ShareButtons = ({ data, langKey }: { data: any; langKey: string }) => {
   const copyToClipboard = () => {
     const textToCopy = `${shareText}\n\n${shareUrl}`;
     navigator.clipboard.writeText(textToCopy);
-    alert(langKey === 'Cantonese' ? '已複製到剪貼板！' : langKey === '简体中文' ? '已复制到剪贴板！' : 'Copied to clipboard!');
+    alert(langKey === 'Traditional Chinese' ? '已複製到剪貼板！' : langKey === 'Simplified Chinese' ? '已复制到剪贴板！' : 'Copied to clipboard!');
   };
 
   const downloadAsImage = () => {
-    alert(langKey === 'Cantonese' ? '截圖功能：請使用瀏覽器截圖工具' : langKey === '简体中文' ? '截图功能：请使用浏览器截图工具' : 'Screenshot: Please use browser screenshot tool');
+    alert(langKey === 'Traditional Chinese' ? '截圖功能：請使用瀏覽器截圖工具' : langKey === 'Simplified Chinese' ? '截图功能：请使用浏览器截图工具' : 'Screenshot: Please use browser screenshot tool');
   };
 
   const shareButtons = [
@@ -96,18 +97,18 @@ const ShareButtons = ({ data, langKey }: { data: any; langKey: string }) => {
     { icon: '🐦', label: 'Twitter', onClick: shareToTwitter, color: '#1DA1F2' },
     { icon: '🔗', label: 'LinkedIn', onClick: shareToLinkedIn, color: '#0077B5' },
     { icon: '📱', label: 'WhatsApp', onClick: shareToWhatsApp, color: '#25D366' },
-    { icon: '📋', label: langKey === 'Cantonese' ? '複製連結' : langKey === '简体中文' ? '复制链接' : 'Copy Link', onClick: copyToClipboard, color: '#6B7280' },
-    { icon: '📸', label: langKey === 'Cantonese' ? '截圖' : langKey === '简体中文' ? '截图' : 'Screenshot', onClick: downloadAsImage, color: '#8B5CF6' },
+    { icon: '📋', label: langKey === 'Traditional Chinese' ? '複製連結' : langKey === 'Simplified Chinese' ? '复制链接' : 'Copy Link', onClick: copyToClipboard, color: '#6B7280' },
+    { icon: '📸', label: langKey === 'Traditional Chinese' ? '截圖' : langKey === 'Simplified Chinese' ? '截图' : 'Screenshot', onClick: downloadAsImage, color: '#8B5CF6' },
   ];
 
   return (
     <div style={{ marginTop: '16px', paddingTop: '12px', borderTop: '1px solid #E5E7EB' }}>
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '8px', flexWrap: 'wrap', gap: '8px' }}>
         <span style={{ fontSize: '11px', color: '#6B7280', display: 'flex', alignItems: 'center', gap: '4px' }}>
-          📤 {langKey === 'Cantonese' ? '分享分析報告' : langKey === '简体中文' ? '分享分析报告' : 'Share Analysis'}
+          📤 {langKey === 'Traditional Chinese' ? '分享分析報告' : langKey === 'Simplified Chinese' ? '分享分析报告' : 'Share Analysis'}
         </span>
         <button onClick={() => setShowShareMenu(!showShareMenu)} style={{ fontSize: '10px', color: '#3B82F6', background: 'none', border: 'none', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '4px' }}>
-          {showShareMenu ? '▼' : '▶'} {langKey === 'Cantonese' ? '分享選項' : langKey === '简体中文' ? '分享选项' : 'Share Options'}
+          {showShareMenu ? '▼' : '▶'} {langKey === 'Traditional Chinese' ? '分享選項' : langKey === 'Simplified Chinese' ? '分享选项' : 'Share Options'}
         </button>
       </div>
       
@@ -128,13 +129,53 @@ const ShareButtons = ({ data, langKey }: { data: any; langKey: string }) => {
 };
 
 export const StockAnalysisModule: React.FC<Props> = ({ data, isLoading, langKey, t, onAnalyze }) => {
+  // Get language-specific text for UI
+  const getUIText = () => {
+    if (langKey === 'Traditional Chinese') {
+      return {
+        globalIndicesTitle: '全球市場指數',
+        priceChartTitle: '價格走勢圖 (最近3個月)',
+        range: '區間',
+        dataPeriod: '數據期間',
+        last90Days: '最近90天',
+        loadingChart: '圖表數據載入中...',
+        noData: '輸入股票代號開始分析',
+        analyzing: '分析中...'
+      };
+    } else if (langKey === 'Simplified Chinese') {
+      return {
+        globalIndicesTitle: '全球市场指数',
+        priceChartTitle: '价格走势图 (最近3个月)',
+        range: '区间',
+        dataPeriod: '数据期间',
+        last90Days: '最近90天',
+        loadingChart: '图表数据加载中...',
+        noData: '输入股票代码开始分析',
+        analyzing: '分析中...'
+      };
+    } else {
+      return {
+        globalIndicesTitle: 'Global Market Indices',
+        priceChartTitle: 'Price Chart (Last 3 Months)',
+        range: 'Range',
+        dataPeriod: 'Data Period',
+        last90Days: 'Last 90 Days',
+        loadingChart: 'Loading chart data...',
+        noData: 'Enter stock symbol to start analysis',
+        analyzing: 'Analyzing...'
+      };
+    }
+  };
+
+  const uiText = getUIText();
+
   const globalIndices = [
-    { name: 'S&P 500', value: '5,234.18', change: '+0.8%', positive: true },
-    { name: 'NASDAQ', value: '16,428.82', change: '+1.2%', positive: true },
-    { name: 'DAX', value: '18,456.32', change: '-0.3%', positive: false },
-    { name: 'HSI', value: '19,234.56', change: '+0.5%', positive: true },
-    { name: 'Nikkei 225', value: '38,234.12', change: '-0.7%', positive: false },
-    { name: 'FTSE 100', value: '7,845.67', change: '+0.2%', positive: true },
+    { name: "S&P 500", value: "5,234.18", change: "+0.8%", positive: true },
+    { name: "NASDAQ", value: "16,428.82", change: "+1.2%", positive: true },
+    { name: "DAX", value: "18,456.32", change: "-0.3%", positive: false },
+    { name: "HSI", value: "19,234.56", change: "+0.5%", positive: true },
+    { name: "Nikkei 225", value: "38,234.12", change: "-0.7%", positive: false },
+    { name: "FTSE 100", value: "7,845.67", change: "+0.2%", positive: true },
   ];
 
   const row1Indices = globalIndices.slice(0, 3);
@@ -146,10 +187,10 @@ export const StockAnalysisModule: React.FC<Props> = ({ data, isLoading, langKey,
     if (!historical || historical.length === 0) {
       return [];
     }
-
+    
     // Take last 90 days of data (about 3 months)
     const threeMonthsData = historical.slice(-90);
-
+    
     return threeMonthsData.map((item: any) => ({
       date: new Date(item.date).toLocaleDateString(undefined, { month: 'short', day: 'numeric' }),
       price: item.close,
@@ -158,28 +199,28 @@ export const StockAnalysisModule: React.FC<Props> = ({ data, isLoading, langKey,
 
   // Helper function to get Chinese text based on language
   const getChineseText = (text: string): string => {
-    if (langKey === 'Cantonese' || langKey === '简体中文') {
+    if (langKey === 'Traditional Chinese' || langKey === 'Simplified Chinese') {
       const translations: Record<string, string> = {
-        Bullish: '看好',
-        Bearish: '看淡',
-        Neutral: '中性',
-        Uptrend: '上升通道',
-        Downtrend: '下降通道',
-        Sideways: '區間震盪',
-        Price: '股價',
-        Trend: '趨勢',
-        Volume: '成交量',
+        'Bullish': '看好',
+        'Bearish': '看淡',
+        'Neutral': '中性',
+        'Uptrend': '上升通道',
+        'Downtrend': '下降通道',
+        'Sideways': '區間震盪',
+        'Price': '股價',
+        'Trend': '趨勢',
+        'Volume': '成交量',
         'Avg Volume': '平均成交量',
-        Volatility: '波動率',
+        'Volatility': '波動率',
         'Day Range': '日內波幅',
-        Change: '漲跌幅',
+        'Change': '漲跌幅',
         'Market Cap': '市值',
         'P/E Ratio': '市盈率',
-        EPS: '每股盈利',
+        'EPS': '每股盈利',
         'Revenue Growth': '收入增長',
         'Profit Margin': '利潤率',
         'Debt Ratio': '負債權益比',
-        'Dividend Yield': '股息率',
+        'Dividend Yield': '股息率'
       };
       return translations[text] || text;
     }
@@ -190,7 +231,7 @@ export const StockAnalysisModule: React.FC<Props> = ({ data, isLoading, langKey,
     return (
       <div style={{ backgroundColor: 'white', borderRadius: '12px', padding: '20px', textAlign: 'center' }}>
         <div style={{ width: '24px', height: '24px', border: '2px solid #3B82F6', borderTopColor: 'transparent', borderRadius: '50%', animation: 'spin 1s linear infinite', margin: '0 auto 8px' }} />
-        <p style={{ color: '#6B7280' }}>{langKey === 'Cantonese' ? '分析中...' : langKey === '简体中文' ? '分析中...' : 'Analyzing...'}</p>
+        <p style={{ color: '#6B7280' }}>{uiText.analyzing}</p>
         <style>{`@keyframes spin { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }`}</style>
       </div>
     );
@@ -199,7 +240,7 @@ export const StockAnalysisModule: React.FC<Props> = ({ data, isLoading, langKey,
   if (!data || !data.summary) {
     return (
       <div style={{ backgroundColor: 'white', borderRadius: '12px', padding: '20px', textAlign: 'center' }}>
-        <p style={{ color: '#9CA3AF' }}>{langKey === 'Cantonese' ? '輸入股票代號開始分析' : langKey === '简体中文' ? '输入股票代码开始分析' : 'Enter stock symbol to start analysis'}</p>
+        <p style={{ color: '#9CA3AF' }}>{uiText.noData}</p>
         <p style={{ fontSize: '12px', color: '#9CA3AF', marginTop: '8px' }}>例如: 2330.TW, 0700.HK, TSLA</p>
       </div>
     );
@@ -209,11 +250,11 @@ export const StockAnalysisModule: React.FC<Props> = ({ data, isLoading, langKey,
   const priceDisplay = data.price ? `${data.price.toFixed(2)}` : 'N/A';
   const changeDisplay = data.changePercent ? `${isPositive ? '+' : ''}${data.changePercent.toFixed(2)}%` : 'N/A';
   const rsiDisplay = data.rsi ? data.rsi.toFixed(1) : 'N/A';
-
+  
   // Get Chinese text for MACD and Trend (if language is Chinese)
-  const macdDisplay = (langKey === 'Cantonese' || langKey === '简体中文') ? getChineseText(data.macd || 'Neutral') : (data.macd || 'Neutral');
-  const trendDisplay = (langKey === 'Cantonese' || langKey === '简体中文') ? getChineseText(data.trend || 'Sideways') : (data.trend || 'Sideways');
-
+  const macdDisplay = (langKey === 'Traditional Chinese' || langKey === 'Simplified Chinese') ? getChineseText(data.macd || 'Neutral') : (data.macd || 'Neutral');
+  const trendDisplay = (langKey === 'Traditional Chinese' || langKey === 'Simplified Chinese') ? getChineseText(data.trend || 'Sideways') : (data.trend || 'Sideways');
+  
   // Get additional metrics
   const sma20Display = data.sma20 ? `${data.currency || '$'}${data.sma20.toFixed(2)}` : 'N/A';
   const sma50Display = data.sma50 ? `${data.currency || '$'}${data.sma50.toFixed(2)}` : 'N/A';
@@ -229,8 +270,8 @@ export const StockAnalysisModule: React.FC<Props> = ({ data, isLoading, langKey,
   };
   const currencySymbol = getCurrencySymbol();
 
-  const minPrice = chartData.length > 0 ? Math.min(...chartData.map((d) => d.price)) : 0;
-  const maxPrice = chartData.length > 0 ? Math.max(...chartData.map((d) => d.price)) : 0;
+  const minPrice = chartData.length > 0 ? Math.min(...chartData.map(d => d.price)) : 0;
+  const maxPrice = chartData.length > 0 ? Math.max(...chartData.map(d => d.price)) : 0;
   const labelInterval = Math.max(1, Math.floor(chartData.length / 6));
 
   const formatXTick = (value: string, index: number) => {
@@ -256,7 +297,7 @@ export const StockAnalysisModule: React.FC<Props> = ({ data, isLoading, langKey,
       <div style={{ backgroundColor: '#FEF08A', borderRadius: '12px', padding: '12px', marginBottom: '16px' }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '10px' }}>
           <span style={{ fontSize: '14px' }}>🌍</span>
-          <h3 style={{ fontSize: '12px', fontWeight: 'bold', color: '#B45309', margin: 0 }}>{langKey === 'Cantonese' ? '全球市場指數' : langKey === '简体中文' ? '全球市场指数' : 'Global Market Indices'}</h3>
+          <h3 style={{ fontSize: '12px', fontWeight: 'bold', color: '#B45309', margin: 0 }}>{uiText.globalIndicesTitle}</h3>
         </div>
         <div style={{ display: 'flex', gap: '10px', marginBottom: '10px' }}>
           {row1Indices.map((idx, i) => (
@@ -293,7 +334,7 @@ export const StockAnalysisModule: React.FC<Props> = ({ data, isLoading, langKey,
           </div>
           <div style={{ display: 'flex', gap: '20px', flexWrap: 'wrap' }}>
             <div style={{ textAlign: 'center' }}>
-              <p style={{ fontSize: '10px', color: '#6B7280', margin: 0 }}>{langKey === 'Cantonese' || langKey === '简体中文' ? '股價' : 'Price'}</p>
+              <p style={{ fontSize: '10px', color: '#6B7280', margin: 0 }}>{langKey === 'Traditional Chinese' || langKey === 'Simplified Chinese' ? '股價' : 'Price'}</p>
               <p style={{ fontSize: '16px', fontWeight: 'bold', margin: 0 }}>{currencySymbol}{priceDisplay}</p>
             </div>
             <div style={{ textAlign: 'center' }}>
@@ -307,14 +348,14 @@ export const StockAnalysisModule: React.FC<Props> = ({ data, isLoading, langKey,
               </p>
             </div>
             <div style={{ textAlign: 'center' }}>
-              <p style={{ fontSize: '10px', color: '#6B7280', margin: 0 }}>{langKey === 'Cantonese' || langKey === '简体中文' ? '趨勢' : 'Trend'}</p>
+              <p style={{ fontSize: '10px', color: '#6B7280', margin: 0 }}>{langKey === 'Traditional Chinese' || langKey === 'Simplified Chinese' ? '趨勢' : 'Trend'}</p>
               <p style={{ fontSize: '14px', fontWeight: 'bold', margin: 0 }}>
                 {data.trend === 'Uptrend' ? '📈' : data.trend === 'Downtrend' ? '📉' : '➡️'} {trendDisplay}
               </p>
             </div>
           </div>
         </div>
-
+        
         {/* Additional Metrics Row */}
         <div style={{ display: 'flex', gap: '16px', flexWrap: 'wrap', paddingTop: '10px', borderTop: '1px solid #E5E7EB', justifyContent: 'space-between' }}>
           <div>
@@ -326,15 +367,15 @@ export const StockAnalysisModule: React.FC<Props> = ({ data, isLoading, langKey,
             <p style={{ fontSize: '11px', fontWeight: 'bold', margin: 0 }}>{sma50Display}</p>
           </div>
           <div>
-            <p style={{ fontSize: '9px', color: '#6B7280', margin: 0 }}>{langKey === 'Cantonese' || langKey === '简体中文' ? '波動率' : 'Volatility'}</p>
+            <p style={{ fontSize: '9px', color: '#6B7280', margin: 0 }}>{langKey === 'Traditional Chinese' || langKey === 'Simplified Chinese' ? '波動率' : 'Volatility'}</p>
             <p style={{ fontSize: '11px', fontWeight: 'bold', margin: 0 }}>{volatilityDisplay}</p>
           </div>
           <div>
-            <p style={{ fontSize: '9px', color: '#6B7280', margin: 0 }}>{langKey === 'Cantonese' || langKey === '简体中文' ? '平均成交量' : 'Avg Volume'}</p>
+            <p style={{ fontSize: '9px', color: '#6B7280', margin: 0 }}>{langKey === 'Traditional Chinese' || langKey === 'Simplified Chinese' ? '平均成交量' : 'Avg Volume'}</p>
             <p style={{ fontSize: '11px', fontWeight: 'bold', margin: 0 }}>{avgVolumeDisplay}</p>
           </div>
           <div>
-            <p style={{ fontSize: '9px', color: '#6B7280', margin: 0 }}>{langKey === 'Cantonese' || langKey === '简体中文' ? '日內波幅' : 'Day Range'}</p>
+            <p style={{ fontSize: '9px', color: '#6B7280', margin: 0 }}>{langKey === 'Traditional Chinese' || langKey === 'Simplified Chinese' ? '日內波幅' : 'Day Range'}</p>
             <p style={{ fontSize: '11px', fontWeight: 'bold', margin: 0 }}>{dayLowDisplay} - {dayHighDisplay}</p>
           </div>
         </div>
@@ -342,7 +383,7 @@ export const StockAnalysisModule: React.FC<Props> = ({ data, isLoading, langKey,
 
       {/* Price Chart - Fixed 3 months */}
       <div style={{ backgroundColor: 'white', borderRadius: '12px', padding: '12px', marginBottom: '16px', border: '1px solid #E5E7EB' }}>
-        <h4 style={{ fontSize: '12px', fontWeight: 'bold', marginBottom: '12px' }}>{langKey === 'Cantonese' ? '價格走勢圖 (最近3個月)' : langKey === '简体中文' ? '价格走势图 (最近3个月)' : 'Price Chart (Last 3 Months)'}</h4>
+        <h4 style={{ fontSize: '12px', fontWeight: 'bold', marginBottom: '12px' }}>{uiText.priceChartTitle}</h4>
         {chartData.length > 0 ? (
           <>
             <div style={{ height: '250px' }}>
@@ -357,13 +398,13 @@ export const StockAnalysisModule: React.FC<Props> = ({ data, isLoading, langKey,
               </ResponsiveContainer>
             </div>
             <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '10px', color: '#9CA3AF', marginTop: '8px', paddingTop: '8px', borderTop: '1px solid #E5E7EB' }}>
-              <span>{langKey === 'Cantonese' ? '區間' : langKey === '简体中文' ? '区间' : 'Range'}: {currencySymbol}{minPrice.toFixed(2)} - {currencySymbol}{maxPrice.toFixed(2)}</span>
-              <span>{langKey === 'Cantonese' ? '數據期間' : langKey === '简体中文' ? '数据期间' : 'Data Period'}: {langKey === 'Cantonese' ? '最近90天' : langKey === '简体中文' ? '最近90天' : 'Last 90 Days'}</span>
+              <span>{uiText.range}: {currencySymbol}{minPrice.toFixed(2)} - {currencySymbol}{maxPrice.toFixed(2)}</span>
+              <span>{uiText.dataPeriod}: {uiText.last90Days}</span>
             </div>
           </>
         ) : (
           <div style={{ height: '200px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-            <p style={{ color: '#9CA3AF' }}>{langKey === 'Cantonese' ? '圖表數據載入中...' : langKey === '简体中文' ? '图表数据加载中...' : 'Loading chart data...'}</p>
+            <p style={{ color: '#9CA3AF' }}>{uiText.loadingChart}</p>
           </div>
         )}
       </div>
@@ -371,10 +412,10 @@ export const StockAnalysisModule: React.FC<Props> = ({ data, isLoading, langKey,
       {/* Analysis Report */}
       <div style={{ backgroundColor: 'white', borderRadius: '12px', padding: '20px', border: '1px solid #E5E7EB' }}>
         <div style={{ whiteSpace: 'pre-wrap', lineHeight: 1.6, fontSize: '13px' }}>{data.summary}</div>
-
+        
         {/* Share Buttons */}
         <ShareButtons data={data} langKey={langKey} />
-
+        
         <div style={{ borderTop: '1px solid #E5E7EB', marginTop: '16px', paddingTop: '12px', fontSize: '11px', color: '#9CA3AF' }}>
           <span>AI Analysis by vibeailink.com • {new Date().toLocaleString()}</span>
         </div>
