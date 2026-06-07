@@ -28,4 +28,9 @@ export const PRICE_AMOUNTS = {
   ENTERPRISE: 9900,
   COFFEE_MONTHLY: 1000,
   COFFEE_TOPUP: 500,
+  // Summer promotional prices (new)
+  PROMO_PRO_LITE_MONTHLY: 'price_1TfluY2RTqNKntjquZvsb168',
+  PROMO_PRO_LITE_ANNUAL: 'price_1Tflxs2RTqNKntjqVnt9mhdJ',
+  PROMO_INSTITUTIONAL_MONTHLY: 'price_1Tflvk2RTqNKntjqxRdasrgI',
+  PROMO_INSTITUTIONAL_ANNUAL: 'price_1TflzD2RTqNKntjql2QyONmY',
 };
