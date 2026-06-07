@@ -10,39 +10,38 @@ function getBestVoice(langKey: string): SpeechSynthesisVoice | null {
   if (voices.length === 0) return null;
   
   if (langKey === 'Cantonese') {
+    // ONLY use Hong Kong voices for Cantonese
     const preferredVoices = [
       voices.find(v => v.lang === 'zh-HK'),
       voices.find(v => v.lang === 'zh-HK' && v.name.includes('Ting-Ting')),
       voices.find(v => v.lang === 'zh-HK' && v.name.includes('Sin-Ji')),
-      voices.find(v => v.lang === 'zh-TW'),
-      voices.find(v => v.lang.includes('zh')),
+      voices.find(v => v.lang === 'zh-TW'), // Fallback to Taiwanese
     ];
     const selected = preferredVoices.find(v => v !== undefined);
     console.log("🎤 Selected Cantonese voice:", selected?.name, selected?.lang);
     return selected || null;
   } 
   else if (langKey === '简体中文') {
-    // Mandarin - specifically use zh-CN
+    // ONLY use Mainland China voices for Mandarin
+    // IMPORTANT: EXCLUDE zh-HK and zh-TW
     const preferredVoices = [
       voices.find(v => v.lang === 'zh-CN'),
       voices.find(v => v.lang === 'zh-CN' && v.name.includes('Ting-Ting')),
       voices.find(v => v.lang === 'zh-CN' && v.name.includes('Yun-Yang')),
-      voices.find(v => v.lang === 'zh-TW'),
-      voices.find(v => v.lang.includes('zh')),
+      voices.find(v => v.lang === 'zh-CN' && v.name.includes('Mei-Jia')),
     ];
     const selected = preferredVoices.find(v => v !== undefined);
     console.log("🎤 Selected Mandarin voice:", selected?.name, selected?.lang);
     return selected || null;
   }
   else {
-    // English - try different voices, avoid robotic ones
+    // English
     const preferredVoices = [
-      voices.find(v => v.lang === 'en-US' && v.name === 'Samantha'),      // Female, natural
+      voices.find(v => v.lang === 'en-US' && v.name === 'Samantha'),
       voices.find(v => v.lang === 'en-US' && v.name === 'Google US English'),
-      voices.find(v => v.lang === 'en-US' && v.name.includes('Alex')),    // Male
-      voices.find(v => v.lang === 'en-GB' && v.name === 'Daniel'),        // UK Male
-      voices.find(v => v.lang === 'en-US'),                               // Any US English
-      voices.find(v => v.lang === 'en-GB'),                               // Any UK English
+      voices.find(v => v.lang === 'en-US' && v.name.includes('Alex')),
+      voices.find(v => v.lang === 'en-GB' && v.name === 'Daniel'),
+      voices.find(v => v.lang === 'en-US'),
     ];
     const selected = preferredVoices.find(v => v !== undefined);
     console.log("🎤 Selected English voice:", selected?.name, selected?.lang);
@@ -50,7 +49,7 @@ function getBestVoice(langKey: string): SpeechSynthesisVoice | null {
   }
 }
 
-// Prepare text for TTS - Remove "fullstop" and fix punctuation
+// Prepare text for TTS
 function prepareTextForTTS(text: string, langKey: string): string {
   let result = text;
   
@@ -76,19 +75,14 @@ function prepareTextForTTS(text: string, langKey: string): string {
   result = result.replace(/\*/g, '');
   result = result.replace(/•/g, '');
   
-  // Replace periods with natural pauses - remove "fullstop" issue
+  // Fix punctuation - remove "fullstop" issue
   result = result.replace(/\. /g, '. ');
   result = result.replace(/\.\./g, '.');
-  
-  // Replace colons with natural pauses (not saying "colon")
   result = result.replace(/:/g, ', ');
   result = result.replace(/：/g, ', ');
-  
-  // Replace line breaks with spaces
   result = result.replace(/\n/g, '. ');
   
   if (langKey === 'Cantonese') {
-    // Replace stars with text
     result = result.replace(/信心評分: (\d+)% 五顆星 \(非常高\)/g, '信心評分 $1 個巴仙，非常高，五星級');
     result = result.replace(/信心評分: (\d+)% 四顆星 \(高\)/g, '信心評分 $1 個巴仙，高，四星級');
     result = result.replace(/信心評分: (\d+)% 三顆星 \(中等\)/g, '信心評分 $1 個巴仙，中等，三星級');
@@ -103,7 +97,6 @@ function prepareTextForTTS(text: string, langKey: string): string {
     result = result.replace(/ - /g, '至');
     
   } else if (langKey === '简体中文') {
-    // Mandarin - Simplified Chinese
     result = result.replace(/信心评分: (\d+)% 五颗星 \(非常高\)/g, '信心评分 $1 百分之，非常高，五星级');
     result = result.replace(/信心评分: (\d+)% 四颗星 \(高\)/g, '信心评分 $1 百分之，高，四星级');
     result = result.replace(/信心评分: (\d+)% 三颗星 \(中等\)/g, '信心评分 $1 百分之，中等，三星级');
@@ -133,15 +126,12 @@ function prepareTextForTTS(text: string, langKey: string): string {
     result = result.replace(/ - /g, ' to ');
   }
   
-  // Clean up multiple spaces and punctuation
   result = result.replace(/\s+/g, ' ');
-  result = result.replace(/\. \./g, '.');
   result = result.trim();
   
   return result;
 }
 
-// Initialize speech synthesis
 export function initSpeechSynthesis() {
   if (typeof window !== 'undefined' && window.speechSynthesis) {
     const utterance = new SpeechSynthesisUtterance('');
@@ -172,11 +162,11 @@ export async function speakText(text: string, langKey: string, onEnd?: () => voi
   const processedText = prepareTextForTTS(text, langKey);
   const utterance = new SpeechSynthesisUtterance(processedText);
   
-  // Set language
+  // IMPORTANT: Set language codes correctly
   if (langKey === 'Cantonese') {
-    utterance.lang = 'zh-HK';
+    utterance.lang = 'zh-HK';  // Hong Kong Cantonese
   } else if (langKey === '简体中文') {
-    utterance.lang = 'zh-CN';
+    utterance.lang = 'zh-CN';  // Mainland Mandarin (NOT Cantonese)
   } else {
     utterance.lang = 'en-US';
   }
@@ -185,6 +175,8 @@ export async function speakText(text: string, langKey: string, onEnd?: () => voi
   if (bestVoice) {
     utterance.voice = bestVoice;
     console.log(`🎤 Using voice: ${bestVoice.name} (${bestVoice.lang}) for ${langKey}`);
+  } else {
+    console.log(`🎤 No specific voice found for ${langKey}, using default with lang=${utterance.lang}`);
   }
   
   utterance.rate = 0.85;
