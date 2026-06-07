@@ -274,8 +274,8 @@ export default function VibeAiMaster() {
       console.error('Analysis error:', error);
       setAnalysisData({ 
         symbol: ticker, 
-        summary: language === 'Cantonese' ? `無法分析 ${ticker}，請稍後再試。` :
-                  language === '简体中文' ? `无法分析 ${ticker}，请稍后再试。` :
+        summary: language === 'Traditional Chinese' ? `無法分析 ${ticker}，請稍後再試。` :
+                  language === 'Simplified Chinese' ? `无法分析 ${ticker}，请稍后再试。` :
                   `Unable to analyze ${ticker}. Please try again.` 
       });
     } finally {
@@ -347,7 +347,7 @@ export default function VibeAiMaster() {
         postToFacebook: '發文到 Facebook',
         posting: '發文中...',
       };
-    } else if (language === '简体中文') {
+    } else if (language === 'Simplified Chinese') {
       return {
         financeText: '您的财务及市场分析师',
         inputLabel: '请在下方输入股票代码',
