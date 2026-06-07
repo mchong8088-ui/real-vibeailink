@@ -1,19 +1,13 @@
 import React from 'react';
 import { 
   Rocket, 
-  ShieldCheck, 
-  Heart, 
+  Shield, 
+  Brain, 
+  Clock, 
   Zap, 
-  TrendingUp, 
   Mic, 
-  Globe, 
-  Award,
-  Clock,
-  Sparkles,
-  Shield,
-  Brain,
-  BarChart3,
-  Users
+  Globe,
+  Sparkles
 } from 'lucide-react';
 
 export const AboutSection = ({ lang }: { lang: string }) => {
@@ -42,7 +36,7 @@ export const AboutSection = ({ lang }: { lang: string }) => {
           { value: '<5', label: '秒級分析', suffix: 's' },
           { value: '100%', label: '無偏見', suffix: '' },
         ],
-        cta: '開始你的分析之旅',
+        cta: '立即開始分析',
         badge1: '數據驅動',
         badge2: '全球視野',
         badge3: '三語支援',
@@ -68,7 +62,7 @@ export const AboutSection = ({ lang }: { lang: string }) => {
           { value: '<5', label: '秒级分析', suffix: 's' },
           { value: '100%', label: '无偏见', suffix: '' },
         ],
-        cta: '开始你的分析之旅',
+        cta: '立即开始分析',
         badge1: '数据驱动',
         badge2: '全球视野',
         badge3: '三语支持',
@@ -94,7 +88,7 @@ export const AboutSection = ({ lang }: { lang: string }) => {
           { value: '<5', label: 'Second Analysis', suffix: 's' },
           { value: '100%', label: 'No Bias', suffix: '' },
         ],
-        cta: 'Start Your Analysis Journey',
+        cta: 'Start Analysis Now',
         badge1: 'Data Driven',
         badge2: 'Global Vision',
         badge3: 'Multi-Lingual',
@@ -103,6 +97,21 @@ export const AboutSection = ({ lang }: { lang: string }) => {
   };
 
   const text = getText();
+
+  // Function to navigate to Analysis page
+  const navigateToAnalysis = () => {
+    // Find and click the analysis tab button
+    const buttons = document.querySelectorAll('button');
+    for (const button of buttons) {
+      const buttonText = button.textContent || '';
+      if (buttonText === 'AI STOCK' || buttonText === 'AI 股票' || buttonText === 'AI股票') {
+        button.click();
+        break;
+      }
+    }
+    // Also scroll to top for better UX
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  };
 
   return (
     <div style={{ padding: '40px 20px', maxWidth: '1200px', margin: '0 auto' }}>
@@ -117,11 +126,9 @@ export const AboutSection = ({ lang }: { lang: string }) => {
         position: 'relative',
         overflow: 'hidden'
       }}>
-        {/* Animated background elements */}
         <div style={{ position: 'absolute', top: -50, right: -50, width: 200, height: 200, borderRadius: '50%', background: 'rgba(59,130,246,0.1)', filter: 'blur(60px)' }} />
         <div style={{ position: 'absolute', bottom: -50, left: -50, width: 200, height: 200, borderRadius: '50%', background: 'rgba(168,85,247,0.1)', filter: 'blur(60px)' }} />
         
-        {/* Badges */}
         <div style={{ display: 'flex', justifyContent: 'center', gap: '12px', marginBottom: '32px', flexWrap: 'wrap', position: 'relative', zIndex: 1 }}>
           <span style={{ padding: '6px 16px', borderRadius: '20px', background: 'rgba(59,130,246,0.2)', fontSize: '13px', fontWeight: '600', border: '1px solid rgba(59,130,246,0.4)' }}>
             🚀 {text.badge1}
@@ -243,8 +250,10 @@ export const AboutSection = ({ lang }: { lang: string }) => {
         borderRadius: '24px',
         padding: '48px 32px',
         textAlign: 'center',
-        border: '1px solid #e9d5ff'
-      }}>
+        border: '1px solid #e9d5ff',
+        cursor: 'pointer'
+      }}
+      onClick={navigateToAnalysis}>
         <div style={{ fontSize: '48px', marginBottom: '16px' }}>💡</div>
         <h3 style={{ fontSize: '24px', fontWeight: 700, marginBottom: '12px', color: '#1f2937' }}>
           {isChinese ? '準備好開始你的投資之旅了嗎？' : 'Ready to start your investment journey?'}
@@ -253,12 +262,6 @@ export const AboutSection = ({ lang }: { lang: string }) => {
           {isChinese ? '輸入股票代號，5秒內獲得專業分析' : 'Enter a ticker, get professional analysis in under 5 seconds'}
         </p>
         <button
-          onClick={() => {
-            const analysisTab = document.querySelector('button[onclick*="analysis"]');
-            if (analysisTab) {
-              (analysisTab as HTMLElement).click();
-            }
-          }}
           style={{
             background: 'linear-gradient(135deg, #2563eb, #7c3aed)',
             color: 'white',
