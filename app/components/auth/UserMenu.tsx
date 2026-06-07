@@ -26,9 +26,10 @@ const UserMenu: React.FC<UserMenuProps> = ({
   const [showDowngrade, setShowDowngrade] = useState(false);
 
   // Move these INSIDE the component
-  const displayName = profile?.display_name || user?.email?.split('@')[0] || 'User';
-  const credits = profile?.credits ?? 0;
-  const plan = profile?.subscription_plan || 'Free Explorer';
+  // In UserMenu.tsx, inside the component
+const displayName = profile?.display_name || profile?.username || user?.email?.split('@')[0] || 'User';
+const credits = profile?.credits ?? 0;
+const plan = profile?.subscription_plan || profile?.subscription_status || 'Free Explorer';
 
   useEffect(() => {
     setMounted(true);
