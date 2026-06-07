@@ -10,42 +10,54 @@ function getBestVoice(langKey: string): SpeechSynthesisVoice | null {
   if (voices.length === 0) return null;
   
   if (langKey === 'Cantonese') {
-    // ONLY use Hong Kong voices for Cantonese
-    const preferredVoices = [
-      voices.find(v => v.lang === 'zh-HK'),
-      voices.find(v => v.lang === 'zh-HK' && v.name.includes('Ting-Ting')),
-      voices.find(v => v.lang === 'zh-HK' && v.name.includes('Sin-Ji')),
-      voices.find(v => v.lang === 'zh-TW'), // Fallback to Taiwanese
-    ];
-    const selected = preferredVoices.find(v => v !== undefined);
-    console.log("🎤 Selected Cantonese voice:", selected?.name, selected?.lang);
-    return selected || null;
+    // ONLY Hong Kong Cantonese - DO NOT fallback to zh-TW or zh-CN
+    const cantoneseVoice = voices.find(v => v.lang === 'zh-HK');
+    if (cantoneseVoice) {
+      console.log("🎤 Found Cantonese voice:", cantoneseVoice.name);
+      return cantoneseVoice;
+    }
+    // If no zh-HK, try any voice that says "Hong Kong" or "Cantonese" in name
+    const altCantonese = voices.find(v => 
+      v.name.toLowerCase().includes('hong kong') || 
+      v.name.toLowerCase().includes('cantonese')
+    );
+    if (altCantonese) {
+      console.log("🎤 Found alternative Cantonese voice:", altCantonese.name);
+      return altCantonese;
+    }
+    // Last resort: use default with zh-HK language code
+    console.log("🎤 No Cantonese voice found, using default with zh-HK");
+    return null;
   } 
   else if (langKey === '简体中文') {
-    // ONLY use Mainland China voices for Mandarin
-    // IMPORTANT: EXCLUDE zh-HK and zh-TW
-    const preferredVoices = [
-      voices.find(v => v.lang === 'zh-CN'),
-      voices.find(v => v.lang === 'zh-CN' && v.name.includes('Ting-Ting')),
-      voices.find(v => v.lang === 'zh-CN' && v.name.includes('Yun-Yang')),
-      voices.find(v => v.lang === 'zh-CN' && v.name.includes('Mei-Jia')),
-    ];
-    const selected = preferredVoices.find(v => v !== undefined);
-    console.log("🎤 Selected Mandarin voice:", selected?.name, selected?.lang);
-    return selected || null;
+    // ONLY Mainland Mandarin - DO NOT fallback to zh-HK or zh-TW
+    const mandarinVoice = voices.find(v => v.lang === 'zh-CN');
+    if (mandarinVoice) {
+      console.log("🎤 Found Mandarin voice:", mandarinVoice.name);
+      return mandarinVoice;
+    }
+    // Try alternative Mandarin voices
+    const altMandarin = voices.find(v => 
+      v.name.toLowerCase().includes('mandarin') ||
+      (v.lang === 'zh' && v.name.toLowerCase().includes('china'))
+    );
+    if (altMandarin) {
+      console.log("🎤 Found alternative Mandarin voice:", altMandarin.name);
+      return altMandarin;
+    }
+    console.log("🎤 No Mandarin voice found, using default with zh-CN");
+    return null;
   }
   else {
     // English
-    const preferredVoices = [
-      voices.find(v => v.lang === 'en-US' && v.name === 'Samantha'),
-      voices.find(v => v.lang === 'en-US' && v.name === 'Google US English'),
-      voices.find(v => v.lang === 'en-US' && v.name.includes('Alex')),
-      voices.find(v => v.lang === 'en-GB' && v.name === 'Daniel'),
-      voices.find(v => v.lang === 'en-US'),
-    ];
-    const selected = preferredVoices.find(v => v !== undefined);
-    console.log("🎤 Selected English voice:", selected?.name, selected?.lang);
-    return selected || null;
+    const englishVoice = voices.find(v => 
+      v.lang === 'en-US' && (v.name === 'Samantha' || v.name === 'Alex')
+    );
+    if (englishVoice) {
+      console.log("🎤 Found English voice:", englishVoice.name);
+      return englishVoice;
+    }
+    return voices.find(v => v.lang === 'en-US') || null;
   }
 }
 
@@ -162,21 +174,22 @@ export async function speakText(text: string, langKey: string, onEnd?: () => voi
   const processedText = prepareTextForTTS(text, langKey);
   const utterance = new SpeechSynthesisUtterance(processedText);
   
-  // IMPORTANT: Set language codes correctly
+  // Set language - this is the most important part
   if (langKey === 'Cantonese') {
-    utterance.lang = 'zh-HK';  // Hong Kong Cantonese
+    utterance.lang = 'zh-HK';
   } else if (langKey === '简体中文') {
-    utterance.lang = 'zh-CN';  // Mainland Mandarin (NOT Cantonese)
+    utterance.lang = 'zh-CN';
   } else {
     utterance.lang = 'en-US';
   }
   
+  // Try to get a better voice, but don't override the language
   const bestVoice = getBestVoice(langKey);
   if (bestVoice) {
     utterance.voice = bestVoice;
     console.log(`🎤 Using voice: ${bestVoice.name} (${bestVoice.lang}) for ${langKey}`);
   } else {
-    console.log(`🎤 No specific voice found for ${langKey}, using default with lang=${utterance.lang}`);
+    console.log(`🎤 Using default voice for ${utterance.lang}`);
   }
   
   utterance.rate = 0.85;
