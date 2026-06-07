@@ -10,7 +10,6 @@ function getBestVoice(voiceLanguage: string): SpeechSynthesisVoice | null {
   if (voices.length === 0) return null;
   
   if (voiceLanguage === 'Cantonese') {
-    // ONLY Hong Kong Cantonese
     const cantoneseVoice = voices.find(v => v.lang === 'zh-HK');
     if (cantoneseVoice) {
       console.log("🎤 Found Cantonese voice:", cantoneseVoice.name);
@@ -20,7 +19,6 @@ function getBestVoice(voiceLanguage: string): SpeechSynthesisVoice | null {
     return null;
   } 
   else if (voiceLanguage === 'Mandarin') {
-    // ONLY Mainland Mandarin
     const mandarinVoice = voices.find(v => v.lang === 'zh-CN');
     if (mandarinVoice) {
       console.log("🎤 Found Mandarin voice:", mandarinVoice.name);
@@ -30,7 +28,6 @@ function getBestVoice(voiceLanguage: string): SpeechSynthesisVoice | null {
     return null;
   }
   else {
-    // English - try natural voices first
     const englishVoice = voices.find(v => 
       v.lang === 'en-US' && (v.name === 'Samantha' || v.name === 'Alex' || v.name === 'Google US English')
     );
@@ -42,7 +39,7 @@ function getBestVoice(voiceLanguage: string): SpeechSynthesisVoice | null {
   }
 }
 
-// Prepare text for TTS - Remove "fullstop" issue
+// Prepare text for TTS - Remove "句號" issue
 function prepareTextForTTS(text: string, textLanguage: string): string {
   let result = text;
   
@@ -68,14 +65,15 @@ function prepareTextForTTS(text: string, textLanguage: string): string {
   result = result.replace(/\*/g, '');
   result = result.replace(/•/g, '');
   
-  // Fix punctuation - remove "fullstop" issue
-  result = result.replace(/\. /g, '. ');
-  result = result.replace(/\.\./g, '.');
-  result = result.replace(/:/g, ', ');
-  result = result.replace(/：/g, ', ');
-  result = result.replace(/\n/g, '. ');
+  // Replace line breaks with spaces (not periods) - this fixes the "句號" issue
+  result = result.replace(/\n/g, ' ');
   
-  if (textLanguage === 'Cantonese') {
+  // Replace colons with natural pauses (not saying "colon")
+  result = result.replace(/:/g, ' ');
+  result = result.replace(/：/g, ' ');
+  
+  if (textLanguage === 'Traditional Chinese') {
+    // Replace stars with text
     result = result.replace(/信心評分: (\d+)% 五顆星 \(非常高\)/g, '信心評分 $1 個巴仙，非常高，五星級');
     result = result.replace(/信心評分: (\d+)% 四顆星 \(高\)/g, '信心評分 $1 個巴仙，高，四星級');
     result = result.replace(/信心評分: (\d+)% 三顆星 \(中等\)/g, '信心評分 $1 個巴仙，中等，三星級');
@@ -88,8 +86,10 @@ function prepareTextForTTS(text: string, textLanguage: string): string {
     result = result.replace(/(\d+)%/, '$1 個巴仙');
     result = result.replace(/-(\d+\.\d+)%/, '負 $1 個巴仙');
     result = result.replace(/ - /g, '至');
+    result = result.replace(/\. /g, ' ');
+    result = result.replace(/\.$/g, '');
     
-  } else if (textLanguage === '简体中文') {
+  } else if (textLanguage === 'Simplified Chinese') {
     result = result.replace(/信心评分: (\d+)% 五颗星 \(非常高\)/g, '信心评分 $1 百分之，非常高，五星级');
     result = result.replace(/信心评分: (\d+)% 四颗星 \(高\)/g, '信心评分 $1 百分之，高，四星级');
     result = result.replace(/信心评分: (\d+)% 三颗星 \(中等\)/g, '信心评分 $1 百分之，中等，三星级');
@@ -102,6 +102,8 @@ function prepareTextForTTS(text: string, textLanguage: string): string {
     result = result.replace(/(\d+)%/, '$1 百分之');
     result = result.replace(/-(\d+\.\d+)%/, '负 $1 百分之');
     result = result.replace(/ - /g, '至');
+    result = result.replace(/\. /g, ' ');
+    result = result.replace(/\.$/g, '');
     
   } else {
     // English
@@ -117,8 +119,11 @@ function prepareTextForTTS(text: string, textLanguage: string): string {
     result = result.replace(/(\d+)%/, '$1 percent');
     result = result.replace(/-(\d+\.\d+)%/, 'minus $1 percent');
     result = result.replace(/ - /g, ' to ');
+    result = result.replace(/\. /g, ' ');
+    result = result.replace(/\.$/g, '');
   }
   
+  // Clean up multiple spaces
   result = result.replace(/\s+/g, ' ');
   result = result.trim();
   
@@ -155,7 +160,7 @@ export async function speakText(text: string, textLanguage: string, voiceLanguag
   const processedText = prepareTextForTTS(text, textLanguage);
   const utterance = new SpeechSynthesisUtterance(processedText);
   
-  // IMPORTANT: Use voiceLanguage for the voice (not textLanguage)
+  // Use voiceLanguage for the voice
   if (voiceLanguage === 'Cantonese') {
     utterance.lang = 'zh-HK';
   } else if (voiceLanguage === 'Mandarin') {
