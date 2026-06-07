@@ -46,13 +46,13 @@ const MobileAnalysis: React.FC<MobileAnalysisProps> = ({
 
   // Load voice preference from localStorage
   useEffect(() => {
-    const savedVoice = localStorage.getItem('preferredVoice');
-    if (savedVoice === 'Cantonese' || savedVoice === 'Mandarin' || savedVoice === 'English') {
-      setVoiceLanguage(savedVoice);
-    } else {
-      setVoiceLanguage('English');
-    }
-  }, []);
+  const savedVoice = localStorage.getItem('preferredVoice');
+  if (savedVoice === 'Cantonese' || savedVoice === 'Mandarin' || savedVoice === 'Taiwanese' || savedVoice === 'English') {
+    setVoiceLanguage(savedVoice);
+  } else {
+    setVoiceLanguage('English');
+  }
+}, []);
 
   const t = {
     analyzingMarket: langKey === 'Traditional Chinese' ? '分析市場中...' : langKey === 'Simplified Chinese' ? '分析市场中...' : 'Analyzing Market...',

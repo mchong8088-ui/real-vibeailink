@@ -27,6 +27,17 @@ function getBestVoice(voiceLanguage: string): SpeechSynthesisVoice | null {
     console.log("🎤 No Mandarin voice found, using default with zh-CN");
     return null;
   }
+  else if (voiceLanguage === 'Taiwanese') {
+    const taiwaneseVoice = voices.find(v => v.lang === 'zh-TW');
+    if (taiwaneseVoice) {
+      console.log("🎤 Found Taiwanese voice:", taiwaneseVoice.name);
+      return taiwaneseVoice;
+    }
+    console.log("🎤 No Taiwanese voice found, falling back to Mandarin");
+    // Fallback to Mandarin if no Taiwanese voice
+    const mandarinVoice = voices.find(v => v.lang === 'zh-CN');
+    return mandarinVoice || null;
+  }
   else {
     const englishVoice = voices.find(v => 
       v.lang === 'en-US' && (v.name === 'Samantha' || v.name === 'Alex' || v.name === 'Google US English')
@@ -39,7 +50,7 @@ function getBestVoice(voiceLanguage: string): SpeechSynthesisVoice | null {
   }
 }
 
-// Prepare text for TTS - Remove "句號" issue and fix dash handling
+// Prepare text for TTS
 function prepareTextForTTS(text: string, textLanguage: string): string {
   let result = text;
   
@@ -73,17 +84,11 @@ function prepareTextForTTS(text: string, textLanguage: string): string {
   result = result.replace(/：/g, ' ');
   
   if (textLanguage === 'Traditional Chinese') {
-    // Handle dash differently based on context
-    // For day range (e.g., HK$452.20 - HK$466.20) - keep as "至"
-    // But for technical analysis (e.g., 48.9 - 中性區間) - remove the dash
-    // Pattern: number space dash space Chinese text - remove dash
+    // Handle dash - number to number (keep as "至"), else remove
     result = result.replace(/(\d+\.?\d*)\s+-\s+([\u4e00-\u9fa5])/g, '$1 $2');
-    // Pattern: number dash number (for ranges) - keep as "至"
     result = result.replace(/(\d+\.?\d*)\s*-\s*(\d+\.?\d*)/g, '$1至$2');
-    // Any remaining dashes with spaces become space
     result = result.replace(/\s*-\s*/g, ' ');
     
-    // Replace stars with text
     result = result.replace(/信心評分: (\d+)% 五顆星 \(非常高\)/g, '信心評分 $1 個巴仙，非常高，五星級');
     result = result.replace(/信心評分: (\d+)% 四顆星 \(高\)/g, '信心評分 $1 個巴仙，高，四星級');
     result = result.replace(/信心評分: (\d+)% 三顆星 \(中等\)/g, '信心評分 $1 個巴仙，中等，三星級');
@@ -99,7 +104,6 @@ function prepareTextForTTS(text: string, textLanguage: string): string {
     result = result.replace(/\.$/g, '');
     
   } else if (textLanguage === 'Simplified Chinese') {
-    // Handle dash similarly for Simplified Chinese
     result = result.replace(/(\d+\.?\d*)\s+-\s+([\u4e00-\u9fa5])/g, '$1 $2');
     result = result.replace(/(\d+\.?\d*)\s*-\s*(\d+\.?\d*)/g, '$1至$2');
     result = result.replace(/\s*-\s*/g, ' ');
@@ -181,6 +185,8 @@ export async function speakText(text: string, textLanguage: string, voiceLanguag
     utterance.lang = 'zh-HK';
   } else if (voiceLanguage === 'Mandarin') {
     utterance.lang = 'zh-CN';
+  } else if (voiceLanguage === 'Taiwanese') {
+    utterance.lang = 'zh-TW';
   } else {
     utterance.lang = 'en-US';
   }

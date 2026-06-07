@@ -1,4 +1,3 @@
-// app/components/layout/VoiceSelector.tsx
 "use client";
 import React, { useState, useRef, useEffect } from 'react';
 
@@ -16,6 +15,7 @@ export const VoiceSelector: React.FC<VoiceSelectorProps> = ({ currentVoice, onVo
       case 'English': return '🔊 EN';
       case 'Cantonese': return '🔊 粵語';
       case 'Mandarin': return '🔊 普通話';
+      case 'Taiwanese': return '🔊 國語';
       default: return '🔊 Voice';
     }
   };
@@ -23,13 +23,14 @@ export const VoiceSelector: React.FC<VoiceSelectorProps> = ({ currentVoice, onVo
   const getFullName = (voice: string) => {
     switch (voice) {
       case 'English': return 'English Voice';
-      case 'Cantonese': return '粵語語音 (Cantonese)';
-      case 'Mandarin': return '普通話語音 (Mandarin)';
+      case 'Cantonese': return '粵語 (Cantonese)';
+      case 'Mandarin': return '普通話 (Mainland Mandarin)';
+      case 'Taiwanese': return '國語 (Taiwanese Mandarin)';
       default: return voice;
     }
   };
 
-  const voiceOptions = ['English', 'Cantonese', 'Mandarin'];
+  const voiceOptions = ['English', 'Cantonese', 'Mandarin', 'Taiwanese'];
 
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
@@ -76,7 +77,7 @@ export const VoiceSelector: React.FC<VoiceSelectorProps> = ({ currentVoice, onVo
           borderRadius: '8px',
           boxShadow: '0 4px 6px -1px rgba(0,0,0,0.1)',
           zIndex: 50,
-          minWidth: '200px',
+          minWidth: '220px',
           overflow: 'hidden'
         }}>
           {voiceOptions.map((voice) => (

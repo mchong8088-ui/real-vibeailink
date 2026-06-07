@@ -23,13 +23,13 @@ const MobileLanding: React.FC<MobileLandingProps> = ({
 
   // Load voice preference from localStorage
   React.useEffect(() => {
-    const savedVoice = localStorage.getItem('preferredVoice');
-    if (savedVoice === 'Cantonese' || savedVoice === 'Mandarin' || savedVoice === 'English') {
-      setVoiceLanguage(savedVoice);
-    } else {
-      setVoiceLanguage('English');
-    }
-  }, []);
+  const savedVoice = localStorage.getItem('preferredVoice');
+  if (savedVoice === 'Cantonese' || savedVoice === 'Mandarin' || savedVoice === 'Taiwanese' || savedVoice === 'English') {
+    setVoiceLanguage(savedVoice);
+  } else {
+    setVoiceLanguage('English');
+  }
+}, []);
 
   const getTranslatedText = () => {
     if (langKey === 'Traditional Chinese') {
