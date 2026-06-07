@@ -29,6 +29,15 @@ export const PricingModal: React.FC<PricingModalProps> = ({
   // Summer promotion dates
   const promotionEndDate = "August 31, 2026";
   
+  // Check if promotion is still active
+  const isPromotionActive = (): boolean => {
+    const today = new Date();
+    const endDate = new Date(2026, 7, 31); // August 31, 2026 (month is 0-indexed)
+    return today <= endDate;
+  };
+  
+  const promotionActive = isPromotionActive();
+  
   // Promotion prices (50% off)
   const promotionPrices = {
     monthly: {
@@ -41,7 +50,7 @@ export const PricingModal: React.FC<PricingModalProps> = ({
     }
   };
   
-  // Original prices for strikethrough
+  // Original prices for strikethrough (monthly rates)
   const originalPrices = {
     monthly: {
       proLite: 29,
@@ -118,14 +127,22 @@ export const PricingModal: React.FC<PricingModalProps> = ({
         onSelectPlan('topup', STRIPE_PRICE_IDS.COFFEE_TOPUP);
       }
     } else if (planId === 'prolite') {
-      const priceId = billingCycle === 'monthly' 
-        ? STRIPE_PRICE_IDS.PRO_LITE_MONTHLY 
-        : STRIPE_PRICE_IDS.PRO_LITE_ANNUAL;
+      // Use promotional price if active, otherwise regular price
+      let priceId;
+      if (billingCycle === 'monthly') {
+        priceId = promotionActive ? STRIPE_PRICE_IDS.PROMO_PRO_LITE_MONTHLY : STRIPE_PRICE_IDS.PRO_LITE_MONTHLY;
+      } else {
+        priceId = promotionActive ? STRIPE_PRICE_IDS.PROMO_PRO_LITE_ANNUAL : STRIPE_PRICE_IDS.PRO_LITE_ANNUAL;
+      }
       onSelectPlan(planId, priceId);
     } else if (planId === 'institutional') {
-      const priceId = billingCycle === 'monthly'
-        ? STRIPE_PRICE_IDS.INSTITUTIONAL_MONTHLY
-        : STRIPE_PRICE_IDS.INSTITUTIONAL_ANNUAL;
+      // Use promotional price if active, otherwise regular price
+      let priceId;
+      if (billingCycle === 'monthly') {
+        priceId = promotionActive ? STRIPE_PRICE_IDS.PROMO_INSTITUTIONAL_MONTHLY : STRIPE_PRICE_IDS.INSTITUTIONAL_MONTHLY;
+      } else {
+        priceId = promotionActive ? STRIPE_PRICE_IDS.PROMO_INSTITUTIONAL_ANNUAL : STRIPE_PRICE_IDS.INSTITUTIONAL_ANNUAL;
+      }
       onSelectPlan(planId, priceId);
     }
     
@@ -140,6 +157,8 @@ export const PricingModal: React.FC<PricingModalProps> = ({
       price: { monthly: 0, annual: 0 },
       promotionPrice: { monthly: 0, annual: 0 },
       originalPrice: { monthly: 0, annual: 0 },
+      displayPrice: { monthly: 0, annual: 0 },
+      displayOriginal: { monthly: 0, annual: 0 },
       credits: '100',
       period: 'one-time',
       features: [
@@ -155,8 +174,8 @@ export const PricingModal: React.FC<PricingModalProps> = ({
       id: 'prolite',
       name: 'PRO LITE',
       shortName: 'PRO',
-      price: { monthly: promotionPrices.monthly.proLite, annual: promotionPrices.annual.proLite },
-      originalPrice: { monthly: originalPrices.monthly.proLite, annual: originalPrices.annual.proLite },
+      displayPrice: { monthly: promotionPrices.monthly.proLite, annual: promotionPrices.annual.proLite },
+      displayOriginal: { monthly: originalPrices.monthly.proLite, annual: originalPrices.annual.proLite },
       credits: '1,500',
       period: '/mo',
       features: [
@@ -173,8 +192,8 @@ export const PricingModal: React.FC<PricingModalProps> = ({
       id: 'institutional',
       name: 'INSTITUTIONAL',
       shortName: 'INST',
-      price: { monthly: promotionPrices.monthly.institutional, annual: promotionPrices.annual.institutional },
-      originalPrice: { monthly: originalPrices.monthly.institutional, annual: originalPrices.annual.institutional },
+      displayPrice: { monthly: promotionPrices.monthly.institutional, annual: promotionPrices.annual.institutional },
+      displayOriginal: { monthly: originalPrices.monthly.institutional, annual: originalPrices.annual.institutional },
       credits: '8,000',
       period: '/mo',
       features: [
@@ -189,43 +208,40 @@ export const PricingModal: React.FC<PricingModalProps> = ({
   ];
 
   const currentPrice = (plan: typeof plans[0]) => {
-    return billingCycle === 'monthly' ? plan.price.monthly : plan.price.annual;
+    return billingCycle === 'monthly' ? plan.displayPrice.monthly : plan.displayPrice.annual;
   };
 
   const currentOriginalPrice = (plan: typeof plans[0]) => {
-    return billingCycle === 'monthly' ? plan.originalPrice.monthly : plan.originalPrice.annual;
+    return billingCycle === 'monthly' ? plan.displayOriginal.monthly : plan.displayOriginal.annual;
   };
 
-  const getSavings = (plan: typeof plans[0]) => {
-    if (billingCycle === 'annual' && plan.originalPrice.annual > 0) {
-      const monthlyTotal = plan.originalPrice.monthly * 12;
-      const annualPrice = plan.originalPrice.annual * 12;
-      return monthlyTotal - annualPrice;
-    }
-    return 0;
+  const getAnnualTotal = (plan: typeof plans[0]) => {
+    return (billingCycle === 'annual' ? currentPrice(plan) * 12 : currentPrice(plan)).toFixed(0);
   };
 
   return (
     <div style={{ width: '100%', maxWidth: '1200px', margin: '0 auto', padding: '20px' }}>
-      {/* Header with Promotion Banner */}
-      <div style={{ 
-        background: 'linear-gradient(135deg, #ff6b6b 0%, #ee5a24 100%)',
-        borderRadius: '16px',
-        padding: '16px 24px',
-        marginBottom: '24px',
-        textAlign: 'center',
-        animation: 'pulse 2s infinite'
-      }}>
-        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '12px', flexWrap: 'wrap' }}>
-          <span style={{ fontSize: '28px' }}>🎉</span>
-          <div>
-            <div style={{ fontSize: '16px', fontWeight: 'bold', color: 'white' }}>🔥 SUMMER PROMOTION 🔥</div>
-            <div style={{ fontSize: '13px', color: 'rgba(255,255,255,0.9)' }}>50% OFF on Pro Lite & Institutional Plans!</div>
-            <div style={{ fontSize: '11px', color: 'rgba(255,255,255,0.7)', marginTop: '4px' }}>⏰ Offer expires on {promotionEndDate}</div>
+      {/* Header with Promotion Banner - Only show if promotion is active */}
+      {promotionActive && (
+        <div style={{ 
+          background: 'linear-gradient(135deg, #ff6b6b 0%, #ee5a24 100%)',
+          borderRadius: '16px',
+          padding: '16px 24px',
+          marginBottom: '24px',
+          textAlign: 'center',
+          animation: 'pulse 2s infinite'
+        }}>
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '12px', flexWrap: 'wrap' }}>
+            <span style={{ fontSize: '28px' }}>🎉</span>
+            <div>
+              <div style={{ fontSize: '16px', fontWeight: 'bold', color: 'white' }}>🔥 SUMMER PROMOTION 🔥</div>
+              <div style={{ fontSize: '13px', color: 'rgba(255,255,255,0.9)' }}>50% OFF on Pro Lite & Institutional Plans!</div>
+              <div style={{ fontSize: '11px', color: 'rgba(255,255,255,0.7)', marginTop: '4px' }}>⏰ Offer expires on {promotionEndDate}</div>
+            </div>
+            <span style={{ fontSize: '28px' }}>☀️</span>
           </div>
-          <span style={{ fontSize: '28px' }}>☀️</span>
         </div>
-      </div>
+      )}
 
       {/* Billing Toggle */}
       <div style={{ display: 'flex', justifyContent: 'center', marginBottom: '32px' }}>
@@ -341,41 +357,38 @@ export const PricingModal: React.FC<PricingModalProps> = ({
                 </>
               ) : (
                 <>
-                  {/* Original price with strikethrough */}
-                  <div style={{ marginBottom: '8px' }}>
-                    <span style={{ 
-                      fontSize: '18px', 
-                      color: '#9CA3AF', 
-                      textDecoration: 'line-through',
-                      marginRight: '8px'
-                    }}>
-                      ${currentOriginalPrice(plan)}
-                    </span>
-                    <span style={{ 
-                      backgroundColor: '#EF4444', 
-                      color: 'white', 
-                      fontSize: '11px', 
-                      padding: '2px 8px', 
-                      borderRadius: '20px',
-                      fontWeight: 'bold'
-                    }}>
-                      50% OFF
-                    </span>
-                  </div>
+                  {/* Original price with strikethrough - only if promotion is active */}
+                  {promotionActive && (
+                    <div style={{ marginBottom: '8px' }}>
+                      <span style={{ 
+                        fontSize: '18px', 
+                        color: '#9CA3AF', 
+                        textDecoration: 'line-through',
+                        marginRight: '8px'
+                      }}>
+                        ${currentOriginalPrice(plan)}
+                      </span>
+                      <span style={{ 
+                        backgroundColor: '#EF4444', 
+                        color: 'white', 
+                        fontSize: '11px', 
+                        padding: '2px 8px', 
+                        borderRadius: '20px',
+                        fontWeight: 'bold'
+                      }}>
+                        50% OFF
+                      </span>
+                    </div>
+                  )}
                   <div>
-                    <span style={{ fontSize: '48px', fontWeight: 'bold', color: '#EF4444' }}>${currentPrice(plan)}</span>
+                    <span style={{ fontSize: '48px', fontWeight: 'bold', color: promotionActive ? '#EF4444' : '#111827' }}>${currentPrice(plan)}</span>
                     <span style={{ color: '#6B7280', fontSize: '14px' }}>/{billingCycle === 'monthly' ? 'mo' : 'mo'}</span>
                   </div>
                   <p style={{ fontSize: '11px', color: '#22C55E', marginTop: '8px', fontWeight: '500' }}>
                     {billingCycle === 'annual' 
-                      ? `$${(currentPrice(plan) * 12).toFixed(0)} billed annually` 
+                      ? `$${getAnnualTotal(plan)} billed annually` 
                       : 'billed monthly'}
                   </p>
-                  {billingCycle === 'annual' && getSavings(plan) > 0 && (
-                    <p style={{ fontSize: '11px', color: '#F97316', marginTop: '4px' }}>
-                      Save ${getSavings(plan)}/year vs monthly
-                    </p>
-                  )}
                 </>
               )}
             </div>
@@ -423,19 +436,21 @@ export const PricingModal: React.FC<PricingModalProps> = ({
         ))}
       </div>
 
-      {/* Promotion Footer */}
-      <div style={{ 
-        textAlign: 'center', 
-        marginTop: '32px',
-        padding: '16px',
-        background: 'linear-gradient(135deg, #fef3c7 0%, #fde68a 100%)',
-        borderRadius: '16px',
-        border: '1px solid #fbbf24'
-      }}>
-        <p style={{ fontSize: '13px', color: '#92400E', margin: 0 }}>
-          🎊 Summer promotion ends on <strong>{promotionEndDate}</strong>. Prices will return to regular rates afterward. 🎊
-        </p>
-      </div>
+      {/* Promotion Footer - Only show if promotion is active */}
+      {promotionActive && (
+        <div style={{ 
+          textAlign: 'center', 
+          marginTop: '32px',
+          padding: '16px',
+          background: 'linear-gradient(135deg, #fef3c7 0%, #fde68a 100%)',
+          borderRadius: '16px',
+          border: '1px solid #fbbf24'
+        }}>
+          <p style={{ fontSize: '13px', color: '#92400E', margin: 0 }}>
+            🎊 Summer promotion ends on <strong>{promotionEndDate}</strong>. Prices will return to regular rates afterward. 🎊
+          </p>
+        </div>
+      )}
 
       {/* Close Button */}
       <div style={{ display: 'flex', justifyContent: 'center', marginTop: '24px' }}>
