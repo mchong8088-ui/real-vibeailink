@@ -8,9 +8,26 @@ interface VoiceSelectorProps {
 
 export const VoiceSelector: React.FC<VoiceSelectorProps> = ({ currentVoice, onVoiceChange }) => {
   const [isOpen, setIsOpen] = useState(false);
+  const [isMobile, setIsMobile] = useState(false);
   const dropdownRef = useRef<HTMLDivElement>(null);
 
+  useEffect(() => {
+    // Detect mobile device
+    const mobile = /iPhone|iPad|iPod|Android/i.test(navigator.userAgent);
+    setIsMobile(mobile);
+  }, []);
+
   const getDisplayName = (voice: string) => {
+    if (isMobile) {
+      // On mobile, simplify display names
+      switch (voice) {
+        case 'English': return '🔊 EN';
+        case 'Cantonese': return '🔊 粵語';
+        case 'Mandarin': return '🔊 普通話';
+        case 'Taiwanese': return '🔊 國語';
+        default: return '🔊 Voice';
+      }
+    }
     switch (voice) {
       case 'English': return '🔊 EN';
       case 'Cantonese': return '🔊 粵語';
@@ -21,6 +38,16 @@ export const VoiceSelector: React.FC<VoiceSelectorProps> = ({ currentVoice, onVo
   };
 
   const getFullName = (voice: string) => {
+    if (isMobile) {
+      // On mobile, show note that Taiwanese uses Mandarin voice
+      switch (voice) {
+        case 'English': return 'English Voice';
+        case 'Cantonese': return '粵語 (Cantonese)';
+        case 'Mandarin': return '普通話 (Mandarin)';
+        case 'Taiwanese': return '國語 (Taiwanese) - 與普通話共用同一語音';
+        default: return voice;
+      }
+    }
     switch (voice) {
       case 'English': return 'English Voice';
       case 'Cantonese': return '粵語 (Cantonese)';
@@ -30,6 +57,7 @@ export const VoiceSelector: React.FC<VoiceSelectorProps> = ({ currentVoice, onVo
     }
   };
 
+  // All 4 voice options - keep them, but mobile users will see a note
   const voiceOptions = ['English', 'Cantonese', 'Mandarin', 'Taiwanese'];
 
   useEffect(() => {
@@ -41,6 +69,30 @@ export const VoiceSelector: React.FC<VoiceSelectorProps> = ({ currentVoice, onVo
     document.addEventListener('mousedown', handleClickOutside);
     return () => document.removeEventListener('mousedown', handleClickOutside);
   }, []);
+
+  // Test the voice when selected (for debugging)
+  const testVoice = (voice: string) => {
+    const testText = voice === 'Mandarin' ? '你好，这是普通话测试。' :
+                     voice === 'Taiwanese' ? '你好，這是國語測試。' :
+                     voice === 'Cantonese' ? '你好，呢個係廣東話測試。' :
+                     'Hello, this is an English test.';
+    
+    const utterance = new SpeechSynthesisUtterance(testText);
+    
+    if (voice === 'Cantonese') {
+      utterance.lang = 'zh-HK';
+    } else if (voice === 'Taiwanese') {
+      utterance.lang = 'zh-TW';
+    } else if (voice === 'Mandarin') {
+      utterance.lang = 'zh-CN';
+    } else {
+      utterance.lang = 'en-US';
+    }
+    
+    utterance.rate = 0.9;
+    window.speechSynthesis.cancel();
+    window.speechSynthesis.speak(utterance);
+  };
 
   return (
     <div style={{ position: 'relative' }} ref={dropdownRef}>
@@ -77,7 +129,7 @@ export const VoiceSelector: React.FC<VoiceSelectorProps> = ({ currentVoice, onVo
           borderRadius: '8px',
           boxShadow: '0 4px 6px -1px rgba(0,0,0,0.1)',
           zIndex: 50,
-          minWidth: '220px',
+          minWidth: isMobile ? '220px' : '240px',
           overflow: 'hidden'
         }}>
           {voiceOptions.map((voice) => (
@@ -87,6 +139,8 @@ export const VoiceSelector: React.FC<VoiceSelectorProps> = ({ currentVoice, onVo
                 onVoiceChange(voice);
                 localStorage.setItem('preferredVoice', voice);
                 setIsOpen(false);
+                // Test the voice after selection (so user knows what they get)
+                setTimeout(() => testVoice(voice), 100);
               }}
               style={{
                 display: 'block',
@@ -99,6 +153,7 @@ export const VoiceSelector: React.FC<VoiceSelectorProps> = ({ currentVoice, onVo
                 cursor: 'pointer',
                 fontSize: '12px',
                 fontWeight: currentVoice === voice ? '600' : '400',
+                borderBottom: '1px solid #E5E7EB'
               }}
             >
               {getFullName(voice)}
