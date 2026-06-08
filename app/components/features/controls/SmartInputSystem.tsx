@@ -102,13 +102,17 @@ export const SmartInputSystem: React.FC<SmartInputSystemProps> = ({
       // Use voiceLanguage for the voice
       const voiceLang = voiceLanguage || localStorage.getItem('preferredVoice') || 'English';
       
-      if (voiceLang === 'Cantonese') {
-        utterance.lang = 'zh-HK';
-      } else if (voiceLang === 'Mandarin') {
-        utterance.lang = 'zh-CN';
-      } else {
-        utterance.lang = 'en-US';
-      }
+      // In SmartInputSystem.tsx, update the voice mapping section (around line 120-135):
+
+if (voiceLang === 'Cantonese') {
+  utterance.lang = 'zh-HK';
+} else if (voiceLang === 'Taiwanese') {
+  utterance.lang = 'zh-TW';  // Taiwanese Mandarin
+} else if (voiceLang === 'Mandarin') {
+  utterance.lang = 'zh-CN';  // Mainland Mandarin
+} else {
+  utterance.lang = 'en-US';
+}
       
       utterance.rate = 0.85;
       utterance.pitch = 1.0;
