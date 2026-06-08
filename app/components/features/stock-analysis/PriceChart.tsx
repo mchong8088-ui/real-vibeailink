@@ -7,53 +7,80 @@ interface PriceChartProps {
   langKey: string;
 }
 
+// Calculate Bollinger Bands - FIXED for read-only properties
+const addBollingerBands = (data: any[], period: number = 20, multiplier: number = 2) => {
+  if (!data || data.length < period) return data;
+  
+  // Create a deep copy to avoid read-only issues
+  const result = data.map(item => ({ ...item }));
+  const prices = result.map(d => d.price || d.close);
+  
+  for (let i = period - 1; i < result.length; i++) {
+    const slice = prices.slice(i - period + 1, i + 1);
+    const sma = slice.reduce((a, b) => a + b, 0) / period;
+    const squaredDiffs = slice.map(p => Math.pow(p - sma, 2));
+    const stdDev = Math.sqrt(squaredDiffs.reduce((a, b) => a + b, 0) / period);
+    
+    // Create new object with band properties
+    result[i] = {
+      ...result[i],
+      upper: sma + (multiplier * stdDev),
+      middle: sma,
+      lower: sma - (multiplier * stdDev)
+    };
+  }
+  
+  return result;
+};
+
 export const PriceChart = ({ data, langKey }: PriceChartProps) => {
-  const [period, setPeriod] = useState<'1W' | '1M' | '3M'>('1M');
+  const [period, setPeriod] = useState<'1D' | '1W' | '1M' | '3M' | '6M'>('3M');
   const [filteredData, setFilteredData] = useState<any[]>([]);
   
-  // Filter data based on selected period
+  // Filter data based on selected period and add Bollinger Bands
   useEffect(() => {
     if (!data || data.length === 0) {
       setFilteredData([]);
       return;
     }
     
-    const now = new Date();
-    let daysToShow = 30; // Default 1M
-    
+    let daysToShow = 90;
     switch (period) {
+      case '1D': daysToShow = 1; break;
       case '1W': daysToShow = 7; break;
       case '1M': daysToShow = 30; break;
       case '3M': daysToShow = 90; break;
+      case '6M': daysToShow = 180; break;
     }
     
-    // Check if data has real dates
     const hasValidDates = data.some(item => item.date && !item.date.includes('d ago'));
     
+    let filtered: any[];
     if (hasValidDates) {
       const cutoffDate = new Date();
-      cutoffDate.setDate(now.getDate() - daysToShow);
-      const filtered = data.filter(item => {
+      cutoffDate.setDate(new Date().getDate() - daysToShow);
+      filtered = data.filter(item => {
         const itemDate = new Date(item.date);
         return itemDate >= cutoffDate;
       });
-      setFilteredData(filtered.length > 0 ? filtered : data.slice(-daysToShow));
+      if (filtered.length === 0) filtered = data.slice(-Math.max(daysToShow, 20));
     } else {
-      // Mock data - just take last N items
-      setFilteredData(data.slice(-daysToShow));
+      filtered = data.slice(-Math.max(daysToShow, 20));
     }
+    
+    const bandsAdded = addBollingerBands(filtered);
+    setFilteredData(bandsAdded);
   }, [data, period]);
   
   const formatXAxis = (dateStr: string) => {
     if (!dateStr) return '';
     try {
       const date = new Date(dateStr);
-      if (isNaN(date.getTime())) {
-        // Handle mock data format like "30d ago"
-        return dateStr;
-      }
-      if (period === '1W') {
-        return date.toLocaleDateString(undefined, { weekday: 'short' });
+      if (isNaN(date.getTime())) return dateStr;
+      if (period === '1D') {
+        return date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+      } else if (period === '1W') {
+        return date.toLocaleDateString([], { weekday: 'short' });
       } else {
         return `${date.getMonth() + 1}/${date.getDate()}`;
       }
@@ -64,18 +91,7 @@ export const PriceChart = ({ data, langKey }: PriceChartProps) => {
   
   const CustomTooltip = ({ active, payload, label }: any) => {
     if (active && payload && payload.length) {
-      let displayLabel = label;
-      try {
-        const date = new Date(label);
-        if (!isNaN(date.getTime())) {
-          displayLabel = date.toLocaleString(undefined, { 
-            month: 'short', 
-            day: 'numeric',
-            hour: '2-digit',
-            minute: '2-digit'
-          });
-        }
-      } catch (e) {}
+      const priceItem = payload.find((p: any) => p.dataKey === 'price' || p.dataKey === 'close');
       
       return (
         <div style={{ 
@@ -85,22 +101,33 @@ export const PriceChart = ({ data, langKey }: PriceChartProps) => {
           padding: '8px 12px',
           boxShadow: '0 4px 6px -1px rgba(0,0,0,0.1)'
         }}>
-          <p style={{ fontSize: '10px', color: '#6B7280', margin: '0 0 4px 0' }}>
-            {displayLabel}
-          </p>
-          <p style={{ fontSize: '13px', fontWeight: 'bold', color: '#2563EB', margin: 0 }}>
-            ${payload[0].value}
-          </p>
+          <p style={{ fontSize: '10px', color: '#6B7280', margin: '0 0 4px 0' }}>{label}</p>
+          {priceItem && (
+            <p style={{ fontSize: '13px', fontWeight: 'bold', color: '#2563EB', margin: 0 }}>
+              ${priceItem.value?.toFixed(2)}
+            </p>
+          )}
         </div>
       );
     }
     return null;
   };
   
-  const periodLabels = {
-    '1W': langKey === 'Cantonese' ? '1週' : langKey === '简体中文' ? '1周' : '1W',
-    '1M': langKey === 'Cantonese' ? '1月' : langKey === '简体中文' ? '1月' : '1M',
-    '3M': langKey === 'Cantonese' ? '3月' : langKey === '简体中文' ? '3月' : '3M',
+  const getPeriodLabel = (p: string) => {
+    if (langKey === 'Cantonese' || langKey === 'Traditional Chinese') {
+      if (p === '1D') return '1日';
+      if (p === '1W') return '1週';
+      if (p === '1M') return '1月';
+      if (p === '3M') return '3月';
+      if (p === '6M') return '6月';
+    } else if (langKey === 'Simplified Chinese') {
+      if (p === '1D') return '1日';
+      if (p === '1W') return '1周';
+      if (p === '1M') return '1月';
+      if (p === '3M') return '3月';
+      if (p === '6M') return '6月';
+    }
+    return p;
   };
   
   if (filteredData.length === 0) {
@@ -113,13 +140,16 @@ export const PriceChart = ({ data, langKey }: PriceChartProps) => {
         textAlign: 'center',
         marginBottom: '12px'
       }}>
-        <p style={{ color: '#6B7280', fontSize: '12px' }}>Loading chart data...</p>
+        <p style={{ color: '#6B7280', fontSize: '12px' }}>
+          {langKey === 'Cantonese' || langKey === 'Traditional Chinese' ? '圖表數據載入中...' : 
+           langKey === 'Simplified Chinese' ? '图表数据加载中...' : 'Loading chart data...'}
+        </p>
       </div>
     );
   }
   
-  const minPrice = Math.min(...filteredData.map(d => d.price));
-  const maxPrice = Math.max(...filteredData.map(d => d.price));
+  const minPrice = Math.min(...filteredData.map(d => d.price || d.close));
+  const maxPrice = Math.max(...filteredData.map(d => d.price || d.close));
   const priceRange = maxPrice - minPrice;
   const yDomain = [minPrice - priceRange * 0.1, maxPrice + priceRange * 0.1];
   
@@ -132,7 +162,6 @@ export const PriceChart = ({ data, langKey }: PriceChartProps) => {
       marginBottom: '12px',
       overflow: 'hidden'
     }}>
-      {/* Header with period selector */}
       <div style={{ 
         padding: '12px 16px', 
         borderBottom: '1px solid #E5E7EB',
@@ -143,17 +172,18 @@ export const PriceChart = ({ data, langKey }: PriceChartProps) => {
         gap: '8px'
       }}>
         <h4 style={{ margin: 0, fontSize: '13px', fontWeight: '600', color: '#1F2937' }}>
-          {langKey === 'Cantonese' ? '股價趨勢' : langKey === '简体中文' ? '股价趋势' : 'Price Trend'}
+          {langKey === 'Cantonese' || langKey === 'Traditional Chinese' ? '股價趨勢 (布林通道)' : 
+           langKey === 'Simplified Chinese' ? '股价趋势 (布林通道)' : 'Price Trend (Bollinger Bands)'}
         </h4>
         
-        <div style={{ display: 'flex', gap: '6px' }}>
-          {(['1W', '1M', '3M'] as const).map((p) => (
+        <div style={{ display: 'flex', gap: '4px', flexWrap: 'wrap' }}>
+          {(['1D', '1W', '1M', '3M', '6M'] as const).map((p) => (
             <button
               key={p}
               onClick={() => setPeriod(p)}
               style={{
-                padding: '4px 10px',
-                fontSize: '11px',
+                padding: '4px 8px',
+                fontSize: '10px',
                 fontWeight: period === p ? '600' : '400',
                 borderRadius: '6px',
                 border: period === p ? '1px solid #2563EB' : '1px solid #E5E7EB',
@@ -162,22 +192,15 @@ export const PriceChart = ({ data, langKey }: PriceChartProps) => {
                 cursor: 'pointer'
               }}
             >
-              {periodLabels[p]}
+              {getPeriodLabel(p)}
             </button>
           ))}
         </div>
       </div>
       
-      {/* Chart */}
-      <div style={{ padding: '12px', height: '220px' }}>
+      <div style={{ padding: '12px', height: '240px' }}>
         <ResponsiveContainer width="100%" height="100%">
           <ComposedChart data={filteredData}>
-            <defs>
-              <linearGradient id="colorPrice" x1="0" y1="0" x2="0" y2="1">
-                <stop offset="5%" stopColor="#2563eb" stopOpacity={0.1}/>
-                <stop offset="95%" stopColor="#2563eb" stopOpacity={0}/>
-              </linearGradient>
-            </defs>
             <XAxis 
               dataKey="date" 
               tickFormatter={formatXAxis}
@@ -188,33 +211,75 @@ export const PriceChart = ({ data, langKey }: PriceChartProps) => {
             <YAxis 
               domain={yDomain}
               fontSize={9}
-              width={35}
+              width={40}
               tick={{ fill: '#6B7280' }}
             />
             <Tooltip content={<CustomTooltip />} />
-            <Area type="monotone" dataKey="upper" stroke="none" fill="#e2e8f0" fillOpacity={0.3} />
-            <Area type="monotone" dataKey="lower" stroke="none" fill="#ffffff" />
-            <Line type="monotone" dataKey="price" stroke="#2563eb" strokeWidth={2} dot={false} activeDot={{ r: 3, fill: '#2563eb' }} />
-            <Line type="monotone" dataKey="vwap" stroke="#f59e0b" strokeWidth={1.5} strokeDasharray="5 5" dot={false} />
+            
+            <Area 
+              type="monotone" 
+              dataKey="upper" 
+              stroke="#94a3b8" 
+              strokeWidth={1}
+              fill="#e2e8f0" 
+              fillOpacity={0.2}
+              dot={false}
+            />
+            <Area 
+              type="monotone" 
+              dataKey="lower" 
+              stroke="#94a3b8" 
+              strokeWidth={1}
+              fill="none" 
+              dot={false}
+            />
+            
+            <Line 
+              type="monotone" 
+              dataKey="middle" 
+              stroke="#94a3b8" 
+              strokeWidth={1.5} 
+              strokeDasharray="4 4"
+              dot={false}
+            />
+            
+            <Line 
+              type="monotone" 
+              dataKey="price" 
+              stroke="#2563eb" 
+              strokeWidth={2.5} 
+              dot={false}
+              activeDot={{ r: 4, fill: '#2563eb' }}
+            />
           </ComposedChart>
         </ResponsiveContainer>
       </div>
       
-      {/* Legend */}
       <div style={{ 
         padding: '6px 16px 10px', 
         borderTop: '1px solid #E5E7EB',
         display: 'flex',
         gap: '16px',
-        fontSize: '9px'
+        fontSize: '9px',
+        flexWrap: 'wrap'
       }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-          <div style={{ width: '16px', height: '2px', backgroundColor: '#2563eb' }} />
-          <span style={{ color: '#6B7280' }}>Price</span>
+          <div style={{ width: '20px', height: '2px', backgroundColor: '#2563eb' }} />
+          <span style={{ color: '#6B7280' }}>
+            {langKey === 'Cantonese' || langKey === 'Traditional Chinese' ? '股價' : 
+             langKey === 'Simplified Chinese' ? '股价' : 'Price'}
+          </span>
         </div>
         <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-          <div style={{ width: '16px', height: '2px', backgroundColor: '#f59e0b', borderStyle: 'dashed' }} />
-          <span style={{ color: '#6B7280' }}>VWAP</span>
+          <div style={{ width: '20px', height: '2px', backgroundColor: '#94a3b8', borderStyle: 'dashed' }} />
+          <span style={{ color: '#6B7280' }}>SMA20</span>
+        </div>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+          <div style={{ width: '20px', height: '10px', backgroundColor: '#cbd5e1', opacity: 0.3 }} />
+          <span style={{ color: '#6B7280' }}>
+            {langKey === 'Cantonese' || langKey === 'Traditional Chinese' ? '布林通道' : 
+             langKey === 'Simplified Chinese' ? '布林通道' : 'Bollinger Bands'}
+          </span>
         </div>
       </div>
     </div>
