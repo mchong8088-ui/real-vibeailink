@@ -91,6 +91,27 @@ async function fetchCompanyInfo(symbol: string): Promise<{ name: string; chinese
   };
 }
 
+// Calculate Bollinger Bands for historical data
+function addBollingerBands(historical: any[], period: number = 20, multiplier: number = 2) {
+  if (historical.length < period) return historical;
+  
+  const result = [...historical];
+  const prices = result.map(d => d.close);
+  
+  for (let i = period - 1; i < result.length; i++) {
+    const slice = prices.slice(i - period + 1, i + 1);
+    const sma = slice.reduce((a, b) => a + b, 0) / period;
+    const squaredDiffs = slice.map(p => Math.pow(p - sma, 2));
+    const stdDev = Math.sqrt(squaredDiffs.reduce((a, b) => a + b, 0) / period);
+    
+    result[i].upper = sma + (multiplier * stdDev);
+    result[i].middle = sma;
+    result[i].lower = sma - (multiplier * stdDev);
+  }
+  
+  return result;
+}
+
 function calculateRSI(prices: number[], period: number = 14): number | null {
   if (prices.length < period + 1) return null;
   let gains = 0, losses = 0;
@@ -124,6 +145,34 @@ function determineTrend(prices: number[]): string {
   if (currentPrice > sma20 * 1.02) return 'Uptrend';
   if (currentPrice < sma20 * 0.98) return 'Downtrend';
   return 'Sideways';
+}
+
+// Helper function to translate news headlines
+function translateNewsHeadline(headline: string, language: string): string {
+  if (language === 'English') return headline;
+  
+  const translations: Record<string, string> = {
+    'ROTH to Host Its 16th Annual London Conference': 'ROTH將舉辦第16屆倫敦年度會議',
+    'Modern Healthcare Names': '現代醫療評選',
+    'Among 50 Most Influential Clinical Executives': '入選50位最具影響力臨床高管',
+    'Annual Financial Report': '年度財務報告',
+    'Dear Apple Stock Fans': '親愛的蘋果股票投資者',
+    'Mark Your Calendars for': '請在日曆上標記',
+    'Giroud pens one-year Lille contract extension aged': '吉魯與里爾續約一年，現年',
+    'InventHelp Inventor Develops New Vending Machine': 'InventHelp發明家開發新型自動售貨機',
+    'for Feminine Hygiene Products': '女性衛生用品',
+    'SLB\'s OneSubsea Wins BP Contract': 'SLB旗下OneSubsea獲得BP合約',
+    'Thunder Horse Deepwater Project': '雷霆馬深水項目',
+  };
+  
+  let translated = headline;
+  for (const [eng, chn] of Object.entries(translations)) {
+    if (headline.includes(eng)) {
+      translated = translated.replace(eng, chn);
+    }
+  }
+  
+  return translated;
 }
 
 async function fetchRealStockData(symbol: string) {
@@ -208,6 +257,7 @@ async function fetchRealStockData(symbol: string) {
       if (timestamps[i] && closes[i] && closes[i] > 0) {
         historical.push({
           date: new Date(timestamps[i] * 1000).toISOString().split('T')[0],
+          price: closes[i],
           close: closes[i],
           open: opens[i] || null,
           high: highs[i] || null,
@@ -219,6 +269,9 @@ async function fetchRealStockData(symbol: string) {
     
     console.log(`✅ ${symbol}: ${currency}${price} (${changePercent > 0 ? '+' : ''}${changePercent.toFixed(2)}%) - ${historical.length} data points`);
     
+    // Add Bollinger Bands to historical data
+    const historicalWithBands = addBollingerBands(historical);
+    
     return { 
       price, 
       changePercent,
@@ -229,7 +282,7 @@ async function fetchRealStockData(symbol: string) {
       macd, 
       trend, 
       currency, 
-      historical,
+      historical: historicalWithBands,
       sma20,
       sma50,
       volatility,
@@ -659,22 +712,22 @@ function generateSpecificAnalysis(stockData: any, fundamentals: any, symbol: str
     stopLoss = price * 0.94;
   }
   
-  // Confidence score
+  // Confidence score - UPDATED with cap at 95%
   let confidenceScore = 50;
   
   let technicalScore = 0;
   if (trend === 'Uptrend' && macd === 'Bullish') {
-    technicalScore += 30;
+    technicalScore += 25;
   } else if (trend === 'Uptrend' && macd === 'Bearish') {
     technicalScore += 5;
   } else if (trend === 'Downtrend' && macd === 'Bearish') {
-    technicalScore -= 25;
+    technicalScore -= 30;
   } else if (trend === 'Downtrend' && macd === 'Bullish') {
-    technicalScore -= 5;
+    technicalScore -= 10;
   } else if (trend === 'Uptrend') {
     technicalScore += 15;
   } else if (trend === 'Downtrend') {
-    technicalScore -= 15;
+    technicalScore -= 20;
   }
   
   if (rsi !== null) {
@@ -683,13 +736,13 @@ function generateSpecificAnalysis(stockData: any, fundamentals: any, symbol: str
     } else if (rsi >= 30 && rsi <= 70) {
       technicalScore += 5;
     } else if (rsi < 25) {
-      technicalScore -= 15;
+      technicalScore -= 20;
     } else if (rsi > 75) {
-      technicalScore -= 15;
+      technicalScore -= 20;
     } else if (rsi < 30) {
-      technicalScore -= 5;
-    } else if (rsi > 70) {
       technicalScore -= 10;
+    } else if (rsi > 70) {
+      technicalScore -= 15;
     }
   }
   
@@ -707,11 +760,11 @@ function generateSpecificAnalysis(stockData: any, fundamentals: any, symbol: str
     } else if (pe > 45 && pe <= 60) {
       fundamentalScore -= 10;
     } else if (pe > 60) {
-      fundamentalScore -= 15;
+      fundamentalScore -= 20;
     } else if (pe < 10 && pe > 0) {
       fundamentalScore += 10;
     } else if (pe < 0) {
-      fundamentalScore -= 20;
+      fundamentalScore -= 25;
     }
   }
   
@@ -725,9 +778,9 @@ function generateSpecificAnalysis(stockData: any, fundamentals: any, symbol: str
     } else if (revenueGrowth > 0) {
       fundamentalScore += 0;
     } else if (revenueGrowth < 0 && revenueGrowth >= -10) {
-      fundamentalScore -= 10;
+      fundamentalScore -= 15;
     } else if (revenueGrowth < -10) {
-      fundamentalScore -= 20;
+      fundamentalScore -= 25;
     }
   }
   
@@ -741,7 +794,7 @@ function generateSpecificAnalysis(stockData: any, fundamentals: any, symbol: str
     } else if (profitMargin > 0) {
       fundamentalScore -= 5;
     } else if (profitMargin < 0) {
-      fundamentalScore -= 20;
+      fundamentalScore -= 25;
     }
   }
   
@@ -751,9 +804,9 @@ function generateSpecificAnalysis(stockData: any, fundamentals: any, symbol: str
     } else if (debtRatio < 50) {
       fundamentalScore += 5;
     } else if (debtRatio > 70) {
-      fundamentalScore -= 15;
+      fundamentalScore -= 20;
     } else if (debtRatio > 50) {
-      fundamentalScore -= 5;
+      fundamentalScore -= 10;
     }
   }
   
@@ -761,11 +814,11 @@ function generateSpecificAnalysis(stockData: any, fundamentals: any, symbol: str
   
   if (volatility !== null) {
     if (volatility > 0.6) {
-      confidenceScore -= 15;
+      confidenceScore -= 20;
     } else if (volatility > 0.45) {
-      confidenceScore -= 8;
+      confidenceScore -= 12;
     } else if (volatility > 0.3) {
-      confidenceScore -= 3;
+      confidenceScore -= 5;
     } else if (volatility < 0.2) {
       confidenceScore += 5;
     }
@@ -783,14 +836,20 @@ function generateSpecificAnalysis(stockData: any, fundamentals: any, symbol: str
     confidenceScore -= 25;
   }
   
-  confidenceScore = Math.max(0, Math.min(100, Math.round(confidenceScore)));
+  // Apply a CAP - maximum confidence is 95% (never 100%)
+  confidenceScore = Math.min(95, confidenceScore);
+  
+  // Apply minimum
+  confidenceScore = Math.max(15, confidenceScore);
+  
+  confidenceScore = Math.round(confidenceScore);
   
   let confidenceRating = '';
   let confidenceEmoji = '';
-  if (confidenceScore >= 80) {
+  if (confidenceScore >= 85) {
     confidenceRating = language === 'Traditional Chinese' ? '非常高' : language === 'Simplified Chinese' ? '非常高' : 'Very High';
     confidenceEmoji = '⭐⭐⭐⭐⭐';
-  } else if (confidenceScore >= 65) {
+  } else if (confidenceScore >= 70) {
     confidenceRating = language === 'Traditional Chinese' ? '高' : language === 'Simplified Chinese' ? '高' : 'High';
     confidenceEmoji = '⭐⭐⭐⭐';
   } else if (confidenceScore >= 50) {
@@ -889,7 +948,7 @@ export async function POST(req: Request) {
     
     if (newsSentiment) {
       if (newsSentiment.sentiment === 'Positive') {
-        specificAnalysis.confidenceScore = Math.min(100, specificAnalysis.confidenceScore + 5);
+        specificAnalysis.confidenceScore = Math.min(95, specificAnalysis.confidenceScore + 5);
       } else if (newsSentiment.sentiment === 'Negative') {
         specificAnalysis.confidenceScore = Math.max(0, specificAnalysis.confidenceScore - 10);
       }
@@ -1118,7 +1177,7 @@ Debt/Equity: ${debtRatio?.toFixed(2) || 'N/A'} | Dividend Yield: ${dividendYield
                      '• No significant bearish factors identified';
     }
     
-    // Generate news section
+    // Generate news section with translated headlines
     let userContentText = '';
     if (userContentAnalysis && userContentAnalysis.originalContent) {
       const sentimentText = userContentAnalysis.sentiment?.sentiment === 'Positive' ? 
@@ -1154,7 +1213,15 @@ AI內容分析: ${aiContentAnalysis}`;
                            (language === 'Traditional Chinese' ? '負面' : language === 'Simplified Chinese' ? '負面' : 'Negative') :
                            (language === 'Traditional Chinese' ? '中性' : language === 'Simplified Chinese' ? '中性' : 'Neutral');
       
-      const headlines = news.slice(0, 3).map((item: any) => item.title).filter(Boolean);
+      // Translate headlines if Chinese language is selected
+      const headlines = news.slice(0, 3).map((item: any) => {
+        const title = item.title || '';
+        if (language === 'Traditional Chinese' || language === 'Simplified Chinese') {
+          return translateNewsHeadline(title, language);
+        }
+        return title;
+      }).filter(Boolean);
+      
       let newsSummary = '';
       if (headlines.length > 0) {
         newsSummary = language === 'Traditional Chinese' ? `近期主要新聞包括：${headlines.join('；')}` :
@@ -1187,10 +1254,6 @@ AI內容分析: ${aiContentAnalysis}`;
 • 整體情緒: ${sentimentText} (分數: ${newsSentiment.score})
 • 正面新聞: ${newsSentiment.positiveCount}篇 | 負面新聞: ${newsSentiment.negativeCount}篇 | 中性: ${newsSentiment.neutralCount}篇
 
-新聞摘要:
-${newsSummary}
-
-AI新聞分析:
 ${aiNewsAnalysis}`;
       } else if (language === 'Simplified Chinese') {
         userContentText = `${newsTitle}
@@ -1198,10 +1261,6 @@ ${aiNewsAnalysis}`;
 • 整体情绪: ${sentimentText} (分数: ${newsSentiment.score})
 • 正面新闻: ${newsSentiment.positiveCount}篇 | 负面新闻: ${newsSentiment.negativeCount}篇 | 中性: ${newsSentiment.neutralCount}篇
 
-新闻摘要:
-${newsSummary}
-
-AI新闻分析:
 ${aiNewsAnalysis}`;
       } else {
         userContentText = `${newsTitle}
@@ -1209,10 +1268,6 @@ Latest News Sentiment Analysis (${news.length} articles):
 • Overall Sentiment: ${sentimentText} (Score: ${newsSentiment.score})
 • Positive: ${newsSentiment.positiveCount} | Negative: ${newsSentiment.negativeCount} | Neutral: ${newsSentiment.neutralCount}
 
-News Summary:
-${newsSummary}
-
-AI News Analysis:
 ${aiNewsAnalysis}`;
       }
     } else {
@@ -1242,9 +1297,9 @@ Risk/Reward Ratio: 1:${((specificAnalysis.targetPrice - stockData.price) / (stoc
     // Generate confidence display
     let confidenceDisplay = '';
     if (language === 'Traditional Chinese') {
-      if (specificAnalysis.confidenceScore >= 80) {
+      if (specificAnalysis.confidenceScore >= 85) {
         confidenceDisplay = `信心評分: ${specificAnalysis.confidenceScore}% 五顆星 (非常高)`;
-      } else if (specificAnalysis.confidenceScore >= 65) {
+      } else if (specificAnalysis.confidenceScore >= 70) {
         confidenceDisplay = `信心評分: ${specificAnalysis.confidenceScore}% 四顆星 (高)`;
       } else if (specificAnalysis.confidenceScore >= 50) {
         confidenceDisplay = `信心評分: ${specificAnalysis.confidenceScore}% 三顆星 (中等)`;
@@ -1254,9 +1309,9 @@ Risk/Reward Ratio: 1:${((specificAnalysis.targetPrice - stockData.price) / (stoc
         confidenceDisplay = `信心評分: ${specificAnalysis.confidenceScore}% 一顆星 (極低)`;
       }
     } else if (language === 'Simplified Chinese') {
-      if (specificAnalysis.confidenceScore >= 80) {
+      if (specificAnalysis.confidenceScore >= 85) {
         confidenceDisplay = `信心评分: ${specificAnalysis.confidenceScore}% 五颗星 (非常高)`;
-      } else if (specificAnalysis.confidenceScore >= 65) {
+      } else if (specificAnalysis.confidenceScore >= 70) {
         confidenceDisplay = `信心评分: ${specificAnalysis.confidenceScore}% 四颗星 (高)`;
       } else if (specificAnalysis.confidenceScore >= 50) {
         confidenceDisplay = `信心评分: ${specificAnalysis.confidenceScore}% 三颗星 (中等)`;
@@ -1346,7 +1401,7 @@ export async function GET() {
     features: {
       stockDetection: true,
       multiMarket: "HK/TW/US",
-      technicalIndicators: ["RSI", "MACD", "Trend", "SMA20", "SMA50", "Volatility"],
+      technicalIndicators: ["RSI", "MACD", "Trend", "SMA20", "SMA50", "Volatility", "BollingerBands"],
       newsAnalysis: true,
       sentimentAnalysis: true,
       userContentIntegration: true,
