@@ -1,56 +1,84 @@
 // app/utils/SimpleTTS.ts
 let currentUtterance: SpeechSynthesisUtterance | null = null;
 
-// Get available voices
-function getBestVoice(voiceLanguage: string): SpeechSynthesisVoice | null {
-  const voices = window.speechSynthesis.getVoices();
+// Helper to wait for voices on iOS
+const waitForVoices = (): Promise<SpeechSynthesisVoice[]> => {
+  return new Promise((resolve) => {
+    const voices = window.speechSynthesis.getVoices();
+    if (voices.length > 0) {
+      resolve(voices);
+    } else {
+      window.speechSynthesis.onvoiceschanged = () => {
+        resolve(window.speechSynthesis.getVoices());
+      };
+    }
+  });
+};
+
+// Get best voice with iOS-specific name matching
+async function getBestVoice(voiceLanguage: string): Promise<SpeechSynthesisVoice | null> {
+  const voices = await waitForVoices();
   
   console.log("🎤 Available voices:", voices.map(v => `${v.name} (${v.lang})`).join(', '));
   
   if (voices.length === 0) return null;
   
-  if (voiceLanguage === 'Cantonese') {
-    const cantoneseVoice = voices.find(v => v.lang === 'zh-HK');
-    if (cantoneseVoice) {
-      console.log("🎤 Found Cantonese voice:", cantoneseVoice.name);
-      return cantoneseVoice;
-    }
-    console.log("🎤 No Cantonese voice found, using default with zh-HK");
-    return null;
-  } 
-  else if (voiceLanguage === 'Mandarin') {
-    const mandarinVoice = voices.find(v => v.lang === 'zh-CN');
+  // iOS voice name mapping
+  if (voiceLanguage === 'Mandarin') {
+    // iOS Mandarin voices: Ting-Ting (zh-CN), Mei-Jia (zh-TW), Li-Li (zh-TW)
+    const mandarinVoice = voices.find(v => 
+      v.name === 'Ting-Ting' ||
+      v.name === 'Mei-Jia' ||
+      v.name === 'Li-Li' ||
+      v.name.includes('Ting') ||
+      v.lang === 'zh-CN' ||
+      v.lang === 'zh-TW'
+    );
     if (mandarinVoice) {
       console.log("🎤 Found Mandarin voice:", mandarinVoice.name);
       return mandarinVoice;
     }
-    console.log("🎤 No Mandarin voice found, using default with zh-CN");
-    return null;
-  }
+  } 
   else if (voiceLanguage === 'Taiwanese') {
-    const taiwaneseVoice = voices.find(v => v.lang === 'zh-TW');
+    const taiwaneseVoice = voices.find(v => 
+      v.name === 'Mei-Jia' ||
+      v.name === 'Li-Li' ||
+      v.lang === 'zh-TW'
+    );
     if (taiwaneseVoice) {
       console.log("🎤 Found Taiwanese voice:", taiwaneseVoice.name);
       return taiwaneseVoice;
     }
-    console.log("🎤 No Taiwanese voice found, falling back to Mandarin");
-    // Fallback to Mandarin if no Taiwanese voice
-    const mandarinVoice = voices.find(v => v.lang === 'zh-CN');
+    // Fallback to Mandarin
+    const mandarinVoice = voices.find(v => 
+      v.name === 'Ting-Ting' || 
+      v.lang === 'zh-CN'
+    );
     return mandarinVoice || null;
   }
+  else if (voiceLanguage === 'Cantonese') {
+    const cantoneseVoice = voices.find(v => 
+      v.name === 'Sin-ji' ||
+      v.lang === 'zh-HK'
+    );
+    if (cantoneseVoice) {
+      console.log("🎤 Found Cantonese voice:", cantoneseVoice.name);
+      return cantoneseVoice;
+    }
+  }
   else {
+    // English
     const englishVoice = voices.find(v => 
       v.lang === 'en-US' && (v.name === 'Samantha' || v.name === 'Alex' || v.name === 'Google US English')
     );
-    if (englishVoice) {
-      console.log("🎤 Found English voice:", englishVoice.name);
-      return englishVoice;
-    }
+    if (englishVoice) return englishVoice;
     return voices.find(v => v.lang === 'en-US') || null;
   }
+  
+  return null;
 }
 
-// Prepare text for TTS
+// Prepare text for TTS (keep your existing prepareTextForTTS function)
 function prepareTextForTTS(text: string, textLanguage: string): string {
   let result = text;
   
@@ -84,7 +112,6 @@ function prepareTextForTTS(text: string, textLanguage: string): string {
   result = result.replace(/：/g, ' ');
   
   if (textLanguage === 'Traditional Chinese') {
-    // Handle dash - number to number (keep as "至"), else remove
     result = result.replace(/(\d+\.?\d*)\s+-\s+([\u4e00-\u9fa5])/g, '$1 $2');
     result = result.replace(/(\d+\.?\d*)\s*-\s*(\d+\.?\d*)/g, '$1至$2');
     result = result.replace(/\s*-\s*/g, ' ');
@@ -171,16 +198,10 @@ export async function speakText(text: string, textLanguage: string, voiceLanguag
     window.speechSynthesis.cancel();
   }
   
-  if (window.speechSynthesis.getVoices().length === 0) {
-    await new Promise<void>((resolve) => {
-      window.speechSynthesis.onvoiceschanged = () => resolve();
-    });
-  }
-  
   const processedText = prepareTextForTTS(text, textLanguage);
   const utterance = new SpeechSynthesisUtterance(processedText);
   
-  // Use voiceLanguage for the voice
+  // Set language tag
   if (voiceLanguage === 'Cantonese') {
     utterance.lang = 'zh-HK';
   } else if (voiceLanguage === 'Mandarin') {
@@ -191,12 +212,17 @@ export async function speakText(text: string, textLanguage: string, voiceLanguag
     utterance.lang = 'en-US';
   }
   
-  const bestVoice = getBestVoice(voiceLanguage);
+  // CRITICAL: Wait for voices and get the exact voice
+  const bestVoice = await getBestVoice(voiceLanguage);
   if (bestVoice) {
     utterance.voice = bestVoice;
     console.log(`🎤 Using voice: ${bestVoice.name} (${bestVoice.lang}) for voice language: ${voiceLanguage}`);
   } else {
-    console.log(`🎤 Using default voice for ${utterance.lang}`);
+    console.log(`🎤 No specific voice found for ${voiceLanguage}, using default with lang=${utterance.lang}`);
+    // For iOS, try to trigger voice download reminder
+    if (/iPhone|iPad|iPod/.test(navigator.userAgent) && voiceLanguage !== 'English') {
+      console.log('📱 iOS: Please download voice in Settings > Accessibility > Spoken Content > Voices');
+    }
   }
   
   utterance.rate = 0.85;
