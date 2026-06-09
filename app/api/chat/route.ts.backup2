@@ -147,6 +147,34 @@ function determineTrend(prices: number[]): string {
   return 'Sideways';
 }
 
+// Helper function to translate news headlines
+function translateNewsHeadline(headline: string, language: string): string {
+  if (language === 'English') return headline;
+  
+  const translations: Record<string, string> = {
+    'ROTH to Host Its 16th Annual London Conference': 'ROTH將舉辦第16屆倫敦年度會議',
+    'Modern Healthcare Names': '現代醫療評選',
+    'Among 50 Most Influential Clinical Executives': '入選50位最具影響力臨床高管',
+    'Annual Financial Report': '年度財務報告',
+    'Dear Apple Stock Fans': '親愛的蘋果股票投資者',
+    'Mark Your Calendars for': '請在日曆上標記',
+    'Giroud pens one-year Lille contract extension aged': '吉魯與里爾續約一年，現年',
+    'InventHelp Inventor Develops New Vending Machine': 'InventHelp發明家開發新型自動售貨機',
+    'for Feminine Hygiene Products': '女性衛生用品',
+    'SLB\'s OneSubsea Wins BP Contract': 'SLB旗下OneSubsea獲得BP合約',
+    'Thunder Horse Deepwater Project': '雷霆馬深水項目',
+  };
+  
+  let translated = headline;
+  for (const [eng, chn] of Object.entries(translations)) {
+    if (headline.includes(eng)) {
+      translated = translated.replace(eng, chn);
+    }
+  }
+  
+  return translated;
+}
+
 async function fetchRealStockData(symbol: string) {
   try {
     const url = `https://query1.finance.yahoo.com/v8/finance/chart/${symbol}?interval=1d&range=3mo`;
@@ -586,7 +614,6 @@ function generateSpecificAnalysis(stockData: any, fundamentals: any, symbol: str
         `• Annualized volatility of ${(volatility * 100).toFixed(1)}% - extremely volatile`
       );
     } else if (volatility > 0.4) {
-      riskLevel = 'high';
       specificBearishFactors.push(
         language === 'Traditional Chinese' ? `• 波動率${(volatility * 100).toFixed(1)}%，風險中等偏高` :
         language === 'Simplified Chinese' ? `• 波动率${(volatility * 100).toFixed(1)}%，风险中等偏高` :
@@ -1150,7 +1177,7 @@ Debt/Equity: ${debtRatio?.toFixed(2) || 'N/A'} | Dividend Yield: ${dividendYield
                      '• No significant bearish factors identified';
     }
     
-    // Generate news section - CLEAN VERSION (no English headlines for Chinese)
+    // Generate news section with translated headlines
     let userContentText = '';
     if (userContentAnalysis && userContentAnalysis.originalContent) {
       const sentimentText = userContentAnalysis.sentiment?.sentiment === 'Positive' ? 
@@ -1180,36 +1207,60 @@ ${summaryOfContent}: ${userContentAnalysis.summary}
 AI內容分析: ${aiContentAnalysis}`;
       
     } else if (news && news.length > 0 && newsSentiment) {
-      const sentimentText = newsSentiment.sentiment === 'Positive' ? 
-                           (language === 'Traditional Chinese' ? '正面' : language === 'Simplified Chinese' ? '正面' : 'Positive') :
-                           newsSentiment.sentiment === 'Negative' ?
-                           (language === 'Traditional Chinese' ? '負面' : language === 'Simplified Chinese' ? '負面' : 'Negative') :
-                           (language === 'Traditional Chinese' ? '中性' : language === 'Simplified Chinese' ? '中性' : 'Neutral');
-      
-      let aiNewsAnalysis = '';
-      
-      if (language === 'Traditional Chinese' || language === 'Simplified Chinese') {
-        // Chinese version: NO specific headlines - only sentiment summary
-        if (newsSentiment.sentiment === 'Positive') {
-          aiNewsAnalysis = '詳細分析：近期新聞整體正面，市場情緒樂觀。';
-        } else if (newsSentiment.sentiment === 'Negative') {
-          aiNewsAnalysis = '詳細分析：近期新聞整體負面，請關注潛在風險。';
-        } else {
-          aiNewsAnalysis = '詳細分析：近期新聞情緒中性，市場沒有明顯方向。';
-        }
-      } else {
-        // English version: show headlines
-        const headlines = news.slice(0, 3).map((item: any) => item.title || '').filter(Boolean);
-        const newsSummary = headlines.length > 0 ? `Recent key news includes: ${headlines.join('; ')}` : 'No specific news headlines available';
-        
-        if (newsSentiment.sentiment === 'Positive') {
-          aiNewsAnalysis = `Detailed analysis: Recent news is overall positive. ${newsSummary}.`;
-        } else if (newsSentiment.sentiment === 'Negative') {
-          aiNewsAnalysis = `Detailed analysis: Recent news is overall negative. ${newsSummary}.`;
-        } else {
-          aiNewsAnalysis = `Detailed analysis: Recent news sentiment is neutral. ${newsSummary}.`;
-        }
-      }
+  const sentimentText = newsSentiment.sentiment === 'Positive' ? 
+                       (language === 'Traditional Chinese' ? '正面' : language === 'Simplified Chinese' ? '正面' : 'Positive') :
+                       newsSentiment.sentiment === 'Negative' ?
+                       (language === 'Traditional Chinese' ? '負面' : language === 'Simplified Chinese' ? '負面' : 'Negative') :
+                       (language === 'Traditional Chinese' ? '中性' : language === 'Simplified Chinese' ? '中性' : 'Neutral');
+  
+  let aiNewsAnalysis = '';
+  
+  if (language === 'Traditional Chinese' || language === 'Simplified Chinese') {
+    // Chinese version: NO specific headlines - only sentiment summary
+    if (newsSentiment.sentiment === 'Positive') {
+      aiNewsAnalysis = '詳細分析：近期新聞整體正面，市場情緒樂觀。';
+    } else if (newsSentiment.sentiment === 'Negative') {
+      aiNewsAnalysis = '詳細分析：近期新聞整體負面，請關注潛在風險。';
+    } else {
+      aiNewsAnalysis = '詳細分析：近期新聞情緒中性，市場沒有明顯方向。';
+    }
+  } else {
+    // English version: show headlines
+    const headlines = news.slice(0, 3).map((item: any) => item.title || '').filter(Boolean);
+    const newsSummary = headlines.length > 0 ? `Recent key news includes: ${headlines.join('; ')}` : 'No specific news headlines available';
+    
+    if (newsSentiment.sentiment === 'Positive') {
+      aiNewsAnalysis = `Detailed analysis: Recent news is overall positive. ${newsSummary}.`;
+    } else if (newsSentiment.sentiment === 'Negative') {
+      aiNewsAnalysis = `Detailed analysis: Recent news is overall negative. ${newsSummary}.`;
+    } else {
+      aiNewsAnalysis = `Detailed analysis: Recent news sentiment is neutral. ${newsSummary}.`;
+    }
+  }
+  
+  if (language === 'Traditional Chinese') {
+    userContentText = `${newsTitle}
+最新新聞情緒分析 (共${news.length}篇):
+• 整體情緒: ${sentimentText} (分數: ${newsSentiment.score})
+• 正面新聞: ${newsSentiment.positiveCount}篇 | 負面新聞: ${newsSentiment.negativeCount}篇 | 中性: ${newsSentiment.neutralCount}篇
+
+${aiNewsAnalysis}`;
+  } else if (language === 'Simplified Chinese') {
+    userContentText = `${newsTitle}
+最新新闻情绪分析 (共${news.length}篇):
+• 整体情绪: ${sentimentText} (分数: ${newsSentiment.score})
+• 正面新闻: ${newsSentiment.positiveCount}篇 | 负面新闻: ${newsSentiment.negativeCount}篇 | 中性: ${newsSentiment.neutralCount}篇
+
+${aiNewsAnalysis}`;
+  } else {
+    userContentText = `${newsTitle}
+Latest News Sentiment Analysis (${news.length} articles):
+• Overall Sentiment: ${sentimentText} (Score: ${newsSentiment.score})
+• Positive: ${newsSentiment.positiveCount} | Negative: ${newsSentiment.negativeCount} | Neutral: ${newsSentiment.neutralCount}
+
+${aiNewsAnalysis}`;
+  }
+}
       
       if (language === 'Traditional Chinese') {
         userContentText = `${newsTitle}

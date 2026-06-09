@@ -2,33 +2,6 @@
 import { useState, useMemo } from 'react';
 import { LineChart, Line, XAxis, YAxis, Tooltip, ResponsiveContainer, Area, ComposedChart } from 'recharts';
 
-// Calculate Bollinger Bands
-const calculateBollingerBands = (data: any[], period: number = 20, multiplier: number = 2) => {
-  if (data.length < period) return data;
-  
-  const result = [...data];
-  
-  for (let i = period - 1; i < result.length; i++) {
-    // Get the slice of prices for the period
-    const slice = result.slice(i - period + 1, i + 1);
-    const prices = slice.map(d => d.price);
-    
-    // Calculate SMA (Simple Moving Average)
-    const sma = prices.reduce((a, b) => a + b, 0) / period;
-    
-    // Calculate Standard Deviation
-    const squaredDiffs = prices.map(price => Math.pow(price - sma, 2));
-    const stdDev = Math.sqrt(squaredDiffs.reduce((a, b) => a + b, 0) / period);
-    
-    // Set Bollinger Bands
-    result[i].middle = sma;
-    result[i].upper = sma + (multiplier * stdDev);
-    result[i].lower = sma - (multiplier * stdDev);
-  }
-  
-  return result;
-};
-
 // Filter data by date range
 const filterDataByRange = (data: any[], range: string) => {
   if (!data || data.length === 0) return [];
@@ -50,7 +23,7 @@ const filterDataByRange = (data: any[], range: string) => {
       startDate.setMonth(now.getMonth() - 6);
       break;
     default:
-      startDate.setMonth(now.getMonth() - 3); // Default 3 months
+      startDate.setMonth(now.getMonth() - 3);
   }
   
   return data.filter(item => new Date(item.date) >= startDate);
@@ -62,9 +35,6 @@ export const PriceChart = ({ data }: { data: any[] }) => {
   // Filter data based on selected range
   const filteredData = useMemo(() => filterDataByRange(data, selectedRange), [data, selectedRange]);
   
-  // Calculate Bollinger Bands on filtered data
-  const chartData = useMemo(() => calculateBollingerBands(filteredData, 20, 2), [filteredData]);
-  
   const timeRanges = [
     { label: '1D', value: '1D' },
     { label: '1W', value: '1W' },
@@ -73,8 +43,8 @@ export const PriceChart = ({ data }: { data: any[] }) => {
   ];
   
   // Get latest price for display
-  const latestPrice = chartData.length > 0 ? chartData[chartData.length - 1]?.price : null;
-  const previousPrice = chartData.length > 1 ? chartData[chartData.length - 2]?.price : null;
+  const latestPrice = filteredData.length > 0 ? filteredData[filteredData.length - 1]?.price || filteredData[filteredData.length - 1]?.close : null;
+  const previousPrice = filteredData.length > 1 ? filteredData[filteredData.length - 2]?.price || filteredData[filteredData.length - 2]?.close : null;
   const priceChange = latestPrice && previousPrice ? latestPrice - previousPrice : 0;
   const priceChangePercent = previousPrice && latestPrice ? ((priceChange / previousPrice) * 100).toFixed(2) : '0';
 
@@ -83,7 +53,7 @@ export const PriceChart = ({ data }: { data: any[] }) => {
       {/* Header with title and price info */}
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '15px', flexWrap: 'wrap', gap: '10px' }}>
         <div>
-          <h4 style={{ margin: 0, color: '#1e293b' }}>股價趨勢與技術指標</h4>
+          <h4 style={{ margin: 0, color: '#1e293b' }}>價格走勢圖（最近{selectedRange === '1D' ? '1天' : selectedRange === '1W' ? '1週' : selectedRange === '3M' ? '3個月' : '6個月'}）</h4>
           {latestPrice && (
             <div style={{ marginTop: '5px' }}>
               <span style={{ fontSize: '24px', fontWeight: 'bold', color: '#1e293b' }}>${latestPrice.toFixed(2)}</span>
@@ -120,7 +90,7 @@ export const PriceChart = ({ data }: { data: any[] }) => {
       
       {/* Chart */}
       <ResponsiveContainer width="100%" height={320}>
-        <ComposedChart data={chartData}>
+        <ComposedChart data={filteredData}>
           <defs>
             <linearGradient id="colorPrice" x1="0" y1="0" x2="0" y2="1">
               <stop offset="5%" stopColor="#2563eb" stopOpacity={0.1}/>
@@ -147,7 +117,7 @@ export const PriceChart = ({ data }: { data: any[] }) => {
           <Tooltip 
             contentStyle={{ borderRadius: '8px', border: 'none', boxShadow: '0 4px 6px -1px rgb(0 0 0 / 0.1)' }}
             formatter={(value: number, name: string) => {
-              if (name === 'price') return [`$${value.toFixed(2)}`, '股價'];
+              if (name === 'price' || name === 'close') return [`$${value.toFixed(2)}`, '股價'];
               if (name === 'upper') return [`$${value.toFixed(2)}`, '上軌 (Bollinger Upper)'];
               if (name === 'middle') return [`$${value.toFixed(2)}`, '中軌 (SMA 20)'];
               if (name === 'lower') return [`$${value.toFixed(2)}`, '下軌 (Bollinger Lower)'];
@@ -155,7 +125,7 @@ export const PriceChart = ({ data }: { data: any[] }) => {
             }}
           />
           
-          {/* Bollinger Bands - Upper and Lower as Area (fill between) */}
+          {/* Bollinger Bands - Upper and Lower as Area */}
           <Area 
             type="monotone" 
             dataKey="upper" 
@@ -184,7 +154,7 @@ export const PriceChart = ({ data }: { data: any[] }) => {
             dot={false}
           />
           
-          {/* 股價主線 (品牌藍) */}
+          {/* 股價主線 */}
           <Line 
             type="monotone" 
             dataKey="price" 
@@ -193,15 +163,17 @@ export const PriceChart = ({ data }: { data: any[] }) => {
             dot={false} 
           />
           
-          {/* VWAP (虛線) */}
-          <Line 
-            type="monotone" 
-            dataKey="vwap" 
-            stroke="#f59e0b" 
-            strokeWidth={2} 
-            strokeDasharray="5 5" 
-            dot={false} 
-          />
+          {/* VWAP (if exists) */}
+          {filteredData.some(d => d.vwap) && (
+            <Line 
+              type="monotone" 
+              dataKey="vwap" 
+              stroke="#f59e0b" 
+              strokeWidth={2} 
+              strokeDasharray="5 5" 
+              dot={false} 
+            />
+          )}
         </ComposedChart>
       </ResponsiveContainer>
       
@@ -212,10 +184,6 @@ export const PriceChart = ({ data }: { data: any[] }) => {
           <span style={{ fontSize: '12px', color: '#64748b' }}>股價</span>
         </div>
         <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-          <div style={{ width: '20px', height: '3px', background: '#f59e0b', borderRadius: '2px', borderStyle: 'dashed' }}></div>
-          <span style={{ fontSize: '12px', color: '#64748b' }}>VWAP</span>
-        </div>
-        <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
           <div style={{ width: '20px', height: '3px', background: '#94a3b8', borderRadius: '2px', borderStyle: 'dashed' }}></div>
           <span style={{ fontSize: '12px', color: '#64748b' }}>SMA 20 (中軌)</span>
         </div>
@@ -223,6 +191,12 @@ export const PriceChart = ({ data }: { data: any[] }) => {
           <div style={{ width: '20px', height: '12px', background: '#e2e8f0', borderRadius: '2px', opacity: 0.5 }}></div>
           <span style={{ fontSize: '12px', color: '#64748b' }}>布林通道 (上/下軌)</span>
         </div>
+        {filteredData.some(d => d.vwap) && (
+          <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+            <div style={{ width: '20px', height: '3px', background: '#f59e0b', borderRadius: '2px', borderStyle: 'dashed' }}></div>
+            <span style={{ fontSize: '12px', color: '#64748b' }}>VWAP</span>
+          </div>
+        )}
       </div>
     </div>
   );

@@ -1,5 +1,5 @@
 "use client";
-import { useState, useEffect } from 'react';
+import { useMemo } from 'react';
 import { LineChart, Line, XAxis, YAxis, Tooltip, ResponsiveContainer, Area, ComposedChart } from 'recharts';
 
 interface PriceChartProps {
@@ -7,7 +7,7 @@ interface PriceChartProps {
   langKey: string;
 }
 
-// Calculate Bollinger Bands - FIXED for read-only properties
+// Calculate Bollinger Bands
 const addBollingerBands = (data: any[], period: number = 20, multiplier: number = 2) => {
   if (!data || data.length < period) return data;
   
@@ -21,7 +21,6 @@ const addBollingerBands = (data: any[], period: number = 20, multiplier: number 
     const squaredDiffs = slice.map(p => Math.pow(p - sma, 2));
     const stdDev = Math.sqrt(squaredDiffs.reduce((a, b) => a + b, 0) / period);
     
-    // Create new object with band properties
     result[i] = {
       ...result[i],
       upper: sma + (multiplier * stdDev),
@@ -34,56 +33,18 @@ const addBollingerBands = (data: any[], period: number = 20, multiplier: number 
 };
 
 export const PriceChart = ({ data, langKey }: PriceChartProps) => {
-  const [period, setPeriod] = useState<'1D' | '1W' | '1M' | '3M' | '6M'>('3M');
-  const [filteredData, setFilteredData] = useState<any[]>([]);
-  
-  // Filter data based on selected period and add Bollinger Bands
-  useEffect(() => {
-    if (!data || data.length === 0) {
-      setFilteredData([]);
-      return;
-    }
-    
-    let daysToShow = 90;
-    switch (period) {
-      case '1D': daysToShow = 1; break;
-      case '1W': daysToShow = 7; break;
-      case '1M': daysToShow = 30; break;
-      case '3M': daysToShow = 90; break;
-      case '6M': daysToShow = 180; break;
-    }
-    
-    const hasValidDates = data.some(item => item.date && !item.date.includes('d ago'));
-    
-    let filtered: any[];
-    if (hasValidDates) {
-      const cutoffDate = new Date();
-      cutoffDate.setDate(new Date().getDate() - daysToShow);
-      filtered = data.filter(item => {
-        const itemDate = new Date(item.date);
-        return itemDate >= cutoffDate;
-      });
-      if (filtered.length === 0) filtered = data.slice(-Math.max(daysToShow, 20));
-    } else {
-      filtered = data.slice(-Math.max(daysToShow, 20));
-    }
-    
-    const bandsAdded = addBollingerBands(filtered);
-    setFilteredData(bandsAdded);
-  }, [data, period]);
+  // Use all data (already filtered to 3 months from parent)
+  const chartData = useMemo(() => {
+    if (!data || data.length === 0) return [];
+    return addBollingerBands(data);
+  }, [data]);
   
   const formatXAxis = (dateStr: string) => {
     if (!dateStr) return '';
     try {
       const date = new Date(dateStr);
       if (isNaN(date.getTime())) return dateStr;
-      if (period === '1D') {
-        return date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
-      } else if (period === '1W') {
-        return date.toLocaleDateString([], { weekday: 'short' });
-      } else {
-        return `${date.getMonth() + 1}/${date.getDate()}`;
-      }
+      return `${date.getMonth() + 1}/${date.getDate()}`;
     } catch (e) {
       return dateStr;
     }
@@ -92,6 +53,7 @@ export const PriceChart = ({ data, langKey }: PriceChartProps) => {
   const CustomTooltip = ({ active, payload, label }: any) => {
     if (active && payload && payload.length) {
       const priceItem = payload.find((p: any) => p.dataKey === 'price' || p.dataKey === 'close');
+      const middleItem = payload.find((p: any) => p.dataKey === 'middle');
       
       return (
         <div style={{ 
@@ -107,30 +69,18 @@ export const PriceChart = ({ data, langKey }: PriceChartProps) => {
               ${priceItem.value?.toFixed(2)}
             </p>
           )}
+          {middleItem && middleItem.value && (
+            <p style={{ fontSize: '10px', color: '#6B7280', margin: '4px 0 0 0' }}>
+              SMA20: ${middleItem.value?.toFixed(2)}
+            </p>
+          )}
         </div>
       );
     }
     return null;
   };
   
-  const getPeriodLabel = (p: string) => {
-    if (langKey === 'Cantonese' || langKey === 'Traditional Chinese') {
-      if (p === '1D') return '1日';
-      if (p === '1W') return '1週';
-      if (p === '1M') return '1月';
-      if (p === '3M') return '3月';
-      if (p === '6M') return '6月';
-    } else if (langKey === 'Simplified Chinese') {
-      if (p === '1D') return '1日';
-      if (p === '1W') return '1周';
-      if (p === '1M') return '1月';
-      if (p === '3M') return '3月';
-      if (p === '6M') return '6月';
-    }
-    return p;
-  };
-  
-  if (filteredData.length === 0) {
+  if (chartData.length === 0) {
     return (
       <div style={{ 
         background: 'white', 
@@ -148,8 +98,8 @@ export const PriceChart = ({ data, langKey }: PriceChartProps) => {
     );
   }
   
-  const minPrice = Math.min(...filteredData.map(d => d.price || d.close));
-  const maxPrice = Math.max(...filteredData.map(d => d.price || d.close));
+  const minPrice = Math.min(...chartData.map(d => d.price || d.close));
+  const maxPrice = Math.max(...chartData.map(d => d.price || d.close));
   const priceRange = maxPrice - minPrice;
   const yDomain = [minPrice - priceRange * 0.1, maxPrice + priceRange * 0.1];
   
@@ -172,35 +122,14 @@ export const PriceChart = ({ data, langKey }: PriceChartProps) => {
         gap: '8px'
       }}>
         <h4 style={{ margin: 0, fontSize: '13px', fontWeight: '600', color: '#1F2937' }}>
-          {langKey === 'Cantonese' || langKey === 'Traditional Chinese' ? '股價趨勢 (布林通道)' : 
-           langKey === 'Simplified Chinese' ? '股价趋势 (布林通道)' : 'Price Trend (Bollinger Bands)'}
+          {langKey === 'Cantonese' || langKey === 'Traditional Chinese' ? '股價走勢圖 (最近3個月) - 布林通道' : 
+           langKey === 'Simplified Chinese' ? '股价走势图 (最近3个月) - 布林通道' : 'Price Chart (Last 3 Months) - Bollinger Bands'}
         </h4>
-        
-        <div style={{ display: 'flex', gap: '4px', flexWrap: 'wrap' }}>
-          {(['1D', '1W', '1M', '3M', '6M'] as const).map((p) => (
-            <button
-              key={p}
-              onClick={() => setPeriod(p)}
-              style={{
-                padding: '4px 8px',
-                fontSize: '10px',
-                fontWeight: period === p ? '600' : '400',
-                borderRadius: '6px',
-                border: period === p ? '1px solid #2563EB' : '1px solid #E5E7EB',
-                backgroundColor: period === p ? '#EFF6FF' : 'white',
-                color: period === p ? '#2563EB' : '#6B7280',
-                cursor: 'pointer'
-              }}
-            >
-              {getPeriodLabel(p)}
-            </button>
-          ))}
-        </div>
       </div>
       
-      <div style={{ padding: '12px', height: '240px' }}>
+      <div style={{ padding: '12px', height: '260px' }}>
         <ResponsiveContainer width="100%" height="100%">
-          <ComposedChart data={filteredData}>
+          <ComposedChart data={chartData}>
             <XAxis 
               dataKey="date" 
               tickFormatter={formatXAxis}
@@ -216,6 +145,7 @@ export const PriceChart = ({ data, langKey }: PriceChartProps) => {
             />
             <Tooltip content={<CustomTooltip />} />
             
+            {/* Bollinger Bands - Fill between upper and lower */}
             <Area 
               type="monotone" 
               dataKey="upper" 
@@ -234,6 +164,7 @@ export const PriceChart = ({ data, langKey }: PriceChartProps) => {
               dot={false}
             />
             
+            {/* Middle Band (SMA 20) */}
             <Line 
               type="monotone" 
               dataKey="middle" 
@@ -243,6 +174,7 @@ export const PriceChart = ({ data, langKey }: PriceChartProps) => {
               dot={false}
             />
             
+            {/* Price Line */}
             <Line 
               type="monotone" 
               dataKey="price" 
@@ -255,6 +187,7 @@ export const PriceChart = ({ data, langKey }: PriceChartProps) => {
         </ResponsiveContainer>
       </div>
       
+      {/* Legend */}
       <div style={{ 
         padding: '6px 16px 10px', 
         borderTop: '1px solid #E5E7EB',
@@ -272,13 +205,13 @@ export const PriceChart = ({ data, langKey }: PriceChartProps) => {
         </div>
         <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
           <div style={{ width: '20px', height: '2px', backgroundColor: '#94a3b8', borderStyle: 'dashed' }} />
-          <span style={{ color: '#6B7280' }}>SMA20</span>
+          <span style={{ color: '#6B7280' }}>SMA20 (中軌)</span>
         </div>
         <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
           <div style={{ width: '20px', height: '10px', backgroundColor: '#cbd5e1', opacity: 0.3 }} />
           <span style={{ color: '#6B7280' }}>
-            {langKey === 'Cantonese' || langKey === 'Traditional Chinese' ? '布林通道' : 
-             langKey === 'Simplified Chinese' ? '布林通道' : 'Bollinger Bands'}
+            {langKey === 'Cantonese' || langKey === 'Traditional Chinese' ? '布林通道 (上/下軌)' : 
+             langKey === 'Simplified Chinese' ? '布林通道 (上/下轨)' : 'Bollinger Bands (Upper/Lower)'}
           </span>
         </div>
       </div>

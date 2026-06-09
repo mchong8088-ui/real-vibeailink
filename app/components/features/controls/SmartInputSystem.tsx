@@ -93,36 +93,64 @@ export const SmartInputSystem: React.FC<SmartInputSystemProps> = ({
   };
 
   // Auto-speak when analysis data arrives
-  useEffect(() => {
-    if (analysisText && isSpeaking && !isPaused) {
-      if (utteranceRef.current) window.speechSynthesis.cancel();
-      const textToSpeak = prepareTextForTTS(analysisText);
-      const utterance = new SpeechSynthesisUtterance(textToSpeak);
-      
-      // Use voiceLanguage for the voice
-      const voiceLang = voiceLanguage || localStorage.getItem('preferredVoice') || 'English';
-      
-      // In SmartInputSystem.tsx, update the voice mapping section (around line 120-135):
-
-if (voiceLang === 'Cantonese') {
-  utterance.lang = 'zh-HK';
-} else if (voiceLang === 'Taiwanese') {
-  utterance.lang = 'zh-TW';  // Taiwanese Mandarin
-} else if (voiceLang === 'Mandarin') {
-  utterance.lang = 'zh-CN';  // Mainland Mandarin
-} else {
-  utterance.lang = 'en-US';
-}
-      
-      utterance.rate = 0.85;
-      utterance.pitch = 1.0;
-      utterance.onend = () => { utteranceRef.current = null; };
-      utterance.onerror = () => { utteranceRef.current = null; };
-      utteranceRef.current = utterance;
-      window.speechSynthesis.speak(utterance);
+  // Auto-speak when analysis data arrives
+useEffect(() => {
+  if (analysisText && isSpeaking && !isPaused) {
+    if (utteranceRef.current) window.speechSynthesis.cancel();
+    const textToSpeak = prepareTextForTTS(analysisText);
+    const utterance = new SpeechSynthesisUtterance(textToSpeak);
+    
+    // Get preferred voice language
+    const voiceLang = voiceLanguage || localStorage.getItem('preferredVoice') || 'English';
+    
+    // Set language tag based on selected voice language
+    if (voiceLang === 'Cantonese') {
+      utterance.lang = 'zh-HK';
+    } else if (voiceLang === 'Taiwanese') {
+      utterance.lang = 'zh-TW';
+    } else if (voiceLang === 'Mandarin') {
+      utterance.lang = 'zh-CN';
+    } else {
+      utterance.lang = 'en-US';
     }
-    return () => { if (utteranceRef.current) window.speechSynthesis.cancel(); };
-  }, [analysisText, isSpeaking, isPaused, voiceLanguage, langKey]);
+    
+    // iOS needs explicit voice selection, not just language tag
+    const voices = window.speechSynthesis.getVoices();
+    
+    // For Mandarin on iOS, explicitly look for Ting-Ting
+    if (voiceLang === 'Mandarin') {
+      const mandarinVoice = voices.find(v => 
+        v.name === 'Ting-Ting' || 
+        v.name.includes('Ting') ||
+        v.lang === 'zh-CN'
+      );
+      if (mandarinVoice) {
+        utterance.voice = mandarinVoice;
+        console.log('✓ Using Mandarin voice:', mandarinVoice.name);
+      }
+    }
+    
+    // For Cantonese on iOS, explicitly look for Sin-ji
+    if (voiceLang === 'Cantonese') {
+      const cantoneseVoice = voices.find(v => 
+        v.name === 'Sin-ji' || 
+        v.lang === 'zh-HK'
+      );
+      if (cantoneseVoice) {
+        utterance.voice = cantoneseVoice;
+        console.log('✓ Using Cantonese voice:', cantoneseVoice.name);
+      }
+    }
+    
+    utterance.rate = 0.85;
+    utterance.pitch = 1.0;
+    utterance.onend = () => { utteranceRef.current = null; };
+    utterance.onerror = () => { utteranceRef.current = null; };
+    utteranceRef.current = utterance;
+    window.speechSynthesis.speak(utterance);
+  }
+  return () => { if (utteranceRef.current) window.speechSynthesis.cancel(); };
+}, [analysisText, isSpeaking, isPaused, voiceLanguage, langKey]);
 
   const handleMicToggle = () => {
     if (recognition && !isListening) {
