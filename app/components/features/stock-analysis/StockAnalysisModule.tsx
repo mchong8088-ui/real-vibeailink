@@ -1,5 +1,5 @@
 "use client";
-import React, { useMemo, useState } from 'react';
+import React, { useMemo, useState, useEffect } from 'react';
 import { PriceChart } from './PriceChart';
 
 interface Props {
@@ -11,25 +11,276 @@ interface Props {
   voiceLanguage?: string;
 }
 
-// Share Buttons Component
+// Facebook Login Component
+const FacebookLoginButton = ({ onLogin, langKey }: { onLogin: (token: string) => void; langKey: string }) => {
+  const [isLoading, setIsLoading] = useState(false);
+
+  useEffect(() => {
+    // Load Facebook SDK
+    if (typeof window !== 'undefined' && !window.FB) {
+      window.fbAsyncInit = function() {
+        window.FB.init({
+          appId: process.env.NEXT_PUBLIC_FB_APP_ID || 'YOUR_APP_ID',
+          cookie: true,
+          xfbml: true,
+          version: 'v19.0'
+        });
+      };
+
+      const script = document.createElement('script');
+      script.src = 'https://connect.facebook.net/en_US/sdk.js';
+      script.async = true;
+      script.defer = true;
+      document.body.appendChild(script);
+    }
+  }, []);
+
+  const handleLogin = () => {
+    if (typeof window === 'undefined' || !window.FB) {
+      alert(langKey === 'Traditional Chinese' ? 'Facebook SDK 載入中，請稍後再試' :
+            langKey === 'Simplified Chinese' ? 'Facebook SDK 加载中，请稍后再试' :
+            'Facebook SDK is loading, please try again later');
+      return;
+    }
+
+    setIsLoading(true);
+    window.FB.login((response: any) => {
+      if (response.authResponse) {
+        const token = response.authResponse.accessToken;
+        localStorage.setItem('fb_access_token', token);
+        onLogin(token);
+      } else {
+        alert(langKey === 'Traditional Chinese' ? 'Facebook 登入失敗' :
+              langKey === 'Simplified Chinese' ? 'Facebook 登录失败' :
+              'Facebook login failed');
+      }
+      setIsLoading(false);
+    }, { scope: 'public_profile,email' });
+  };
+
+  return (
+    <button
+      onClick={handleLogin}
+      disabled={isLoading}
+      style={{
+        display: 'flex',
+        alignItems: 'center',
+        gap: '8px',
+        padding: '8px 12px',
+        backgroundColor: '#1877F2',
+        color: 'white',
+        border: 'none',
+        borderRadius: '8px',
+        cursor: isLoading ? 'not-allowed' : 'pointer',
+        fontSize: '11px',
+        fontWeight: '500',
+        opacity: isLoading ? 0.6 : 1,
+      }}
+    >
+      {isLoading ? (
+        <>
+          <div style={{
+            width: '12px',
+            height: '12px',
+            border: '2px solid white',
+            borderTop: '2px solid transparent',
+            borderRadius: '50%',
+            animation: 'spin 0.8s linear infinite',
+          }} />
+          <span>{langKey === 'Traditional Chinese' ? '登入中...' : langKey === 'Simplified Chinese' ? '登录中...' : 'Logging in...'}</span>
+        </>
+      ) : (
+        <>
+          <svg width="12" height="12" viewBox="0 0 24 24" fill="white">
+            <path d="M22 12c0-5.52-4.48-10-10-10S2 6.48 2 12c0 4.84 3.44 8.87 8 9.8V15H8v-3h2V9.5C10 7.57 11.57 6 13.5 6H16v3h-2c-.55 0-1 .45-1 1v2h3v3h-3v6.95c5.05-.5 9-4.76 9-9.95z"/>
+          </svg>
+          <span>{langKey === 'Traditional Chinese' ? 'Facebook 登入' : langKey === 'Simplified Chinese' ? 'Facebook 登录' : 'Facebook Login'}</span>
+        </>
+      )}
+      <style>{`
+        @keyframes spin {
+          0% { transform: rotate(0deg); }
+          100% { transform: rotate(360deg); }
+        }
+      `}</style>
+    </button>
+  );
+};
+
+// Facebook API Share Button Component
+const FacebookAPIShareButton = ({ 
+  accessToken, 
+  symbol, 
+  reportContent, 
+  reportUrl, 
+  langKey,
+  onSuccess,
+  onError 
+}: { 
+  accessToken: string;
+  symbol: string;
+  reportContent: string;
+  reportUrl: string;
+  langKey: string;
+  onSuccess?: () => void;
+  onError?: (error: string) => void;
+}) => {
+  const [isSharing, setIsSharing] = useState(false);
+  const [shareMessage, setShareMessage] = useState('');
+
+  const getShareMessage = () => {
+    const baseMessage = shareMessage.trim() ? shareMessage.trim() : '';
+    const analysisPreview = reportContent.substring(0, 300);
+    
+    if (baseMessage) {
+      return `${baseMessage}\n\n📊 ${symbol} Analysis:\n${analysisPreview}...`;
+    }
+    return `📊 ${symbol} Analysis Report\n\n${analysisPreview}...`;
+  };
+
+  const handleShare = async () => {
+    if (!accessToken) {
+      onError?.(langKey === 'Traditional Chinese' ? '請先登入 Facebook' :
+                 langKey === 'Simplified Chinese' ? '请先登录 Facebook' :
+                 'Please login to Facebook first');
+      return;
+    }
+
+    setIsSharing(true);
+
+    try {
+      const response = await fetch('/api/facebook/share', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          accessToken: accessToken,
+          message: getShareMessage(),
+          link: reportUrl,
+          symbol: symbol,
+        }),
+      });
+
+      const data = await response.json();
+
+      if (response.ok) {
+        const successMsg = langKey === 'Traditional Chinese' ? '✅ 成功分享到 Facebook！' :
+                          langKey === 'Simplified Chinese' ? '✅ 成功分享到 Facebook！' :
+                          '✅ Successfully shared to Facebook!';
+        alert(successMsg);
+        setShareMessage('');
+        onSuccess?.();
+      } else {
+        throw new Error(data.error || 'Share failed');
+      }
+    } catch (error: any) {
+      console.error('Share error:', error);
+      const errorMsg = langKey === 'Traditional Chinese' ? '分享失敗，請稍後再試' :
+                       langKey === 'Simplified Chinese' ? '分享失败，请稍后再试' :
+                       'Share failed, please try again later';
+      onError?.(errorMsg);
+    } finally {
+      setIsSharing(false);
+    }
+  };
+
+  return (
+    <div style={{ marginTop: '12px' }}>
+      <label style={{ fontSize: '10px', color: '#6B7280', display: 'block', marginBottom: '4px' }}>
+        {langKey === 'Traditional Chinese' ? '添加您的評論 (可選)' : 
+         langKey === 'Simplified Chinese' ? '添加您的评论 (可选)' : 
+         'Add your message (optional)'}
+      </label>
+      <textarea
+        placeholder={langKey === 'Traditional Chinese' ? '例如：Time to BUY or Sell this week?' : 
+                    langKey === 'Simplified Chinese' ? '例如：Time to BUY or Sell this week?' :
+                    'E.g.: Time to BUY or Sell this week?'}
+        value={shareMessage}
+        onChange={(e) => setShareMessage(e.target.value)}
+        style={{
+          width: '100%',
+          padding: '8px 10px',
+          borderRadius: '8px',
+          border: '1px solid #E5E7EB',
+          fontSize: '11px',
+          resize: 'vertical',
+          minHeight: '50px',
+          fontFamily: 'inherit',
+          boxSizing: 'border-box',
+          marginBottom: '8px',
+        }}
+      />
+      <button
+        onClick={handleShare}
+        disabled={isSharing}
+        style={{
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          gap: '8px',
+          width: '100%',
+          padding: '10px 16px',
+          backgroundColor: '#1877F2',
+          color: 'white',
+          border: 'none',
+          borderRadius: '8px',
+          cursor: isSharing ? 'not-allowed' : 'pointer',
+          opacity: isSharing ? 0.6 : 1,
+          fontSize: '13px',
+          fontWeight: '500',
+        }}
+      >
+        {isSharing ? (
+          <>
+            <div style={{
+              width: '14px',
+              height: '14px',
+              border: '2px solid white',
+              borderTop: '2px solid transparent',
+              borderRadius: '50%',
+              animation: 'spin 0.8s linear infinite',
+            }} />
+            <span>{langKey === 'Traditional Chinese' ? '分享中...' : langKey === 'Simplified Chinese' ? '分享中...' : 'Sharing...'}</span>
+          </>
+        ) : (
+          <>
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="white">
+              <path d="M22 12c0-5.52-4.48-10-10-10S2 6.48 2 12c0 4.84 3.44 8.87 8 9.8V15H8v-3h2V9.5C10 7.57 11.57 6 13.5 6H16v3h-2c-.55 0-1 .45-1 1v2h3v3h-3v6.95c5.05-.5 9-4.76 9-9.95z"/>
+            </svg>
+            <span>{langKey === 'Traditional Chinese' ? '一鍵分享到 Facebook' : langKey === 'Simplified Chinese' ? '一键分享到 Facebook' : 'Share to Facebook'}</span>
+          </>
+        )}
+      </button>
+    </div>
+  );
+};
+
+// Share Buttons Component (updated with API sharing)
 const ShareButtons = ({ data, langKey }: { data: any; langKey: string }) => {
   const [showShareMenu, setShowShareMenu] = useState(false);
   const [shareMessage, setShareMessage] = useState('');
+  const [fbAccessToken, setFbAccessToken] = useState<string | null>(null);
+  const [showFbLogin, setShowFbLogin] = useState(false);
+
+  // Load saved Facebook token
+  useEffect(() => {
+    const token = localStorage.getItem('fb_access_token');
+    if (token) {
+      setFbAccessToken(token);
+    }
+  }, []);
 
   const generateShareText = () => {
-    // Use the full analysis text from data.summary
     let analysisText = data.summary || '';
     
-    // If summary is not available, generate fallback
     if (!analysisText || analysisText.length < 100) {
       const isPositive = data.changePercent > 0;
       const sentiment = isPositive ? '🚀' : '📉';
       const changeText = `${isPositive ? '+' : ''}${data.changePercent?.toFixed(2)}%`;
       const companyName = data.companyName || data.symbol;
       
-      analysisText = `${sentiment} ${companyName} ${data.currency || '$'}${data.price} (${changeText})
-      
-Full analysis: vibeailink.com`;
+      analysisText = `${sentiment} ${companyName} ${data.currency || '$'}${data.price} (${changeText})\n\nFull analysis: vibeailink.com`;
     }
     
     if (shareMessage.trim()) {
@@ -70,6 +321,14 @@ Full analysis: vibeailink.com`;
 
   const downloadAsImage = () => {
     alert(langKey === 'Traditional Chinese' ? '截圖功能：請使用瀏覽器截圖工具' : langKey === 'Simplified Chinese' ? '截图功能：请使用浏览器截图工具' : 'Screenshot: Please use browser screenshot tool');
+  };
+
+  const handleFbLoginSuccess = (token: string) => {
+    setFbAccessToken(token);
+    setShowFbLogin(false);
+    alert(langKey === 'Traditional Chinese' ? 'Facebook 帳號已連接！' :
+          langKey === 'Simplified Chinese' ? 'Facebook 账号已连接！' :
+          'Facebook account connected!');
   };
 
   const shareButtons = [
@@ -120,7 +379,7 @@ Full analysis: vibeailink.com`;
             />
           </div>
           
-          <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
+          <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap', marginBottom: '16px' }}>
             {shareButtons.map((btn, idx) => (
               <button key={idx} onClick={btn.onClick} style={{ padding: '6px 12px', borderRadius: '8px', backgroundColor: btn.color, color: 'white', border: 'none', cursor: 'pointer', fontSize: '11px', display: 'flex', alignItems: 'center', gap: '6px', transition: 'opacity 0.2s' }}
                 onMouseEnter={(e) => e.currentTarget.style.opacity = '0.8'}
@@ -129,6 +388,71 @@ Full analysis: vibeailink.com`;
                 <span>{btn.icon}</span> {btn.label}
               </button>
             ))}
+          </div>
+
+          {/* Facebook API Share Section */}
+          <div style={{ 
+            marginTop: '12px', 
+            paddingTop: '12px', 
+            borderTop: '1px dashed #E5E7EB',
+            backgroundColor: '#F0F9FF',
+            borderRadius: '8px',
+            padding: '12px'
+          }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '12px' }}>
+              <span style={{ fontSize: '11px', fontWeight: 'bold', color: '#1877F2' }}>
+                🤖 {langKey === 'Traditional Chinese' ? '自動發帖模式' : langKey === 'Simplified Chinese' ? '自动发帖模式' : 'Auto-Post Mode'}
+              </span>
+              <span style={{ fontSize: '9px', color: '#6B7280' }}>
+                {langKey === 'Traditional Chinese' ? '(需 Facebook 授權)' : langKey === 'Simplified Chinese' ? '(需 Facebook 授权)' : '(Facebook authorization required)'}
+              </span>
+            </div>
+
+            {fbAccessToken ? (
+              <FacebookAPIShareButton
+                accessToken={fbAccessToken}
+                symbol={data.symbol}
+                reportContent={data.summary || ''}
+                reportUrl={shareUrl}
+                langKey={langKey}
+                onSuccess={() => console.log('Share success')}
+                onError={(error) => alert(error)}
+              />
+            ) : showFbLogin ? (
+              <div>
+                <FacebookLoginButton onLogin={handleFbLoginSuccess} langKey={langKey} />
+                <button
+                  onClick={() => setShowFbLogin(false)}
+                  style={{ marginTop: '8px', fontSize: '10px', color: '#6B7280', background: 'none', border: 'none', cursor: 'pointer' }}
+                >
+                  {langKey === 'Traditional Chinese' ? '取消' : langKey === 'Simplified Chinese' ? '取消' : 'Cancel'}
+                </button>
+              </div>
+            ) : (
+              <button
+                onClick={() => setShowFbLogin(true)}
+                style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  gap: '8px',
+                  width: '100%',
+                  padding: '10px 16px',
+                  backgroundColor: '#E8F0FE',
+                  color: '#1877F2',
+                  border: '1px solid #1877F2',
+                  borderRadius: '8px',
+                  cursor: 'pointer',
+                  fontSize: '13px',
+                  fontWeight: '500',
+                }}
+              >
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="#1877F2">
+                  <path d="M22 12c0-5.52-4.48-10-10-10S2 6.48 2 12c0 4.84 3.44 8.87 8 9.8V15H8v-3h2V9.5C10 7.57 11.57 6 13.5 6H16v3h-2c-.55 0-1 .45-1 1v2h3v3h-3v6.95c5.05-.5 9-4.76 9-9.95z"/>
+                </svg>
+                <span>{langKey === 'Traditional Chinese' ? '連接 Facebook 以啟用一鍵發帖' : langKey === 'Simplified Chinese' ? '连接 Facebook 以启用一键发帖' : 'Connect Facebook to enable one-click posting'}</span>
+              </button>
+            )}
           </div>
         </div>
       )}

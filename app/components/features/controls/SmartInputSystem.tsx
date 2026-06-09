@@ -94,62 +94,86 @@ export const SmartInputSystem: React.FC<SmartInputSystemProps> = ({
 
   // Auto-speak when analysis data arrives
   // Auto-speak when analysis data arrives
+// Add this helper function at the top of your component (inside SmartInputSystem)
+const waitForVoices = (): Promise<SpeechSynthesisVoice[]> => {
+  return new Promise((resolve) => {
+    const voices = window.speechSynthesis.getVoices();
+    if (voices.length > 0) {
+      resolve(voices);
+    } else {
+      window.speechSynthesis.onvoiceschanged = () => {
+        resolve(window.speechSynthesis.getVoices());
+      };
+    }
+  });
+};
+
+// Then replace the auto-speak useEffect with this:
 useEffect(() => {
-  if (analysisText && isSpeaking && !isPaused) {
-    if (utteranceRef.current) window.speechSynthesis.cancel();
+  const speakAnalysis = async () => {
+    if (!analysisText || !isSpeaking || isPaused) return;
+    
+    if (utteranceRef.current) {
+      window.speechSynthesis.cancel();
+    }
+    
+    // CRITICAL: Wait for iOS voices to load
+    const voices = await waitForVoices();
+    console.log('✅ Voices loaded:', voices.map(v => `${v.name} (${v.lang})`));
+    
     const textToSpeak = prepareTextForTTS(analysisText);
     const utterance = new SpeechSynthesisUtterance(textToSpeak);
     
-    // Get preferred voice language
     const voiceLang = voiceLanguage || localStorage.getItem('preferredVoice') || 'English';
     
-    // Set language tag based on selected voice language
-    if (voiceLang === 'Cantonese') {
-      utterance.lang = 'zh-HK';
-    } else if (voiceLang === 'Taiwanese') {
-      utterance.lang = 'zh-TW';
-    } else if (voiceLang === 'Mandarin') {
-      utterance.lang = 'zh-CN';
-    } else {
-      utterance.lang = 'en-US';
-    }
+    // Set language and find the correct voice
+    let selectedVoice = null;
     
-    // iOS needs explicit voice selection, not just language tag
-    const voices = window.speechSynthesis.getVoices();
-    
-    // For Mandarin on iOS, explicitly look for Ting-Ting
     if (voiceLang === 'Mandarin') {
-      const mandarinVoice = voices.find(v => 
-        v.name === 'Ting-Ting' || 
-        v.name.includes('Ting') ||
-        v.lang === 'zh-CN'
-      );
-      if (mandarinVoice) {
-        utterance.voice = mandarinVoice;
-        console.log('✓ Using Mandarin voice:', mandarinVoice.name);
-      }
+      utterance.lang = 'zh-CN';
+      // Try these in order: Ting-Ting, Mei-Jia, any zh-CN voice
+      selectedVoice = voices.find(v => v.name === 'Ting-Ting') ||
+                      voices.find(v => v.name.includes('Ting')) ||
+                      voices.find(v => v.lang === 'zh-CN');
+    } 
+    else if (voiceLang === 'Taiwanese') {
+      utterance.lang = 'zh-TW';
+      selectedVoice = voices.find(v => v.lang === 'zh-TW');
+    }
+    else if (voiceLang === 'Cantonese') {
+      utterance.lang = 'zh-HK';
+      selectedVoice = voices.find(v => v.name === 'Sin-ji') ||
+                      voices.find(v => v.lang === 'zh-HK');
+    }
+    else {
+      utterance.lang = 'en-US';
+      selectedVoice = voices.find(v => v.lang === 'en-US');
     }
     
-    // For Cantonese on iOS, explicitly look for Sin-ji
-    if (voiceLang === 'Cantonese') {
-      const cantoneseVoice = voices.find(v => 
-        v.name === 'Sin-ji' || 
-        v.lang === 'zh-HK'
-      );
-      if (cantoneseVoice) {
-        utterance.voice = cantoneseVoice;
-        console.log('✓ Using Cantonese voice:', cantoneseVoice.name);
-      }
+    if (selectedVoice) {
+      utterance.voice = selectedVoice;
+      console.log(`🎤 Using voice: ${selectedVoice.name} (${selectedVoice.lang})`);
+    } else {
+      console.log(`⚠️ No voice found for ${voiceLang}, using default with lang=${utterance.lang}`);
     }
     
     utterance.rate = 0.85;
     utterance.pitch = 1.0;
     utterance.onend = () => { utteranceRef.current = null; };
-    utterance.onerror = () => { utteranceRef.current = null; };
+    utterance.onerror = (e) => { 
+      console.error('Speech error:', e);
+      utteranceRef.current = null;
+    };
+    
     utteranceRef.current = utterance;
     window.speechSynthesis.speak(utterance);
-  }
-  return () => { if (utteranceRef.current) window.speechSynthesis.cancel(); };
+  };
+  
+  speakAnalysis();
+  
+  return () => { 
+    if (utteranceRef.current) window.speechSynthesis.cancel(); 
+  };
 }, [analysisText, isSpeaking, isPaused, voiceLanguage, langKey]);
 
   const handleMicToggle = () => {
