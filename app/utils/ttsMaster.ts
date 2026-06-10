@@ -32,28 +32,32 @@ const waitForVoices = (): Promise<SpeechSynthesisVoice[]> => {
       resolve([]);
       return;
     }
-    const voices = window.speechSynthesis.getVoices();
-    if (voices.length > 0) {
-      console.log(`✅ Voices already loaded: ${voices.length} voices`);
+    
+    const checkVoices = () => {
+      const voices = window.speechSynthesis.getVoices();
+      if (voices.length > 0) {
+        console.log(`✅ Voices ready: ${voices.length} voices`);
+        resolve(voices);
+      } else {
+        setTimeout(checkVoices, 100);
+      }
+    };
+    
+    checkVoices();
+    
+    // Also listen for onvoiceschanged
+    window.speechSynthesis.onvoiceschanged = () => {
+      const voices = window.speechSynthesis.getVoices();
+      if (voices.length > 0) {
+        resolve(voices);
+      }
+    };
+    
+    // Timeout fallback
+    setTimeout(() => {
+      const voices = window.speechSynthesis.getVoices();
       resolve(voices);
-    } else {
-      console.log('⏳ Waiting for voices to load...');
-      window.speechSynthesis.onvoiceschanged = () => {
-        const loadedVoices = window.speechSynthesis.getVoices();
-        console.log(`✅ Voices loaded: ${loadedVoices.length} voices`);
-        resolve(loadedVoices);
-      };
-      setTimeout(() => {
-        const timeoutVoices = window.speechSynthesis.getVoices();
-        if (timeoutVoices.length > 0) {
-          console.log(`✅ Voices loaded via timeout: ${timeoutVoices.length} voices`);
-          resolve(timeoutVoices);
-        } else {
-          console.log('⚠️ No voices found after timeout');
-          resolve([]);
-        }
-      }, 2000);
-    }
+    }, 2000);
   });
 };
 
@@ -184,9 +188,13 @@ export async function speak(
     return;
   }
   
+  // Cancel any ongoing speech
   if (currentUtterance) {
     window.speechSynthesis.cancel();
   }
+  
+  // CRITICAL: Wait for voices to be fully loaded
+  await waitForVoices();
   
   const intro = getIntroMessage(voiceLanguage);
   const cleanedText = cleanTextForTTS(text, textLanguage);
@@ -196,6 +204,7 @@ export async function speak(
   
   const utterance = new SpeechSynthesisUtterance(fullText);
   
+  // Set language tag
   switch (voiceLanguage) {
     case 'Cantonese':
       utterance.lang = 'zh-HK';
@@ -210,18 +219,27 @@ export async function speak(
       utterance.lang = 'en-US';
   }
   
-  // Get best voice
-const bestVoice = await getBestVoice(voiceLanguage);
-if (bestVoice) {
-  utterance.voice = bestVoice;
-  console.log(`✓ Using voice: "${bestVoice.name}" (${bestVoice.lang})`);
-} else {
-  // If no voice found, try to set by language code directly
-  console.log(`⚠️ No specific voice, setting lang=${utterance.lang}`);
-}
-
-// FORCE the voice selection - double check
-console.log(`FINAL - Speaking with voice: ${utterance.voice?.name || 'default'}, lang: ${utterance.lang}`);
+  // Find and set the voice BEFORE speaking
+  const allVoices = window.speechSynthesis.getVoices();
+  let selectedVoice: SpeechSynthesisVoice | null = null;
+  
+  // Explicit voice selection
+  if (voiceLanguage === 'Cantonese') {
+    selectedVoice = allVoices.find(v => v.name === '善怡' || v.name === 'Sin-ji' || v.lang === 'zh-HK');
+  } else if (voiceLanguage === 'Mandarin') {
+    selectedVoice = allVoices.find(v => v.name === '婷婷' || v.name === 'Ting-Ting' || v.lang === 'zh-CN');
+  } else if (voiceLanguage === 'Taiwanese') {
+    selectedVoice = allVoices.find(v => v.name === '美佳' || v.name === 'Mei-Jia' || v.lang === 'zh-TW');
+  } else {
+    selectedVoice = allVoices.find(v => v.lang === 'en-US');
+  }
+  
+  if (selectedVoice) {
+    utterance.voice = selectedVoice;
+    console.log(`✓ Selected voice: "${selectedVoice.name}" (${selectedVoice.lang})`);
+  } else {
+    console.log(`⚠️ No matching voice found for ${voiceLanguage}`);
+  }
   
   utterance.rate = 0.85;
   utterance.pitch = 1.0;
@@ -239,7 +257,11 @@ console.log(`FINAL - Speaking with voice: ${utterance.voice?.name || 'default'},
   };
   
   currentUtterance = utterance;
-  window.speechSynthesis.speak(utterance);
+  
+  // CRITICAL: Small delay before speaking to ensure voice is set
+  setTimeout(() => {
+    window.speechSynthesis.speak(utterance);
+  }, 50);
 }
 
 export function stopSpeech() {
