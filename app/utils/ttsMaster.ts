@@ -66,102 +66,60 @@ const getBestVoice = async (voiceLanguage: string): Promise<SpeechSynthesisVoice
   const voices = await waitForVoices();
   
   console.log(`🎤 Looking for ${voiceLanguage} voice among ${voices.length} voices`);
-  console.log('Available voices:', voices.map(v => `"${v.name}" (${v.lang})`).join(', '));
+  console.log('Available Chinese voices:', voices.filter(v => v.lang.startsWith('zh-')).map(v => `"${v.name}" (${v.lang})`));
   
   if (voices.length === 0) return null;
 
-  if (voiceLanguage === 'Mandarin') {
-    let mandarinVoice = voices.find(v => 
-      v.name === 'Ting-Ting' ||
-      v.name === 'Tingting' ||
-      v.name.toLowerCase().includes('ting-ting') ||
-      v.name.toLowerCase().includes('tingting')
-    );
-    
-    if (!mandarinVoice) {
-      mandarinVoice = voices.find(v => 
-        v.lang === 'zh-CN' ||
-        v.lang === 'zh_CN' ||
-        v.lang.startsWith('zh-CN')
-      );
-    }
-    
-    if (mandarinVoice) {
-      console.log(`🎤 Found Mandarin voice: "${mandarinVoice.name}" (${mandarinVoice.lang})`);
-      return mandarinVoice;
-    }
-    
-    const anyChinese = voices.find(v => v.lang.startsWith('zh-'));
-    if (anyChinese) {
-      console.log(`⚠️ Fallback to Chinese voice for Mandarin: "${anyChinese.name}" (${anyChinese.lang})`);
-      return anyChinese;
-    }
-  }
-  
-  if (voiceLanguage === 'Taiwanese') {
-    let taiwaneseVoice = voices.find(v => 
-  v.name === "美佳" ||
-  v.name === "Mei-Jia" ||
-  v.name.toLowerCase().includes("mei-jia")
-);
-    
-    if (!taiwaneseVoice) {
-      taiwaneseVoice = voices.find(v => 
-        v.lang === 'zh-TW' ||
-        v.lang.startsWith('zh-TW')
-      );
-    }
-    
-    if (taiwaneseVoice) {
-      console.log(`🎤 Found Taiwanese voice: "${taiwaneseVoice.name}" (${taiwaneseVoice.lang})`);
-      return taiwaneseVoice;
-    }
-    
-    const mandarinVoice = voices.find(v => 
-      v.name === 'Ting-Ting' || v.lang === 'zh-CN'
-    );
-    if (mandarinVoice) {
-      console.log(`⚠️ Taiwanese voice not found, falling back to Mandarin: "${mandarinVoice.name}"`);
-      return mandarinVoice;
-    }
-  }
-  
+  // EXPLICIT VOICE MAPPING
   if (voiceLanguage === 'Cantonese') {
     let cantoneseVoice = voices.find(v => 
+      v.name === '善怡' ||
       v.name === 'Sin-ji' ||
-      v.name === 'Sinji' ||
-      v.name.toLowerCase().includes('sin-ji') ||
       v.lang === 'zh-HK'
     );
-    
-    if (!cantoneseVoice) {
-      cantoneseVoice = voices.find(v => 
-        v.lang === 'zh-HK' || v.lang === 'yue-HK'
-      );
-    }
-    
     if (cantoneseVoice) {
       console.log(`🎤 Found Cantonese voice: "${cantoneseVoice.name}" (${cantoneseVoice.lang})`);
       return cantoneseVoice;
     }
   }
   
+  if (voiceLanguage === 'Mandarin') {
+    let mandarinVoice = voices.find(v => 
+      v.name === '婷婷' ||
+      v.name === 'Ting-Ting' ||
+      v.lang === 'zh-CN'
+    );
+    if (mandarinVoice) {
+      console.log(`🎤 Found Mandarin voice: "${mandarinVoice.name}" (${mandarinVoice.lang})`);
+      return mandarinVoice;
+    }
+  }
+  
+  if (voiceLanguage === 'Taiwanese') {
+    let taiwaneseVoice = voices.find(v => 
+      v.name === '美佳' ||
+      v.name === 'Mei-Jia' ||
+      v.lang === 'zh-TW'
+    );
+    if (taiwaneseVoice) {
+      console.log(`🎤 Found Taiwanese voice: "${taiwaneseVoice.name}" (${taiwaneseVoice.lang})`);
+      return taiwaneseVoice;
+    }
+  }
+  
   if (voiceLanguage === 'English') {
     let englishVoice = voices.find(v => 
-      v.name === 'Samantha' || v.name === 'Alex'
+      v.name === 'Samantha' ||
+      v.name === 'Alex' ||
+      v.lang === 'en-US'
     );
-    
-    if (!englishVoice) {
-      englishVoice = voices.find(v => v.lang === 'en-US');
-    }
-    
     if (englishVoice) {
       console.log(`🎤 Found English voice: "${englishVoice.name}" (${englishVoice.lang})`);
       return englishVoice;
     }
   }
   
-  console.log(`❌ No voice found for ${voiceLanguage}`);
+  console.log(`❌ No voice found for ${voiceLanguage}, using default`);
   return null;
 };
 
@@ -274,9 +232,6 @@ export async function speak(
   window.speechSynthesis.speak(utterance);
 }
 
-// ============================================
-// STOP SPEECH
-// ============================================
 export function stopSpeech() {
   if (typeof window !== 'undefined') {
     window.speechSynthesis.cancel();
@@ -284,9 +239,6 @@ export function stopSpeech() {
   }
 }
 
-// ============================================
-// INITIALIZE
-// ============================================
 export function initTTS() {
   if (typeof window !== 'undefined' && window.speechSynthesis) {
     const utterance = new SpeechSynthesisUtterance('');
@@ -297,17 +249,12 @@ export function initTTS() {
   }
 }
 
-// ============================================
-// LEGACY EXPORTS (for backward compatibility)
-// ============================================
+// Legacy exports
 export const speakText = speak;
 export const stopSpeaking = stopSpeech;
 export const speakWithLanguage = speak;
 export const speakWithBrowserSupport = speak;
 
-// ============================================
-// DEBUGGING HELPERS
-// ============================================
 export const getAvailableVoices = (): SpeechSynthesisVoice[] => {
   if (typeof window === 'undefined') return [];
   return refreshVoices();
