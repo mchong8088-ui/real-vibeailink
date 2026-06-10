@@ -353,3 +353,8 @@ export const logAvailableVoices = () => {
   voices.forEach(v => console.log(`- "${v.name}" (${v.lang})`));
   console.log('=======================');
 };
+// Legacy exports for backward compatibility
+export const stopSpeaking = stopSpeech;
+export const speakText = speak;
+export const speakWithLanguage = speak;
+export const speakWithBrowserSupport = speak;
