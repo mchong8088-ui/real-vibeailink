@@ -1,15 +1,3 @@
-"use client";
-import React, { useState, useEffect, useRef } from 'react';
-import { LanguageToggle } from '../layout/LanguageToggle';
-import { VoiceSelector } from '../layout/VoiceSelector';
-import { SourceMenu } from '../features/controls/SourceMenu';
-import { AboutSection } from '../sections/AboutSection';
-import { FeaturesSection } from '../sections/FeaturesSection';
-import { PricingModal } from '../features/pricing/PricingModal';
-import { StockAnalysisModule } from '../features/stock-analysis/StockAnalysisModule';
-import { footerContent } from '../../constants/content';
-import { speak as speakText, stopSpeech as stopSpeaking } from '../../utils/ttsMaster';
-import { speak, stopSpeech } from '../../utils/ttsMaster';
 interface MobileAnalysisProps {
   langKey: string;
   setLangKey: (lang: string) => void;
@@ -19,6 +7,8 @@ interface MobileAnalysisProps {
   topicId?: string;
   legalTitle?: string | null;
   onBack: () => void;
+  voiceLanguage?: string;
+  voiceLanguage?: string;
 }
 
 const MobileAnalysis: React.FC<MobileAnalysisProps> = ({
