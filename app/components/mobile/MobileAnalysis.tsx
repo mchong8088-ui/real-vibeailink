@@ -23,16 +23,23 @@ interface MobileAnalysisProps {
 }
 
 // iOS Version Warning Component
-const IOSVersionWarning = ({ voiceLanguage, onClose }: { voiceLanguage: string; onClose: () => void }) => {
+// iOS Version Warning Component - FIXED VERSION
+const IOSVersionWarning = ({ voiceLanguage }: { voiceLanguage: string }) => {
   const [iosVersion, setIosVersion] = useState<number | null>(null);
+  const [visible, setVisible] = useState(true);
 
   useEffect(() => {
     const ua = navigator.userAgent;
     const iosMatch = ua.match(/OS (\d+)_/);
     const version = iosMatch ? parseInt(iosMatch[1], 10) : 0;
     setIosVersion(version);
+    
+    // Auto hide after 10 seconds
+    const timer = setTimeout(() => setVisible(false), 10000);
+    return () => clearTimeout(timer);
   }, []);
 
+  if (!visible) return null;
   if (!iosVersion || iosVersion > 18) return null;
   if (voiceLanguage !== 'Mandarin' && voiceLanguage !== 'Taiwanese') return null;
 
@@ -61,8 +68,16 @@ const IOSVersionWarning = ({ voiceLanguage, onClose }: { voiceLanguage: string; 
         Settings &gt; Accessibility &gt; Spoken Content &gt; Voices &gt; Chinese
       </span>
       <button 
-        onClick={onClose}
-        style={{ background: 'none', border: 'none', fontSize: '16px', cursor: 'pointer' }}
+        onClick={() => setVisible(false)}
+        style={{ 
+          background: 'none', 
+          border: 'none', 
+          fontSize: '16px', 
+          cursor: 'pointer',
+          color: '#92400E',
+          padding: '4px 8px',
+          borderRadius: '4px'
+        }}
       >
         ✕
       </button>
@@ -93,7 +108,6 @@ const MobileAnalysis: React.FC<MobileAnalysisProps> = ({
   const utteranceRef = useRef<SpeechSynthesisUtterance | null>(null);
   const [isLanguageSwitching, setIsLanguageSwitching] = useState(false);
   const [voiceLanguage, setVoiceLanguage] = useState<string>(propVoiceLanguage);
-  const [showWarning, setShowWarning] = useState(true);
 
   // Load voice preference from localStorage
   useEffect(() => {
@@ -361,7 +375,7 @@ const MobileAnalysis: React.FC<MobileAnalysisProps> = ({
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', height: '100%', width: '100%', backgroundColor: '#f5f5f5', overflow: 'hidden', position: 'absolute', top: 0, left: 0, right: 0, bottom: 0 }}>
-      <IOSVersionWarning voiceLanguage={voiceLanguage} onClose={() => setShowWarning(false)} />
+      <IOSVersionWarning voiceLanguage={voiceLanguage} />
       
       <div style={{ backgroundColor: 'white', padding: '8px 12px', borderBottom: '1px solid #E5E7EB', display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexShrink: 0, zIndex: 20, width: '100%', boxSizing: 'border-box' }}>
         <button onClick={onBack} style={{ display: 'flex', alignItems: 'center', gap: '4px', color: '#4B5563', background: 'none', border: 'none', cursor: 'pointer', padding: '4px 0', minWidth: '44px' }}>
