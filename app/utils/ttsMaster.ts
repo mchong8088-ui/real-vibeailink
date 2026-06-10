@@ -65,61 +65,69 @@ const refreshVoices = (): SpeechSynthesisVoice[] => {
 const getBestVoice = async (voiceLanguage: string): Promise<SpeechSynthesisVoice | null> => {
   const voices = await waitForVoices();
   
-  console.log(`🎤 Looking for ${voiceLanguage} voice among ${voices.length} voices`);
-  console.log('Available Chinese voices:', voices.filter(v => v.lang.startsWith('zh-')).map(v => `"${v.name}" (${v.lang})`));
+  console.log(`🎤 Looking for ${voiceLanguage} voice`);
   
-  if (voices.length === 0) return null;
-
-  // EXPLICIT VOICE MAPPING
-  if (voiceLanguage === 'Cantonese') {
-    let cantoneseVoice = voices.find(v => 
-      v.name === '善怡' ||
-      v.name === 'Sin-ji' ||
-      v.lang === 'zh-HK'
-    );
-    if (cantoneseVoice) {
-      console.log(`🎤 Found Cantonese voice: "${cantoneseVoice.name}" (${cantoneseVoice.lang})`);
-      return cantoneseVoice;
+  // Log all Chinese voices
+  const chineseVoices = voices.filter(v => v.lang.startsWith('zh-'));
+  console.log('=== Chinese voices available ===');
+  chineseVoices.forEach(v => {
+    console.log(`Name: "${v.name}", Lang: "${v.lang}", URI: "${v.voiceURI}"`);
+  });
+  
+  // For Mandarin - try multiple methods
+  if (voiceLanguage === 'Mandarin') {
+    // Try by exact name first
+    let voice = chineseVoices.find(v => v.name === '婷婷');
+    if (!voice) voice = chineseVoices.find(v => v.name === 'Ting-Ting');
+    if (!voice) voice = chineseVoices.find(v => v.lang === 'zh-CN');
+    if (!voice) voice = chineseVoices.find(v => v.lang.startsWith('zh-CN'));
+    
+    if (voice) {
+      console.log(`✅ SELECTED Mandarin: "${voice.name}" (${voice.lang})`);
+      return voice;
     }
   }
   
-  if (voiceLanguage === 'Mandarin') {
-    let mandarinVoice = voices.find(v => 
-      v.name === '婷婷' ||
-      v.name === 'Ting-Ting' ||
-      v.lang === 'zh-CN'
-    );
+  // For Taiwanese
+  if (voiceLanguage === 'Taiwanese') {
+    let voice = chineseVoices.find(v => v.name === '美佳');
+    if (!voice) voice = chineseVoices.find(v => v.name === 'Mei-Jia');
+    if (!voice) voice = chineseVoices.find(v => v.lang === 'zh-TW');
+    
+    if (voice) {
+      console.log(`✅ SELECTED Taiwanese: "${voice.name}" (${voice.lang})`);
+      return voice;
+    }
+    // Fallback to Mandarin
+    const mandarinVoice = chineseVoices.find(v => v.lang === 'zh-CN');
     if (mandarinVoice) {
-      console.log(`🎤 Found Mandarin voice: "${mandarinVoice.name}" (${mandarinVoice.lang})`);
+      console.log(`⚠️ Fallback to Mandarin for Taiwanese`);
       return mandarinVoice;
     }
   }
   
-  if (voiceLanguage === 'Taiwanese') {
-    let taiwaneseVoice = voices.find(v => 
-      v.name === '美佳' ||
-      v.name === 'Mei-Jia' ||
-      v.lang === 'zh-TW'
-    );
-    if (taiwaneseVoice) {
-      console.log(`🎤 Found Taiwanese voice: "${taiwaneseVoice.name}" (${taiwaneseVoice.lang})`);
-      return taiwaneseVoice;
+  // For Cantonese
+  if (voiceLanguage === 'Cantonese') {
+    let voice = chineseVoices.find(v => v.name === '善怡');
+    if (!voice) voice = chineseVoices.find(v => v.name === 'Sin-ji');
+    if (!voice) voice = chineseVoices.find(v => v.lang === 'zh-HK');
+    
+    if (voice) {
+      console.log(`✅ SELECTED Cantonese: "${voice.name}" (${voice.lang})`);
+      return voice;
     }
   }
   
+  // For English
   if (voiceLanguage === 'English') {
-    let englishVoice = voices.find(v => 
-      v.name === 'Samantha' ||
-      v.name === 'Alex' ||
-      v.lang === 'en-US'
-    );
-    if (englishVoice) {
-      console.log(`🎤 Found English voice: "${englishVoice.name}" (${englishVoice.lang})`);
-      return englishVoice;
+    let voice = voices.find(v => v.lang === 'en-US');
+    if (voice) {
+      console.log(`✅ SELECTED English: "${voice.name}"`);
+      return voice;
     }
   }
   
-  console.log(`❌ No voice found for ${voiceLanguage}, using default`);
+  console.log(`❌ No voice found for ${voiceLanguage}`);
   return null;
 };
 
@@ -202,16 +210,18 @@ export async function speak(
       utterance.lang = 'en-US';
   }
   
-  const bestVoice = await getBestVoice(voiceLanguage);
-  if (bestVoice) {
-    utterance.voice = bestVoice;
-    console.log(`✓ Using voice: "${bestVoice.name}" (${bestVoice.lang})`);
-  } else {
-    console.log(`⚠️ No voice found for ${voiceLanguage}, using default`);
-    if (isIOS() && voiceLanguage !== 'English') {
-      console.log('📱 iOS: Please download voice in Settings > Accessibility > Spoken Content > Voices');
-    }
-  }
+  // Get best voice
+const bestVoice = await getBestVoice(voiceLanguage);
+if (bestVoice) {
+  utterance.voice = bestVoice;
+  console.log(`✓ Using voice: "${bestVoice.name}" (${bestVoice.lang})`);
+} else {
+  // If no voice found, try to set by language code directly
+  console.log(`⚠️ No specific voice, setting lang=${utterance.lang}`);
+}
+
+// FORCE the voice selection - double check
+console.log(`FINAL - Speaking with voice: ${utterance.voice?.name || 'default'}, lang: ${utterance.lang}`);
   
   utterance.rate = 0.85;
   utterance.pitch = 1.0;
