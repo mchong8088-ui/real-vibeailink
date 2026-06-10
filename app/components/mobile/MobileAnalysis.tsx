@@ -8,8 +8,6 @@ interface MobileAnalysisProps {
   legalTitle?: string | null;
   onBack: () => void;
   voiceLanguage?: string;
-  voiceLanguage?: string;
-}
 
 const MobileAnalysis: React.FC<MobileAnalysisProps> = ({
   langKey,
@@ -72,6 +70,7 @@ const MobileAnalysis: React.FC<MobileAnalysisProps> = ({
         });
       }, 100);
     }
+  const [debugInfo, setDebugInfo] = useState('');
     return () => {
       if (utteranceRef.current) {
         window.speechSynthesis.cancel();
@@ -287,6 +286,7 @@ const MobileAnalysis: React.FC<MobileAnalysisProps> = ({
 
   const renderButtonWithCross = (isActive: boolean, onClick: () => void, icon: React.ReactElement, color: string, inactiveColor: string) => {
     const bgColor = isActive ? color : inactiveColor;
+  const [debugInfo, setDebugInfo] = useState('');
     return (
       <button onClick={onClick} style={{ flex: 1, height: '48px', borderRadius: '12px', display: 'flex', alignItems: 'center', justifyContent: 'center', backgroundColor: bgColor, color: 'white', border: 'none', cursor: 'pointer', position: 'relative', overflow: 'hidden' }}>
         {icon}
@@ -297,6 +297,7 @@ const MobileAnalysis: React.FC<MobileAnalysisProps> = ({
 
   const displayLegalTitle = legalTitle || undefined;
 
+  const [debugInfo, setDebugInfo] = useState('');
   return (
     <div style={{ display: 'flex', flexDirection: 'column', height: '100%', width: '100%', backgroundColor: '#f5f5f5', overflow: 'hidden', position: 'absolute', top: 0, left: 0, right: 0, bottom: 0 }}>
       <div style={{ backgroundColor: 'white', padding: '8px 12px', borderBottom: '1px solid #E5E7EB', display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexShrink: 0, zIndex: 20, width: '100%', boxSizing: 'border-box' }}>

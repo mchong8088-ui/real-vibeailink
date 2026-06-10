@@ -71,6 +71,13 @@ export const VoiceSelector: React.FC<VoiceSelectorProps> = ({ currentVoice, onVo
         return 'Hello, this is Michael and Teresa, your Finance and Market Analysts, here to serve you.';
     }
   };
+  // In VoiceSelector.tsx, add debug
+const handleVoiceChange = (voice: string) => {
+  console.log("🔄 VOICE CHANGED TO:", voice);
+  onVoiceChange(voice);
+  localStorage.setItem('preferredVoice', voice);
+  // ... rest
+};
 
   // Test the voice with proper greeting when selected
   const testVoice = async (voice: string) => {
