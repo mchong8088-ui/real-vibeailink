@@ -100,10 +100,10 @@ const getBestVoice = async (voiceLanguage: string): Promise<SpeechSynthesisVoice
   
   if (voiceLanguage === 'Taiwanese') {
     let taiwaneseVoice = voices.find(v => 
-      v.name === 'Mei-Jia' ||
-      v.name.toLowerCase().includes('mei-jia') ||
-      v.lang === 'zh-TW'
-    );
+  v.name === "美佳" ||
+  v.name === "Mei-Jia" ||
+  v.name.toLowerCase().includes("mei-jia")
+);
     
     if (!taiwaneseVoice) {
       taiwaneseVoice = voices.find(v => 
