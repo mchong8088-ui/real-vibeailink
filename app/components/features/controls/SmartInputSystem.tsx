@@ -7,7 +7,7 @@ interface SmartInputSystemProps {
   onPlusClick: () => void;
   systemInfo: any;
   analysisText?: string;
-  voiceLanguage?: string;  // Add this prop
+  voiceLanguage?: string;
 }
 
 export const SmartInputSystem: React.FC<SmartInputSystemProps> = ({
@@ -16,7 +16,7 @@ export const SmartInputSystem: React.FC<SmartInputSystemProps> = ({
   onPlusClick,
   systemInfo,
   analysisText,
-  voiceLanguage = 'English',  // Default to English
+  voiceLanguage = 'English',
 }) => {
   const [inputValue, setInputValue] = useState('');
   const [isLoading, setIsLoading] = useState(false);
@@ -27,6 +27,53 @@ export const SmartInputSystem: React.FC<SmartInputSystemProps> = ({
   const [useAIEnhancement, setUseAIEnhancement] = useState(false);
   const [recognition, setRecognition] = useState<any>(null);
   const utteranceRef = useRef<SpeechSynthesisUtterance | null>(null);
+  const [voicesReady, setVoicesReady] = useState(false);
+
+  // Helper: Wait for iOS voices to load
+  const waitForVoices = (): Promise<SpeechSynthesisVoice[]> => {
+    return new Promise((resolve) => {
+      if (typeof window === 'undefined') {
+        resolve([]);
+        return;
+      }
+      const voices = window.speechSynthesis.getVoices();
+      if (voices.length > 0) {
+        setVoicesReady(true);
+        resolve(voices);
+      } else {
+        window.speechSynthesis.onvoiceschanged = () => {
+          const loadedVoices = window.speechSynthesis.getVoices();
+          setVoicesReady(true);
+          resolve(loadedVoices);
+        };
+        // Timeout fallback after 1 second
+        setTimeout(() => {
+          const timeoutVoices = window.speechSynthesis.getVoices();
+          if (timeoutVoices.length > 0) {
+            setVoicesReady(true);
+            resolve(timeoutVoices);
+          } else {
+            resolve([]);
+          }
+        }, 1000);
+      }
+    });
+  };
+
+  // Get intro message based on language
+  const getIntroMessage = (): string => {
+    const voiceLang = voiceLanguage || localStorage.getItem('preferredVoice') || 'English';
+    
+    if (voiceLang === 'Cantonese') {
+      return "你好，我哋係米高和杜麗莎，你嘅財務和市場分析員，好高興為你報告。";
+    } else if (voiceLang === 'Mandarin') {
+      return "你好，我们是米高和杜丽莎，你的财务和市场分析师，很高兴为你报告。";
+    } else if (voiceLang === 'Taiwanese') {
+      return "你好，我們是米高和杜麗莎，你的財務和市場分析員，很高興為你報告。";
+    } else {
+      return "Hello, this is Michael and Teresa, your Finance and Market Analysts, here to give you the report.";
+    }
+  };
 
   // Listen for source selections from SourceMenu
   useEffect(() => {
@@ -59,122 +106,171 @@ export const SmartInputSystem: React.FC<SmartInputSystemProps> = ({
     };
   }, [langKey]);
 
-  // Prepare text for TTS
+  // Prepare text for TTS (cleans up markdown, emojis, formats numbers)
   const prepareTextForTTS = (text: string): string => {
     let result = text;
     
+    // Remove emojis
     result = result.replace(/[\u{1F600}-\u{1F6FF}]/gu, '');
     result = result.replace(/[\u{1F300}-\u{1F5FF}]/gu, '');
     result = result.replace(/[⭐]/g, '');
     result = result.replace(/📈/g, '');
     result = result.replace(/📉/g, '');
+    result = result.replace(/📊/g, '');
+    result = result.replace(/⚠️/g, '');
+    result = result.replace(/✅/g, '');
+    result = result.replace(/📋/g, '');
+    result = result.replace(/🔗/g, '');
+    result = result.replace(/📤/g, '');
+    result = result.replace(/▶/g, '');
+    result = result.replace(/▼/g, '');
     
+    // Remove markdown
+    result = result.replace(/\*\*/g, '');
+    result = result.replace(/###/g, '');
+    result = result.replace(/##/g, '');
+    result = result.replace(/\*/g, '');
+    result = result.replace(/•/g, '');
+    
+    // Replace line breaks with spaces
+    result = result.replace(/\n/g, ' ');
+    
+    // Replace colons with natural pauses
+    result = result.replace(/:/g, ' ');
+    result = result.replace(/：/g, ' ');
+    
+    // Handle dashes
+    result = result.replace(/(\d+\.?\d*)\s+-\s+([\u4e00-\u9fa5])/g, '$1 $2');
+    result = result.replace(/(\d+\.?\d*)\s*-\s*(\d+\.?\d*)/g, '$1至$2');
+    result = result.replace(/\s*-\s*/g, ' ');
+    
+    // Language-specific formatting
     if (langKey === 'Cantonese') {
-      result = result.replace(/信心評分: (\d+)% 五顆星 \(非常高\)/g, '我比呢隻股信心非常高 $1 個巴仙，同埋五粒星');
-      result = result.replace(/信心評分: (\d+)% 四顆星 \(高\)/g, '我比呢隻股信心高 $1 個巴仙，同埋四粒星');
-      result = result.replace(/信心評分: (\d+)% 三顆星 \(中等\)/g, '我比呢隻股信心中等 $1 個巴仙，同埋三粒星');
-      result = result.replace(/信心評分: (\d+)% 兩顆星 \(低\)/g, '我比呢隻股信心低 $1 個巴仙，同埋兩粒星');
-      result = result.replace(/信心評分: (\d+)% 一顆星 \(極低\)/g, '我比呢隻股信心極低 $1 個巴仙，同埋一粒星');
+      result = result.replace(/信心評分: (\d+)% 五顆星 \(非常高\)/g, '信心評分 $1 個巴仙，非常高，五星級');
+      result = result.replace(/信心評分: (\d+)% 四顆星 \(高\)/g, '信心評分 $1 個巴仙，高，四星級');
+      result = result.replace(/信心評分: (\d+)% 三顆星 \(中等\)/g, '信心評分 $1 個巴仙，中等，三星級');
+      result = result.replace(/信心評分: (\d+)% 兩顆星 \(低\)/g, '信心評分 $1 個巴仙，低，兩星級');
+      result = result.replace(/信心評分: (\d+)% 一顆星 \(極低\)/g, '信心評分 $1 個巴仙，極低，一星級');
+      result = result.replace(/HK\$/g, '港幣');
+      result = result.replace(/NT\$/g, '新台幣');
+      result = result.replace(/\$/g, '美元');
+      result = result.replace(/(\d+)%/, '$1 個巴仙');
+      result = result.replace(/-(\d+\.\d+)%/, '負 $1 個巴仙');
     } else if (langKey === '简体中文') {
-      result = result.replace(/信心评分: (\d+)% 五颗星 \(非常高\)/g, '我对这只股票信心非常高 $1 百分之，五颗星');
-      result = result.replace(/信心评分: (\d+)% 四颗星 \(高\)/g, '我对这只股票信心高 $1 百分之，四颗星');
-      result = result.replace(/信心评分: (\d+)% 三颗星 \(中等\)/g, '我对这只股票信心中等 $1 百分之，三颗星');
-      result = result.replace(/信心评分: (\d+)% 两颗星 \(低\)/g, '我对这只股票信心低 $1 百分之，两颗星');
-      result = result.replace(/信心评分: (\d+)% 一颗星 \(极低\)/g, '我对这只股票信心极低 $1 百分之，一颗星');
+      result = result.replace(/信心评分: (\d+)% 五颗星 \(非常高\)/g, '信心评分 $1 百分之，非常高，五星级');
+      result = result.replace(/信心评分: (\d+)% 四颗星 \(高\)/g, '信心评分 $1 百分之，高，四星级');
+      result = result.replace(/信心评分: (\d+)% 三颗星 \(中等\)/g, '信心评分 $1 百分之，中等，三星级');
+      result = result.replace(/信心评分: (\d+)% 两颗星 \(低\)/g, '信心评分 $1 百分之，低，两星级');
+      result = result.replace(/信心评分: (\d+)% 一颗星 \(极低\)/g, '信心评分 $1 百分之，极低，一星级');
+      result = result.replace(/HK\$/g, '港币');
+      result = result.replace(/NT\$/g, '新台币');
+      result = result.replace(/\$/g, '美元');
+      result = result.replace(/(\d+)%/, '$1 百分之');
+      result = result.replace(/-(\d+\.\d+)%/, '负 $1 百分之');
     } else {
-      result = result.replace(/Confidence Score: (\d+)% ⭐⭐⭐⭐⭐ \(Very High\)/g, "I rate this stock 5 stars with $1 percent confidence!");
-      result = result.replace(/Confidence Score: (\d+)% ⭐⭐⭐⭐ \(High\)/g, "I rate this stock 4 stars with $1 percent confidence!");
-      result = result.replace(/Confidence Score: (\d+)% ⭐⭐⭐ \(Medium\)/g, "I rate this stock 3 stars with $1 percent confidence.");
-      result = result.replace(/Confidence Score: (\d+)% ⭐⭐ \(Low\)/g, "I rate this stock 2 stars with $1 percent confidence. Be careful.");
-      result = result.replace(/Confidence Score: (\d+)% ⭐ \(Very Low\)/g, "I rate this stock only 1 star with $1 percent confidence. High risk!");
+      result = result.replace(/Confidence Score: (\d+)% ⭐⭐⭐⭐⭐ \(Very High\)/g, 'Confidence score $1 percent, very high, five stars');
+      result = result.replace(/Confidence Score: (\d+)% ⭐⭐⭐⭐ \(High\)/g, 'Confidence score $1 percent, high, four stars');
+      result = result.replace(/Confidence Score: (\d+)% ⭐⭐⭐ \(Medium\)/g, 'Confidence score $1 percent, medium, three stars');
+      result = result.replace(/Confidence Score: (\d+)% ⭐⭐ \(Low\)/g, 'Confidence score $1 percent, low, two stars');
+      result = result.replace(/Confidence Score: (\d+)% ⭐ \(Very Low\)/g, 'Confidence score $1 percent, very low, one star');
+      result = result.replace(/HK\$/g, 'Hong Kong dollars');
+      result = result.replace(/NT\$/g, 'New Taiwan dollars');
+      result = result.replace(/\$/g, 'US dollars');
+      result = result.replace(/(\d+)%/, '$1 percent');
+      result = result.replace(/-(\d+\.\d+)%/, 'minus $1 percent');
     }
+    
+    // Clean up multiple spaces
+    result = result.replace(/\s+/g, ' ');
+    result = result.trim();
     
     return result;
   };
 
-  // Auto-speak when analysis data arrives
-  // Auto-speak when analysis data arrives
-// Add this helper function at the top of your component (inside SmartInputSystem)
-const waitForVoices = (): Promise<SpeechSynthesisVoice[]> => {
-  return new Promise((resolve) => {
-    const voices = window.speechSynthesis.getVoices();
-    if (voices.length > 0) {
-      resolve(voices);
-    } else {
-      window.speechSynthesis.onvoiceschanged = () => {
-        resolve(window.speechSynthesis.getVoices());
-      };
-    }
-  });
-};
+  // Initialize voices on component mount
+  useEffect(() => {
+    waitForVoices();
+  }, []);
 
-// Then replace the auto-speak useEffect with this:
-useEffect(() => {
-  const speakAnalysis = async () => {
-    if (!analysisText || !isSpeaking || isPaused) return;
-    
-    if (utteranceRef.current) {
-      window.speechSynthesis.cancel();
-    }
-    
-    // CRITICAL: Wait for iOS voices to load
-    const voices = await waitForVoices();
-    console.log('✅ Voices loaded:', voices.map(v => `${v.name} (${v.lang})`));
-    
-    const textToSpeak = prepareTextForTTS(analysisText);
-    const utterance = new SpeechSynthesisUtterance(textToSpeak);
-    
-    const voiceLang = voiceLanguage || localStorage.getItem('preferredVoice') || 'English';
-    
-    // Set language and find the correct voice
-    let selectedVoice = null;
-    
-    if (voiceLang === 'Mandarin') {
-      utterance.lang = 'zh-CN';
-      // Try these in order: Ting-Ting, Mei-Jia, any zh-CN voice
-      selectedVoice = voices.find(v => v.name === 'Ting-Ting') ||
-                      voices.find(v => v.name.includes('Ting')) ||
-                      voices.find(v => v.lang === 'zh-CN');
-    } 
-    else if (voiceLang === 'Taiwanese') {
-      utterance.lang = 'zh-TW';
-      selectedVoice = voices.find(v => v.lang === 'zh-TW');
-    }
-    else if (voiceLang === 'Cantonese') {
-      utterance.lang = 'zh-HK';
-      selectedVoice = voices.find(v => v.name === 'Sin-ji') ||
-                      voices.find(v => v.lang === 'zh-HK');
-    }
-    else {
-      utterance.lang = 'en-US';
-      selectedVoice = voices.find(v => v.lang === 'en-US');
-    }
-    
-    if (selectedVoice) {
-      utterance.voice = selectedVoice;
-      console.log(`🎤 Using voice: ${selectedVoice.name} (${selectedVoice.lang})`);
-    } else {
-      console.log(`⚠️ No voice found for ${voiceLang}, using default with lang=${utterance.lang}`);
-    }
-    
-    utterance.rate = 0.85;
-    utterance.pitch = 1.0;
-    utterance.onend = () => { utteranceRef.current = null; };
-    utterance.onerror = (e) => { 
-      console.error('Speech error:', e);
-      utteranceRef.current = null;
+  // Auto-speak when analysis data arrives (with intro + report)
+  useEffect(() => {
+    const speakAnalysis = async () => {
+      if (!analysisText || !isSpeaking || isPaused) return;
+      
+      if (utteranceRef.current) {
+        window.speechSynthesis.cancel();
+      }
+      
+      // CRITICAL: Wait for iOS voices to load
+      const voices = await waitForVoices();
+      console.log('✅ Voices loaded:', voices.map(v => `${v.name} (${v.lang})`));
+      
+      // Combine intro message + report
+      const intro = getIntroMessage();
+      const cleanedReport = prepareTextForTTS(analysisText);
+      const fullText = `${intro} ${cleanedReport}`;
+      
+      const utterance = new SpeechSynthesisUtterance(fullText);
+      
+      const voiceLang = voiceLanguage || localStorage.getItem('preferredVoice') || 'English';
+      
+      // Set language and find the correct voice
+      let selectedVoice = null;
+      
+      if (voiceLang === 'Mandarin') {
+        utterance.lang = 'zh-CN';
+        selectedVoice = voices.find(v => v.name === 'Ting-Ting') ||
+                        voices.find(v => v.name.includes('Ting')) ||
+                        voices.find(v => v.lang === 'zh-CN');
+      } 
+      else if (voiceLang === 'Taiwanese') {
+        utterance.lang = 'zh-TW';
+        selectedVoice = voices.find(v => v.lang === 'zh-TW') ||
+                        voices.find(v => v.name === 'Mei-Jia') ||
+                        voices.find(v => v.lang === 'zh-CN'); // fallback to Mandarin
+      }
+      else if (voiceLang === 'Cantonese') {
+        utterance.lang = 'zh-HK';
+        selectedVoice = voices.find(v => v.name === 'Sin-ji') ||
+                        voices.find(v => v.name.includes('Sin-ji')) ||
+                        voices.find(v => v.lang === 'zh-HK');
+      }
+      else {
+        utterance.lang = 'en-US';
+        selectedVoice = voices.find(v => v.lang === 'en-US') ||
+                        voices.find(v => v.name === 'Samantha') ||
+                        voices.find(v => v.name === 'Alex');
+      }
+      
+      if (selectedVoice) {
+        utterance.voice = selectedVoice;
+        console.log(`🎤 Using voice: ${selectedVoice.name} (${selectedVoice.lang})`);
+      } else {
+        console.log(`⚠️ No voice found for ${voiceLang}, using default with lang=${utterance.lang}`);
+      }
+      
+      utterance.rate = 0.85;
+      utterance.pitch = 1.0;
+      utterance.volume = 1;
+      utterance.onend = () => { 
+        utteranceRef.current = null;
+        console.log('✅ Speech finished');
+      };
+      utterance.onerror = (e) => { 
+        console.error('Speech error:', e);
+        utteranceRef.current = null;
+      };
+      
+      utteranceRef.current = utterance;
+      window.speechSynthesis.speak(utterance);
     };
     
-    utteranceRef.current = utterance;
-    window.speechSynthesis.speak(utterance);
-  };
-  
-  speakAnalysis();
-  
-  return () => { 
-    if (utteranceRef.current) window.speechSynthesis.cancel(); 
-  };
-}, [analysisText, isSpeaking, isPaused, voiceLanguage, langKey]);
+    speakAnalysis();
+    
+    return () => { 
+      if (utteranceRef.current) window.speechSynthesis.cancel(); 
+    };
+  }, [analysisText, isSpeaking, isPaused, voiceLanguage, langKey]);
 
   const handleMicToggle = () => {
     if (recognition && !isListening) {

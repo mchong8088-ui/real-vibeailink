@@ -1,6 +1,7 @@
 "use client";
 import React from 'react';
 import { LanguageToggle } from '../layout/LanguageToggle';
+import { initTTS } from '../../utils/ttsMaster';
 import { VoiceSelector } from '../layout/VoiceSelector';
 
 interface MobileLandingProps {

@@ -8,7 +8,9 @@ import { FeaturesSection } from '../sections/FeaturesSection';
 import { PricingModal } from '../features/pricing/PricingModal';
 import { StockAnalysisModule } from '../features/stock-analysis/StockAnalysisModule';
 import { footerContent } from '../../constants/content';
-import { speakText, stopSpeaking } from '../../utils/SimpleTTS';
+import { speak, stopSpeech } from '../../utils/ttsMaster';
+// Or keep old names - they still work because of legacy compatibility
+import { speakText, stopSpeaking } from '../../utils/ttsMaster';
 
 interface MobileAnalysisProps {
   langKey: string;
