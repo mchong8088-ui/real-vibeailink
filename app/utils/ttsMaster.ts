@@ -34,62 +34,150 @@ const waitForVoices = (): Promise<SpeechSynthesisVoice[]> => {
     }
     const voices = window.speechSynthesis.getVoices();
     if (voices.length > 0) {
+      console.log(`✅ Voices already loaded: ${voices.length} voices`);
       resolve(voices);
     } else {
+      console.log('⏳ Waiting for voices to load...');
       window.speechSynthesis.onvoiceschanged = () => {
-        resolve(window.speechSynthesis.getVoices());
+        const loadedVoices = window.speechSynthesis.getVoices();
+        console.log(`✅ Voices loaded: ${loadedVoices.length} voices`);
+        resolve(loadedVoices);
       };
+      // Timeout fallback after 2 seconds
       setTimeout(() => {
-        resolve(window.speechSynthesis.getVoices());
-      }, 1000);
+        const timeoutVoices = window.speechSynthesis.getVoices();
+        if (timeoutVoices.length > 0) {
+          console.log(`✅ Voices loaded via timeout: ${timeoutVoices.length} voices`);
+          resolve(timeoutVoices);
+        } else {
+          console.log('⚠️ No voices found after timeout');
+          resolve([]);
+        }
+      }, 2000);
     }
   });
+};
+
+// Force refresh voice list
+const refreshVoices = (): SpeechSynthesisVoice[] => {
+  if (typeof window === 'undefined') return [];
+  return window.speechSynthesis.getVoices();
 };
 
 const getBestVoice = async (voiceLanguage: string): Promise<SpeechSynthesisVoice | null> => {
   const voices = await waitForVoices();
   
   console.log(`🎤 Looking for ${voiceLanguage} voice among ${voices.length} voices`);
+  console.log('Available voices:', voices.map(v => `"${v.name}" (${v.lang})`).join(', '));
   
   if (voices.length === 0) return null;
 
-  // iOS-specific voice names
+  // iOS-specific voice name mapping - CRITICAL for iPhone
   if (voiceLanguage === 'Mandarin') {
-    const mandarinVoice = voices.find(v => 
+    // Try exact iOS Mandarin voice names first
+    let mandarinVoice = voices.find(v => 
       v.name === 'Ting-Ting' ||
-      v.name.includes('Ting') ||
-      v.lang === 'zh-CN'
+      v.name === 'Tingting' ||
+      v.name.toLowerCase().includes('ting-ting') ||
+      v.name.toLowerCase().includes('tingting')
     );
-    if (mandarinVoice) return mandarinVoice;
+    
+    if (!mandarinVoice) {
+      mandarinVoice = voices.find(v => 
+        v.lang === 'zh-CN' ||
+        v.lang === 'zh_CN' ||
+        v.lang.startsWith('zh-CN')
+      );
+    }
+    
+    if (mandarinVoice) {
+      console.log(`🎤 Found Mandarin voice: "${mandarinVoice.name}" (${mandarinVoice.lang})`);
+      return mandarinVoice;
+    }
+    
+    // Ultimate fallback: any Chinese voice
+    const anyChinese = voices.find(v => v.lang.startsWith('zh-'));
+    if (anyChinese) {
+      console.log(`⚠️ Fallback to Chinese voice for Mandarin: "${anyChinese.name}" (${anyChinese.lang})`);
+      return anyChinese;
+    }
   }
   
   if (voiceLanguage === 'Taiwanese') {
-    const taiwaneseVoice = voices.find(v => 
+    // Try exact iOS Taiwanese voice names
+    let taiwaneseVoice = voices.find(v => 
       v.name === 'Mei-Jia' ||
-      v.lang === 'zh-TW'
+      v.name === 'Mei-Jia' ||
+      v.name.toLowerCase().includes('mei-jia') ||
+      v.name.toLowerCase().includes('meijia')
     );
-    if (taiwaneseVoice) return taiwaneseVoice;
-    // Fallback to Mandarin
-    return voices.find(v => v.lang === 'zh-CN');
+    
+    if (!taiwaneseVoice) {
+      taiwaneseVoice = voices.find(v => 
+        v.lang === 'zh-TW' ||
+        v.lang === 'zh_TW' ||
+        v.lang.startsWith('zh-TW')
+      );
+    }
+    
+    if (taiwaneseVoice) {
+      console.log(`🎤 Found Taiwanese voice: "${taiwaneseVoice.name}" (${taiwaneseVoice.lang})`);
+      return taiwaneseVoice;
+    }
+    
+    // Fallback to Mandarin if Taiwanese not available
+    const mandarinVoice = voices.find(v => 
+      v.name === 'Ting-Ting' ||
+      v.lang === 'zh-CN'
+    );
+    if (mandarinVoice) {
+      console.log(`⚠️ Taiwanese voice not found, falling back to Mandarin: "${mandarinVoice.name}"`);
+      return mandarinVoice;
+    }
   }
   
   if (voiceLanguage === 'Cantonese') {
-    const cantoneseVoice = voices.find(v => 
+    // Try exact iOS Cantonese voice names
+    let cantoneseVoice = voices.find(v => 
       v.name === 'Sin-ji' ||
-      v.name.includes('Sin-ji') ||
-      v.lang === 'zh-HK'
+      v.name === 'Sinji' ||
+      v.name.toLowerCase().includes('sin-ji') ||
+      v.name.toLowerCase().includes('sinji')
     );
-    if (cantoneseVoice) return cantoneseVoice;
+    
+    if (!cantoneseVoice) {
+      cantoneseVoice = voices.find(v => 
+        v.lang === 'zh-HK' ||
+        v.lang === 'yue-HK' ||
+        v.lang.startsWith('zh-HK')
+      );
+    }
+    
+    if (cantoneseVoice) {
+      console.log(`🎤 Found Cantonese voice: "${cantoneseVoice.name}" (${cantoneseVoice.lang})`);
+      return cantoneseVoice;
+    }
   }
   
   if (voiceLanguage === 'English') {
-    const englishVoice = voices.find(v => 
-      v.lang === 'en-US' && (v.name === 'Samantha' || v.name === 'Alex')
+    // Try iOS English voices
+    let englishVoice = voices.find(v => 
+      v.name === 'Samantha' ||
+      v.name === 'Alex' ||
+      (v.lang === 'en-US' && (v.name.includes('Samantha') || v.name.includes('Alex')))
     );
-    if (englishVoice) return englishVoice;
-    return voices.find(v => v.lang === 'en-US');
+    
+    if (!englishVoice) {
+      englishVoice = voices.find(v => v.lang === 'en-US');
+    }
+    
+    if (englishVoice) {
+      console.log(`🎤 Found English voice: "${englishVoice.name}" (${englishVoice.lang})`);
+      return englishVoice;
+    }
   }
   
+  console.log(`❌ No voice found for ${voiceLanguage}`);
   return null;
 };
 
@@ -169,7 +257,7 @@ export async function speak(
   
   const utterance = new SpeechSynthesisUtterance(fullText);
   
-  // Set language
+  // Set language tag based on voice language
   switch (voiceLanguage) {
     case 'Cantonese':
       utterance.lang = 'zh-HK';
@@ -184,11 +272,18 @@ export async function speak(
       utterance.lang = 'en-US';
   }
   
-  // Get best voice
+  // Get best voice - THIS IS THE CRITICAL PART
   const bestVoice = await getBestVoice(voiceLanguage);
   if (bestVoice) {
     utterance.voice = bestVoice;
-    console.log(`✓ Using voice: ${bestVoice.name} (${bestVoice.lang})`);
+    console.log(`✓ Using voice: "${bestVoice.name}" (${bestVoice.lang}) for ${voiceLanguage}`);
+  } else {
+    console.log(`⚠️ No voice found for ${voiceLanguage}, using default with lang=${utterance.lang}`);
+    
+    // On iOS, provide helpful message
+    if (isIOS() && voiceLanguage !== 'English') {
+      console.log('📱 iOS: Please download voice in Settings > Accessibility > Spoken Content > Voices');
+    }
   }
   
   utterance.rate = 0.85;
@@ -225,19 +320,36 @@ export function stopSpeech() {
 // ============================================
 export function initTTS() {
   if (typeof window !== 'undefined' && window.speechSynthesis) {
-    // Warm up speech synthesis
+    // Warm up speech synthesis and load voices
     const utterance = new SpeechSynthesisUtterance('');
     utterance.volume = 0;
     window.speechSynthesis.speak(utterance);
     setTimeout(() => window.speechSynthesis.cancel(), 100);
+    
+    // Pre-load voices
+    waitForVoices();
   }
 }
 
 // ============================================
-// LEGACY COMPATIBILITY (for existing imports)
+// LEGACY COMPATIBILITY
 // ============================================
-// These functions map to the new ones so old code still works
 export const speakText = speak;
-export const stopSpeaking = stopSpeech;
 export const speakWithLanguage = speak;
 export const speakWithBrowserSupport = speak;
+
+// ============================================
+// HELPER FOR DEBUGGING
+// ============================================
+export const getAvailableVoices = (): SpeechSynthesisVoice[] => {
+  if (typeof window === 'undefined') return [];
+  return refreshVoices();
+};
+
+export const logAvailableVoices = () => {
+  if (typeof window === 'undefined') return;
+  const voices = getAvailableVoices();
+  console.log('=== Available Voices ===');
+  voices.forEach(v => console.log(`- "${v.name}" (${v.lang})`));
+  console.log('=======================');
+};

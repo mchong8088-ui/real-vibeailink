@@ -74,24 +74,24 @@ export const VoiceSelector: React.FC<VoiceSelectorProps> = ({ currentVoice, onVo
 
   // Test the voice with proper greeting when selected
   const testVoice = async (voice: string) => {
-    // Stop any ongoing speech
-    stopSpeech();
-    
-    // Wait a moment for the speech to cancel
-    await new Promise(resolve => setTimeout(resolve, 100));
-    
-    // Get the appropriate greeting
-    const greeting = getMichaelTeresaGreeting(voice);
-    
-    // Use the unified TTS system
-    // The textLanguage parameter determines number formatting
-    let textLanguage = 'English';
-    if (voice === 'Cantonese') textLanguage = 'Traditional Chinese';
-    else if (voice === 'Mandarin' || voice === 'Taiwanese') textLanguage = 'Simplified Chinese';
-    
-    // Speak the greeting using the unified system
-    await speak(greeting, textLanguage, voice);
-  };
+  stopSpeech();
+  await new Promise(resolve => setTimeout(resolve, 100));
+  
+  // Log available voices for debugging
+  if (typeof window !== 'undefined') {
+    const voices = window.speechSynthesis.getVoices();
+    console.log(`=== Testing ${voice} voice ===`);
+    console.log('Available voices:', voices.map(v => `${v.name} (${v.lang})`));
+  }
+  
+  const greeting = getMichaelTeresaGreeting(voice);
+  
+  let textLanguage = 'English';
+  if (voice === 'Cantonese') textLanguage = 'Traditional Chinese';
+  else if (voice === 'Mandarin' || voice === 'Taiwanese') textLanguage = 'Simplified Chinese';
+  
+  await speak(greeting, textLanguage, voice);
+};
 
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
