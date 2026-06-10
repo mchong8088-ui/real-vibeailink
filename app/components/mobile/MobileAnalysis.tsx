@@ -1,3 +1,15 @@
+"use client";
+import React, { useState, useEffect, useRef } from 'react';
+import { LanguageToggle } from '../layout/LanguageToggle';
+import { VoiceSelector } from '../layout/VoiceSelector';
+import { SourceMenu } from '../features/controls/SourceMenu';
+import { AboutSection } from '../sections/AboutSection';
+import { FeaturesSection } from '../sections/FeaturesSection';
+import { PricingModal } from '../features/pricing/PricingModal';
+import { StockAnalysisModule } from '../features/stock-analysis/StockAnalysisModule';
+import { footerContent } from '../../constants/content';
+import { speak as speakText, stopSpeech as stopSpeaking } from '../../utils/ttsMaster';
+
 interface MobileAnalysisProps {
   langKey: string;
   setLangKey: (lang: string) => void;
@@ -8,6 +20,7 @@ interface MobileAnalysisProps {
   legalTitle?: string | null;
   onBack: () => void;
   voiceLanguage?: string;
+}
 
 const MobileAnalysis: React.FC<MobileAnalysisProps> = ({
   langKey,
@@ -18,6 +31,7 @@ const MobileAnalysis: React.FC<MobileAnalysisProps> = ({
   topicId,
   legalTitle,
   onBack,
+  voiceLanguage: propVoiceLanguage = 'English',
 }) => {
   const [inputValue, setInputValue] = useState('');
   const [analysisData, setAnalysisData] = useState<any>(null);
@@ -30,17 +44,17 @@ const MobileAnalysis: React.FC<MobileAnalysisProps> = ({
   const [useAIEnhancement, setUseAIEnhancement] = useState(false);
   const utteranceRef = useRef<SpeechSynthesisUtterance | null>(null);
   const [isLanguageSwitching, setIsLanguageSwitching] = useState(false);
-  const [voiceLanguage, setVoiceLanguage] = useState<string>('English');
+  const [voiceLanguage, setVoiceLanguage] = useState<string>(propVoiceLanguage);
 
   // Load voice preference from localStorage
   useEffect(() => {
-  const savedVoice = localStorage.getItem('preferredVoice');
-  if (savedVoice === 'Cantonese' || savedVoice === 'Mandarin' || savedVoice === 'Taiwanese' || savedVoice === 'English') {
-    setVoiceLanguage(savedVoice);
-  } else {
-    setVoiceLanguage('English');
-  }
-}, []);
+    const savedVoice = localStorage.getItem('preferredVoice');
+    if (savedVoice === 'Cantonese' || savedVoice === 'Mandarin' || savedVoice === 'Taiwanese' || savedVoice === 'English') {
+      setVoiceLanguage(savedVoice);
+    } else {
+      setVoiceLanguage(propVoiceLanguage);
+    }
+  }, [propVoiceLanguage]);
 
   const t = {
     analyzingMarket: langKey === 'Traditional Chinese' ? '分析市場中...' : langKey === 'Simplified Chinese' ? '分析市场中...' : 'Analyzing Market...',
@@ -61,6 +75,7 @@ const MobileAnalysis: React.FC<MobileAnalysisProps> = ({
   // Auto-speak when analysis data arrives
   useEffect(() => {
     if (analysisData?.summary && isSpeakerActive && !isPaused) {
+      console.log("🔊 SPEECH TRIGGERED - Voice:", voiceLanguage);
       setTimeout(() => {
         if (utteranceRef.current) {
           window.speechSynthesis.cancel();
@@ -70,7 +85,6 @@ const MobileAnalysis: React.FC<MobileAnalysisProps> = ({
         });
       }, 100);
     }
-  const [debugInfo, setDebugInfo] = useState('');
     return () => {
       if (utteranceRef.current) {
         window.speechSynthesis.cancel();
@@ -220,7 +234,7 @@ const MobileAnalysis: React.FC<MobileAnalysisProps> = ({
 
   const handleSpeakerToggle = () => {
     if (isSpeakerActive) {
-      window.speechSynthesis.cancel();
+      stopSpeaking();
       setIsSpeakerActive(false);
       setIsPaused(false);
     } else {
@@ -228,7 +242,7 @@ const MobileAnalysis: React.FC<MobileAnalysisProps> = ({
       setIsPaused(false);
       if (analysisData?.summary) {
         if (utteranceRef.current) {
-          window.speechSynthesis.cancel();
+          stopSpeaking();
         }
         speakText(analysisData.summary, langKey, voiceLanguage, () => {
           utteranceRef.current = null;
@@ -241,7 +255,7 @@ const MobileAnalysis: React.FC<MobileAnalysisProps> = ({
     if (!analysisData?.summary) return;
     
     if (isSpeakerActive && !isPaused) {
-      window.speechSynthesis.cancel();
+      stopSpeaking();
       setIsPaused(true);
     } else if (isPaused && isSpeakerActive) {
       speakText(analysisData.summary, langKey, voiceLanguage, () => {
@@ -286,7 +300,6 @@ const MobileAnalysis: React.FC<MobileAnalysisProps> = ({
 
   const renderButtonWithCross = (isActive: boolean, onClick: () => void, icon: React.ReactElement, color: string, inactiveColor: string) => {
     const bgColor = isActive ? color : inactiveColor;
-  const [debugInfo, setDebugInfo] = useState('');
     return (
       <button onClick={onClick} style={{ flex: 1, height: '48px', borderRadius: '12px', display: 'flex', alignItems: 'center', justifyContent: 'center', backgroundColor: bgColor, color: 'white', border: 'none', cursor: 'pointer', position: 'relative', overflow: 'hidden' }}>
         {icon}
@@ -297,7 +310,6 @@ const MobileAnalysis: React.FC<MobileAnalysisProps> = ({
 
   const displayLegalTitle = legalTitle || undefined;
 
-  const [debugInfo, setDebugInfo] = useState('');
   return (
     <div style={{ display: 'flex', flexDirection: 'column', height: '100%', width: '100%', backgroundColor: '#f5f5f5', overflow: 'hidden', position: 'absolute', top: 0, left: 0, right: 0, bottom: 0 }}>
       <div style={{ backgroundColor: 'white', padding: '8px 12px', borderBottom: '1px solid #E5E7EB', display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexShrink: 0, zIndex: 20, width: '100%', boxSizing: 'border-box' }}>
