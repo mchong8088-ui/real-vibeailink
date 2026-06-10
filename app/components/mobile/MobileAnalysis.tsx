@@ -22,6 +22,54 @@ interface MobileAnalysisProps {
   voiceLanguage?: string;
 }
 
+// iOS Version Warning Component
+const IOSVersionWarning = ({ voiceLanguage, onClose }: { voiceLanguage: string; onClose: () => void }) => {
+  const [iosVersion, setIosVersion] = useState<number | null>(null);
+
+  useEffect(() => {
+    const ua = navigator.userAgent;
+    const iosMatch = ua.match(/OS (\d+)_/);
+    const version = iosMatch ? parseInt(iosMatch[1], 10) : 0;
+    setIosVersion(version);
+  }, []);
+
+  if (!iosVersion || iosVersion > 18) return null;
+  if (voiceLanguage !== 'Mandarin' && voiceLanguage !== 'Taiwanese') return null;
+
+  return (
+    <div style={{
+      position: 'fixed',
+      bottom: '80px',
+      left: '12px',
+      right: '12px',
+      background: '#FEF3C7',
+      borderLeft: '4px solid #F59E0B',
+      padding: '10px 12px',
+      borderRadius: '8px',
+      zIndex: 10000,
+      fontSize: '11px',
+      color: '#92400E',
+      boxShadow: '0 2px 8px rgba(0,0,0,0.1)',
+      display: 'flex',
+      alignItems: 'center',
+      gap: '8px'
+    }}>
+      <span style={{ fontSize: '16px' }}>⚠️</span>
+      <span style={{ flex: 1 }}>
+        Your iOS version ({iosVersion}) has limited voice support. 
+        Please change system default voice in: 
+        Settings &gt; Accessibility &gt; Spoken Content &gt; Voices &gt; Chinese
+      </span>
+      <button 
+        onClick={onClose}
+        style={{ background: 'none', border: 'none', fontSize: '16px', cursor: 'pointer' }}
+      >
+        ✕
+      </button>
+    </div>
+  );
+};
+
 const MobileAnalysis: React.FC<MobileAnalysisProps> = ({
   langKey,
   setLangKey,
@@ -45,6 +93,7 @@ const MobileAnalysis: React.FC<MobileAnalysisProps> = ({
   const utteranceRef = useRef<SpeechSynthesisUtterance | null>(null);
   const [isLanguageSwitching, setIsLanguageSwitching] = useState(false);
   const [voiceLanguage, setVoiceLanguage] = useState<string>(propVoiceLanguage);
+  const [showWarning, setShowWarning] = useState(true);
 
   // Load voice preference from localStorage
   useEffect(() => {
@@ -312,6 +361,8 @@ const MobileAnalysis: React.FC<MobileAnalysisProps> = ({
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', height: '100%', width: '100%', backgroundColor: '#f5f5f5', overflow: 'hidden', position: 'absolute', top: 0, left: 0, right: 0, bottom: 0 }}>
+      <IOSVersionWarning voiceLanguage={voiceLanguage} onClose={() => setShowWarning(false)} />
+      
       <div style={{ backgroundColor: 'white', padding: '8px 12px', borderBottom: '1px solid #E5E7EB', display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexShrink: 0, zIndex: 20, width: '100%', boxSizing: 'border-box' }}>
         <button onClick={onBack} style={{ display: 'flex', alignItems: 'center', gap: '4px', color: '#4B5563', background: 'none', border: 'none', cursor: 'pointer', padding: '4px 0', minWidth: '44px' }}>
           <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M15 19l-7-7 7-7" /></svg>
