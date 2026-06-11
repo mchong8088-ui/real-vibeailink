@@ -15,6 +15,7 @@
     "@google/generative-ai": "^0.21.0",
     "@react-three/drei": "^10.0.0",
     "@react-three/fiber": "^9.0.0",
+    "@supabase/auth-helpers-nextjs": "^0.15.0",
     "@supabase/ssr": "^0.10.3",
     "@supabase/supabase-js": "^2.103.3",
     "cheerio": "^1.2.0",
