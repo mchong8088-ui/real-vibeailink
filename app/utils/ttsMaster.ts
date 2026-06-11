@@ -45,7 +45,6 @@ const waitForVoices = (): Promise<SpeechSynthesisVoice[]> => {
     
     checkVoices();
     
-    // Also listen for onvoiceschanged
     window.speechSynthesis.onvoiceschanged = () => {
       const voices = window.speechSynthesis.getVoices();
       if (voices.length > 0) {
@@ -53,7 +52,6 @@ const waitForVoices = (): Promise<SpeechSynthesisVoice[]> => {
       }
     };
     
-    // Timeout fallback
     setTimeout(() => {
       const voices = window.speechSynthesis.getVoices();
       resolve(voices);
@@ -71,16 +69,13 @@ const getBestVoice = async (voiceLanguage: string): Promise<SpeechSynthesisVoice
   
   console.log(`🎤 Looking for ${voiceLanguage} voice`);
   
-  // Log all Chinese voices
   const chineseVoices = voices.filter(v => v.lang.startsWith('zh-'));
   console.log('=== Chinese voices available ===');
   chineseVoices.forEach(v => {
     console.log(`Name: "${v.name}", Lang: "${v.lang}", URI: "${v.voiceURI}"`);
   });
   
-  // For Mandarin - try multiple methods
   if (voiceLanguage === 'Mandarin') {
-    // Try by exact name first
     let voice = chineseVoices.find(v => v.name === '婷婷');
     if (!voice) voice = chineseVoices.find(v => v.name === 'Ting-Ting');
     if (!voice) voice = chineseVoices.find(v => v.lang === 'zh-CN');
@@ -92,7 +87,6 @@ const getBestVoice = async (voiceLanguage: string): Promise<SpeechSynthesisVoice
     }
   }
   
-  // For Taiwanese
   if (voiceLanguage === 'Taiwanese') {
     let voice = chineseVoices.find(v => v.name === '美佳');
     if (!voice) voice = chineseVoices.find(v => v.name === 'Mei-Jia');
@@ -102,7 +96,6 @@ const getBestVoice = async (voiceLanguage: string): Promise<SpeechSynthesisVoice
       console.log(`✅ SELECTED Taiwanese: "${voice.name}" (${voice.lang})`);
       return voice;
     }
-    // Fallback to Mandarin
     const mandarinVoice = chineseVoices.find(v => v.lang === 'zh-CN');
     if (mandarinVoice) {
       console.log(`⚠️ Fallback to Mandarin for Taiwanese`);
@@ -110,7 +103,6 @@ const getBestVoice = async (voiceLanguage: string): Promise<SpeechSynthesisVoice
     }
   }
   
-  // For Cantonese
   if (voiceLanguage === 'Cantonese') {
     let voice = chineseVoices.find(v => v.name === '善怡');
     if (!voice) voice = chineseVoices.find(v => v.name === 'Sin-ji');
@@ -122,7 +114,6 @@ const getBestVoice = async (voiceLanguage: string): Promise<SpeechSynthesisVoice
     }
   }
   
-  // For English
   if (voiceLanguage === 'English') {
     let voice = voices.find(v => v.lang === 'en-US');
     if (voice) {
@@ -183,12 +174,6 @@ export async function speak(
   voiceLanguage: string,
   onEnd?: () => void,
   skipIntro: boolean = false
-)
-  text: string,
-  textLanguage: string,
-  voiceLanguage: string,
-  onEnd?: () => void,
-  skipIntro: boolean = false  // Add this parameter
 ) {
   if (typeof window === 'undefined' || !window.speechSynthesis) {
     console.log('Speech synthesis not supported');
@@ -199,19 +184,14 @@ export async function speak(
     window.speechSynthesis.cancel();
   }
   
-  // Only add intro if skipIntro is false
   const intro = skipIntro ? '' : getIntroMessage(voiceLanguage);
   const cleanedText = cleanTextForTTS(text, textLanguage);
   const fullText = intro ? `${intro} ${cleanedText}` : cleanedText;
-  
-  // ... rest of function
-
   
   console.log(`🔊 Speaking (${voiceLanguage}): ${fullText.substring(0, 100)}...`);
   
   const utterance = new SpeechSynthesisUtterance(fullText);
   
-  // Set language tag
   switch (voiceLanguage) {
     case 'Cantonese':
       utterance.lang = 'zh-HK';
@@ -226,11 +206,9 @@ export async function speak(
       utterance.lang = 'en-US';
   }
   
-  // Find and set the voice BEFORE speaking
   const allVoices = window.speechSynthesis.getVoices();
   let selectedVoice: SpeechSynthesisVoice | null = null;
   
-  // Explicit voice selection
   if (voiceLanguage === 'Cantonese') {
     selectedVoice = allVoices.find(v => v.name === '善怡' || v.name === 'Sin-ji' || v.lang === 'zh-HK');
   } else if (voiceLanguage === 'Mandarin') {
@@ -265,7 +243,6 @@ export async function speak(
   
   currentUtterance = utterance;
   
-  // CRITICAL: Small delay before speaking to ensure voice is set
   setTimeout(() => {
     window.speechSynthesis.speak(utterance);
   }, 50);
