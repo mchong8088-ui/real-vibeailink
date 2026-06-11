@@ -1,6 +1,6 @@
 // /app/api/chat/route.ts
 import { NextResponse } from 'next/server';
-import { createRouteHandlerClient } from '@supabase/auth-helpers-nextjs';
+import { createServerClient } from '@supabase/ssr';
 import { cookies } from 'next/headers';
 import { detectStock, isQuestion, STOCK_ALIASES } from '@/app/lib/market/stockDetector';
 import { getFundamentals } from '@/app/lib/market/fundamentals';
@@ -851,8 +851,24 @@ function generateSpecificAnalysis(stockData: any, fundamentals: any, symbol: str
 export async function POST(req: Request) {
   try {
     // Authentication check
-    const cookieStore = await cookies();
-    const supabase = createRouteHandlerClient({ cookies: () => cookieStore });
+   const cookieStore = await cookies();
+const supabase = createServerClient(
+  process.env.NEXT_PUBLIC_SUPABASE_URL!,
+  process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
+  {
+    cookies: {
+      get(name: string) {
+        return cookieStore.get(name)?.value;
+      },
+      set(name: string, value: string, options: any) {
+        cookieStore.set({ name, value, ...options });
+      },
+      remove(name: string, options: any) {
+        cookieStore.set({ name, value: '', ...options });
+      },
+    },
+  }
+);
     const { data: { session } } = await supabase.auth.getSession();
 
     if (!session) {
