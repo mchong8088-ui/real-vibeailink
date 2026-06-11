@@ -9,6 +9,9 @@ interface Props {
   t: any;
   onAnalyze?: (ticker: string, attachments?: any[], useAI?: boolean) => void;
   voiceLanguage?: string;
+  user?: any;  // ADD THIS
+  profile?: any;  // ADD THIS
+  onUpgradePlan?: () => void;  // ADD THIS
 }
 
 // Facebook Login Component
@@ -459,7 +462,58 @@ const ShareButtons = ({ data, langKey }: { data: any; langKey: string }) => {
     </div>
   );
 };
-
+export const StockAnalysisModule: React.FC<Props> = ({ 
+  data, 
+  isLoading, 
+  langKey, 
+  t, 
+  onAnalyze,
+  user,
+  profile,
+  onUpgradePlan 
+}) => {
+  
+  // Credit check for desktop users
+  if (user && profile && profile.credits <= 0 && !isLoading) {
+    return (
+      <div style={{ 
+        textAlign: 'center', 
+        padding: '60px 20px',
+        backgroundColor: 'white',
+        borderRadius: '12px',
+        margin: '20px'
+      }}>
+        <h3 style={{ color: '#DC2626', marginBottom: '16px' }}>
+          {langKey === 'Traditional Chinese' ? '沒有足夠積分' : 
+           langKey === 'Simplified Chinese' ? '没有足够积分' : 
+           'Insufficient Credits'}
+        </h3>
+        <p style={{ color: '#6B7280', marginBottom: '24px' }}>
+          {langKey === 'Traditional Chinese' ? '您已經用完所有積分。請升級計劃以繼續使用。' : 
+           langKey === 'Simplified Chinese' ? '您已经用完所有积分。请升级计划以继续使用。' : 
+           'You have used all your credits. Please upgrade your plan to continue.'}
+        </p>
+        <button 
+          onClick={onUpgradePlan}
+          style={{
+            backgroundColor: '#22C55E',
+            color: 'white',
+            border: 'none',
+            padding: '10px 24px',
+            borderRadius: '8px',
+            cursor: 'pointer',
+            fontWeight: 'bold'
+          }}
+        >
+          {langKey === 'Traditional Chinese' ? '升級計劃' : 
+           langKey === 'Simplified Chinese' ? '升级计划' : 
+           'Upgrade Plan'}
+        </button>
+      </div>
+    );
+  }
+  
+  // ... rest of existing component
 export const StockAnalysisModule: React.FC<Props> = ({ data, isLoading, langKey, t, onAnalyze }) => {
   // Get language-specific text for UI
   const getUIText = () => {

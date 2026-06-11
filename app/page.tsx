@@ -231,6 +231,14 @@ export default function VibeAiMaster() {
   };
 
   const handleAnalyzeRequest = async (ticker: string, attachments?: any[], useAI?: boolean) => {
+    // Check if user is logged in
+  if (!user) {
+    alert('Please login to analyze stocks. Create a free account at vibeailink.com');
+    setIsAuthOpen(true);
+    return;
+  }
+  
+  setIsLoading(true);
     setIsLoading(true);
     try {
       let userContent = null;
@@ -434,15 +442,18 @@ export default function VibeAiMaster() {
     }
     return (
       <MobileAnalysis 
-        langKey={language} 
-        setLangKey={setLanguage as any} 
-        user={user} 
-        onAuthOpen={() => setIsAuthOpen(true)} 
-        viewType={mobileView} 
-        topicId={mobileTopic} 
-        legalTitle={mobileLegal} 
-        onBack={handleMobileBack} 
-      />
+  langKey={language} 
+  setLangKey={setLanguage as any} 
+  user={user} 
+  profile={profile}
+  onAuthOpen={() => setIsAuthOpen(true)} 
+  viewType={mobileView} 
+  topicId={mobileTopic} 
+  legalTitle={mobileLegal} 
+  onBack={handleMobileBack}
+  voiceLanguage={voiceLanguage}
+  onNavigate={handleMobileNavigate}
+/>
     );
   }
 
@@ -545,12 +556,15 @@ export default function VibeAiMaster() {
                     </div>
                   )}
                   <StockAnalysisModule 
-                    t={t} 
-                    data={analysisData} 
-                    isLoading={isLoading} 
-                    langKey={language} 
-                    onAnalyze={(symbol) => handleAnalyzeRequest(symbol, [], false)} 
-                  />
+  t={t} 
+  data={analysisData} 
+  isLoading={isLoading} 
+  langKey={language} 
+  onAnalyze={(symbol) => handleAnalyzeRequest(symbol, [], false)}
+  user={user}
+  profile={profile}
+  onUpgradePlan={() => setCurrentView('pricing')}
+/>
                 </>
               )}
               {currentView === "portfolio" && <PortfolioModule langKey={language} onAnalyzeStock={(symbol) => handleAnalyzeRequest(symbol, [], false)} />}

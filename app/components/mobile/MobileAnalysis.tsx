@@ -14,12 +14,14 @@ interface MobileAnalysisProps {
   langKey: string;
   setLangKey: (lang: string) => void;
   user: any;
+  profile?: any;  // ADD THIS
   onAuthOpen: () => void;
   viewType: string;
   topicId?: string;
   legalTitle?: string | null;
   onBack: () => void;
   voiceLanguage?: string;
+  onNavigate?: (page: string, params?: any) => void;  // ADD THIS
 }
 
 // iOS Version Warning Component
@@ -89,12 +91,14 @@ const MobileAnalysis: React.FC<MobileAnalysisProps> = ({
   langKey,
   setLangKey,
   user,
+  profile,  // ADD THIS
   onAuthOpen,
   viewType,
   topicId,
   legalTitle,
   onBack,
   voiceLanguage: propVoiceLanguage = 'English',
+  onNavigate,  // ADD THIS
 }) => {
   const [inputValue, setInputValue] = useState('');
   const [analysisData, setAnalysisData] = useState<any>(null);
@@ -232,9 +236,31 @@ const MobileAnalysis: React.FC<MobileAnalysisProps> = ({
   };
 
   const handleAnalyze = async () => {
-    if (!inputValue.trim()) return;
-    setIsLoading(true);
-    try {
+  if (!inputValue.trim()) return;
+  
+  // Check if user is logged in
+  if (!user) {
+    alert(langKey === 'Traditional Chinese' ? '請先登入' : 
+          langKey === 'Simplified Chinese' ? '请先登录' : 
+          'Please login first');
+    onAuthOpen();
+    return;
+  }
+  
+  // Check credits
+  if (profile && profile.credits <= 0) {
+    alert(langKey === 'Traditional Chinese' ? '積分不足，請升級計劃' : 
+          langKey === 'Simplified Chinese' ? '积分不足，请升级计划' : 
+          'Insufficient credits. Please upgrade your plan');
+    if (onNavigate) {
+      onNavigate('content', { view: 'pricing' });
+    }
+    return;
+  }
+  
+  setIsLoading(true);  // REMOVE THE DUPLICATE - KEEP ONLY ONE
+  try {
+   
       const endpoint = useAIEnhancement ? '/api/chat/ai-enhanced' : '/api/chat';
       const response = await fetch(endpoint, {
         method: 'POST',
