@@ -135,7 +135,7 @@ const handleVoiceChange = (voice: string) => {
                 localStorage.setItem('preferredVoice', voice);
                 setIsOpen(false);
                 // Test the voice with Michael & Teresa greeting after selection
-                setTimeout(() => testVoice(voice), 100);
+                // setTimeout(() => testVoice(voice), 100);
               }}
               style={{
                 display: 'block',
