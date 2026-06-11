@@ -79,27 +79,6 @@ const handleVoiceChange = (voice: string) => {
   // ... rest
 };
 
-  // Test the voice with proper greeting when selected
-  const testVoice = async (voice: string) => {
-  stopSpeech();
-  await new Promise(resolve => setTimeout(resolve, 100));
-  
-  // Log available voices for debugging
-  if (typeof window !== 'undefined') {
-    const voices = window.speechSynthesis.getVoices();
-    console.log(`=== Testing ${voice} voice ===`);
-    console.log('Available voices:', voices.map(v => `${v.name} (${v.lang})`));
-  }
-  
-  const greeting = getMichaelTeresaGreeting(voice);
-  
-  let textLanguage = 'English';
-  if (voice === 'Cantonese') textLanguage = 'Traditional Chinese';
-  else if (voice === 'Mandarin' || voice === 'Taiwanese') textLanguage = 'Simplified Chinese';
-  
-  await speak(greeting, textLanguage, voice);
-};
-
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
       if (dropdownRef.current && !dropdownRef.current.contains(event.target as Node)) {

@@ -8,13 +8,13 @@ let currentUtterance: SpeechSynthesisUtterance | null = null;
 const getIntroMessage = (voiceLanguage: string): string => {
   switch (voiceLanguage) {
     case 'Cantonese':
-      return "你好，我哋係米高和杜麗莎，你嘅財務和市場分析員，好高興為你報告。";
+      return "你好，我哋係米高和杜麗莎，你嘅財務和市場分析員，好高興為你服務。";
     case 'Mandarin':
-      return "你好，我们是米高和杜丽莎，你的财务和市场分析师，很高兴为你报告。";
+      return "你好，我们是米高和杜丽莎，你的财务和市场分析师，很高兴为你服务。";
     case 'Taiwanese':
-      return "你好，我們是米高和杜麗莎，你的財務和市場分析員，很高興為你報告。";
+      return "你好，我們是米高和杜麗莎，你的財務和市場分析員，很高興為你服務。";
     default:
-      return "Hello, this is Michael and Teresa, your Finance and Market Analysts, here to give you the report.";
+      return "Hello, this is Michael and Teresa, your Finance and Market Analysts, glad to give you the service.";
   }
 };
 
@@ -181,24 +181,31 @@ export async function speak(
   text: string,
   textLanguage: string,
   voiceLanguage: string,
-  onEnd?: () => void
+  onEnd?: () => void,
+  skipIntro: boolean = false
+)
+  text: string,
+  textLanguage: string,
+  voiceLanguage: string,
+  onEnd?: () => void,
+  skipIntro: boolean = false  // Add this parameter
 ) {
   if (typeof window === 'undefined' || !window.speechSynthesis) {
     console.log('Speech synthesis not supported');
     return;
   }
   
-  // Cancel any ongoing speech
   if (currentUtterance) {
     window.speechSynthesis.cancel();
   }
   
-  // CRITICAL: Wait for voices to be fully loaded
-  await waitForVoices();
-  
-  const intro = getIntroMessage(voiceLanguage);
+  // Only add intro if skipIntro is false
+  const intro = skipIntro ? '' : getIntroMessage(voiceLanguage);
   const cleanedText = cleanTextForTTS(text, textLanguage);
-  const fullText = `${intro} ${cleanedText}`;
+  const fullText = intro ? `${intro} ${cleanedText}` : cleanedText;
+  
+  // ... rest of function
+
   
   console.log(`🔊 Speaking (${voiceLanguage}): ${fullText.substring(0, 100)}...`);
   
