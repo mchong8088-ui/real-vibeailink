@@ -6,7 +6,22 @@ import { getNews } from '@/app/lib/market/news';
 import { getSentiment, analyzeTextSentiment } from '@/app/lib/market/sentiment';
 import { createRouteHandlerClient } from '@supabase/auth-helpers-nextjs';
 import { cookies } from 'next/headers';
+import { NextResponse } from 'next/server';
 
+export async function POST(req: Request) {
+  const cookieStore = await cookies();
+  const supabase = createRouteHandlerClient({ cookies: () => cookieStore });
+  const { data: { session } } = await supabase.auth.getSession();
+
+  if (!session) {
+    return NextResponse.json({
+      success: false,
+      summary: 'Please login to continue.',
+    }, { status: 401 });
+  }
+  
+  // ... rest of your existing code
+}
 // Get Chinese name from STOCK_ALIASES dynamically
 function getChineseNameFromSymbol(symbol: string): string | null {
   for (const [name, sym] of Object.entries(STOCK_ALIASES)) {

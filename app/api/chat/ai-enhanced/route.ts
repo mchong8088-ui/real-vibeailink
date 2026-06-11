@@ -1,3 +1,5 @@
+import { createRouteHandlerClient } from "@supabase/auth-helpers-nextjs";
+import { cookies } from "next/headers";
 // app/api/chat/ai-enhanced/route.ts
 import { NextResponse } from 'next/server';
 import { detectStock, extractStockFromQuestion, isQuestion, STOCK_ALIASES } from '@/app/lib/market/stockDetector';
@@ -5,7 +7,8 @@ import { getFundamentals } from '@/app/lib/market/fundamentals';
 import { getNews } from '@/app/lib/market/news';
 import { callAI } from '@/app/lib/ai/gateway';
 import { buildAnalysisPrompt } from '@/app/lib/ai/promptBuilder';
-
+import { createRouteHandlerClient } from '@supabase/auth-helpers-nextjs';
+import { cookies } from 'next/headers';
 // Reuse the same helper functions from your main route
 function getChineseNameFromSymbol(symbol: string): string | null {
   for (const [name, sym] of Object.entries(STOCK_ALIASES)) {
@@ -220,7 +223,8 @@ async function extractUrlContent(url: string): Promise<string> {
 
 export async function POST(req: Request) {
   // Authentication check
-  const supabase = createRouteHandlerClient({ cookies });
+  const supabase = createRouteHandlerClient({ cookies: () => cookieStore });
+  const cookieStore = await cookies();
   const { data: { session } } = await supabase.auth.getSession();
   
   if (!session) {
