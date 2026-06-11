@@ -46,8 +46,6 @@ async function fetchCompanyInfo(symbol: string): Promise<{ name: string; chinese
   }
   
   return { 
-      sma20: null,
-      sma50: null,
     name: symbol, 
     chineseName: chineseNameFromAlias || symbol 
   };
@@ -126,8 +124,6 @@ async function fetchRealStockData(symbol: string) {
     if (symbol.endsWith('.HK')) currency = 'HK$';
     
     return { 
-      sma20: null,
-      sma50: null,
       price, 
       changePercent,
       dayLow,
@@ -135,7 +131,9 @@ async function fetchRealStockData(symbol: string) {
       rsi, 
       macd, 
       trend, 
-      currency
+      currency,
+      sma20: null,
+      sma50: null
     };
   } catch (err) {
     console.error(`❌ Error fetching ${symbol}:`, err);
@@ -168,10 +166,10 @@ export async function POST(req: Request) {
     // Authentication check
     const cookieStore = await cookies();
     const supabase = createServerClient(
-  process.env.NEXT_PUBLIC_SUPABASE_URL!,
-  process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
-  { cookies: { get: (name) => cookieStore.get(name)?.value } }
-);
+      process.env.NEXT_PUBLIC_SUPABASE_URL!,
+      process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
+      { cookies: { get: (name) => cookieStore.get(name)?.value } }
+    );
     const { data: { session } } = await supabase.auth.getSession();
 
     if (!session) {
