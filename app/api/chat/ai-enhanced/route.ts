@@ -36,8 +36,6 @@ async function fetchCompanyInfo(symbol: string): Promise<{ name: string; chinese
       const longName = data.chart?.result?.[0]?.meta?.longName;
       if (longName) {
         return { 
-      sma20: null,
-      sma50: null,
           name: longName, 
           chineseName: chineseNameFromAlias || longName
         };
