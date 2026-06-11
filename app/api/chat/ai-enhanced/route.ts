@@ -219,6 +219,65 @@ async function extractUrlContent(url: string): Promise<string> {
 }
 
 export async function POST(req: Request) {
+  // Authentication check
+  const supabase = createRouteHandlerClient({ cookies });
+  const { data: { session } } = await supabase.auth.getSession();
+  
+  if (!session) {
+    return NextResponse.json({
+      success: false,
+      summary: 'Please login to use this feature. Create a free account at vibeailink.com',
+      text: 'Please login to use this feature. Create a free account at vibeailink.com'
+    }, { status: 401 });
+  }
+  
+  // Check user's credits
+  const { data: profile, error: profileError } = await supabase
+    .from('profiles')
+    .select('credits, subscription_plan')
+    .eq('id', session.user.id)
+    .single();
+  
+  if (profileError || !profile) {
+    return NextResponse.json({
+      success: false,
+      summary: 'User profile not found. Please contact support.',
+      text: 'User profile not found. Please contact support.'
+    }, { status: 403 });
+  }
+  
+  // Check if user has credits (Free Explorer has 100 credits, paid plans have more)
+  if (profile.credits <= 0) {
+    return NextResponse.json({
+      success: false,
+      summary: 'You have used all your credits. Please upgrade your plan to continue.',
+      text: 'You have used all your credits. Please upgrade your plan to continue.'
+    }, { status: 403 });
+  }
+  
+  // Deduct 1 credit for this analysis
+  const { error: updateError } = await supabase
+    .from('profiles')
+    .update({ credits: profile.credits - 1 })
+    .eq('id', session.user.id);
+  
+  if (updateError) {
+    console.error('Failed to deduct credit:', updateError);
+  }
+  
+  // Continue with existing analysis logic...
+  // (your existing code from const { message, language... } onward)
+  
+  // After successful analysis, you can also log the transaction
+  await supabase
+    .from('credit_transactions')
+    .insert({
+      user_id: session.user.id,
+      amount: -1,
+      type: 'analysis',
+      description: `Stock analysis for ${symbol}`,
+      created_at: new Date().toISOString()
+    });
   try {
     const { message, language = 'English', userContent = null, useAI = true } = await req.json();
     console.log(`📝 AI-Enhanced Query: ${message}, Language: ${language}, UserContent: ${userContent ? 'Yes' : 'No'}`);
