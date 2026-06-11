@@ -9,9 +9,9 @@ interface Props {
   t: any;
   onAnalyze?: (ticker: string, attachments?: any[], useAI?: boolean) => void;
   voiceLanguage?: string;
-  user?: any;  // ADD THIS
-  profile?: any;  // ADD THIS
-  onUpgradePlan?: () => void;  // ADD THIS
+  user?: any;
+  profile?: any;
+  onUpgradePlan?: () => void;
 }
 
 // Facebook Login Component
@@ -19,7 +19,6 @@ const FacebookLoginButton = ({ onLogin, langKey }: { onLogin: (token: string) =>
   const [isLoading, setIsLoading] = useState(false);
 
   useEffect(() => {
-    // Load Facebook SDK
     if (typeof window !== 'undefined' && !window.FB) {
       window.fbAsyncInit = function() {
         window.FB.init({
@@ -259,14 +258,13 @@ const FacebookAPIShareButton = ({
   );
 };
 
-// Share Buttons Component (updated with API sharing)
+// Share Buttons Component
 const ShareButtons = ({ data, langKey }: { data: any; langKey: string }) => {
   const [showShareMenu, setShowShareMenu] = useState(false);
   const [shareMessage, setShareMessage] = useState('');
   const [fbAccessToken, setFbAccessToken] = useState<string | null>(null);
   const [showFbLogin, setShowFbLogin] = useState(false);
 
-  // Load saved Facebook token
   useEffect(() => {
     const token = localStorage.getItem('fb_access_token');
     if (token) {
@@ -393,7 +391,6 @@ const ShareButtons = ({ data, langKey }: { data: any; langKey: string }) => {
             ))}
           </div>
 
-          {/* Facebook API Share Section */}
           <div style={{ 
             marginTop: '12px', 
             paddingTop: '12px', 
@@ -462,6 +459,7 @@ const ShareButtons = ({ data, langKey }: { data: any; langKey: string }) => {
     </div>
   );
 };
+
 export const StockAnalysisModule: React.FC<Props> = ({ 
   data, 
   isLoading, 
@@ -512,9 +510,7 @@ export const StockAnalysisModule: React.FC<Props> = ({
       </div>
     );
   }
-  
-  // ... rest of existing component
-export const StockAnalysisModule: React.FC<Props> = ({ data, isLoading, langKey, t, onAnalyze }) => {
+
   // Get language-specific text for UI
   const getUIText = () => {
     if (langKey === 'Traditional Chinese') {
@@ -574,7 +570,6 @@ export const StockAnalysisModule: React.FC<Props> = ({ data, isLoading, langKey,
       return [];
     }
     
-    // Take last 90 days of data (about 3 months)
     const threeMonthsData = historical.slice(-90);
     
     return threeMonthsData.map((item: any) => ({
@@ -632,9 +627,6 @@ export const StockAnalysisModule: React.FC<Props> = ({ data, isLoading, langKey,
     return '$';
   };
   const currencySymbol = getCurrencySymbol();
-
-  const minPrice = chartData.length > 0 ? Math.min(...chartData.map(d => d.price)) : 0;
-  const maxPrice = chartData.length > 0 ? Math.max(...chartData.map(d => d.price)) : 0;
 
   return (
     <div style={{ maxWidth: '100%' }}>
