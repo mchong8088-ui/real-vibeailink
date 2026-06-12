@@ -850,64 +850,8 @@ function generateSpecificAnalysis(stockData: any, fundamentals: any, symbol: str
 
 export async function POST(req: Request) {
   try {
-    // AUTH TEMPORARILY DISABLED FOR TESTING
-    /*
-    // Authentication check
-    const cookieStore = await cookies();
-    const supabase = createServerClient(
-      process.env.NEXT_PUBLIC_SUPABASE_URL!,
-      process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
-      { cookies: { get: (name) => cookieStore.get(name)?.value } }
-    );
-    const { data: { session } } = await supabase.auth.getSession();
-
-    if (!session) {
-      return NextResponse.json({
-        success: false,
-        summary: 'Please login to use this feature. Create a free account at vibeailink.com',
-        text: 'Please login to use this feature. Create a free account at vibeailink.com'
-      }, { status: 401 });
-    }
-
-    // Check user's credits
-    const { data: profile, error: profileError } = await supabase
-      .from('profiles')
-      .select('credits, subscription_plan')
-      .eq('id', session.user.id)
-      .single();
-
-    if (profileError || !profile) {
-      return NextResponse.json({
-        success: false,
-        summary: 'User profile not found. Please contact support.',
-        text: 'User profile not found. Please contact support.'
-      }, { status: 403 });
-    }
-
-    if (profile.credits <= 0) {
-      return NextResponse.json({
-        success: false,
-        summary: 'You have used all your credits. Please upgrade your plan to continue.',
-        text: 'You have used all your credits. Please upgrade your plan to continue.'
-      }, { status: 403 });
-    }
-
-    // Deduct 1 credit for this analysis
-    // Log credit transaction - DISABLED FOR TESTING
-/*
-await supabase
-  .from('credit_transactions')
-  .insert({
-    user_id: session.user.id,
-    amount: -1,
-    type: 'analysis',
-    description: `AI-enhanced analysis for ${symbol}`,
-    created_at: new Date().toISOString()
-  });
-*/
-
     const { message, language = 'English', userContent = null } = await req.json();
-    console.log(`Query: ${message}, Language: ${language}, UserContent: ${userContent ? 'Yes' : 'No'}`);
+    console.log(`Query: ${message}, Language: ${language}`);
     
     const symbol = detectStock(message);
     
@@ -920,16 +864,10 @@ await supabase
       } else {
         errorMsg = 'Unable to recognize stock symbol. Please try: 2330.TW, 0700.HK, TSLA';
       }
-      return NextResponse.json({
-        success: false,
-        summary: errorMsg,
-        text: errorMsg
-      });
+      return NextResponse.json({ success: false, summary: errorMsg, text: errorMsg });
     }
     
     console.log(`Detected symbol: ${symbol}`);
-    
-    const isUserQuestion = isQuestion(message);
     
     const [stockData, companyInfo] = await Promise.all([
       fetchRealStockData(symbol),
@@ -945,56 +883,22 @@ await supabase
       } else {
         errorMsg = `Unable to fetch real-time data for ${symbol}. Please try again.`;
       }
-      return NextResponse.json({
-        success: false,
-        summary: errorMsg,
-        text: errorMsg
-      });
+      return NextResponse.json({ success: false, summary: errorMsg, text: errorMsg });
     }
     
-    const [fundamentals, news] = await Promise.all([
-      getFundamentals(symbol),
-      getNews(symbol, companyInfo.name || symbol, language)
-    ]);
-    
-    let userContentAnalysis = null;
-    let newsSentiment = null;
-    
-    if (userContent) {
-      userContentAnalysis = await extractUserContent(userContent, language);
-      console.log(`User content analyzed: ${userContentAnalysis.type}, Title: ${userContentAnalysis.title}`);
-    }
-    
-    if (news && news.length > 0) {
-      newsSentiment = getSentiment(news);
-      console.log(`News sentiment: ${newsSentiment.sentiment}, Score: ${newsSentiment.score}`);
-    }
-    
-    const specificAnalysis = generateSpecificAnalysis(stockData, fundamentals, symbol, language);
-    
-    if (newsSentiment) {
-      if (newsSentiment.sentiment === 'Positive') {
-        specificAnalysis.confidenceScore = Math.min(95, specificAnalysis.confidenceScore + 5);
-      } else if (newsSentiment.sentiment === 'Negative') {
-        specificAnalysis.confidenceScore = Math.max(0, specificAnalysis.confidenceScore - 10);
-      }
-    }
-    
+    const displayName = companyInfo.chineseName || companyInfo.name || symbol;
     const isPositive = stockData.changePercent >= 0;
     const changePercentText = stockData.changePercent ? `${isPositive ? '+' : ''}${stockData.changePercent.toFixed(2)}%` : 'N/A';
     const rsiText = stockData.rsi ? stockData.rsi.toFixed(1) : 'N/A';
     
-    // Language-specific text setup (abbreviated for brevity - keep your existing language mappings)
-    let rsiStatus = '';
-    let rsiInterpret = '';
-    let macdText = '';
-    let macdInterpret = '';
-    let trendText = '';
-    // ... (keep all your language mapping code here)
+    // Simple analysis
+    const analysis = `${displayName} (${symbol}) - Price: ${stockData.currency}${stockData.price}, Change: ${changePercentText}, RSI: ${rsiText}`;
     
-    const displayName = companyInfo.chineseName || companyInfo.name || symbol;
-    
-    // Generate complete analysis (abbreviated - keep your existing analysis generation)
+    return NextResponse.json({
+      success: true,
+      symbol: symbol,
+      companyName: displayName,
+      price: stockData.price,
       changePercent: stockData.changePercent,
       dayLow: stockData.dayLow,
       dayHigh: stockData.dayHigh,
@@ -1002,26 +906,15 @@ await supabase
       macd: stockData.macd,
       trend: stockData.trend,
       historical: stockData.historical,
-      isQuestion: isUserQuestion,
-      detectedFrom: message,
       summary: analysis,
       text: analysis,
-      sma20: stockData.sma20,
-      sma50: stockData.sma50,
-      volatility: stockData.volatility,
-      avgVolume: stockData.avgVolume,
-      currency: stockData.currency,
-      specificAnalysis: specificAnalysis
+      currency: stockData.currency
     });
     
   } catch (error) {
     console.error('API Error:', error);
     const errorMsg = 'Service temporarily unavailable. Please try again later.';
-    return NextResponse.json({
-      success: false,
-      summary: errorMsg,
-      text: errorMsg
-    });
+    return NextResponse.json({ success: false, summary: errorMsg, text: errorMsg });
   }
 }
 
