@@ -1,30 +1,11 @@
 // app/auth/callback/route.ts
-import { createRouteHandlerClient } from '@supabase/auth-helpers-nextjs'
-import { cookies } from 'next/headers'
-import { NextResponse } from 'next/server'
+// AUTH TEMPORARILY DISABLED FOR TESTING
+import { NextResponse } from 'next/server';
 
 export async function GET(request: Request) {
-  const requestUrl = new URL(request.url)
-  const code = requestUrl.searchParams.get('code')
-
-  console.log('🔐 Callback received, code exists:', !!code)
-
-  if (code) {
-    const cookieStore = await cookies()
-    
-    const supabase = createRouteHandlerClient({ cookies: () => cookieStore })
-
-    const { error } = await supabase.auth.exchangeCodeForSession(code)
-    
-    if (error) {
-      console.error('❌ Exchange error:', error.message)
-      // Redirect to home with error
-      return NextResponse.redirect(new URL('/?error=auth_failed', requestUrl.origin))
-    }
-    
-    console.log('✅ Session exchanged successfully')
-  }
-
-  // Always redirect to home page
-  return NextResponse.redirect(new URL('/', requestUrl.origin))
+  // Simply redirect to home page without any auth processing
+  console.log('🔐 Auth callback hit but auth is temporarily disabled');
+  
+  // Just redirect to home page
+  return NextResponse.redirect(new URL('/', request.url));
 }
