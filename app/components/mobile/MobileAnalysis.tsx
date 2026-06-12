@@ -238,6 +238,8 @@ const MobileAnalysis: React.FC<MobileAnalysisProps> = ({
   const handleAnalyze = async () => {
   if (!inputValue.trim()) return;
   
+  // TEMPORARILY DISABLED AUTH CHECKS
+  /*
   // Check if user is logged in
   if (!user) {
     alert(langKey === 'Traditional Chinese' ? '請先登入' : 
@@ -257,8 +259,10 @@ const MobileAnalysis: React.FC<MobileAnalysisProps> = ({
     }
     return;
   }
+  */
   
-  setIsLoading(true);  // REMOVE THE DUPLICATE - KEEP ONLY ONE
+  setIsLoading(true);
+ // REMOVE THE DUPLICATE - KEEP ONLY ONE
   try {
    
       const endpoint = useAIEnhancement ? '/api/chat/ai-enhanced' : '/api/chat';

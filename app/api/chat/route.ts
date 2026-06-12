@@ -850,13 +850,75 @@ function generateSpecificAnalysis(stockData: any, fundamentals: any, symbol: str
 
 export async function POST(req: Request) {
   try {
+    // AUTH TEMPORARILY DISABLED FOR TESTING - COMMENT OUT ALL AUTH CHECKS
+    /*
+    // Authentication check
+    const cookieStore = await cookies();
+    const supabase = createRouteHandlerClient({ cookies: () => cookieStore });
+    const { data: { session } } = await supabase.auth.getSession();
+
+    if (!session) {
+      return NextResponse.json({
+        success: false,
+        summary: 'Please login to use this feature. Create a free account at vibeailink.com',
+        text: 'Please login to use this feature. Create a free account at vibeailink.com'
+      }, { status: 401 });
+    }
+
+    // Check user's credits
+    const { data: profile, error: profileError } = await supabase
+      .from('profiles')
+      .select('credits, subscription_plan')
+      .eq('id', session.user.id)
+      .single();
+
+    if (profileError || !profile) {
+      return NextResponse.json({
+        success: false,
+        summary: 'User profile not found. Please contact support.',
+        text: 'User profile not found. Please contact support.'
+      }, { status: 403 });
+    }
+
+    if (profile.credits <= 0) {
+      return NextResponse.json({
+        success: false,
+        summary: 'You have used all your credits. Please upgrade your plan to continue.',
+        text: 'You have used all your credits. Please upgrade your plan to continue.'
+      }, { status: 403 });
+    }
+
+    // Deduct 1 credit for this analysis
+    await supabase
+      .from('profiles')
+      .update({ credits: profile.credits - 1 })
+      .eq('id', session.user.id);
+    */
+
     const { message, language = 'English', userContent = null } = await req.json();
-    console.log(`Query: ${message}, Language: ${language}`);
+    console.log(`Query: ${message}, Language: ${language}, UserContent: ${userContent ? 'Yes' : 'No'}`);
     
     const symbol = detectStock(message);
+    
     if (!symbol || symbol === '') {
-      return NextResponse.json({ success: false, summary: 'Unable to recognize stock symbol.' });
+      let errorMsg = '';
+      if (language === 'Traditional Chinese') {
+        errorMsg = '無法識別股票代號。請嘗試: 台積電, 騰訊, 特斯拉, 或直接輸入代號如 2330.TW, 0700.HK, TSLA';
+      } else if (language === 'Simplified Chinese') {
+        errorMsg = '无法识别股票代码。请尝试: 台积电, 腾讯, 特斯拉, 或直接输入代码如 2330.TW, 0700.HK, TSLA';
+      } else {
+        errorMsg = 'Unable to recognize stock symbol. Please try: 2330.TW, 0700.HK, TSLA';
+      }
+      return NextResponse.json({
+        success: false,
+        summary: errorMsg,
+        text: errorMsg
+      });
     }
+    
+    console.log(`Detected symbol: ${symbol}`);
+    
+    const isUserQuestion = isQuestion(message);
     
     const [stockData, companyInfo] = await Promise.all([
       fetchRealStockData(symbol),
@@ -864,7 +926,19 @@ export async function POST(req: Request) {
     ]);
     
     if (!stockData) {
-      return NextResponse.json({ success: false, summary: `Unable to fetch data for ${symbol}.` });
+      let errorMsg = '';
+      if (language === 'Traditional Chinese') {
+        errorMsg = `無法獲取 ${symbol} 的即時數據，請稍後再試。`;
+      } else if (language === 'Simplified Chinese') {
+        errorMsg = `无法获取 ${symbol} 的实时数据，请稍后再试。`;
+      } else {
+        errorMsg = `Unable to fetch real-time data for ${symbol}. Please try again.`;
+      }
+      return NextResponse.json({
+        success: false,
+        summary: errorMsg,
+        text: errorMsg
+      });
     }
     
     const [fundamentals, news] = await Promise.all([
@@ -872,35 +946,372 @@ export async function POST(req: Request) {
       getNews(symbol, companyInfo.name || symbol, language)
     ]);
     
-    const displayName = companyInfo.chineseName || companyInfo.name || symbol;
+    let userContentAnalysis = null;
+    let newsSentiment = null;
+    
+    if (userContent) {
+      userContentAnalysis = await extractUserContent(userContent, language);
+      console.log(`User content analyzed: ${userContentAnalysis.type}, Title: ${userContentAnalysis.title}`);
+    }
+    
+    if (news && news.length > 0) {
+      newsSentiment = getSentiment(news);
+      console.log(`News sentiment: ${newsSentiment.sentiment}, Score: ${newsSentiment.score}`);
+    }
+    
+    const specificAnalysis = generateSpecificAnalysis(stockData, fundamentals, symbol, language);
+    
+    if (newsSentiment) {
+      if (newsSentiment.sentiment === 'Positive') {
+        specificAnalysis.confidenceScore = Math.min(95, specificAnalysis.confidenceScore + 5);
+      } else if (newsSentiment.sentiment === 'Negative') {
+        specificAnalysis.confidenceScore = Math.max(0, specificAnalysis.confidenceScore - 10);
+      }
+    }
+    
     const isPositive = stockData.changePercent >= 0;
     const changePercentText = stockData.changePercent ? `${isPositive ? '+' : ''}${stockData.changePercent.toFixed(2)}%` : 'N/A';
     const rsiText = stockData.rsi ? stockData.rsi.toFixed(1) : 'N/A';
     
-    // Build full analysis sections
-    let analysis = `${displayName} (${symbol}) Investment Analysis\n\n`;
-    analysis += `1. Summary\n`;
-    analysis += `Current Price: ${stockData.currency}${stockData.price.toFixed(2)}, Daily Change: ${changePercentText}\n`;
-    analysis += `Day Range: ${stockData.dayLow ? `${stockData.currency}${stockData.dayLow.toFixed(2)}` : 'N/A'} - ${stockData.dayHigh ? `${stockData.currency}${stockData.dayHigh.toFixed(2)}` : 'N/A'}\n`;
-    analysis += `RSI(14): ${rsiText}\n\n`;
+    // Language-specific text
+    let rsiStatus = '';
+    let rsiInterpret = '';
+    let macdText = '';
+    let macdInterpret = '';
+    let trendText = '';
+    let analysisTitle = '';
+    let summaryTitle = '';
+    let technicalTitle = '';
+    let fundamentalsTitle = '';
+    let newsTitle = '';
+    let bullishTitle = '';
+    let bearishTitle = '';
+    let tradingAdviceTitle = '';
+    let finalAdviceTitle = '';
+    let disclaimer = '';
+    let userContentTitle = '';
+    let summaryOfContent = '';
+    let keyPointsTitle = '';
+    let riskLevelTitle = '';
+    let currentPriceLabel = '';
+    let dailyChangeLabel = '';
+    let dayRangeLabel = '';
+    let rsiLabel = '';
+    let overallTrendLabel = '';
+    let macdLabel = '';
+    let trendLabel = '';
+    let sma20Label = '';
+    let sma50Label = '';
+    let volatilityLabel = '';
+    let avgVolumeLabel = '';
     
-    analysis += `2. Technical Analysis\n`;
-    analysis += `RSI(14): ${rsiText} - ${stockData.rsi ? (stockData.rsi > 70 ? 'Overbought' : stockData.rsi < 30 ? 'Oversold' : 'Neutral') : 'N/A'}\n`;
-    analysis += `MACD: ${stockData.macd === 'Bullish' ? 'Bullish' : stockData.macd === 'Bearish' ? 'Bearish' : 'Neutral'}\n`;
-    analysis += `Trend: ${stockData.trend === 'Uptrend' ? 'Uptrend' : stockData.trend === 'Downtrend' ? 'Downtrend' : 'Sideways'}\n`;
-    analysis += `SMA20: ${stockData.sma20 ? `${stockData.currency}${stockData.sma20.toFixed(2)}` : 'N/A'}\n`;
-    analysis += `SMA50: ${stockData.sma50 ? `${stockData.currency}${stockData.sma50.toFixed(2)}` : 'N/A'}\n\n`;
-    
-    analysis += `3. Fundamentals\n`;
-    if (fundamentals && fundamentals.marketCap !== 'N/A') {
-      analysis += `Market Cap: ${fundamentals.marketCap} | P/E: ${fundamentals.peRatio?.toFixed(2) || 'N/A'}x\n`;
-      analysis += `Revenue Growth: ${fundamentals.revenueGrowth?.toFixed(2) || 'N/A'}%\n`;
-      analysis += `Profit Margin: ${fundamentals.profitMargin?.toFixed(2) || 'N/A'}%\n`;
+    if (language === 'Traditional Chinese') {
+      rsiStatus = stockData.rsi ? (stockData.rsi > 70 ? '超買' : stockData.rsi < 30 ? '超賣' : '中性') : '中性';
+      rsiInterpret = stockData.rsi ? (stockData.rsi > 70 ? '超買區間，短期可能回調' : stockData.rsi < 30 ? '超賣區間，可能出現反彈' : '中性區間，動能平衡') : '';
+      macdText = stockData.macd === 'Bullish' ? '看好' : stockData.macd === 'Bearish' ? '看淡' : '中性';
+      macdInterpret = stockData.macd === 'Bullish' ? '看好信號，多頭動能增強' : stockData.macd === 'Bearish' ? '看淡信號，空頭動能增強' : '中性信號，方向未明';
+      trendText = stockData.trend === 'Uptrend' ? '上升通道' : stockData.trend === 'Downtrend' ? '下降通道' : '區間震盪';
+      
+      analysisTitle = '投資分析';
+      summaryTitle = '1. 摘要';
+      technicalTitle = '2. 技術分析';
+      fundamentalsTitle = '3. 基本面分析';
+      newsTitle = '4. 新聞與風險分析';
+      bullishTitle = '5. 看好因素';
+      bearishTitle = '6. 看淡因素';
+      tradingAdviceTitle = '7. 買賣建議';
+      finalAdviceTitle = '8. 最終建議及風險評級';
+      disclaimer = '⚠️ 以上分析僅供參考，不構成投資建議。';
+      userContentTitle = '用戶提供的新聞/內容分析';
+      summaryOfContent = '內容摘要';
+      keyPointsTitle = '關鍵要點';
+      riskLevelTitle = '風險評級';
+      
+      currentPriceLabel = '目前股價';
+      dailyChangeLabel = '日漲跌幅';
+      dayRangeLabel = '日內波幅';
+      rsiLabel = 'RSI';
+      overallTrendLabel = '整體趨勢';
+      
+      macdLabel = 'MACD';
+      trendLabel = '趨勢';
+      sma20Label = 'SMA20';
+      sma50Label = 'SMA50';
+      volatilityLabel = '波動率';
+      avgVolumeLabel = '平均成交量';
+      
+    } else if (language === 'Simplified Chinese') {
+      rsiStatus = stockData.rsi ? (stockData.rsi > 70 ? '超买' : stockData.rsi < 30 ? '超卖' : '中性') : '中性';
+      rsiInterpret = stockData.rsi ? (stockData.rsi > 70 ? '超买区间，短期可能回调' : stockData.rsi < 30 ? '超卖区间，可能出现反弹' : '中性区间，动能平衡') : '';
+      macdText = stockData.macd === 'Bullish' ? '看好' : stockData.macd === 'Bearish' ? '看淡' : '中性';
+      macdInterpret = stockData.macd === 'Bullish' ? '看好信号，多头动能增强' : stockData.macd === 'Bearish' ? '看淡信号，空头动能增强' : '中性信号，方向未明';
+      trendText = stockData.trend === 'Uptrend' ? '上升通道' : stockData.trend === 'Downtrend' ? '下降通道' : '区间震荡';
+      
+      analysisTitle = '投资分析';
+      summaryTitle = '1. 摘要';
+      technicalTitle = '2. 技术分析';
+      fundamentalsTitle = '3. 基本面分析';
+      newsTitle = '4. 新闻与风险分析';
+      bullishTitle = '5. 看好因素';
+      bearishTitle = '6. 看淡因素';
+      tradingAdviceTitle = '7. 买卖建议';
+      finalAdviceTitle = '8. 最终建议及风险评级';
+      disclaimer = '⚠️ 以上分析仅供参考，不构成投资建议。';
+      userContentTitle = '用户提供的内容分析';
+      summaryOfContent = '内容摘要';
+      keyPointsTitle = '关键要点';
+      riskLevelTitle = '风险评级';
+      
+      currentPriceLabel = '目前股价';
+      dailyChangeLabel = '日涨跌幅';
+      dayRangeLabel = '日内波幅';
+      rsiLabel = 'RSI';
+      overallTrendLabel = '整体趋势';
+      
+      macdLabel = 'MACD';
+      trendLabel = '趋势';
+      sma20Label = 'SMA20';
+      sma50Label = 'SMA50';
+      volatilityLabel = '波动率';
+      avgVolumeLabel = '平均成交量';
+      
     } else {
-      analysis += `Fundamental data temporarily unavailable.\n`;
+      rsiStatus = stockData.rsi ? (stockData.rsi > 70 ? 'Overbought' : stockData.rsi < 30 ? 'Oversold' : 'Neutral') : 'Neutral';
+      rsiInterpret = stockData.rsi ? (stockData.rsi > 70 ? 'Overbought zone, potential pullback' : stockData.rsi < 30 ? 'Oversold zone, potential rebound' : 'Neutral zone, balanced momentum') : '';
+      macdText = stockData.macd === 'Bullish' ? 'Bullish' : stockData.macd === 'Bearish' ? 'Bearish' : 'Neutral';
+      macdInterpret = stockData.macd === 'Bullish' ? 'Bullish signal, bullish momentum increasing' : stockData.macd === 'Bearish' ? 'Bearish signal, bearish momentum increasing' : 'Neutral signal, direction unclear';
+      trendText = stockData.trend === 'Uptrend' ? 'Uptrend' : stockData.trend === 'Downtrend' ? 'Downtrend' : 'Sideways';
+      
+      analysisTitle = 'Investment Analysis';
+      summaryTitle = '1. Summary';
+      technicalTitle = '2. Technical Analysis';
+      fundamentalsTitle = '3. Fundamental Analysis';
+      newsTitle = '4. News & Risk Analysis';
+      bullishTitle = '5. Bullish Factors';
+      bearishTitle = '6. Bearish Factors';
+      tradingAdviceTitle = '7. Trading Advice';
+      finalAdviceTitle = '8. Final Recommendation & Risk Rating';
+      disclaimer = '⚠️ This analysis is for reference only and does not constitute investment advice.';
+      userContentTitle = 'User-Provided Content Analysis';
+      summaryOfContent = 'Content Summary';
+      keyPointsTitle = 'Key Points';
+      riskLevelTitle = 'Risk Rating';
+      
+      currentPriceLabel = 'Current Price';
+      dailyChangeLabel = 'Daily Change';
+      dayRangeLabel = 'Day Range';
+      rsiLabel = 'RSI';
+      overallTrendLabel = 'Overall Trend';
+      
+      macdLabel = 'MACD';
+      trendLabel = 'Trend';
+      sma20Label = 'SMA20';
+      sma50Label = 'SMA50';
+      volatilityLabel = 'Volatility';
+      avgVolumeLabel = 'Average Volume';
     }
     
-    analysis += `\n⚠️ This analysis is for reference only and does not constitute investment advice.`;
+    const displayName = companyInfo.chineseName || companyInfo.name || symbol;
+    const overallTrend = stockData.trend === 'Uptrend' ? (language === 'Traditional Chinese' ? '看好' : language === 'Simplified Chinese' ? '看好' : 'Bullish') : 
+                         stockData.trend === 'Downtrend' ? (language === 'Traditional Chinese' ? '看淡' : language === 'Simplified Chinese' ? '看淡' : 'Bearish') : 
+                         (language === 'Traditional Chinese' ? '橫向整理' : language === 'Simplified Chinese' ? '横向整理' : 'Sideways');
+    
+    let riskText = '';
+    if (language === 'Traditional Chinese') {
+      riskText = specificAnalysis.riskLevel === 'extreme' ? '⚠️ 極高風險' :
+                 specificAnalysis.riskLevel === 'high' ? '⚠️ 高風險' :
+                 specificAnalysis.riskLevel === 'medium' ? '⚠️ 中等風險' : '✅ 低風險';
+    } else if (language === 'Simplified Chinese') {
+      riskText = specificAnalysis.riskLevel === 'extreme' ? '⚠️ 极高风险' :
+                 specificAnalysis.riskLevel === 'high' ? '⚠️ 高风险' :
+                 specificAnalysis.riskLevel === 'medium' ? '⚠️ 中等风险' : '✅ 低风险';
+    } else {
+      riskText = specificAnalysis.riskLevel === 'extreme' ? '⚠️ EXTREME RISK' :
+                 specificAnalysis.riskLevel === 'high' ? '⚠️ HIGH RISK' :
+                 specificAnalysis.riskLevel === 'medium' ? '⚠️ MEDIUM RISK' : '✅ LOW RISK';
+    }
+    
+    // Build fundamentals text
+    let fundamentalsText = '';
+    if (fundamentals && fundamentals.marketCap !== 'N/A') {
+      const pe = fundamentals.peRatio;
+      const eps = fundamentals.eps;
+      const revenueGrowth = fundamentals.revenueGrowth;
+      const profitMargin = fundamentals.profitMargin;
+      const debtRatio = fundamentals.debtRatio;
+      const dividendYield = fundamentals.dividendYield;
+      
+      if (language === 'Traditional Chinese') {
+        fundamentalsText = `市值: ${fundamentals.marketCap} | 市盈率: ${pe?.toFixed(2) || 'N/A'}倍 | EPS: ${eps?.toFixed(2) || 'N/A'}\n收入增長: ${revenueGrowth?.toFixed(2) || 'N/A'}% | 利潤率: ${profitMargin?.toFixed(2) || 'N/A'}%\n負債權益比: ${debtRatio?.toFixed(2) || 'N/A'} | 股息率: ${dividendYield?.toFixed(2) || 'N/A'}%`;
+      } else if (language === 'Simplified Chinese') {
+        fundamentalsText = `市值: ${fundamentals.marketCap} | 市盈率: ${pe?.toFixed(2) || 'N/A'}倍 | EPS: ${eps?.toFixed(2) || 'N/A'}\n收入增长: ${revenueGrowth?.toFixed(2) || 'N/A'}% | 利润率: ${profitMargin?.toFixed(2) || 'N/A'}%\n负债权益比: ${debtRatio?.toFixed(2) || 'N/A'} | 股息率: ${dividendYield?.toFixed(2) || 'N/A'}%`;
+      } else {
+        fundamentalsText = `Market Cap: ${fundamentals.marketCap} | P/E: ${pe?.toFixed(2) || 'N/A'}x | EPS: ${eps?.toFixed(2) || 'N/A'}\nRevenue Growth: ${revenueGrowth?.toFixed(2) || 'N/A'}% | Profit Margin: ${profitMargin?.toFixed(2) || 'N/A'}%\nDebt/Equity: ${debtRatio?.toFixed(2) || 'N/A'} | Dividend Yield: ${dividendYield?.toFixed(2) || 'N/A'}%`;
+      }
+    } else {
+      if (language === 'Traditional Chinese') {
+        fundamentalsText = '⚠️ 暫無詳細財務數據。請參考技術面分析。';
+      } else if (language === 'Simplified Chinese') {
+        fundamentalsText = '⚠️ 暂无详细财务数据。请参考技术面分析。';
+      } else {
+        fundamentalsText = '⚠️ No detailed financial data available. Please refer to technical analysis.';
+      }
+    }
+    
+    // Build news section
+    let newsText = '';
+    if (userContentAnalysis && userContentAnalysis.originalContent) {
+      const sentimentText = userContentAnalysis.sentiment?.sentiment === 'Positive' ? 
+                           (language === 'Traditional Chinese' ? '正面' : language === 'Simplified Chinese' ? '正面' : 'Positive') :
+                           userContentAnalysis.sentiment?.sentiment === 'Negative' ?
+                           (language === 'Traditional Chinese' ? '負面' : language === 'Simplified Chinese' ? '負面' : 'Negative') :
+                           (language === 'Traditional Chinese' ? '中性' : language === 'Simplified Chinese' ? '中性' : 'Neutral');
+      
+      let aiContentAnalysis = '';
+      if (userContentAnalysis.sentiment?.sentiment === 'Positive') {
+        aiContentAnalysis = language === 'Traditional Chinese' ? '這份資料包含利好因素，可能支持股價向上。' :
+                            language === 'Simplified Chinese' ? '这份资料包含利好因素，可能支持股价向上。' :
+                            'This content contains positive factors that may support upward price movement.';
+      } else if (userContentAnalysis.sentiment?.sentiment === 'Negative') {
+        aiContentAnalysis = language === 'Traditional Chinese' ? '這份資料包含負面因素，可能對股價構成壓力。' :
+                            language === 'Simplified Chinese' ? '这份资料包含负面因素，可能对股价构成压力。' :
+                            'This content contains negative factors that may pressure the stock price.';
+      } else {
+        aiContentAnalysis = language === 'Traditional Chinese' ? '這份資料影響中性，沒有明確方向。' :
+                            language === 'Simplified Chinese' ? '这份资料影响中性，没有明确方向。' :
+                            'This content has neutral impact with no clear direction.';
+      }
+      
+      newsText = `文章標題: ${userContentAnalysis.title}\n${summaryOfContent}: ${userContentAnalysis.summary}\nAI內容分析: ${aiContentAnalysis}`;
+      
+    } else if (news && news.length > 0 && newsSentiment) {
+      const sentimentText = newsSentiment.sentiment === 'Positive' ? 
+                           (language === 'Traditional Chinese' ? '正面' : language === 'Simplified Chinese' ? '正面' : 'Positive') :
+                           newsSentiment.sentiment === 'Negative' ?
+                           (language === 'Traditional Chinese' ? '負面' : language === 'Simplified Chinese' ? '負面' : 'Negative') :
+                           (language === 'Traditional Chinese' ? '中性' : language === 'Simplified Chinese' ? '中性' : 'Neutral');
+      
+      let aiNewsAnalysis = '';
+      if (language === 'Traditional Chinese' || language === 'Simplified Chinese') {
+        if (newsSentiment.sentiment === 'Positive') {
+          aiNewsAnalysis = '近期新聞整體正面，市場情緒樂觀。';
+        } else if (newsSentiment.sentiment === 'Negative') {
+          aiNewsAnalysis = '近期新聞整體負面，請關注潛在風險。';
+        } else {
+          aiNewsAnalysis = '近期新聞情緒中性，市場沒有明顯方向。';
+        }
+      } else {
+        if (newsSentiment.sentiment === 'Positive') {
+          aiNewsAnalysis = `Recent news is overall positive.`;
+        } else if (newsSentiment.sentiment === 'Negative') {
+          aiNewsAnalysis = `Recent news is overall negative.`;
+        } else {
+          aiNewsAnalysis = `Recent news sentiment is neutral.`;
+        }
+      }
+      
+      newsText = `最新新聞情緒分析 (共${news.length}篇):\n整體情緒: ${sentimentText} (分數: ${newsSentiment.score})\n正面新聞: ${newsSentiment.positiveCount}篇 | 負面新聞: ${newsSentiment.negativeCount}篇 | 中性: ${newsSentiment.neutralCount}篇\n\n${aiNewsAnalysis}`;
+    } else {
+      newsText = '近期暫無重大相關新聞。';
+    }
+    
+    // Build bullish and bearish text
+    let bullishText = '';
+    if (specificAnalysis.specificBullishFactors.length > 0) {
+      bullishText = specificAnalysis.specificBullishFactors.join('\n');
+    } else {
+      bullishText = language === 'Traditional Chinese' ? '暫無明顯看好因素' :
+                    language === 'Simplified Chinese' ? '暂无明显看好因素' :
+                    'No significant bullish factors identified';
+    }
+    
+    let bearishText = '';
+    if (specificAnalysis.specificBearishFactors.length > 0) {
+      bearishText = specificAnalysis.specificBearishFactors.join('\n');
+    } else {
+      bearishText = language === 'Traditional Chinese' ? '暫無明顯看淡因素' :
+                    language === 'Simplified Chinese' ? '暂无明显看淡因素' :
+                    'No significant bearish factors identified';
+    }
+    
+    // Generate trading advice
+    let tradingAdviceText = '';
+    if (language === 'Traditional Chinese') {
+      tradingAdviceText = `目標價: ${stockData.currency}${specificAnalysis.targetPrice.toFixed(2)}\n止蝕位: ${stockData.currency}${specificAnalysis.stopLoss.toFixed(2)}\n風險回報比: 1:${((specificAnalysis.targetPrice - stockData.price) / (stockData.price - specificAnalysis.stopLoss)).toFixed(1)}`;
+    } else if (language === 'Simplified Chinese') {
+      tradingAdviceText = `目标价: ${stockData.currency}${specificAnalysis.targetPrice.toFixed(2)}\n止损位: ${stockData.currency}${specificAnalysis.stopLoss.toFixed(2)}\n风险回报比: 1:${((specificAnalysis.targetPrice - stockData.price) / (stockData.price - specificAnalysis.stopLoss)).toFixed(1)}`;
+    } else {
+      tradingAdviceText = `Target Price: ${stockData.currency}${specificAnalysis.targetPrice.toFixed(2)}\nStop Loss: ${stockData.currency}${specificAnalysis.stopLoss.toFixed(2)}\nRisk/Reward Ratio: 1:${((specificAnalysis.targetPrice - stockData.price) / (stockData.price - specificAnalysis.stopLoss)).toFixed(1)}`;
+    }
+    
+    // Generate confidence display
+    let confidenceDisplay = '';
+    if (language === 'Traditional Chinese') {
+      if (specificAnalysis.confidenceScore >= 85) {
+        confidenceDisplay = `信心評分: ${specificAnalysis.confidenceScore}% 五顆星 (非常高)`;
+      } else if (specificAnalysis.confidenceScore >= 70) {
+        confidenceDisplay = `信心評分: ${specificAnalysis.confidenceScore}% 四顆星 (高)`;
+      } else if (specificAnalysis.confidenceScore >= 50) {
+        confidenceDisplay = `信心評分: ${specificAnalysis.confidenceScore}% 三顆星 (中等)`;
+      } else if (specificAnalysis.confidenceScore >= 35) {
+        confidenceDisplay = `信心評分: ${specificAnalysis.confidenceScore}% 兩顆星 (低)`;
+      } else {
+        confidenceDisplay = `信心評分: ${specificAnalysis.confidenceScore}% 一顆星 (極低)`;
+      }
+    } else if (language === 'Simplified Chinese') {
+      if (specificAnalysis.confidenceScore >= 85) {
+        confidenceDisplay = `信心评分: ${specificAnalysis.confidenceScore}% 五颗星 (非常高)`;
+      } else if (specificAnalysis.confidenceScore >= 70) {
+        confidenceDisplay = `信心评分: ${specificAnalysis.confidenceScore}% 四颗星 (高)`;
+      } else if (specificAnalysis.confidenceScore >= 50) {
+        confidenceDisplay = `信心评分: ${specificAnalysis.confidenceScore}% 三颗星 (中等)`;
+      } else if (specificAnalysis.confidenceScore >= 35) {
+        confidenceDisplay = `信心评分: ${specificAnalysis.confidenceScore}% 两颗星 (低)`;
+      } else {
+        confidenceDisplay = `信心评分: ${specificAnalysis.confidenceScore}% 一颗星 (极低)`;
+      }
+    } else {
+      confidenceDisplay = `Confidence Score: ${specificAnalysis.confidenceScore}% ${specificAnalysis.confidenceEmoji} (${specificAnalysis.confidenceRating})`;
+    }
+    
+    // Generate complete analysis with all 8 sections
+    const analysis = `${displayName} (${symbol}) ${analysisTitle}
+
+${summaryTitle}
+${currentPriceLabel}: ${stockData.currency}${stockData.price ? stockData.price.toFixed(2) : 'N/A'}, ${dailyChangeLabel}: ${changePercentText}
+${dayRangeLabel}: ${stockData.dayLow ? `${stockData.currency}${stockData.dayLow.toFixed(2)}` : 'N/A'} - ${stockData.dayHigh ? `${stockData.currency}${stockData.dayHigh.toFixed(2)}` : 'N/A'}
+${rsiLabel}: ${rsiText} (${rsiStatus}). ${overallTrendLabel}: ${overallTrend}
+
+${technicalTitle}
+RSI(14): ${rsiText} - ${rsiInterpret}
+${macdLabel}: ${macdText} - ${macdInterpret}
+${trendLabel}: ${trendText}
+${sma20Label}: ${stockData.sma20 ? `${stockData.currency}${stockData.sma20.toFixed(2)}` : 'N/A'}
+${sma50Label}: ${stockData.sma50 ? `${stockData.currency}${stockData.sma50.toFixed(2)}` : 'N/A'}
+${volatilityLabel}: ${stockData.volatility ? `${(stockData.volatility * 100).toFixed(2)}%` : 'N/A'}
+${avgVolumeLabel}: ${stockData.avgVolume ? stockData.avgVolume.toLocaleString() : 'N/A'}
+
+${fundamentalsTitle}
+${fundamentalsText}
+
+${newsTitle}
+${newsText}
+
+${bullishTitle}
+${bullishText}
+
+${bearishTitle}
+${bearishText}
+
+${tradingAdviceTitle}
+${tradingAdviceText}
+
+${finalAdviceTitle}
+${specificAnalysis.specificRecommendation}
+${riskLevelTitle}: ${riskText}
+${confidenceDisplay}
+
+${disclaimer}`;
     
     return NextResponse.json({
       success: true,
@@ -914,13 +1325,25 @@ export async function POST(req: Request) {
       macd: stockData.macd,
       trend: stockData.trend,
       historical: stockData.historical,
+      isQuestion: isUserQuestion,
+      detectedFrom: message,
       summary: analysis,
       text: analysis,
-      currency: stockData.currency
+      sma20: stockData.sma20,
+      sma50: stockData.sma50,
+      volatility: stockData.volatility,
+      avgVolume: stockData.avgVolume,
+      currency: stockData.currency,
+      specificAnalysis: specificAnalysis
     });
     
   } catch (error) {
     console.error('API Error:', error);
-    return NextResponse.json({ success: false, summary: 'Service temporarily unavailable.' });
+    const errorMsg = 'Service temporarily unavailable. Please try again later.';
+    return NextResponse.json({
+      success: false,
+      summary: errorMsg,
+      text: errorMsg
+    });
   }
 }
