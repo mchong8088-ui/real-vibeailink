@@ -854,20 +854,9 @@ export async function POST(req: Request) {
     console.log(`Query: ${message}, Language: ${language}`);
     
     const symbol = detectStock(message);
-    
     if (!symbol || symbol === '') {
-      let errorMsg = '';
-      if (language === 'Traditional Chinese') {
-        errorMsg = '無法識別股票代號。請嘗試: 台積電, 騰訊, 特斯拉, 或直接輸入代號如 2330.TW, 0700.HK, TSLA';
-      } else if (language === 'Simplified Chinese') {
-        errorMsg = '无法识别股票代码。请尝试: 台积电, 腾讯, 特斯拉, 或直接输入代码如 2330.TW, 0700.HK, TSLA';
-      } else {
-        errorMsg = 'Unable to recognize stock symbol. Please try: 2330.TW, 0700.HK, TSLA';
-      }
-      return NextResponse.json({ success: false, summary: errorMsg, text: errorMsg });
+      return NextResponse.json({ success: false, summary: 'Unable to recognize stock symbol.' });
     }
-    
-    console.log(`Detected symbol: ${symbol}`);
     
     const [stockData, companyInfo] = await Promise.all([
       fetchRealStockData(symbol),
@@ -875,24 +864,43 @@ export async function POST(req: Request) {
     ]);
     
     if (!stockData) {
-      let errorMsg = '';
-      if (language === 'Traditional Chinese') {
-        errorMsg = `無法獲取 ${symbol} 的即時數據，請稍後再試。`;
-      } else if (language === 'Simplified Chinese') {
-        errorMsg = `无法获取 ${symbol} 的实时数据，请稍后再试。`;
-      } else {
-        errorMsg = `Unable to fetch real-time data for ${symbol}. Please try again.`;
-      }
-      return NextResponse.json({ success: false, summary: errorMsg, text: errorMsg });
+      return NextResponse.json({ success: false, summary: `Unable to fetch data for ${symbol}.` });
     }
+    
+    const [fundamentals, news] = await Promise.all([
+      getFundamentals(symbol),
+      getNews(symbol, companyInfo.name || symbol, language)
+    ]);
     
     const displayName = companyInfo.chineseName || companyInfo.name || symbol;
     const isPositive = stockData.changePercent >= 0;
     const changePercentText = stockData.changePercent ? `${isPositive ? '+' : ''}${stockData.changePercent.toFixed(2)}%` : 'N/A';
     const rsiText = stockData.rsi ? stockData.rsi.toFixed(1) : 'N/A';
     
-    // Simple analysis
-    const analysis = `${displayName} (${symbol}) - Price: ${stockData.currency}${stockData.price}, Change: ${changePercentText}, RSI: ${rsiText}`;
+    // Build full analysis sections
+    let analysis = `${displayName} (${symbol}) Investment Analysis\n\n`;
+    analysis += `1. Summary\n`;
+    analysis += `Current Price: ${stockData.currency}${stockData.price.toFixed(2)}, Daily Change: ${changePercentText}\n`;
+    analysis += `Day Range: ${stockData.dayLow ? `${stockData.currency}${stockData.dayLow.toFixed(2)}` : 'N/A'} - ${stockData.dayHigh ? `${stockData.currency}${stockData.dayHigh.toFixed(2)}` : 'N/A'}\n`;
+    analysis += `RSI(14): ${rsiText}\n\n`;
+    
+    analysis += `2. Technical Analysis\n`;
+    analysis += `RSI(14): ${rsiText} - ${stockData.rsi ? (stockData.rsi > 70 ? 'Overbought' : stockData.rsi < 30 ? 'Oversold' : 'Neutral') : 'N/A'}\n`;
+    analysis += `MACD: ${stockData.macd === 'Bullish' ? 'Bullish' : stockData.macd === 'Bearish' ? 'Bearish' : 'Neutral'}\n`;
+    analysis += `Trend: ${stockData.trend === 'Uptrend' ? 'Uptrend' : stockData.trend === 'Downtrend' ? 'Downtrend' : 'Sideways'}\n`;
+    analysis += `SMA20: ${stockData.sma20 ? `${stockData.currency}${stockData.sma20.toFixed(2)}` : 'N/A'}\n`;
+    analysis += `SMA50: ${stockData.sma50 ? `${stockData.currency}${stockData.sma50.toFixed(2)}` : 'N/A'}\n\n`;
+    
+    analysis += `3. Fundamentals\n`;
+    if (fundamentals && fundamentals.marketCap !== 'N/A') {
+      analysis += `Market Cap: ${fundamentals.marketCap} | P/E: ${fundamentals.peRatio?.toFixed(2) || 'N/A'}x\n`;
+      analysis += `Revenue Growth: ${fundamentals.revenueGrowth?.toFixed(2) || 'N/A'}%\n`;
+      analysis += `Profit Margin: ${fundamentals.profitMargin?.toFixed(2) || 'N/A'}%\n`;
+    } else {
+      analysis += `Fundamental data temporarily unavailable.\n`;
+    }
+    
+    analysis += `\n⚠️ This analysis is for reference only and does not constitute investment advice.`;
     
     return NextResponse.json({
       success: true,
@@ -913,15 +921,6 @@ export async function POST(req: Request) {
     
   } catch (error) {
     console.error('API Error:', error);
-    const errorMsg = 'Service temporarily unavailable. Please try again later.';
-    return NextResponse.json({ success: false, summary: errorMsg, text: errorMsg });
+    return NextResponse.json({ success: false, summary: 'Service temporarily unavailable.' });
   }
-}
-
-export async function GET() {
-  return NextResponse.json({ 
-    status: "Stock Analysis API running", 
-    timestamp: new Date().toISOString(),
-    version: "4.0"
-  });
 }
