@@ -163,6 +163,8 @@ async function extractUrlContent(url: string): Promise<string> {
 
 export async function POST(req: Request) {
   try {
+    // AUTH TEMPORARILY DISABLED FOR TESTING
+    /*
     // Authentication check
     const cookieStore = await cookies();
     const supabase = createServerClient(
@@ -175,8 +177,8 @@ export async function POST(req: Request) {
     if (!session) {
       return NextResponse.json({
         success: false,
-        summary: 'Please login to use this feature.',
-        text: 'Please login to use this feature.'
+        summary: 'Please login to use this feature. Create a free account at vibeailink.com',
+        text: 'Please login to use this feature. Create a free account at vibeailink.com'
       }, { status: 401 });
     }
 
@@ -190,24 +192,25 @@ export async function POST(req: Request) {
     if (profileError || !profile) {
       return NextResponse.json({
         success: false,
-        summary: 'User profile not found.',
-        text: 'User profile not found.'
+        summary: 'User profile not found. Please contact support.',
+        text: 'User profile not found. Please contact support.'
       }, { status: 403 });
     }
 
     if (profile.credits <= 0) {
       return NextResponse.json({
         success: false,
-        summary: 'Insufficient credits. Please upgrade your plan.',
-        text: 'Insufficient credits. Please upgrade your plan.'
+        summary: 'You have used all your credits. Please upgrade your plan to continue.',
+        text: 'You have used all your credits. Please upgrade your plan to continue.'
       }, { status: 403 });
     }
 
-    // Deduct 1 credit
+    // Deduct 1 credit for this analysis
     await supabase
       .from('profiles')
       .update({ credits: profile.credits - 1 })
       .eq('id', session.user.id);
+    */
 
     const { message, language = 'English', userContent = null, useAI = true } = await req.json();
     console.log(`📝 AI-Enhanced Query: ${message}, Language: ${language}`);

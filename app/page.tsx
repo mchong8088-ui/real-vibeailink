@@ -231,14 +231,18 @@ export default function VibeAiMaster() {
   };
 
   const handleAnalyzeRequest = async (ticker: string, attachments?: any[], useAI?: boolean) => {
-    // Check if user is logged in
+  // AUTH TEMPORARILY DISABLED FOR TESTING
+  /*
+  // Check if user is logged in
   if (!user) {
     alert('Please login to analyze stocks. Create a free account at vibeailink.com');
     setIsAuthOpen(true);
     return;
   }
+  */
   
   setIsLoading(true);
+  // ... rest
     setIsLoading(true);
     try {
       let userContent = null;
