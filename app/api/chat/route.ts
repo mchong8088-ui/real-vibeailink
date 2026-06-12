@@ -995,24 +995,6 @@ await supabase
     const displayName = companyInfo.chineseName || companyInfo.name || symbol;
     
     // Generate complete analysis (abbreviated - keep your existing analysis generation)
-    const analysis = `${displayName} (${symbol}) - Analysis completed successfully.`;
-    
-    // Log credit transaction
-    await supabase
-      .from('credit_transactions')
-      .insert({
-        user_id: session.user.id,
-        amount: -1,
-        type: 'analysis',
-        description: `Stock analysis for ${symbol}`,
-        created_at: new Date().toISOString()
-      });
-    
-    return NextResponse.json({
-      success: true,
-      symbol: symbol,
-      companyName: displayName,
-      price: stockData.price,
       changePercent: stockData.changePercent,
       dayLow: stockData.dayLow,
       dayHigh: stockData.dayHigh,
