@@ -1158,81 +1158,121 @@ export async function POST(req: Request) {
       }
     }
     
-    // Build news section
-    let newsText = '';
-    if (userContentAnalysis && userContentAnalysis.originalContent) {
-      const sentimentText = userContentAnalysis.sentiment?.sentiment === 'Positive' ? 
-                           (language === 'Traditional Chinese' ? '正面' : language === 'Simplified Chinese' ? '正面' : 'Positive') :
-                           userContentAnalysis.sentiment?.sentiment === 'Negative' ?
-                           (language === 'Traditional Chinese' ? '負面' : language === 'Simplified Chinese' ? '負面' : 'Negative') :
-                           (language === 'Traditional Chinese' ? '中性' : language === 'Simplified Chinese' ? '中性' : 'Neutral');
-      
-      let aiContentAnalysis = '';
-      if (userContentAnalysis.sentiment?.sentiment === 'Positive') {
-        aiContentAnalysis = language === 'Traditional Chinese' ? '這份資料包含利好因素，可能支持股價向上。' :
-                            language === 'Simplified Chinese' ? '这份资料包含利好因素，可能支持股价向上。' :
-                            'This content contains positive factors that may support upward price movement.';
-      } else if (userContentAnalysis.sentiment?.sentiment === 'Negative') {
-        aiContentAnalysis = language === 'Traditional Chinese' ? '這份資料包含負面因素，可能對股價構成壓力。' :
-                            language === 'Simplified Chinese' ? '这份资料包含负面因素，可能对股价构成压力。' :
-                            'This content contains negative factors that may pressure the stock price.';
-      } else {
-        aiContentAnalysis = language === 'Traditional Chinese' ? '這份資料影響中性，沒有明確方向。' :
-                            language === 'Simplified Chinese' ? '这份资料影响中性，没有明确方向。' :
-                            'This content has neutral impact with no clear direction.';
-      }
-      
-      newsText = `文章標題: ${userContentAnalysis.title}\n${summaryOfContent}: ${userContentAnalysis.summary}\nAI內容分析: ${aiContentAnalysis}`;
-      
-    } else if (news && news.length > 0 && newsSentiment) {
-      const sentimentText = newsSentiment.sentiment === 'Positive' ? 
-                           (language === 'Traditional Chinese' ? '正面' : language === 'Simplified Chinese' ? '正面' : 'Positive') :
-                           newsSentiment.sentiment === 'Negative' ?
-                           (language === 'Traditional Chinese' ? '負面' : language === 'Simplified Chinese' ? '負面' : 'Negative') :
-                           (language === 'Traditional Chinese' ? '中性' : language === 'Simplified Chinese' ? '中性' : 'Neutral');
-      
-      let aiNewsAnalysis = '';
-      if (language === 'Traditional Chinese' || language === 'Simplified Chinese') {
-        if (newsSentiment.sentiment === 'Positive') {
-          aiNewsAnalysis = '近期新聞整體正面，市場情緒樂觀。';
-        } else if (newsSentiment.sentiment === 'Negative') {
-          aiNewsAnalysis = '近期新聞整體負面，請關注潛在風險。';
-        } else {
-          aiNewsAnalysis = '近期新聞情緒中性，市場沒有明顯方向。';
-        }
-      } else {
-        if (newsSentiment.sentiment === 'Positive') {
-          aiNewsAnalysis = `Recent news is overall positive.`;
-        } else if (newsSentiment.sentiment === 'Negative') {
-          aiNewsAnalysis = `Recent news is overall negative.`;
-        } else {
-          aiNewsAnalysis = `Recent news sentiment is neutral.`;
-        }
-      }
-      
-      newsText = `最新新聞情緒分析 (共${news.length}篇):\n整體情緒: ${sentimentText} (分數: ${newsSentiment.score})\n正面新聞: ${newsSentiment.positiveCount}篇 | 負面新聞: ${newsSentiment.negativeCount}篇 | 中性: ${newsSentiment.neutralCount}篇\n\n${aiNewsAnalysis}`;
+   // Build news section - CONSISTENT LANGUAGE ONLY
+let newsText = '';
+if (userContentAnalysis && userContentAnalysis.originalContent) {
+  const sentimentText = userContentAnalysis.sentiment?.sentiment === 'Positive' ? 
+                       (language === 'Traditional Chinese' ? '正面' : language === 'Simplified Chinese' ? '正面' : 'Positive') :
+                       userContentAnalysis.sentiment?.sentiment === 'Negative' ?
+                       (language === 'Traditional Chinese' ? '負面' : language === 'Simplified Chinese' ? '負面' : 'Negative') :
+                       (language === 'Traditional Chinese' ? '中性' : language === 'Simplified Chinese' ? '中性' : 'Neutral');
+  
+  let aiContentAnalysis = '';
+  if (userContentAnalysis.sentiment?.sentiment === 'Positive') {
+    aiContentAnalysis = language === 'Traditional Chinese' ? '這份資料包含利好因素，可能支持股價向上。' :
+                        language === 'Simplified Chinese' ? '这份资料包含利好因素，可能支持股价向上。' :
+                        'This content contains positive factors that may support upward price movement.';
+  } else if (userContentAnalysis.sentiment?.sentiment === 'Negative') {
+    aiContentAnalysis = language === 'Traditional Chinese' ? '這份資料包含負面因素，可能對股價構成壓力。' :
+                        language === 'Simplified Chinese' ? '这份资料包含负面因素，可能对股价构成压力。' :
+                        'This content contains negative factors that may pressure the stock price.';
+  } else {
+    aiContentAnalysis = language === 'Traditional Chinese' ? '這份資料影響中性，沒有明確方向。' :
+                        language === 'Simplified Chinese' ? '这份资料影响中性，没有明确方向。' :
+                        'This content has neutral impact with no clear direction.';
+  }
+  
+  newsText = `文章標題: ${userContentAnalysis.title}\n${summaryOfContent}: ${userContentAnalysis.summary}\nAI內容分析: ${aiContentAnalysis}`;
+  
+} else if (news && news.length > 0 && newsSentiment) {
+  // Choose language based on user's selected language
+  if (language === 'Traditional Chinese') {
+    let sentimentMessage = '';
+    if (newsSentiment.sentiment === 'Positive') {
+      sentimentMessage = '近期新聞整體正面，市場情緒樂觀。';
+    } else if (newsSentiment.sentiment === 'Negative') {
+      sentimentMessage = '近期新聞整體負面，請關注潛在風險。';
     } else {
-      newsText = '近期暫無重大相關新聞。';
+      sentimentMessage = '近期新聞情緒中性，市場沒有明顯方向。';
     }
+    
+    newsText = `最新新聞情緒分析 (共${news.length}篇):
+整體情緒: ${newsSentiment.sentiment === 'Positive' ? '正面' : newsSentiment.sentiment === 'Negative' ? '負面' : '中性'} (分數: ${newsSentiment.score})
+正面新聞: ${newsSentiment.positiveCount}篇 | 負面新聞: ${newsSentiment.negativeCount}篇 | 中性: ${newsSentiment.neutralCount}篇
+
+${sentimentMessage}`;
+    
+  } else if (language === 'Simplified Chinese') {
+    let sentimentMessage = '';
+    if (newsSentiment.sentiment === 'Positive') {
+      sentimentMessage = '近期新闻整体正面，市场情绪乐观。';
+    } else if (newsSentiment.sentiment === 'Negative') {
+      sentimentMessage = '近期新闻整体负面，请关注潜在风险。';
+    } else {
+      sentimentMessage = '近期新闻情绪中性，市场没有明显方向。';
+    }
+    
+    newsText = `最新新闻情绪分析 (共${news.length}篇):
+整体情绪: ${newsSentiment.sentiment === 'Positive' ? '正面' : newsSentiment.sentiment === 'Negative' ? '负面' : '中性'} (分数: ${newsSentiment.score})
+正面新闻: ${newsSentiment.positiveCount}篇 | 负面新闻: ${newsSentiment.negativeCount}篇 | 中性: ${newsSentiment.neutralCount}篇
+
+${sentimentMessage}`;
+    
+  } else {
+    // English
+    let sentimentMessage = '';
+    if (newsSentiment.sentiment === 'Positive') {
+      sentimentMessage = 'Recent news is overall positive, market sentiment is optimistic.';
+    } else if (newsSentiment.sentiment === 'Negative') {
+      sentimentMessage = 'Recent news is overall negative, please be aware of potential risks.';
+    } else {
+      sentimentMessage = 'Recent news sentiment is neutral, market has no clear direction.';
+    }
+    
+    newsText = `Latest News Sentiment Analysis (${news.length} articles):
+Overall Sentiment: ${newsSentiment.sentiment} (Score: ${newsSentiment.score})
+Positive: ${newsSentiment.positiveCount} | Negative: ${newsSentiment.negativeCount} | Neutral: ${newsSentiment.neutralCount}
+
+${sentimentMessage}`;
+  }
+} else {
+  // No news available
+  if (language === 'Traditional Chinese') {
+    newsText = '近期暫無重大相關新聞。';
+  } else if (language === 'Simplified Chinese') {
+    newsText = '近期暂无重大相关新闻。';
+  } else {
+    newsText = 'No significant recent news available.';
+  }
+}
     
     // Build bullish and bearish text
-    let bullishText = '';
-    if (specificAnalysis.specificBullishFactors.length > 0) {
-      bullishText = specificAnalysis.specificBullishFactors.join('\n');
-    } else {
-      bullishText = language === 'Traditional Chinese' ? '暫無明顯看好因素' :
-                    language === 'Simplified Chinese' ? '暂无明显看好因素' :
-                    'No significant bullish factors identified';
-    }
-    
-    let bearishText = '';
-    if (specificAnalysis.specificBearishFactors.length > 0) {
-      bearishText = specificAnalysis.specificBearishFactors.join('\n');
-    } else {
-      bearishText = language === 'Traditional Chinese' ? '暫無明顯看淡因素' :
-                    language === 'Simplified Chinese' ? '暂无明显看淡因素' :
-                    'No significant bearish factors identified';
-    }
+let bullishText = '';
+if (specificAnalysis.specificBullishFactors.length > 0) {
+  bullishText = specificAnalysis.specificBullishFactors.join('\n');
+} else {
+  if (language === 'Traditional Chinese') {
+    bullishText = '暫無明顯看好因素';
+  } else if (language === 'Simplified Chinese') {
+    bullishText = '暂无明显看好因素';
+  } else {
+    bullishText = 'No significant bullish factors identified';
+  }
+}
+
+// Build bearish text - consistent language
+let bearishText = '';
+if (specificAnalysis.specificBearishFactors.length > 0) {
+  bearishText = specificAnalysis.specificBearishFactors.join('\n');
+} else {
+  if (language === 'Traditional Chinese') {
+    bearishText = '暫無明顯看淡因素';
+  } else if (language === 'Simplified Chinese') {
+    bearishText = '暂无明显看淡因素';
+  } else {
+    bearishText = 'No significant bearish factors identified';
+  }
+}
     
     // Generate trading advice
     let tradingAdviceText = '';
