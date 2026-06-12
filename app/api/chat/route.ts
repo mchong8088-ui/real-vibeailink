@@ -893,11 +893,18 @@ export async function POST(req: Request) {
     }
 
     // Deduct 1 credit for this analysis
-    await supabase
-      .from('profiles')
-      .update({ credits: profile.credits - 1 })
-      .eq('id', session.user.id);
-    */
+    // Log credit transaction - DISABLED FOR TESTING
+/*
+await supabase
+  .from('credit_transactions')
+  .insert({
+    user_id: session.user.id,
+    amount: -1,
+    type: 'analysis',
+    description: `AI-enhanced analysis for ${symbol}`,
+    created_at: new Date().toISOString()
+  });
+*/
 
     const { message, language = 'English', userContent = null } = await req.json();
     console.log(`Query: ${message}, Language: ${language}, UserContent: ${userContent ? 'Yes' : 'No'}`);

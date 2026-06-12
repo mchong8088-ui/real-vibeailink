@@ -306,15 +306,18 @@ export async function POST(req: Request) {
     }
     
     // Log credit transaction
-    await supabase
-      .from('credit_transactions')
-      .insert({
-        user_id: session.user.id,
-        amount: -1,
-        type: 'analysis',
-        description: `AI-enhanced analysis for ${symbol}`,
-        created_at: new Date().toISOString()
-      });
+    // Log credit transaction - DISABLED FOR TESTING
+/*
+await supabase
+  .from('credit_transactions')
+  .insert({
+    user_id: session.user.id,
+    amount: -1,
+    type: 'analysis',
+    description: `AI-enhanced analysis for ${symbol}`,
+    created_at: new Date().toISOString()
+  });
+*/
     
     return NextResponse.json({
       success: true,
