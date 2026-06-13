@@ -1,11 +1,46 @@
-// app/auth/callback/route.ts
-// AUTH TEMPORARILY DISABLED FOR TESTING
+import { createServerClient } from '@supabase/ssr';
+import { cookies } from 'next/headers';
 import { NextResponse } from 'next/server';
 
 export async function GET(request: Request) {
-  // Simply redirect to home page without any auth processing
-  console.log('🔐 Auth callback hit but auth is temporarily disabled');
-  
-  // Just redirect to home page
-  return NextResponse.redirect(new URL('/', request.url));
+  const requestUrl = new URL(request.url);
+  const code = requestUrl.searchParams.get('code');
+
+  console.log('🔐 Callback received - Code exists:', !!code);
+  console.log('🔐 Full URL:', requestUrl.toString());
+
+  if (code) {
+    const cookieStore = await cookies();
+    
+    const supabase = createServerClient(
+      process.env.NEXT_PUBLIC_SUPABASE_URL!,
+      process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
+      {
+        cookies: {
+          get(name: string) {
+            return cookieStore.get(name)?.value;
+          },
+          set(name: string, value: string, options: any) {
+            cookieStore.set({ name, value, ...options });
+          },
+          remove(name: string, options: any) {
+            cookieStore.set({ name, value: '', ...options });
+          },
+        },
+      }
+    );
+
+    const { error } = await supabase.auth.exchangeCodeForSession(code);
+    
+    if (error) {
+      console.error('❌ Exchange error:', error.message);
+      // Redirect to home with error
+      return NextResponse.redirect(new URL('/?error=auth_failed', requestUrl.origin));
+    }
+    
+    console.log('✅ Session exchanged successfully');
+  }
+
+  // Always redirect to home page
+  return NextResponse.redirect(new URL('/', requestUrl.origin));
 }

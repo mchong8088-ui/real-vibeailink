@@ -75,20 +75,16 @@ export const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose, onSuccess
 
   // In AuthModal.tsx, update the Google sign-in
 const handleGoogleLogin = async () => {
-  setLoading(true)
-  setError(null)
-  
   try {
     const { error } = await supabase.auth.signInWithOAuth({
       provider: 'google',
       options: {
         redirectTo: `${window.location.origin}/auth/callback`
       }
-    })
-    if (error) throw error
-  } catch (err: any) {
-    setError(err.message)
-    setLoading(false)
+    });
+    if (error) throw error;
+  } catch (err) {
+    console.error('Google login error:', err);
   }
 };
 

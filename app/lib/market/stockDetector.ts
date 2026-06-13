@@ -221,13 +221,17 @@ export const STOCK_ALIASES: Record<string, string> = {
   "特斯拉": "TSLA",
   "tesla": "TSLA",
   "Tesla": "TSLA",
-  
+
   // Tech Giants
   "苹果": "AAPL",
   "蘋果": "AAPL",
   "apple": "AAPL",
   "Apple": "AAPL",
-  
+
+  "SpaceX": "SPCX",
+  "Space X": "SPCX",
+  "spacex": "SPCX",
+
   "微軟": "MSFT",
   "微软": "MSFT",
   "microsoft": "MSFT",
@@ -242,6 +246,9 @@ export const STOCK_ALIASES: Record<string, string> = {
   "亚马逊": "AMZN",
   "amazon": "AMZN",
   "Amazon": "AMZN",
+
+  "Nebius": "NBIS",
+  "nebius": "NBIS",
   
   // Semiconductors
   "英偉達": "NVDA",
