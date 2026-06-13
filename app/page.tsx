@@ -458,12 +458,12 @@ const checkCreditsBeforeAnalysis = async (): Promise<boolean> => {
     if (mobilePage === 'landing') {
       return (
         <MobileLanding 
-          langKey={language} 
-          setLangKey={setLanguage as any} 
-          onAuthOpen={() => setIsAuthOpen(true)} 
-          user={user} 
-          onNavigate={handleMobileNavigate} 
-        />
+  langKey={language} 
+  setLangKey={setLanguage as any} 
+  onAuthOpen={() => setIsAuthOpen(true)} 
+  user={user} 
+  onNavigate={handleMobileNavigate} 
+/>
       );
     }
     return (
