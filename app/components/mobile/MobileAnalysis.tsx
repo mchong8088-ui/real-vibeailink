@@ -1,542 +1,364 @@
 "use client";
-import React, { useState, useEffect, useRef } from 'react';
+import React from 'react';
 import { LanguageToggle } from '../layout/LanguageToggle';
+import { initTTS } from '../../utils/ttsMaster';
 import { VoiceSelector } from '../layout/VoiceSelector';
-import { SourceMenu } from '../features/controls/SourceMenu';
-import { AboutSection } from '../sections/AboutSection';
-import { FeaturesSection } from '../sections/FeaturesSection';
-import { PricingModal } from '../features/pricing/PricingModal';
-import { StockAnalysisModule } from '../features/stock-analysis/StockAnalysisModule';
-import { footerContent } from '../../constants/content';
-import { speak as speakText, stopSpeech as stopSpeaking } from '../../utils/ttsMaster';
 
-interface MobileAnalysisProps {
+interface MobileLandingProps {
   langKey: string;
   setLangKey: (lang: string) => void;
-  user: any;
-  profile?: any;  // ADD THIS
   onAuthOpen: () => void;
-  viewType: string;
-  topicId?: string;
-  legalTitle?: string | null;
-  onBack: () => void;
-  voiceLanguage?: string;
-  onNavigate?: (page: string, params?: any) => void;  // ADD THIS
+  user: any;
+  onNavigate: (page: string, params?: any) => void;
 }
 
-// iOS Version Warning Component
-// iOS Version Warning Component - FIXED VERSION
-const IOSVersionWarning = ({ voiceLanguage }: { voiceLanguage: string }) => {
-  const [iosVersion, setIosVersion] = useState<number | null>(null);
-  const [visible, setVisible] = useState(true);
-
-  useEffect(() => {
-    const ua = navigator.userAgent;
-    const iosMatch = ua.match(/OS (\d+)_/);
-    const version = iosMatch ? parseInt(iosMatch[1], 10) : 0;
-    setIosVersion(version);
-    
-    // Auto hide after 10 seconds
-    const timer = setTimeout(() => setVisible(false), 10000);
-    return () => clearTimeout(timer);
-  }, []);
-
-  if (!visible) return null;
-  if (!iosVersion || iosVersion > 18) return null;
-  if (voiceLanguage !== 'Mandarin' && voiceLanguage !== 'Taiwanese') return null;
-
-  return (
-    <div style={{
-      position: 'fixed',
-      bottom: '80px',
-      left: '12px',
-      right: '12px',
-      background: '#FEF3C7',
-      borderLeft: '4px solid #F59E0B',
-      padding: '10px 12px',
-      borderRadius: '8px',
-      zIndex: 10000,
-      fontSize: '11px',
-      color: '#92400E',
-      boxShadow: '0 2px 8px rgba(0,0,0,0.1)',
-      display: 'flex',
-      alignItems: 'center',
-      gap: '8px'
-    }}>
-      <span style={{ fontSize: '16px' }}>⚠️</span>
-      <span style={{ flex: 1 }}>
-        Your iOS version ({iosVersion}) has limited voice support. 
-        Please change system default voice in: 
-        Settings &gt; Accessibility &gt; Spoken Content &gt; Voices &gt; Chinese
-      </span>
-      <button 
-        onClick={() => setVisible(false)}
-        style={{ 
-          background: 'none', 
-          border: 'none', 
-          fontSize: '16px', 
-          cursor: 'pointer',
-          color: '#92400E',
-          padding: '4px 8px',
-          borderRadius: '4px'
-        }}
-      >
-        ✕
-      </button>
-    </div>
-  );
-};
-
-const MobileAnalysis: React.FC<MobileAnalysisProps> = ({
+const MobileLanding: React.FC<MobileLandingProps> = ({
   langKey,
   setLangKey,
-  user,
-  profile,  // ADD THIS
   onAuthOpen,
-  viewType,
-  topicId,
-  legalTitle,
-  onBack,
-  voiceLanguage: propVoiceLanguage = 'English',
-  onNavigate,  // ADD THIS
+  user,
+  onNavigate,
 }) => {
-  const [inputValue, setInputValue] = useState('');
-  const [analysisData, setAnalysisData] = useState<any>(null);
-  const [isLoading, setIsLoading] = useState(false);
-  const [isSpeakerActive, setIsSpeakerActive] = useState(true);
-  const [isPaused, setIsPaused] = useState(false);
-  const [isListening, setIsListening] = useState(false);
-  const [recognition, setRecognition] = useState<any>(null);
-  const [isMenuOpen, setIsMenuOpen] = useState(false);
-  const [useAIEnhancement, setUseAIEnhancement] = useState(false);
-  const utteranceRef = useRef<SpeechSynthesisUtterance | null>(null);
-  const [isLanguageSwitching, setIsLanguageSwitching] = useState(false);
-  const [voiceLanguage, setVoiceLanguage] = useState<string>(propVoiceLanguage);
+  const [showFooterMenu, setShowFooterMenu] = React.useState(false);
+  const [voiceLanguage, setVoiceLanguage] = React.useState<string>('English');
 
   // Load voice preference from localStorage
-  useEffect(() => {
+  React.useEffect(() => {
     const savedVoice = localStorage.getItem('preferredVoice');
     if (savedVoice === 'Cantonese' || savedVoice === 'Mandarin' || savedVoice === 'Taiwanese' || savedVoice === 'English') {
       setVoiceLanguage(savedVoice);
     } else {
-      setVoiceLanguage(propVoiceLanguage);
-    }
-  }, [propVoiceLanguage]);
-  // Add this after the existing useEffects (around line 120)
-useEffect(() => {
-  console.log('🔍 MobileAnalysis - User state changed:', user);
-  console.log('🔍 MobileAnalysis - Profile state:', profile);
-}, [user, profile]);
-
-  const t = {
-    analyzingMarket: langKey === 'Traditional Chinese' ? '分析市場中...' : langKey === 'Simplified Chinese' ? '分析市场中...' : 'Analyzing Market...',
-  };
-
-  // Initialize speech synthesis on mount
-  useEffect(() => {
-    if (typeof window !== 'undefined' && window.speechSynthesis) {
-      const utterance = new SpeechSynthesisUtterance('');
-      utterance.volume = 0;
-      window.speechSynthesis.speak(utterance);
-      setTimeout(() => {
-        window.speechSynthesis.cancel();
-      }, 100);
+      setVoiceLanguage('English');
     }
   }, []);
 
-  // Auto-speak when analysis data arrives
-  useEffect(() => {
-    if (analysisData?.summary && isSpeakerActive && !isPaused) {
-      console.log("🔊 SPEECH TRIGGERED - Voice:", voiceLanguage);
-      setTimeout(() => {
-        if (utteranceRef.current) {
-          window.speechSynthesis.cancel();
-        }
-        speakText(analysisData.summary, langKey, voiceLanguage, () => {
-          utteranceRef.current = null;
-        });
-      }, 100);
-    }
-    return () => {
-      if (utteranceRef.current) {
-        window.speechSynthesis.cancel();
-      }
-    };
-  }, [analysisData, isSpeakerActive, isPaused, langKey, voiceLanguage]);
+  // Initialize TTS on mount
+  React.useEffect(() => {
+    initTTS();
+  }, []);
 
-  // Re-fetch analysis when language changes
-  useEffect(() => {
-    if (analysisData && analysisData.symbol && !isLoading && !isLanguageSwitching) {
-      setIsLanguageSwitching(true);
-      console.log(`🔄 Mobile: Language changed to ${langKey}, re-fetching ${analysisData.symbol}...`);
-      reFetchAnalysis(analysisData.symbol);
-    }
-  }, [langKey]);
-
-  // Speech recognition setup
-  useEffect(() => {
-    if (typeof window !== 'undefined') {
-      const SpeechRecognition = (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition;
-      if (SpeechRecognition) {
-        const recognitionInstance = new SpeechRecognition();
-        recognitionInstance.continuous = false;
-        recognitionInstance.interimResults = false;
-        recognitionInstance.lang = langKey === 'Traditional Chinese' ? 'zh-TW' : langKey === 'Simplified Chinese' ? 'zh-CN' : 'en-US';
-        
-        recognitionInstance.onresult = (event: any) => {
-          setInputValue(event.results[0][0].transcript);
-          setIsListening(false);
-        };
-        
-        recognitionInstance.onerror = () => setIsListening(false);
-        recognitionInstance.onend = () => setIsListening(false);
-        setRecognition(recognitionInstance);
-      }
-    }
-  }, [langKey]);
-
-  const reFetchAnalysis = async (symbol: string) => {
-    if (!symbol) return;
-    setIsLoading(true);
-    try {
-      const endpoint = useAIEnhancement ? '/api/chat/ai-enhanced' : '/api/chat';
-      const response = await fetch(endpoint, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ 
-          message: symbol, 
-          language: langKey,
-          useAI: useAIEnhancement
-        }),
-      });
-      const data = await response.json();
-      setAnalysisData({
-        symbol: symbol,
-        summary: data.text || data.summary,
-        price: data.price || "N/A",
-        rsi: data.rsi || "N/A",
-        macd: data.macd || "N/A",
-        marketCap: data.marketCap || "N/A",
-        peRatio: data.peRatio || "N/A",
-        volume: data.volume || "N/A",
-        historical: data.historical || [],
-        change: data.change,
-        changePercent: data.changePercent,
-        companyName: data.companyName,
-        currency: data.currency,
-        sma20: data.sma20,
-        sma50: data.sma50,
-        volatility: data.volatility,
-        avgVolume: data.avgVolume,
-        dayLow: data.dayLow,
-        dayHigh: data.dayHigh,
-        specificAnalysis: data.specificAnalysis
-      });
-    } catch (error) {
-      console.error('Re-fetch error:', error);
-    } finally {
-      setIsLoading(false);
-      setIsLanguageSwitching(false);
-    }
-  };
-
-  const handleAnalyze = async () => {
-  if (!inputValue.trim()) return;
-  
-  // Check if user is logged in
-  if (!user) {
-    const msg = langKey === 'Traditional Chinese' ? '請先登入' : 
-                langKey === 'Simplified Chinese' ? '请先登录' : 
-                'Please login first';
-    alert(msg);
-    onAuthOpen();
-    return;
-  }
-  
-  // Check credits
-  if (profile && profile.credits <= 0) {
-    const msg = langKey === 'Traditional Chinese' ? '積分不足，是否升級計劃？' : 
-                langKey === 'Simplified Chinese' ? '积分不足，是否升级计划？' : 
-                'Insufficient credits. Would you like to upgrade?';
-    const confirmUpgrade = confirm(msg);
-    if (confirmUpgrade && onNavigate) {
-      onNavigate('content', { view: 'pricing' });
-    }
-    return;
-  }
-  
-  setIsLoading(true);
- // REMOVE THE DUPLICATE - KEEP ONLY ONE
-  try {
-   
-      const endpoint = useAIEnhancement ? '/api/chat/ai-enhanced' : '/api/chat';
-      const response = await fetch(endpoint, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ 
-          message: inputValue.trim(), 
-          language: langKey,
-          useAI: useAIEnhancement
-        }),
-      });
-      const data = await response.json();
-      setAnalysisData({
-        symbol: inputValue.trim().toUpperCase(),
-        summary: data.text || data.summary || `Analysis for ${inputValue.trim().toUpperCase()} completed.`,
-        price: data.price || "N/A",
-        rsi: data.rsi || "N/A",
-        macd: data.macd || "N/A",
-        marketCap: data.marketCap || "N/A",
-        peRatio: data.peRatio || "N/A",
-        volume: data.volume || "N/A",
-        historical: data.historical || [],
-        change: data.change,
-        changePercent: data.changePercent,
-        companyName: data.companyName,
-        currency: data.currency,
-        sma20: data.sma20,
-        sma50: data.sma50,
-        volatility: data.volatility,
-        avgVolume: data.avgVolume,
-        dayLow: data.dayLow,
-        dayHigh: data.dayHigh,
-        specificAnalysis: data.specificAnalysis
-      });
-    } catch (error) {
-      setAnalysisData({
-        symbol: inputValue.trim().toUpperCase(),
-        summary: `Unable to fetch analysis for ${inputValue.trim().toUpperCase()}. Please try again.`,
-        price: "N/A",
-        rsi: "N/A",
-        macd: "N/A",
-        marketCap: "N/A",
-        peRatio: "N/A",
-        volume: "N/A",
-        historical: [],
-      });
-    } finally {
-      setIsLoading(false);
-    }
-  };
-
-  const handleMicToggle = () => {
-    if (recognition && !isListening) {
-      recognition.start();
-      setIsListening(true);
-    } else if (isListening) {
-      recognition?.stop();
-      setIsListening(false);
-    }
-  };
-
-  const handleSpeakerToggle = () => {
-    if (isSpeakerActive) {
-      stopSpeaking();
-      setIsSpeakerActive(false);
-      setIsPaused(false);
+  const getTranslatedText = () => {
+    if (langKey === 'Traditional Chinese') {
+      return {
+        startAnalysis: '開始分析',
+        aboutUs: '關於',
+        features: '功能',
+        pricing: '定價',
+        disclaimer: '免責聲明',
+        terms: '服務條款',
+        privacy: '隱私政策',
+        refund: '退款政策',
+        contact: '聯絡我們',
+        welcome: '歡迎',
+        financeText: '金融與市場分析',
+        description: '我哋係 Michael 同 Teresa，金融專員同數據分析助手。'
+      };
+    } else if (langKey === 'Simplified Chinese') {
+      return {
+        startAnalysis: '开始分析',
+        aboutUs: '关于',
+        features: '功能',
+        pricing: '定价',
+        disclaimer: '免责声明',
+        terms: '服务条款',
+        privacy: '隐私政策',
+        refund: '退款政策',
+        contact: '联系我们',
+        welcome: '欢迎',
+        financeText: '金融与市场分析',
+        description: '我们是 Michael 和 Teresa，金融专员和数据分析助手。'
+      };
     } else {
-      setIsSpeakerActive(true);
-      setIsPaused(false);
-      if (analysisData?.summary) {
-        if (utteranceRef.current) {
-          stopSpeaking();
-        }
-        speakText(analysisData.summary, langKey, voiceLanguage, () => {
-          utteranceRef.current = null;
-        });
-      }
+      return {
+        startAnalysis: 'Start Analysis',
+        aboutUs: 'About',
+        features: 'Features',
+        pricing: 'Pricing',
+        disclaimer: 'Disclaimer',
+        terms: 'Terms',
+        privacy: 'Privacy',
+        refund: 'Refund',
+        contact: 'Contact',
+        welcome: 'Welcome',
+        financeText: 'Finance & Market Analysis',
+        description: 'We are Michael and Teresa, finance specialist and data analysis assistant.'
+      };
     }
   };
 
-  const handlePauseToggle = () => {
-    if (!analysisData?.summary) return;
-    
-    if (isSpeakerActive && !isPaused) {
-      stopSpeaking();
-      setIsPaused(true);
-    } else if (isPaused && isSpeakerActive) {
-      speakText(analysisData.summary, langKey, voiceLanguage, () => {
-        utteranceRef.current = null;
-      });
-      setIsPaused(false);
-    }
-  };
+  const t = getTranslatedText();
 
-  const handleSelectPlan = async (planId: string, priceId: string) => {
-    console.log('Selected plan:', planId, priceId);
-  };
-
-  const handleSourceSelect = (sourceType: string, sourceData?: any) => {
-    if (sourceType === 'url' && sourceData) {
-      const endpoint = useAIEnhancement ? '/api/chat/ai-enhanced' : '/api/chat';
-      fetch(endpoint, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ 
-          url: sourceData, 
-          language: langKey,
-          useAI: useAIEnhancement 
-        }),
-      }).then(response => response.json()).then(data => {
-        setAnalysisData((prev: any) => ({ ...prev, summary: prev?.summary + "\n\n📎 URL Analysis:\n" + (data.text || "URL analysis completed.") }));
-      });
-    }
-    setIsMenuOpen(false);
-  };
-
-  const exampleText = langKey === 'Traditional Chinese' ? '輸入股票代號 e.g.: 0700.hk, 2330.tw, TSLA' : langKey === 'Simplified Chinese' ? '输入股票代码 e.g.: 0700.hk, 2330.tw, TSLA' : 'Enter stock symbol e.g.: 0700.hk, 2330.tw, TSLA';
-  const isAnalysisMode = viewType === 'analysis';
-
-  const getTitle = () => {
-    if (legalTitle) return legalTitle;
-    if (topicId === 'about') return langKey === 'Traditional Chinese' ? '關於我們' : langKey === 'Simplified Chinese' ? '关于我们' : 'About';
-    if (topicId === 'features') return langKey === 'Traditional Chinese' ? '功能介紹' : langKey === 'Simplified Chinese' ? '功能介绍' : 'Features';
-    if (topicId === 'pricing') return langKey === 'Traditional Chinese' ? '服務定價' : langKey === 'Simplified Chinese' ? '服务定价' : 'Pricing';
-    return langKey === 'Traditional Chinese' ? 'AI 分析' : langKey === 'Simplified Chinese' ? 'AI 分析' : 'AI Analysis';
-  };
-
-  const renderButtonWithCross = (isActive: boolean, onClick: () => void, icon: React.ReactElement, color: string, inactiveColor: string) => {
-    const bgColor = isActive ? color : inactiveColor;
-    return (
-      <button onClick={onClick} style={{ flex: 1, height: '48px', borderRadius: '12px', display: 'flex', alignItems: 'center', justifyContent: 'center', backgroundColor: bgColor, color: 'white', border: 'none', cursor: 'pointer', position: 'relative', overflow: 'hidden' }}>
-        {icon}
-        {!isActive && (<div style={{ position: 'absolute', top: '50%', left: '50%', width: '2px', height: '30px', backgroundColor: 'white', transform: 'translate(-50%, -50%) rotate(45deg)', borderRadius: '1px' }} />)}
-      </button>
-    );
-  };
-
-  const displayLegalTitle = legalTitle || undefined;
+  const footerItems = [
+    { label: t.disclaimer, key: 'DISCLAIMER' },
+    { label: t.terms, key: '服務條款' },
+    { label: t.privacy, key: '隱私政策' },
+    { label: t.refund, key: '退款政策' },
+    { label: t.contact, key: '聯絡我們' },
+  ];
 
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', height: '100%', width: '100%', backgroundColor: '#f5f5f5', overflow: 'hidden', position: 'absolute', top: 0, left: 0, right: 0, bottom: 0 }}>
-      <IOSVersionWarning voiceLanguage={voiceLanguage} />
+    <div style={{
+      display: 'flex',
+      flexDirection: 'column',
+      height: '100dvh',
+      width: '100%',
+      backgroundColor: '#FEF08A',
+      overflow: 'hidden',
+      position: 'relative'
+    }}>
       
-      <div style={{ backgroundColor: 'white', padding: '8px 12px', borderBottom: '1px solid #E5E7EB', display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexShrink: 0, zIndex: 20, width: '100%', boxSizing: 'border-box' }}>
-        <button onClick={onBack} style={{ display: 'flex', alignItems: 'center', gap: '4px', color: '#4B5563', background: 'none', border: 'none', cursor: 'pointer', padding: '4px 0', minWidth: '44px' }}>
-          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M15 19l-7-7 7-7" /></svg>
-          <span style={{ fontSize: '11px', fontWeight: '500' }}>Back</span>
-        </button>
-        <h2 style={{ fontSize: '15px', fontWeight: '600', color: '#1F2937', margin: 0 }}>{getTitle()}</h2>
-        <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
+      {/* Top Bar */}
+      <div style={{
+        backgroundColor: 'white',
+        padding: '12px 16px',
+        borderBottom: '1px solid #E5E7EB',
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'space-between',
+        flexShrink: 0,
+        gap: '8px'
+      }}>
+        <h1 style={{ fontSize: '18px', fontWeight: '900', fontStyle: 'italic', color: '#DC2626', margin: 0, flexShrink: 0 }}>vibeAiLink</h1>
+        <div style={{ display: 'flex', gap: '12px', alignItems: 'center', flexShrink: 0 }}>
           <VoiceSelector 
             currentVoice={voiceLanguage}
             onVoiceChange={setVoiceLanguage}
           />
           <LanguageToggle currentLang={langKey} onLangChange={setLangKey} />
-          <button onClick={onAuthOpen} style={{ color: '#2563EB', fontWeight: '600', fontSize: '11px', background: 'none', border: 'none', cursor: 'pointer', padding: '4px 0', minWidth: '44px' }}>{user ? 'Welcome' : (langKey === 'Traditional Chinese' ? '登入' : langKey === 'Simplified Chinese' ? '登录' : 'Login')}</button>
+          <button
+            onClick={onAuthOpen}
+            style={{
+              color: '#2563EB',
+              fontWeight: '600',
+              fontSize: '12px',
+              background: 'none',
+              border: 'none',
+              cursor: 'pointer',
+              whiteSpace: 'nowrap'
+            }}
+          >
+            {user ? t.welcome : (langKey === 'Traditional Chinese' ? '登入' : langKey === 'Simplified Chinese' ? '登录' : 'Login')}
+          </button>
         </div>
       </div>
-      
-      <div style={{ flex: 1, overflowY: 'auto', overflowX: 'hidden', WebkitOverflowScrolling: 'touch', padding: '12px', backgroundColor: '#F9FAFB', minHeight: 0 }}>
-        {displayLegalTitle && <div style={{ backgroundColor: 'white', borderRadius: '8px', padding: '12px', marginBottom: '8px' }}><div style={{ fontSize: '12px', color: '#4B5563', lineHeight: 1.4 }}>{footerContent[displayLegalTitle]?.[langKey === "Traditional Chinese" ? "粵語 (繁體中文)" : langKey] || "Content coming soon..."}</div></div>}
-        {topicId === 'pricing' && <div style={{ backgroundColor: 'white', borderRadius: '8px', padding: '12px', marginBottom: '8px' }}><PricingModal isOpen={true} onClose={onBack} user={user} profile={null} onSelectPlan={handleSelectPlan} showRetentionOnly={false} /></div>}
-        {topicId === 'about' && <AboutSection lang={langKey} />}
-        {topicId === 'features' && <FeaturesSection lang={langKey} />}
-        {isAnalysisMode && !displayLegalTitle && (
-          <StockAnalysisModule 
-            t={t} 
-            data={analysisData} 
-            isLoading={isLoading} 
-            langKey={langKey} 
-            voiceLanguage={voiceLanguage}
+
+      {/* Main Content */}
+      <div style={{
+        flex: 1,
+        display: 'flex',
+        flexDirection: 'column',
+        alignItems: 'center',
+        justifyContent: 'center',
+        padding: '20px',
+        overflowY: 'auto'
+      }}>
+        
+        <div style={{
+          width: '180px',
+          height: '180px',
+          borderRadius: '30px',
+          overflow: 'hidden',
+          backgroundColor: 'white',
+          boxShadow: '0 8px 20px rgba(0,0,0,0.15)',
+          marginBottom: '24px'
+        }}>
+          <img
+            src="/avatars/michael_teresa.jpg"
+            alt="Michael & Teresa"
+            style={{
+              width: '100%',
+              height: '100%',
+              objectFit: 'cover'
+            }}
           />
-        )}
-      </div>
-      
-      {isAnalysisMode && !displayLegalTitle && (
-        <div style={{ backgroundColor: 'white', borderTop: '1px solid #E5E7EB', padding: '10px 12px', paddingBottom: 'max(10px, env(safe-area-inset-bottom))', flexShrink: 0, zIndex: 20, width: '100%', boxSizing: 'border-box', position: 'relative' }}>
+        </div>
+
+        <h2 style={{
+          fontSize: '24px',
+          fontWeight: 'bold',
+          color: '#1F2937',
+          margin: '0 0 8px 0',
+          textAlign: 'center'
+        }}>
+          Michael & Teresa
+        </h2>
+        
+        <p style={{
+          fontSize: '14px',
+          color: '#2563EB',
+          fontWeight: '600',
+          margin: '0 0 4px 0',
+          textAlign: 'center'
+        }}>
+          {t.financeText}
+        </p>
+        
+        <p style={{
+          fontSize: '13px',
+          color: '#6B7280',
+          margin: '0 0 32px 0',
+          textAlign: 'center',
+          lineHeight: 1.4,
+          padding: '0 20px'
+        }}>
+          {t.description}
+        </p>
+
+        <div style={{
+          display: 'flex',
+          flexDirection: 'column',
+          gap: '12px',
+          width: '100%',
+          maxWidth: '280px'
+        }}>
+          <button
+            onClick={() => onNavigate('analysis')}
+            style={{
+              backgroundColor: '#DC2626',
+              color: 'white',
+              border: 'none',
+              borderRadius: '40px',
+              padding: '14px 24px',
+              fontSize: '16px',
+              fontWeight: 'bold',
+              cursor: 'pointer',
+              boxShadow: '0 2px 8px rgba(220,38,38,0.3)',
+            }}
+          >
+            {t.startAnalysis}
+          </button>
           
-          {/* AI Enhancement Toggle */}
-          <div style={{ 
-            marginBottom: '8px', 
-            padding: '6px 12px', 
-            backgroundColor: useAIEnhancement ? '#FEF3C7' : '#F3F4F6',
-            borderRadius: '8px',
-            fontSize: '11px',
+          <div style={{
             display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'space-between'
+            gap: '8px',
+            justifyContent: 'center',
+            flexWrap: 'nowrap'
           }}>
-            <label style={{ display: 'flex', alignItems: 'center', gap: '8px', cursor: 'pointer', flex: 1 }}>
-              <input
-                type="checkbox"
-                checked={useAIEnhancement}
-                onChange={(e) => setUseAIEnhancement(e.target.checked)}
-                style={{ width: '16px', height: '16px', cursor: 'pointer' }}
-              />
-              <span style={{ fontSize: '11px', fontWeight: '500', color: '#374151' }}>
-                {langKey === 'Traditional Chinese' ? '🤖 AI增強分析' : 
-                 langKey === 'Simplified Chinese' ? '🤖 AI增强分析' : 
-                 '🤖 AI Enhancement'}
-              </span>
-              <span style={{ fontSize: '9px', color: '#6B7280' }}>
-                {langKey === 'Traditional Chinese' ? '(網關選項)' : 
-                 langKey === 'Simplified Chinese' ? '(网关选项)' : 
-                 '(Gateway option)'}
-              </span>
-            </label>
-            {useAIEnhancement && (
-              <div style={{ fontSize: '9px', color: '#D97706', backgroundColor: '#FEF3C7', padding: '2px 6px', borderRadius: '4px' }}>
-                {langKey === 'Traditional Chinese' ? '啟用中' : langKey === 'Simplified Chinese' ? '启用中' : 'Active'}
-              </div>
-            )}
-          </div>
-          
-          <div style={{ display: 'flex', gap: '8px', alignItems: 'center', marginBottom: '10px' }}>
-            <button onClick={() => setIsMenuOpen(true)} style={{ width: '44px', height: '44px', borderRadius: '12px', backgroundColor: '#EF4444', color: 'white', border: 'none', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '20px', fontWeight: 'bold', flexShrink: 0 }}>+</button>
-            <input type="text" value={inputValue} onChange={(e) => setInputValue(e.target.value)} placeholder={exampleText} onKeyPress={(e) => e.key === 'Enter' && handleAnalyze()} style={{ flex: 1, padding: '10px 14px', fontSize: '14px', color: '#1F2937', backgroundColor: '#F3F4F6', borderRadius: '24px', border: '1px solid #E5E7EB', outline: 'none', minWidth: 0 }} />
-          </div>
-          
-          <div style={{ display: 'flex', gap: '8px', justifyContent: 'space-between' }}>
-            {renderButtonWithCross(isListening, handleMicToggle, 
-              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2}><path d="M19 11a7 7 0 01-7 7m0 0a7 7 0 01-7-7m7 7v4m0 0H8m4 0h4m-4-8a3 3 0 01-3-3V5a3 3 0 116 0v6a3 3 0 01-3 3z"/></svg>, 
-              '#3B82F6', '#EF4444'
-            )}
-            
-            {renderButtonWithCross(isSpeakerActive, handleSpeakerToggle, 
-              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2}><path d="M15.536 8.464a5 5 0 010 7.072m2.828-9.9a9 9 0 010 12.728M5.586 15H4a1 1 0 01-1-1v-4a1 1 0 011-1h1.586l4.707-4.707C10.923 3.663 12 4.109 12 5v14c0 .891-1.077 1.337-1.707.707L5.586 15z"/></svg>, 
-              '#EF4444', '#9CA3AF'
-            )}
-            
-            {renderButtonWithCross(isPaused, handlePauseToggle, 
-              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2}><path d="M10 9v6m4-6v6m7-3a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>, 
-              '#EF4444', '#9CA3AF'
-            )}
-            
-            <button 
-              onClick={handleAnalyze} 
-              disabled={!inputValue.trim() || isLoading} 
-              style={{ 
-                flex: 1, 
-                height: '48px', 
-                borderRadius: '12px', 
-                display: 'flex', 
-                alignItems: 'center', 
-                justifyContent: 'center', 
-                backgroundColor: (inputValue.trim() && !isLoading) 
-                  ? (useAIEnhancement ? '#F59E0B' : '#22C55E') 
-                  : '#D1D5DB', 
-                color: 'white', 
-                border: 'none', 
-                cursor: (inputValue.trim() && !isLoading) ? 'pointer' : 'not-allowed', 
-                position: 'relative' 
+            <button
+              onClick={() => onNavigate('content', { view: 'about' })}
+              style={{
+                flex: 1,
+                backgroundColor: 'white',
+                color: '#4B5563',
+                border: '1px solid #E5E7EB',
+                borderRadius: '40px',
+                padding: '10px 0',
+                fontSize: '12px',
+                fontWeight: '500',
+                cursor: 'pointer',
+                whiteSpace: 'nowrap',
+                minWidth: 0
               }}
             >
-              {isLoading 
-                ? (useAIEnhancement 
-                    ? (langKey === 'Traditional Chinese' ? '🤖 AI思考中...' : langKey === 'Simplified Chinese' ? '🤖 AI思考中...' : '🤖 Thinking...')
-                    : (langKey === 'Traditional Chinese' ? '分析中...' : langKey === 'Simplified Chinese' ? '分析中...' : 'Analyzing...'))
-                : (useAIEnhancement 
-                    ? (langKey === 'Traditional Chinese' ? '✨ AI分析' : langKey === 'Simplified Chinese' ? '✨ AI分析' : '✨ AI Analyze')
-                    : (langKey === 'Traditional Chinese' ? '發送' : langKey === 'Simplified Chinese' ? '发送' : 'Send'))}
+              {t.aboutUs}
+            </button>
+            <button
+              onClick={() => onNavigate('content', { view: 'features' })}
+              style={{
+                flex: 1,
+                backgroundColor: 'white',
+                color: '#4B5563',
+                border: '1px solid #E5E7EB',
+                borderRadius: '40px',
+                padding: '10px 0',
+                fontSize: '12px',
+                fontWeight: '500',
+                cursor: 'pointer',
+                whiteSpace: 'nowrap',
+                minWidth: 0
+              }}
+            >
+              {t.features}
+            </button>
+            <button
+              onClick={() => onNavigate('content', { view: 'pricing' })}
+              style={{
+                flex: 1,
+                backgroundColor: 'white',
+                color: '#4B5563',
+                border: '1px solid #E5E7EB',
+                borderRadius: '40px',
+                padding: '10px 0',
+                fontSize: '12px',
+                fontWeight: '500',
+                cursor: 'pointer',
+                whiteSpace: 'nowrap',
+                minWidth: 0
+              }}
+            >
+              {t.pricing}
             </button>
           </div>
         </div>
-      )}
-      
-      <SourceMenu isOpen={isMenuOpen} onClose={() => setIsMenuOpen(false)} onSelectSource={handleSourceSelect} langKey={langKey} />
+      </div>
+
+      {/* Footer Menu Button */}
+      <div style={{
+        position: 'absolute',
+        bottom: '20px',
+        right: '20px',
+        zIndex: 30
+      }}>
+        <button
+          onClick={() => setShowFooterMenu(!showFooterMenu)}
+          style={{
+            width: '48px',
+            height: '48px',
+            borderRadius: '24px',
+            backgroundColor: '#DC2626',
+            color: 'white',
+            border: 'none',
+            cursor: 'pointer',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            boxShadow: '0 2px 8px rgba(0,0,0,0.2)'
+          }}
+        >
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2}>
+            <path strokeLinecap="round" strokeLinejoin="round" d="M4 6h16M4 12h16M4 18h16" />
+          </svg>
+        </button>
+
+        {showFooterMenu && (
+          <div style={{
+            position: 'absolute',
+            bottom: '56px',
+            right: '0',
+            backgroundColor: 'white',
+            border: '1px solid #E5E7EB',
+            borderRadius: '12px',
+            boxShadow: '0 4px 12px rgba(0,0,0,0.15)',
+            minWidth: '140px',
+            overflow: 'hidden'
+          }}>
+            {footerItems.map((item, index) => (
+              <button
+                key={index}
+                onClick={() => {
+                  onNavigate('content', { view: item.key });
+                  setShowFooterMenu(false);
+                }}
+                style={{
+                  width: '100%',
+                  padding: '12px 16px',
+                  textAlign: 'left',
+                  backgroundColor: 'white',
+                  border: 'none',
+                  borderBottom: index < footerItems.length - 1 ? '1px solid #E5E7EB' : 'none',
+                  cursor: 'pointer',
+                  fontSize: '13px',
+                  color: '#4B5563',
+                }}
+              >
+                {item.label}
+              </button>
+            ))}
+          </div>
+        )}
+      </div>
     </div>
   );
 };
 
-export default MobileAnalysis;
+export default MobileLanding;
