@@ -431,6 +431,7 @@ export default function VibeAiMaster() {
   }
 
   // Mobile view
+    // Mobile view
   if (systemState.isMobile) {
     if (mobilePage === 'landing') {
       return (
@@ -448,6 +449,7 @@ export default function VibeAiMaster() {
         langKey={language} 
         setLangKey={setLanguage as any} 
         user={user}
+        profile={profile}
         onAuthOpen={() => setIsAuthOpen(true)} 
         viewType={mobileView} 
         topicId={mobileTopic || undefined}
