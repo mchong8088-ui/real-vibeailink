@@ -454,34 +454,34 @@ const checkCreditsBeforeAnalysis = async (): Promise<boolean> => {
   }
 
   // Mobile view
-  if (systemState.isMobile) {
-    if (mobilePage === 'landing') {
-      return (
-        <MobileLanding 
-  langKey={language} 
-  setLangKey={setLanguage as any} 
-  onAuthOpen={() => setIsAuthOpen(true)} 
-  user={user} 
-  onNavigate={handleMobileNavigate} 
-/>
-      );
-    }
+if (systemState.isMobile) {
+  if (mobilePage === 'landing') {
     return (
-      <MobileAnalysis 
-    langKey={language} 
-    setLangKey={setLanguage as any} 
-    user={user}
-    profile={profile}  // ADD THIS
-    onAuthOpen={() => setIsAuthOpen(true)} 
-    viewType={mobileView} 
-    topicId={mobileTopic} 
-    legalTitle={mobileLegal} 
-    onBack={handleMobileBack}
-    voiceLanguage={voiceLanguage}
-    onNavigate={handleMobileNavigate}  // ADD THIS
-  />
-);
+      <MobileLanding 
+        langKey={language} 
+        setLangKey={setLanguage as any} 
+        onAuthOpen={() => setIsAuthOpen(true)} 
+        user={user} 
+        onNavigate={handleMobileNavigate} 
+      />
+    );
   }
+  return (
+    <MobileAnalysis 
+      langKey={language} 
+      setLangKey={setLanguage as any} 
+      user={user}
+      profile={profile}  // KEEP THIS ONE - MobileAnalysis needs profile
+      onAuthOpen={() => setIsAuthOpen(true)} 
+      viewType={mobileView} 
+      topicId={mobileTopic} 
+      legalTitle={mobileLegal} 
+      onBack={handleMobileBack}
+      voiceLanguage={voiceLanguage}
+      onNavigate={handleMobileNavigate}
+    />
+  );
+}
 
   // Desktop view
   return (
