@@ -3,6 +3,7 @@ import React from 'react';
 import { LanguageToggle } from '../layout/LanguageToggle';
 import { initTTS } from '../../utils/ttsMaster';
 import { VoiceSelector } from '../layout/VoiceSelector';
+import { supabase } from '../../lib/supabase'; 
 
 interface MobileLandingProps {
   langKey: string;
@@ -30,8 +31,21 @@ const MobileLanding: React.FC<MobileLandingProps> = ({
   } else {
     setVoiceLanguage('English');
   }
+}
+, []);
+React.useEffect(() => {
+  initTTS();
 }, []);
-
+  // Listen for auth changes
+  const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
+    if (event === 'SIGNED_IN') {
+      console.log('🔐 Mobile: User signed in, reloading...');
+      window.location.reload();
+    }
+  });
+  
+  return () => subscription.unsubscribe();
+}, []);
   const getTranslatedText = () => {
     if (langKey === 'Traditional Chinese') {
       return {

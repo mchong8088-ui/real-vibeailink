@@ -469,19 +469,19 @@ const checkCreditsBeforeAnalysis = async (): Promise<boolean> => {
     }
     return (
       <MobileAnalysis 
-  langKey={language} 
-  setLangKey={setLanguage as any} 
-  user={user} 
-  profile={profile}
-  onAuthOpen={() => setIsAuthOpen(true)} 
-  viewType={mobileView} 
-  topicId={mobileTopic} 
-  legalTitle={mobileLegal} 
-  onBack={handleMobileBack}
-  voiceLanguage={voiceLanguage}
-  onNavigate={handleMobileNavigate}
-/>
-    );
+    langKey={language} 
+    setLangKey={setLanguage as any} 
+    user={user}
+    profile={profile}  // ADD THIS
+    onAuthOpen={() => setIsAuthOpen(true)} 
+    viewType={mobileView} 
+    topicId={mobileTopic} 
+    legalTitle={mobileLegal} 
+    onBack={handleMobileBack}
+    voiceLanguage={voiceLanguage}
+    onNavigate={handleMobileNavigate}  // ADD THIS
+  />
+);
   }
 
   // Desktop view

@@ -122,6 +122,11 @@ const MobileAnalysis: React.FC<MobileAnalysisProps> = ({
       setVoiceLanguage(propVoiceLanguage);
     }
   }, [propVoiceLanguage]);
+  // Add this after the existing useEffects (around line 120)
+useEffect(() => {
+  console.log('🔍 MobileAnalysis - User state changed:', user);
+  console.log('🔍 MobileAnalysis - Profile state:', profile);
+}, [user, profile]);
 
   const t = {
     analyzingMarket: langKey === 'Traditional Chinese' ? '分析市場中...' : langKey === 'Simplified Chinese' ? '分析市场中...' : 'Analyzing Market...',
