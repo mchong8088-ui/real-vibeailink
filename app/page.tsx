@@ -429,9 +429,7 @@ export default function VibeAiMaster() {
       </div>
     );
   }
-
   // Mobile view
-    // Mobile view
   if (systemState.isMobile) {
     if (mobilePage === 'landing') {
       return (
