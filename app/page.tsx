@@ -448,7 +448,6 @@ export default function VibeAiMaster() {
         langKey={language} 
         setLangKey={setLanguage as any} 
         user={user}
-        profile={profile}
         onAuthOpen={() => setIsAuthOpen(true)} 
         viewType={mobileView} 
         topicId={mobileTopic || undefined}
