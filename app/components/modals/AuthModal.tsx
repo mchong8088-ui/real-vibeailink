@@ -346,7 +346,7 @@ export const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose, onSuccess
           displayName={tempUserData.displayName}
           email={tempUserData.email}
           onAccept={handleTermsAccept}
-          langKey={langKey}
+          // langKey={langKey}
         />
       )}
     </>
