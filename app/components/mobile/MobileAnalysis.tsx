@@ -238,28 +238,27 @@ const MobileAnalysis: React.FC<MobileAnalysisProps> = ({
   const handleAnalyze = async () => {
   if (!inputValue.trim()) return;
   
-  // TEMPORARILY DISABLED AUTH CHECKS
-  /*
   // Check if user is logged in
   if (!user) {
-    alert(langKey === 'Traditional Chinese' ? '請先登入' : 
-          langKey === 'Simplified Chinese' ? '请先登录' : 
-          'Please login first');
+    const msg = langKey === 'Traditional Chinese' ? '請先登入' : 
+                langKey === 'Simplified Chinese' ? '请先登录' : 
+                'Please login first';
+    alert(msg);
     onAuthOpen();
     return;
   }
   
   // Check credits
   if (profile && profile.credits <= 0) {
-    alert(langKey === 'Traditional Chinese' ? '積分不足，請升級計劃' : 
-          langKey === 'Simplified Chinese' ? '积分不足，请升级计划' : 
-          'Insufficient credits. Please upgrade your plan');
-    if (onNavigate) {
+    const msg = langKey === 'Traditional Chinese' ? '積分不足，是否升級計劃？' : 
+                langKey === 'Simplified Chinese' ? '积分不足，是否升级计划？' : 
+                'Insufficient credits. Would you like to upgrade?';
+    const confirmUpgrade = confirm(msg);
+    if (confirmUpgrade && onNavigate) {
       onNavigate('content', { view: 'pricing' });
     }
     return;
   }
-  */
   
   setIsLoading(true);
  // REMOVE THE DUPLICATE - KEEP ONLY ONE

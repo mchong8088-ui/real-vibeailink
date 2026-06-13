@@ -229,17 +229,40 @@ export default function VibeAiMaster() {
     setShowUserMenu(false);
     window.location.href = '/';
   };
+  // Add this function to check credits before analysis
+const checkCreditsBeforeAnalysis = async (): Promise<boolean> => {
+  if (!user) {
+    const langMsg = language === 'Traditional Chinese' ? '請先登入' : 
+                    language === 'Simplified Chinese' ? '请先登录' : 
+                    'Please login first';
+    alert(langMsg);
+    setIsAuthOpen(true);
+    return false;
+  }
+  
+  if (!profile) {
+    alert('User profile not found. Please contact support.');
+    return false;
+  }
+  
+  if (profile.credits <= 0) {
+    const langMsg = language === 'Traditional Chinese' ? '積分不足，是否升級計劃？' : 
+                    language === 'Simplified Chinese' ? '积分不足，是否升级计划？' : 
+                    'Insufficient credits. Would you like to upgrade?';
+    const confirmUpgrade = confirm(langMsg);
+    if (confirmUpgrade) {
+      setCurrentView('pricing');
+    }
+    return false;
+  }
+  
+  return true;
+};
 
   const handleAnalyzeRequest = async (ticker: string, attachments?: any[], useAI?: boolean) => {
-  // AUTH TEMPORARILY DISABLED FOR TESTING
-  /*
-  // Check if user is logged in
-  if (!user) {
-    alert('Please login to analyze stocks. Create a free account at vibeailink.com');
-    setIsAuthOpen(true);
-    return;
-  }
-  */
+  // Check credits before proceeding
+  const hasCredits = await checkCreditsBeforeAnalysis();
+  if (!hasCredits) return;
   
   setIsLoading(true);
   // ... rest
