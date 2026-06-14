@@ -144,15 +144,15 @@ const MobileLanding: React.FC<MobileLandingProps> = ({
           />
           <LanguageToggle currentLang={langKey} onLangChange={setLangKey} />
           
-          {user ? (
+{user ? (
   <div className="user-menu-container" style={{ position: 'relative' }}>
     <button
       onClick={() => setShowUserMenu(!showUserMenu)}
       style={{
         display: 'flex',
         alignItems: 'center',
-        gap: '8px',
-        padding: '4px 12px',
+        gap: '4px',
+        padding: '4px 8px',
         borderRadius: '20px',
         backgroundColor: '#F3F4F6',
         border: 'none',
@@ -160,8 +160,8 @@ const MobileLanding: React.FC<MobileLandingProps> = ({
       }}
     >
       <div style={{
-        width: '28px',
-        height: '28px',
+        width: '24px',
+        height: '24px',
         borderRadius: '50%',
         backgroundColor: '#3B82F6',
         display: 'flex',
@@ -169,39 +169,38 @@ const MobileLanding: React.FC<MobileLandingProps> = ({
         justifyContent: 'center',
         color: 'white',
         fontWeight: 'bold',
-        fontSize: '12px'
+        fontSize: '10px'
       }}>
         {user?.email?.charAt(0).toUpperCase() || 'U'}
       </div>
-      <span style={{ fontSize: '12px', color: '#374151' }}>
+      <span style={{ fontSize: '10px', color: '#374151', maxWidth: '80px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
         {user?.email?.split('@')[0] || 'User'}
       </span>
     </button>
     
     {showUserMenu && (
       <div style={{
-  position: 'absolute',
-  top: '100%',
-  left: '50%',  // ← Center it
-  transform: 'translateX(-50%)',  // ← Adjust to center
-  marginTop: '8px',
-  width: '240px',
-  backgroundColor: 'white',
-  border: '1px solid #E5E7EB',
-  borderRadius: '12px',
-  boxShadow: '0 4px 20px rgba(0,0,0,0.15)',
-  overflow: 'hidden',
-  zIndex: 100
-}}>
-        <div style={{ padding: '12px 16px', borderBottom: '1px solid #E5E7EB' }}>
-          <p style={{ fontSize: '13px', fontWeight: 'bold', color: '#1F2937' }}>{user?.email}</p>
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: '8px' }}>
-            <p style={{ fontSize: '11px', color: '#6B7280' }}>Credits:</p>
-            <p style={{ fontSize: '13px', fontWeight: 'bold', color: '#F59E0B' }}>{profile?.credits || 100}</p>
+        position: 'absolute',
+        top: '100%',
+        left: '10px',
+        marginTop: '8px',
+        width: '240px',
+        backgroundColor: 'white',
+        border: '1px solid #E5E7EB',
+        borderRadius: '12px',
+        boxShadow: '0 4px 20px rgba(0,0,0,0.15)',
+        overflow: 'hidden',
+        zIndex: 100
+      }}>
+        <div style={{ padding: '10px 12px', borderBottom: '1px solid #E5E7EB' }}>
+          <p style={{ fontSize: '12px', fontWeight: 'bold', color: '#1F2937', wordBreak: 'break-all' }}>{user?.email}</p>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: '6px' }}>
+            <p style={{ fontSize: '10px', color: '#6B7280' }}>Credits:</p>
+            <p style={{ fontSize: '12px', fontWeight: 'bold', color: '#F59E0B' }}>{profile?.credits || 100}</p>
           </div>
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: '4px' }}>
-            <p style={{ fontSize: '11px', color: '#6B7280' }}>Plan:</p>
-            <p style={{ fontSize: '12px', fontWeight: '500', color: '#1F2937' }}>{profile?.subscription_status || 'Free Explorer'}</p>
+            <p style={{ fontSize: '10px', color: '#6B7280' }}>Plan:</p>
+            <p style={{ fontSize: '11px', fontWeight: '500', color: '#1F2937' }}>{profile?.subscription_status || 'Free Explorer'}</p>
           </div>
         </div>
         <button
@@ -211,17 +210,17 @@ const MobileLanding: React.FC<MobileLandingProps> = ({
           }}
           style={{
             width: '100%',
-            padding: '12px 16px',
+            padding: '10px 12px',
             textAlign: 'left',
             backgroundColor: 'white',
             border: 'none',
             cursor: 'pointer',
-            fontSize: '13px',
+            fontSize: '12px',
             color: '#4B5563',
             borderBottom: '1px solid #E5E7EB',
             display: 'flex',
             alignItems: 'center',
-            gap: '8px'
+            gap: '6px'
           }}
         >
           <span>📊</span> Dashboard
@@ -233,17 +232,17 @@ const MobileLanding: React.FC<MobileLandingProps> = ({
           }}
           style={{
             width: '100%',
-            padding: '12px 16px',
+            padding: '10px 12px',
             textAlign: 'left',
             backgroundColor: 'white',
             border: 'none',
             cursor: 'pointer',
-            fontSize: '13px',
+            fontSize: '12px',
             color: '#4B5563',
             borderBottom: '1px solid #E5E7EB',
             display: 'flex',
             alignItems: 'center',
-            gap: '8px'
+            gap: '6px'
           }}
         >
           <span>⬆️</span> Change Plan
@@ -256,16 +255,16 @@ const MobileLanding: React.FC<MobileLandingProps> = ({
           }}
           style={{
             width: '100%',
-            padding: '12px 16px',
+            padding: '10px 12px',
             textAlign: 'left',
             backgroundColor: 'white',
             border: 'none',
             cursor: 'pointer',
-            fontSize: '13px',
+            fontSize: '12px',
             color: '#EF4444',
             display: 'flex',
             alignItems: 'center',
-            gap: '8px'
+            gap: '6px'
           }}
         >
           <span>🚪</span> Logout
