@@ -116,7 +116,7 @@ export const PricingModal: React.FC<PricingModalProps> = ({
         'Multi-language voice',
         'Basic AI summary'
       ],
-      buttonText: isExistingUser ? 'Top-up' : 'Join',
+      buttonText: isExistingUser ? 'Top-up →' : 'Join →',
       gradient: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)'
     },
     {
@@ -234,6 +234,44 @@ export const PricingModal: React.FC<PricingModalProps> = ({
                   <span style={{ fontSize: '12px', color: '#4B5563' }}>{feature}</span>
                 </div>
               ))}
+              
+              {/* ☕ Special top-up message for Explorer plan when user is logged in */}
+              {plan.id === 'explorer' && isExistingUser && (
+                <div style={{
+                  marginTop: '16px',
+                  marginBottom: '8px',
+                  padding: '12px',
+                  backgroundColor: '#FEF3C7',
+                  border: '1px solid #F59E0B',
+                  borderRadius: '12px',
+                  textAlign: 'center',
+                  boxShadow: '0 2px 4px rgba(0,0,0,0.05)'
+                }}>
+                  <div style={{ fontSize: '20px', marginBottom: '4px' }}>☕✨</div>
+                  <div style={{ 
+                    fontSize: '13px', 
+                    fontWeight: 'bold', 
+                    color: '#92400E',
+                    marginBottom: '6px'
+                  }}>
+                    For Subscriber: One-time Top-up!
+                  </div>
+                  <div style={{ 
+                    fontSize: '20px', 
+                    fontWeight: 'bold', 
+                    color: '#D97706'
+                  }}>
+                    $5 for 100 credits
+                  </div>
+                  <div style={{ 
+                    fontSize: '10px', 
+                    color: '#92400E',
+                    marginTop: '6px'
+                  }}>
+                    Instant credit • Never expires
+                  </div>
+                </div>
+              )}
             </div>
             <div style={{ padding: '20px', backgroundColor: '#F9FAFB' }}>
               <button onClick={() => handlePlanAction(plan.id, plan.id === 'explorer' && isExistingUser)} disabled={loading && selectedPlan === plan.id} style={{ width: '100%', background: plan.gradient, color: 'white', fontWeight: 'bold', padding: '12px', borderRadius: '40px', border: 'none', cursor: loading && selectedPlan === plan.id ? 'not-allowed' : 'pointer', fontSize: '14px' }}>
