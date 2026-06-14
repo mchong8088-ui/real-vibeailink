@@ -22,6 +22,21 @@ const MobileLanding: React.FC<MobileLandingProps> = ({
   const [showFooterMenu, setShowFooterMenu] = React.useState(false);
   const [voiceLanguage, setVoiceLanguage] = React.useState<string>('English');
 
+  // Debug: Log props received
+  console.log("📱 MobileLanding received props:", { 
+    langKey, 
+    user: user?.email, 
+    onAuthOpen: typeof onAuthOpen,
+    onNavigate: typeof onNavigate 
+  });
+
+  // Debug: Check when component mounts
+  React.useEffect(() => {
+    console.log("📱 MobileLanding mounted - onAuthOpen exists:", !!onAuthOpen);
+    initTTS();
+  }, [onAuthOpen]);
+
+  // Load voice preference from localStorage
   React.useEffect(() => {
     const savedVoice = localStorage.getItem('preferredVoice');
     if (savedVoice === 'Cantonese' || savedVoice === 'Mandarin' || savedVoice === 'Taiwanese' || savedVoice === 'English') {
@@ -31,9 +46,16 @@ const MobileLanding: React.FC<MobileLandingProps> = ({
     }
   }, []);
 
-  React.useEffect(() => {
-    initTTS();
-  }, []);
+  // Test function to verify onAuthOpen works
+  const testAuthOpen = () => {
+    console.log("🔐 testAuthOpen called directly");
+    if (onAuthOpen) {
+      console.log("🔐 onAuthOpen exists, calling it");
+      onAuthOpen();
+    } else {
+      console.log("🔐 onAuthOpen is NULL or undefined!");
+    }
+  };
 
   const getTranslatedText = () => {
     if (langKey === 'Traditional Chinese') {
@@ -104,6 +126,7 @@ const MobileLanding: React.FC<MobileLandingProps> = ({
       overflow: 'hidden',
       position: 'relative'
     }}>
+      {/* Top Bar */}
       <div style={{
         backgroundColor: 'white',
         padding: '12px 16px',
@@ -116,14 +139,39 @@ const MobileLanding: React.FC<MobileLandingProps> = ({
       }}>
         <h1 style={{ fontSize: '18px', fontWeight: '900', fontStyle: 'italic', color: '#DC2626', margin: 0, flexShrink: 0 }}>vibeAiLink</h1>
         <div style={{ display: 'flex', gap: '12px', alignItems: 'center', flexShrink: 0 }}>
-          <VoiceSelector currentVoice={voiceLanguage} onVoiceChange={setVoiceLanguage} />
+          <VoiceSelector 
+            currentVoice={voiceLanguage}
+            onVoiceChange={setVoiceLanguage}
+          />
           <LanguageToggle currentLang={langKey} onLangChange={setLangKey} />
-          <button onClick={onAuthOpen} style={{ color: '#2563EB', fontWeight: '600', fontSize: '12px', background: 'none', border: 'none', cursor: 'pointer', whiteSpace: 'nowrap' }}>
+          
+          {/* Original Login Button with debug */}
+          <button
+            onClick={() => {
+              console.log("🔐 Original Login button clicked in MobileLanding");
+              if (onAuthOpen) {
+                console.log("🔐 Calling onAuthOpen");
+                onAuthOpen();
+              } else {
+                console.log("🔐 onAuthOpen is undefined!");
+              }
+            }}
+            style={{
+              color: '#2563EB',
+              fontWeight: '600',
+              fontSize: '12px',
+              background: 'none',
+              border: 'none',
+              cursor: 'pointer',
+              whiteSpace: 'nowrap'
+            }}
+          >
             {user ? t.welcome : (langKey === 'Traditional Chinese' ? '登入' : langKey === 'Simplified Chinese' ? '登录' : 'Login')}
           </button>
         </div>
       </div>
 
+      {/* Main Content */}
       <div style={{
         flex: 1,
         display: 'flex',
@@ -133,6 +181,7 @@ const MobileLanding: React.FC<MobileLandingProps> = ({
         padding: '20px',
         overflowY: 'auto'
       }}>
+        
         <div style={{
           width: '180px',
           height: '180px',
@@ -142,45 +191,216 @@ const MobileLanding: React.FC<MobileLandingProps> = ({
           boxShadow: '0 8px 20px rgba(0,0,0,0.15)',
           marginBottom: '24px'
         }}>
-          <img src="/avatars/michael_teresa.jpg" alt="Michael & Teresa" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+          <img
+            src="/avatars/michael_teresa.jpg"
+            alt="Michael & Teresa"
+            style={{
+              width: '100%',
+              height: '100%',
+              objectFit: 'cover'
+            }}
+          />
         </div>
 
-        <h2 style={{ fontSize: '24px', fontWeight: 'bold', color: '#1F2937', margin: '0 0 8px 0', textAlign: 'center' }}>Michael & Teresa</h2>
+        <h2 style={{
+          fontSize: '24px',
+          fontWeight: 'bold',
+          color: '#1F2937',
+          margin: '0 0 8px 0',
+          textAlign: 'center'
+        }}>
+          Michael & Teresa
+        </h2>
         
-        <p style={{ fontSize: '14px', color: '#2563EB', fontWeight: '600', margin: '0 0 4px 0', textAlign: 'center' }}>{t.financeText}</p>
+        <p style={{
+          fontSize: '14px',
+          color: '#2563EB',
+          fontWeight: '600',
+          margin: '0 0 4px 0',
+          textAlign: 'center'
+        }}>
+          {t.financeText}
+        </p>
         
-        <p style={{ fontSize: '13px', color: '#6B7280', margin: '0 0 32px 0', textAlign: 'center', lineHeight: 1.4, padding: '0 20px' }}>{t.description}</p>
+        <p style={{
+          fontSize: '13px',
+          color: '#6B7280',
+          margin: '0 0 32px 0',
+          textAlign: 'center',
+          lineHeight: 1.4,
+          padding: '0 20px'
+        }}>
+          {t.description}
+        </p>
 
-        <div style={{ display: 'flex', flexDirection: 'column', gap: '12px', width: '100%', maxWidth: '280px' }}>
-          <button 
-  onClick={() => {
-    console.log("Test button clicked");
-    onAuthOpen();
-  }}
-  style={{ marginTop: '10px', padding: '5px', backgroundColor: 'red', color: 'white' }}
->
-  Test Login
-</button>
+        <div style={{
+          display: 'flex',
+          flexDirection: 'column',
+          gap: '12px',
+          width: '100%',
+          maxWidth: '280px'
+        }}>
+          <button
+            onClick={() => {
+              console.log("📱 Start Analysis clicked, navigating to analysis");
+              onNavigate('analysis');
+            }}
+            style={{
+              backgroundColor: '#DC2626',
+              color: 'white',
+              border: 'none',
+              borderRadius: '40px',
+              padding: '14px 24px',
+              fontSize: '16px',
+              fontWeight: 'bold',
+              cursor: 'pointer',
+              boxShadow: '0 2px 8px rgba(220,38,38,0.3)',
+            }}
+          >
+            {t.startAnalysis}
+          </button>
           
-          <div style={{ display: 'flex', gap: '8px', justifyContent: 'center', flexWrap: 'nowrap' }}>
-            <button onClick={() => onNavigate('content', { view: 'about' })} style={{ flex: 1, backgroundColor: 'white', color: '#4B5563', border: '1px solid #E5E7EB', borderRadius: '40px', padding: '10px 0', fontSize: '12px', fontWeight: '500', cursor: 'pointer', whiteSpace: 'nowrap', minWidth: 0 }}>{t.aboutUs}</button>
-            <button onClick={() => onNavigate('content', { view: 'features' })} style={{ flex: 1, backgroundColor: 'white', color: '#4B5563', border: '1px solid #E5E7EB', borderRadius: '40px', padding: '10px 0', fontSize: '12px', fontWeight: '500', cursor: 'pointer', whiteSpace: 'nowrap', minWidth: 0 }}>{t.features}</button>
-            <button onClick={() => onNavigate('content', { view: 'pricing' })} style={{ flex: 1, backgroundColor: 'white', color: '#4B5563', border: '1px solid #E5E7EB', borderRadius: '40px', padding: '10px 0', fontSize: '12px', fontWeight: '500', cursor: 'pointer', whiteSpace: 'nowrap', minWidth: 0 }}>{t.pricing}</button>
+          <div style={{
+            display: 'flex',
+            gap: '8px',
+            justifyContent: 'center',
+            flexWrap: 'nowrap'
+          }}>
+            <button
+              onClick={() => onNavigate('content', { view: 'about' })}
+              style={{
+                flex: 1,
+                backgroundColor: 'white',
+                color: '#4B5563',
+                border: '1px solid #E5E7EB',
+                borderRadius: '40px',
+                padding: '10px 0',
+                fontSize: '12px',
+                fontWeight: '500',
+                cursor: 'pointer',
+                whiteSpace: 'nowrap',
+                minWidth: 0
+              }}
+            >
+              {t.aboutUs}
+            </button>
+            <button
+              onClick={() => onNavigate('content', { view: 'features' })}
+              style={{
+                flex: 1,
+                backgroundColor: 'white',
+                color: '#4B5563',
+                border: '1px solid #E5E7EB',
+                borderRadius: '40px',
+                padding: '10px 0',
+                fontSize: '12px',
+                fontWeight: '500',
+                cursor: 'pointer',
+                whiteSpace: 'nowrap',
+                minWidth: 0
+              }}
+            >
+              {t.features}
+            </button>
+            <button
+              onClick={() => onNavigate('content', { view: 'pricing' })}
+              style={{
+                flex: 1,
+                backgroundColor: 'white',
+                color: '#4B5563',
+                border: '1px solid #E5E7EB',
+                borderRadius: '40px',
+                padding: '10px 0',
+                fontSize: '12px',
+                fontWeight: '500',
+                cursor: 'pointer',
+                whiteSpace: 'nowrap',
+                minWidth: 0
+              }}
+            >
+              {t.pricing}
+            </button>
           </div>
+
+          {/* TEST BUTTON - Purple */}
+          <button 
+            onClick={testAuthOpen}
+            style={{ 
+              marginTop: '10px', 
+              padding: '12px', 
+              backgroundColor: 'purple', 
+              color: 'white',
+              border: 'none',
+              borderRadius: '40px',
+              fontSize: '14px',
+              fontWeight: 'bold',
+              cursor: 'pointer'
+            }}
+          >
+            Test Login (Purple)
+          </button>
         </div>
       </div>
 
-      <div style={{ position: 'absolute', bottom: '20px', right: '20px', zIndex: 30 }}>
-        <button onClick={() => setShowFooterMenu(!showFooterMenu)} style={{ width: '48px', height: '48px', borderRadius: '24px', backgroundColor: '#DC2626', color: 'white', border: 'none', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', boxShadow: '0 2px 8px rgba(0,0,0,0.2)' }}>
+      {/* Footer Menu Button */}
+      <div style={{
+        position: 'absolute',
+        bottom: '20px',
+        right: '20px',
+        zIndex: 30
+      }}>
+        <button
+          onClick={() => setShowFooterMenu(!showFooterMenu)}
+          style={{
+            width: '48px',
+            height: '48px',
+            borderRadius: '24px',
+            backgroundColor: '#DC2626',
+            color: 'white',
+            border: 'none',
+            cursor: 'pointer',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            boxShadow: '0 2px 8px rgba(0,0,0,0.2)'
+          }}
+        >
           <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2}>
             <path strokeLinecap="round" strokeLinejoin="round" d="M4 6h16M4 12h16M4 18h16" />
           </svg>
         </button>
 
         {showFooterMenu && (
-          <div style={{ position: 'absolute', bottom: '56px', right: '0', backgroundColor: 'white', border: '1px solid #E5E7EB', borderRadius: '12px', boxShadow: '0 4px 12px rgba(0,0,0,0.15)', minWidth: '140px', overflow: 'hidden' }}>
+          <div style={{
+            position: 'absolute',
+            bottom: '56px',
+            right: '0',
+            backgroundColor: 'white',
+            border: '1px solid #E5E7EB',
+            borderRadius: '12px',
+            boxShadow: '0 4px 12px rgba(0,0,0,0.15)',
+            minWidth: '140px',
+            overflow: 'hidden'
+          }}>
             {footerItems.map((item, index) => (
-              <button key={index} onClick={() => { onNavigate('content', { view: item.key }); setShowFooterMenu(false); }} style={{ width: '100%', padding: '12px 16px', textAlign: 'left', backgroundColor: 'white', border: 'none', borderBottom: index < footerItems.length - 1 ? '1px solid #E5E7EB' : 'none', cursor: 'pointer', fontSize: '13px', color: '#4B5563' }}>
+              <button
+                key={index}
+                onClick={() => {
+                  onNavigate('content', { view: item.key });
+                  setShowFooterMenu(false);
+                }}
+                style={{
+                  width: '100%',
+                  padding: '12px 16px',
+                  textAlign: 'left',
+                  backgroundColor: 'white',
+                  border: 'none',
+                  borderBottom: index < footerItems.length - 1 ? '1px solid #E5E7EB' : 'none',
+                  cursor: 'pointer',
+                  fontSize: '13px',
+                  color: '#4B5563',
+                }}
+              >
                 {item.label}
               </button>
             ))}
