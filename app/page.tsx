@@ -429,33 +429,47 @@ export default function VibeAiMaster() {
       </div>
     );
   }
-      // Mobile view
+        // Mobile view
   if (systemState.isMobile) {
     if (mobilePage === 'landing') {
       return (
-        <MobileLanding 
-          langKey={language} 
-          setLangKey={setLanguage as any} 
-          onAuthOpen={() => setIsAuthOpen(true)} 
-          user={user} 
-          onNavigate={handleMobileNavigate} 
-        />
+        <>
+          <MobileLanding 
+            langKey={language} 
+            setLangKey={setLanguage as any} 
+            onAuthOpen={() => setIsAuthOpen(true)} 
+            user={user} 
+            onNavigate={handleMobileNavigate} 
+          />
+          {isAuthOpen && !user && (
+            <div style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, backgroundColor: 'rgba(0,0,0,0.5)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1000 }}>
+              <AuthModal isOpen={isAuthOpen} onClose={() => setIsAuthOpen(false)} langKey={language} />
+            </div>
+          )}
+        </>
       );
     }
     return (
-      <MobileAnalysis 
-        langKey={language} 
-        setLangKey={setLanguage as any} 
-        user={user}
-        profile={profile}
-        onAuthOpen={() => setIsAuthOpen(true)} 
-        viewType={mobileView} 
-        topicId={mobileTopic || undefined}
-        legalTitle={mobileLegal || undefined}
-        onBack={handleMobileBack}
-        voiceLanguage={voiceLanguage}
-        onNavigate={handleMobileNavigate}
-      />
+      <>
+        <MobileAnalysis 
+          langKey={language} 
+          setLangKey={setLanguage as any} 
+          user={user}
+          profile={profile}
+          onAuthOpen={() => setIsAuthOpen(true)} 
+          viewType={mobileView} 
+          topicId={mobileTopic || undefined}
+          legalTitle={mobileLegal || undefined}
+          onBack={handleMobileBack}
+          voiceLanguage={voiceLanguage}
+          onNavigate={handleMobileNavigate}
+        />
+        {isAuthOpen && !user && (
+          <div style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, backgroundColor: 'rgba(0,0,0,0.5)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1000 }}>
+            <AuthModal isOpen={isAuthOpen} onClose={() => setIsAuthOpen(false)} langKey={language} />
+          </div>
+        )}
+      </>
     );
   }
   // Desktop view
