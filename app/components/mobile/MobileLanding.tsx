@@ -10,6 +10,7 @@ interface MobileLandingProps {
   setLangKey: (lang: string) => void;
   onAuthOpen: () => void;
   user: any;
+  profile?: any;  // Add this line
   onNavigate: (page: string, params?: any) => void;
 }
 
@@ -18,6 +19,7 @@ const MobileLanding: React.FC<MobileLandingProps> = ({
   setLangKey,
   onAuthOpen,
   user,
+  profile,
   onNavigate,
 }) => {
   const [showFooterMenu, setShowFooterMenu] = useState(false);
@@ -143,128 +145,149 @@ const MobileLanding: React.FC<MobileLandingProps> = ({
           <LanguageToggle currentLang={langKey} onLangChange={setLangKey} />
           
           {user ? (
-            <div className="user-menu-container" style={{ position: 'relative' }}>
-              <button
-                onClick={() => setShowUserMenu(!showUserMenu)}
-                style={{
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: '8px',
-                  padding: '4px 12px',
-                  borderRadius: '20px',
-                  backgroundColor: '#F3F4F6',
-                  border: 'none',
-                  cursor: 'pointer'
-                }}
-              >
-                <div style={{
-                  width: '28px',
-                  height: '28px',
-                  borderRadius: '50%',
-                  backgroundColor: '#3B82F6',
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  color: 'white',
-                  fontWeight: 'bold',
-                  fontSize: '12px'
-                }}>
-                  {user?.email?.charAt(0).toUpperCase() || 'U'}
-                </div>
-                <span style={{ fontSize: '12px', color: '#374151' }}>
-                  {user?.email?.split('@')[0] || 'User'}
-                </span>
-              </button>
-              
-              {showUserMenu && (
-                <div style={{
-                  position: 'absolute',
-                  top: '100%',
-                  right: 0,
-                  marginTop: '8px',
-                  backgroundColor: 'white',
-                  border: '1px solid #E5E7EB',
-                  borderRadius: '12px',
-                  boxShadow: '0 4px 12px rgba(0,0,0,0.15)',
-                  minWidth: '180px',
-                  overflow: 'hidden',
-                  zIndex: 50
-                }}>
-                  <div style={{ padding: '12px', borderBottom: '1px solid #E5E7EB' }}>
-                    <p style={{ fontSize: '12px', fontWeight: 'bold', color: '#1F2937' }}>{user?.email}</p>
-                  </div>
-                  <button
-                    onClick={() => {
-                      setShowUserMenu(false);
-                      onNavigate('analysis');
-                    }}
-                    style={{
-                      width: '100%',
-                      padding: '10px 16px',
-                      textAlign: 'left',
-                      backgroundColor: 'white',
-                      border: 'none',
-                      cursor: 'pointer',
-                      fontSize: '13px',
-                      color: '#4B5563',
-                      borderBottom: '1px solid #E5E7EB'
-                    }}
-                  >
-                    Dashboard
-                  </button>
-                  <button
-                    onClick={() => {
-                      setShowUserMenu(false);
-                      onNavigate('content', { view: 'pricing' });
-                    }}
-                    style={{
-                      width: '100%',
-                      padding: '10px 16px',
-                      textAlign: 'left',
-                      backgroundColor: 'white',
-                      border: 'none',
-                      cursor: 'pointer',
-                      fontSize: '13px',
-                      color: '#4B5563',
-                      borderBottom: '1px solid #E5E7EB'
-                    }}
-                  >
-                    Upgrade Plan
-                  </button>
-                  <button
-                    onClick={handleLogout}
-                    style={{
-                      width: '100%',
-                      padding: '10px 16px',
-                      textAlign: 'left',
-                      backgroundColor: 'white',
-                      border: 'none',
-                      cursor: 'pointer',
-                      fontSize: '13px',
-                      color: '#EF4444'
-                    }}
-                  >
-                    Logout
-                  </button>
-                </div>
-              )}
-            </div>
-          ) : (
-            <button
-              onClick={onAuthOpen}
-              style={{
-                color: '#2563EB',
-                fontWeight: '600',
-                fontSize: '12px',
-                background: 'none',
-                border: 'none',
-                cursor: 'pointer',
-                whiteSpace: 'nowrap'
-              }}
-            >
-              {langKey === 'Traditional Chinese' ? '登入' : langKey === 'Simplified Chinese' ? '登录' : 'Login'}
-            </button>
-          )}
+  <div className="user-menu-container" style={{ position: 'relative' }}>
+    <button
+      onClick={() => setShowUserMenu(!showUserMenu)}
+      style={{
+        display: 'flex',
+        alignItems: 'center',
+        gap: '8px',
+        padding: '4px 12px',
+        borderRadius: '20px',
+        backgroundColor: '#F3F4F6',
+        border: 'none',
+        cursor: 'pointer'
+      }}
+    >
+      <div style={{
+        width: '28px',
+        height: '28px',
+        borderRadius: '50%',
+        backgroundColor: '#3B82F6',
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'center',
+        color: 'white',
+        fontWeight: 'bold',
+        fontSize: '12px'
+      }}>
+        {user?.email?.charAt(0).toUpperCase() || 'U'}
+      </div>
+      <span style={{ fontSize: '12px', color: '#374151' }}>
+        {user?.email?.split('@')[0] || 'User'}
+      </span>
+    </button>
+    
+    {showUserMenu && (
+      <div style={{
+        position: 'absolute',
+        top: '100%',
+        right: 0,
+        marginTop: '8px',
+        backgroundColor: 'white',
+        border: '1px solid #E5E7EB',
+        borderRadius: '12px',
+        boxShadow: '0 4px 20px rgba(0,0,0,0.15)',
+        width: '240px',
+        overflow: 'hidden',
+        zIndex: 100
+      }}>
+        <div style={{ padding: '12px 16px', borderBottom: '1px solid #E5E7EB' }}>
+          <p style={{ fontSize: '13px', fontWeight: 'bold', color: '#1F2937' }}>{user?.email}</p>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: '8px' }}>
+            <p style={{ fontSize: '11px', color: '#6B7280' }}>Credits:</p>
+            <p style={{ fontSize: '13px', fontWeight: 'bold', color: '#F59E0B' }}>{profile?.credits || 100}</p>
+          </div>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: '4px' }}>
+            <p style={{ fontSize: '11px', color: '#6B7280' }}>Plan:</p>
+            <p style={{ fontSize: '12px', fontWeight: '500', color: '#1F2937' }}>{profile?.subscription_status || 'Free Explorer'}</p>
+          </div>
+        </div>
+        <button
+          onClick={() => {
+            setShowUserMenu(false);
+            onNavigate('analysis');
+          }}
+          style={{
+            width: '100%',
+            padding: '12px 16px',
+            textAlign: 'left',
+            backgroundColor: 'white',
+            border: 'none',
+            cursor: 'pointer',
+            fontSize: '13px',
+            color: '#4B5563',
+            borderBottom: '1px solid #E5E7EB',
+            display: 'flex',
+            alignItems: 'center',
+            gap: '8px'
+          }}
+        >
+          <span>📊</span> Dashboard
+        </button>
+        <button
+          onClick={() => {
+            setShowUserMenu(false);
+            onNavigate('content', { view: 'pricing' });
+          }}
+          style={{
+            width: '100%',
+            padding: '12px 16px',
+            textAlign: 'left',
+            backgroundColor: 'white',
+            border: 'none',
+            cursor: 'pointer',
+            fontSize: '13px',
+            color: '#4B5563',
+            borderBottom: '1px solid #E5E7EB',
+            display: 'flex',
+            alignItems: 'center',
+            gap: '8px'
+          }}
+        >
+          <span>⬆️</span> Change Plan
+        </button>
+        <button
+          onClick={async () => {
+            await supabase.auth.signOut();
+            setShowUserMenu(false);
+            window.location.reload();
+          }}
+          style={{
+            width: '100%',
+            padding: '12px 16px',
+            textAlign: 'left',
+            backgroundColor: 'white',
+            border: 'none',
+            cursor: 'pointer',
+            fontSize: '13px',
+            color: '#EF4444',
+            display: 'flex',
+            alignItems: 'center',
+            gap: '8px'
+          }}
+        >
+          <span>🚪</span> Logout
+        </button>
+      </div>
+    )}
+  </div>
+) : (
+  <button
+    onClick={onAuthOpen}
+    style={{
+      color: '#2563EB',
+      fontWeight: '600',
+      fontSize: '12px',
+      background: 'none',
+      border: 'none',
+      cursor: 'pointer',
+      whiteSpace: 'nowrap'
+    }}
+  >
+    {langKey === 'Traditional Chinese' ? '登入' : langKey === 'Simplified Chinese' ? '登录' : 'Login'}
+  </button>
+)}
         </div>
       </div>
 
