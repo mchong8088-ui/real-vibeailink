@@ -355,31 +355,29 @@ const MobileAnalysis: React.FC<MobileAnalysisProps> = ({
 
   // FIXED: handleSelectPlan - now calls Stripe API correctly
   const handleSelectPlan = async (planId: string, priceId: string) => {
-    console.log('📱 Mobile - Selected plan:', planId, 'Price ID:', priceId);
-    try {
-      const response = await fetch('/api/billing/create-checkout', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ 
-          priceId, 
-          userId: user?.id, 
-          successUrl: `${window.location.origin}/success`, 
-          cancelUrl: window.location.href 
-        }),
-      });
-      const data = await response.json();
-      if (data.url) {
-        console.log('🔗 Redirecting to Stripe checkout:', data.url);
-        window.location.href = data.url;
-      } else {
-        console.error('No URL returned from checkout API');
-        alert('Unable to process payment. Please try again.');
-      }
-    } catch (error) {
-      console.error('Payment error:', error);
-      alert('Unable to process payment. Please try again.'); 
+  console.log('📱 Mobile - Selected plan:', planId, 'Price ID:', priceId);
+  try {
+    const response = await fetch('/api/billing/create-checkout', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ 
+        priceId, 
+        userId: user?.id, 
+        successUrl: `${window.location.origin}/success`, 
+        cancelUrl: window.location.href,
+        planId: planId  // Add this line
+      }),
+    });
+    const data = await response.json();
+    if (data.url) {
+      window.location.href = data.url;
+    } else {
+      alert('No checkout URL returned');
     }
-  };
+  } catch (error) { 
+    alert('Unable to process payment.'); 
+  }
+};
 
   const handleSourceSelect = (sourceType: string, sourceData?: any) => {
     if (sourceType === 'url' && sourceData) {

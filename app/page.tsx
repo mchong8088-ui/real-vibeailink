@@ -313,15 +313,15 @@ export default function VibeAiMaster() {
         userId: user?.id, 
         successUrl: `${window.location.origin}/success`, 
         cancelUrl: window.location.href,
-        planId: planId  // Add planId to help identify top-up
+        planId: planId  // IMPORTANT: Pass planId to identify top-up
       }),
     });
-    const { url } = await response.json();
+    const { url, error } = await response.json();
     if (url) {
-      console.log("🔗 Redirecting to Stripe:", url);
       window.location.href = url;
     } else {
-      alert('No checkout URL returned');
+      console.error("Checkout error:", error);
+      alert('Unable to process payment. Please try again.');
     }
   } catch (error) { 
     console.error('Payment error:', error);
