@@ -180,18 +180,19 @@ const MobileLanding: React.FC<MobileLandingProps> = ({
     
     {showUserMenu && (
       <div style={{
-        position: 'absolute',
-        top: '100%',
-        right: 0,
-        marginTop: '8px',
-        backgroundColor: 'white',
-        border: '1px solid #E5E7EB',
-        borderRadius: '12px',
-        boxShadow: '0 4px 20px rgba(0,0,0,0.15)',
-        width: '240px',
-        overflow: 'hidden',
-        zIndex: 100
-      }}>
+  position: 'absolute',
+  top: '100%',
+  left: '50%',  // ← Center it
+  transform: 'translateX(-50%)',  // ← Adjust to center
+  marginTop: '8px',
+  width: '240px',
+  backgroundColor: 'white',
+  border: '1px solid #E5E7EB',
+  borderRadius: '12px',
+  boxShadow: '0 4px 20px rgba(0,0,0,0.15)',
+  overflow: 'hidden',
+  zIndex: 100
+}}>
         <div style={{ padding: '12px 16px', borderBottom: '1px solid #E5E7EB' }}>
           <p style={{ fontSize: '13px', fontWeight: 'bold', color: '#1F2937' }}>{user?.email}</p>
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: '8px' }}>
