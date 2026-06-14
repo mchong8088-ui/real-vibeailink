@@ -303,17 +303,31 @@ export default function VibeAiMaster() {
   };
 
   const handleSelectPlan = async (planId: string, priceId: string) => {
-    try {
-      const response = await fetch('/api/billing/create-checkout', {
-        method: 'POST',
-        body: JSON.stringify({ priceId, userId: user?.id, successUrl: `${window.location.origin}/success`, cancelUrl: window.location.href }),
-      });
-      const { url } = await response.json();
-      if (url) window.location.href = url;
-    } catch (error) { 
-      alert('Unable to process payment.'); 
+  console.log("📦 Selected plan:", planId, "Price ID:", priceId);
+  try {
+    const response = await fetch('/api/billing/create-checkout', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ 
+        priceId, 
+        userId: user?.id, 
+        successUrl: `${window.location.origin}/success`, 
+        cancelUrl: window.location.href,
+        planId: planId  // Add planId to help identify top-up
+      }),
+    });
+    const { url } = await response.json();
+    if (url) {
+      console.log("🔗 Redirecting to Stripe:", url);
+      window.location.href = url;
+    } else {
+      alert('No checkout URL returned');
     }
-  };
+  } catch (error) { 
+    console.error('Payment error:', error);
+    alert('Unable to process payment. Please try again.'); 
+  }
+};
 
   const handleSourceSelect = async (sourceType: string, sourceData?: any) => {
     setIsMenuOpen(false);

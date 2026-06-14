@@ -353,8 +353,32 @@ const MobileAnalysis: React.FC<MobileAnalysisProps> = ({
     }
   };
 
+  // FIXED: handleSelectPlan - now calls Stripe API correctly
   const handleSelectPlan = async (planId: string, priceId: string) => {
-    console.log('Selected plan:', planId, priceId);
+    console.log('📱 Mobile - Selected plan:', planId, 'Price ID:', priceId);
+    try {
+      const response = await fetch('/api/billing/create-checkout', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ 
+          priceId, 
+          userId: user?.id, 
+          successUrl: `${window.location.origin}/success`, 
+          cancelUrl: window.location.href 
+        }),
+      });
+      const data = await response.json();
+      if (data.url) {
+        console.log('🔗 Redirecting to Stripe checkout:', data.url);
+        window.location.href = data.url;
+      } else {
+        console.error('No URL returned from checkout API');
+        alert('Unable to process payment. Please try again.');
+      }
+    } catch (error) {
+      console.error('Payment error:', error);
+      alert('Unable to process payment. Please try again.'); 
+    }
   };
 
   const handleSourceSelect = (sourceType: string, sourceData?: any) => {
@@ -420,9 +444,21 @@ const MobileAnalysis: React.FC<MobileAnalysisProps> = ({
       
       <div style={{ flex: 1, overflowY: 'auto', overflowX: 'hidden', WebkitOverflowScrolling: 'touch', padding: '12px', backgroundColor: '#F9FAFB', minHeight: 0 }}>
         {displayLegalTitle && <div style={{ backgroundColor: 'white', borderRadius: '8px', padding: '12px', marginBottom: '8px' }}><div style={{ fontSize: '12px', color: '#4B5563', lineHeight: 1.4 }}>{footerContent[displayLegalTitle]?.[langKey === "Traditional Chinese" ? "粵語 (繁體中文)" : langKey] || "Content coming soon..."}</div></div>}
-        {topicId === 'pricing' && <div style={{ backgroundColor: 'white', borderRadius: '8px', padding: '12px', marginBottom: '8px' }}><PricingModal isOpen={true} onClose={onBack} user={user} profile={null} onSelectPlan={handleSelectPlan} showRetentionOnly={false} /></div>}
+        {topicId === 'pricing' && (
+          <div style={{ backgroundColor: 'white', borderRadius: '8px', padding: '12px', marginBottom: '8px' }}>
+            <PricingModal 
+              isOpen={true} 
+              onClose={onBack} 
+              user={user} 
+              profile={profile} 
+              onSelectPlan={handleSelectPlan} 
+              showRetentionOnly={false} 
+              langKey={langKey} 
+            />
+          </div>
+        )}
         {topicId === 'about' && <AboutSection lang={langKey} />}
-        {topicId === 'pricing' && <div style={{ backgroundColor: 'white', borderRadius: '8px', padding: '12px', marginBottom: '8px' }}><PricingModal isOpen={true} onClose={onBack} user={user} profile={null} onSelectPlan={handleSelectPlan} showRetentionOnly={false} langKey={langKey} /></div>}
+        {topicId === 'features' && <FeaturesSection lang={langKey} />}
         {isAnalysisMode && !displayLegalTitle && (
           <StockAnalysisModule 
             t={t} 
