@@ -9,6 +9,7 @@ import { PricingModal } from '../features/pricing/PricingModal';
 import { StockAnalysisModule } from '../features/stock-analysis/StockAnalysisModule';
 import { footerContent } from '../../constants/content';
 import { speak as speakText, stopSpeech as stopSpeaking } from '../../utils/ttsMaster';
+import { supabase } from '../../lib/supabase';
 
 interface MobileAnalysisProps {
   langKey: string;
@@ -110,6 +111,7 @@ const MobileAnalysis: React.FC<MobileAnalysisProps> = ({
   const utteranceRef = useRef<SpeechSynthesisUtterance | null>(null);
   const [isLanguageSwitching, setIsLanguageSwitching] = useState(false);
   const [voiceLanguage, setVoiceLanguage] = useState<string>(propVoiceLanguage);
+  const [showUserMenu, setShowUserMenu] = useState(false);
 
   // Load voice preference from localStorage
   useEffect(() => {
@@ -120,6 +122,20 @@ const MobileAnalysis: React.FC<MobileAnalysisProps> = ({
       setVoiceLanguage(propVoiceLanguage);
     }
   }, [propVoiceLanguage]);
+
+  // Close user menu when clicking outside
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (showUserMenu) {
+        const target = event.target as HTMLElement;
+        if (!target.closest('.user-menu-container')) {
+          setShowUserMenu(false);
+        }
+      }
+    };
+    document.addEventListener('click', handleClickOutside);
+    return () => document.removeEventListener('click', handleClickOutside);
+  }, [showUserMenu]);
 
   const t = {
     analyzingMarket: langKey === 'Traditional Chinese' ? '分析市場中...' : langKey === 'Simplified Chinese' ? '分析市场中...' : 'Analyzing Market...',
@@ -353,31 +369,30 @@ const MobileAnalysis: React.FC<MobileAnalysisProps> = ({
     }
   };
 
-  // FIXED: handleSelectPlan - now calls Stripe API correctly
   const handleSelectPlan = async (planId: string, priceId: string) => {
-  console.log('📱 Mobile - Selected plan:', planId, 'Price ID:', priceId);
-  try {
-    const response = await fetch('/api/billing/create-checkout', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ 
-        priceId, 
-        userId: user?.id, 
-        successUrl: `${window.location.origin}/success`, 
-        cancelUrl: window.location.href,
-        planId: planId  // Add this line
-      }),
-    });
-    const data = await response.json();
-    if (data.url) {
-      window.location.href = data.url;
-    } else {
-      alert('No checkout URL returned');
+    console.log('📱 Mobile - Selected plan:', planId, 'Price ID:', priceId);
+    try {
+      const response = await fetch('/api/billing/create-checkout', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ 
+          priceId, 
+          userId: user?.id, 
+          successUrl: `${window.location.origin}/success`, 
+          cancelUrl: window.location.href,
+          planId: planId
+        }),
+      });
+      const data = await response.json();
+      if (data.url) {
+        window.location.href = data.url;
+      } else {
+        alert('No checkout URL returned');
+      }
+    } catch (error) { 
+      alert('Unable to process payment.'); 
     }
-  } catch (error) { 
-    alert('Unable to process payment.'); 
-  }
-};
+  };
 
   const handleSourceSelect = (sourceType: string, sourceData?: any) => {
     if (sourceType === 'url' && sourceData) {
@@ -436,7 +451,140 @@ const MobileAnalysis: React.FC<MobileAnalysisProps> = ({
             onVoiceChange={setVoiceLanguage}
           />
           <LanguageToggle currentLang={langKey} onLangChange={setLangKey} />
-          <button onClick={onAuthOpen} style={{ color: '#2563EB', fontWeight: '600', fontSize: '11px', background: 'none', border: 'none', cursor: 'pointer', padding: '4px 0', minWidth: '44px' }}>{user ? 'Welcome' : (langKey === 'Traditional Chinese' ? '登入' : langKey === 'Simplified Chinese' ? '登录' : 'Login')}</button>
+          
+          {user ? (
+            <div className="user-menu-container" style={{ position: 'relative' }}>
+              <button
+                onClick={() => setShowUserMenu(!showUserMenu)}
+                style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '6px',
+                  padding: '4px 10px',
+                  borderRadius: '20px',
+                  backgroundColor: '#F3F4F6',
+                  border: 'none',
+                  cursor: 'pointer'
+                }}
+              >
+                <div style={{
+                  width: '24px',
+                  height: '24px',
+                  borderRadius: '50%',
+                  backgroundColor: '#3B82F6',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  color: 'white',
+                  fontWeight: 'bold',
+                  fontSize: '11px'
+                }}>
+                  {user?.email?.charAt(0).toUpperCase() || 'U'}
+                </div>
+                <span style={{ fontSize: '11px', color: '#374151' }}>
+                  {user?.email?.split('@')[0] || 'User'}
+                </span>
+              </button>
+              
+              {showUserMenu && (
+                <div style={{
+                  position: 'absolute',
+                  top: '100%',
+                  right: '10px',
+                  marginTop: '8px',
+                  width: '220px',
+                  backgroundColor: 'white',
+                  border: '1px solid #E5E7EB',
+                  borderRadius: '12px',
+                  boxShadow: '0 4px 20px rgba(0,0,0,0.15)',
+                  overflow: 'hidden',
+                  zIndex: 100
+                }}>
+                  <div style={{ padding: '10px 12px', borderBottom: '1px solid #E5E7EB' }}>
+                    <p style={{ fontSize: '12px', fontWeight: 'bold', color: '#1F2937', wordBreak: 'break-all' }}>{user?.email}</p>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: '6px' }}>
+                      <p style={{ fontSize: '10px', color: '#6B7280' }}>Credits:</p>
+                      <p style={{ fontSize: '12px', fontWeight: 'bold', color: '#F59E0B' }}>{profile?.credits || 100}</p>
+                    </div>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: '4px' }}>
+                      <p style={{ fontSize: '10px', color: '#6B7280' }}>Plan:</p>
+                      <p style={{ fontSize: '11px', fontWeight: '500', color: '#1F2937' }}>{profile?.subscription_status || 'Free Explorer'}</p>
+                    </div>
+                  </div>
+                  <button
+                    onClick={() => {
+                      setShowUserMenu(false);
+                      onNavigate?.('analysis');
+                    }}
+                    style={{
+                      width: '100%',
+                      padding: '10px 12px',
+                      textAlign: 'left',
+                      backgroundColor: 'white',
+                      border: 'none',
+                      cursor: 'pointer',
+                      fontSize: '12px',
+                      color: '#4B5563',
+                      borderBottom: '1px solid #E5E7EB',
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: '6px'
+                    }}
+                  >
+                    <span>📊</span> Dashboard
+                  </button>
+                  <button
+                    onClick={() => {
+                      setShowUserMenu(false);
+                      onNavigate?.('content', { view: 'pricing' });
+                    }}
+                    style={{
+                      width: '100%',
+                      padding: '10px 12px',
+                      textAlign: 'left',
+                      backgroundColor: 'white',
+                      border: 'none',
+                      cursor: 'pointer',
+                      fontSize: '12px',
+                      color: '#4B5563',
+                      borderBottom: '1px solid #E5E7EB',
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: '6px'
+                    }}
+                  >
+                    <span>⬆️</span> Change Plan
+                  </button>
+                  <button
+                    onClick={async () => {
+                      await supabase.auth.signOut();
+                      setShowUserMenu(false);
+                      window.location.reload();
+                    }}
+                    style={{
+                      width: '100%',
+                      padding: '10px 12px',
+                      textAlign: 'left',
+                      backgroundColor: 'white',
+                      border: 'none',
+                      cursor: 'pointer',
+                      fontSize: '12px',
+                      color: '#EF4444',
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: '6px'
+                    }}
+                  >
+                    <span>🚪</span> Logout
+                  </button>
+                </div>
+              )}
+            </div>
+          ) : (
+            <button onClick={onAuthOpen} style={{ color: '#2563EB', fontWeight: '600', fontSize: '11px', background: 'none', border: 'none', cursor: 'pointer', padding: '4px 0', minWidth: '44px' }}>
+              {langKey === 'Traditional Chinese' ? '登入' : langKey === 'Simplified Chinese' ? '登录' : 'Login'}
+            </button>
+          )}
         </div>
       </div>
       
