@@ -2,6 +2,7 @@
 import React from 'react';
 import { LanguageToggle } from '../layout/LanguageToggle';
 import { initTTS } from '../../utils/ttsMaster';
+import { supabase } from '../../lib/supabase';
 import { VoiceSelector } from '../layout/VoiceSelector';
 
 interface MobileLandingProps {
@@ -11,7 +12,7 @@ interface MobileLandingProps {
   user: any;
   onNavigate: (page: string, params?: any) => void;
 }
-
+const [showUserMenu, setShowUserMenu] = React.useState(false);
 const MobileLanding: React.FC<MobileLandingProps> = ({
   langKey,
   setLangKey,
@@ -132,7 +133,135 @@ const MobileLanding: React.FC<MobileLandingProps> = ({
               whiteSpace: 'nowrap'
             }}
           >
-            {user ? t.welcome : (langKey === 'Traditional Chinese' ? '登入' : langKey === 'Simplified Chinese' ? '登录' : 'Login')}
+            {user ? (
+  <div style={{ position: 'relative' }}>
+    <button
+      onClick={() => setShowUserMenu(!showUserMenu)}
+      style={{
+        display: 'flex',
+        alignItems: 'center',
+        gap: '8px',
+        padding: '4px 12px',
+        borderRadius: '20px',
+        backgroundColor: '#F3F4F6',
+        border: 'none',
+        cursor: 'pointer'
+      }}
+    >
+      <div style={{
+        width: '28px',
+        height: '28px',
+        borderRadius: '50%',
+        backgroundColor: '#3B82F6',
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'center',
+        color: 'white',
+        fontWeight: 'bold',
+        fontSize: '12px'
+      }}>
+        {user?.email?.charAt(0).toUpperCase() || 'U'}
+      </div>
+      <span style={{ fontSize: '12px', color: '#374151' }}>
+        {user?.email?.split('@')[0] || 'User'}
+      </span>
+    </button>
+    
+    {showUserMenu && (
+      <div style={{
+        position: 'absolute',
+        top: '100%',
+        right: 0,
+        marginTop: '8px',
+        backgroundColor: 'white',
+        border: '1px solid #E5E7EB',
+        borderRadius: '12px',
+        boxShadow: '0 4px 12px rgba(0,0,0,0.15)',
+        minWidth: '180px',
+        overflow: 'hidden',
+        zIndex: 50
+      }}>
+        <div style={{ padding: '12px', borderBottom: '1px solid #E5E7EB' }}>
+          <p style={{ fontSize: '12px', fontWeight: 'bold', color: '#1F2937' }}>{user?.email}</p>
+        </div>
+        <button
+          onClick={() => {
+            setShowUserMenu(false);
+            onNavigate('analysis');
+          }}
+          style={{
+            width: '100%',
+            padding: '10px 16px',
+            textAlign: 'left',
+            backgroundColor: 'white',
+            border: 'none',
+            cursor: 'pointer',
+            fontSize: '13px',
+            color: '#4B5563',
+            borderBottom: '1px solid #E5E7EB'
+          }}
+        >
+          Dashboard
+        </button>
+        <button
+          onClick={() => {
+            setShowUserMenu(false);
+            onNavigate('content', { view: 'pricing' });
+          }}
+          style={{
+            width: '100%',
+            padding: '10px 16px',
+            textAlign: 'left',
+            backgroundColor: 'white',
+            border: 'none',
+            cursor: 'pointer',
+            fontSize: '13px',
+            color: '#4B5563',
+            borderBottom: '1px solid #E5E7EB'
+          }}
+        >
+          Upgrade Plan
+        </button>
+        <button
+          onClick={async () => {
+            const { error } = await supabase.auth.signOut();
+            if (!error) {
+              window.location.reload();
+            }
+            setShowUserMenu(false);
+          }}
+          style={{
+            width: '100%',
+            padding: '10px 16px',
+            textAlign: 'left',
+            backgroundColor: 'white',
+            border: 'none',
+            cursor: 'pointer',
+            fontSize: '13px',
+            color: '#EF4444'
+          }}
+        >
+          Logout
+        </button>
+      </div>
+    )}
+  </div>
+) : (
+  <button
+    onClick={onAuthOpen}
+    style={{
+      color: '#2563EB',
+      fontWeight: '600',
+      fontSize: '12px',
+      background: 'none',
+      border: 'none',
+      cursor: 'pointer',
+      whiteSpace: 'nowrap'
+    }}
+  >
+    {langKey === 'Traditional Chinese' ? '登入' : langKey === 'Simplified Chinese' ? '登录' : 'Login'}
+  </button>
+)}
           </button>
         </div>
       </div>
