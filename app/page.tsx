@@ -551,7 +551,7 @@ export default function VibeAiMaster() {
                 </>
               )}
               {currentView === "portfolio" && <PortfolioModule langKey={language} onAnalyzeStock={(symbol) => handleAnalyzeRequest(symbol, [], false)} />}
-              {currentView === "pricing" && <PricingModal isOpen={true} onClose={() => setCurrentView("analysis")} user={user} profile={profile} onSelectPlan={handleSelectPlan} showRetentionOnly={false} />}
+              {currentView === "pricing" && <PricingModal isOpen={true} onClose={() => setCurrentView("analysis")} user={user} profile={profile} onSelectPlan={handleSelectPlan} showRetentionOnly={false} langKey={language} />}
               {currentView === "about" && <AboutSection lang={language} />}
               {currentView === "features" && <FeaturesSection lang={language} />}
             </div>
