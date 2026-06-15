@@ -706,7 +706,6 @@ const MobileAnalysis: React.FC<MobileAnalysisProps> = ({
           </div>
         </div>
       )}
-)}
 
       <SourceMenu isOpen={isMenuOpen} onClose={() => setIsMenuOpen(false)} onSelectSource={handleSourceSelect} langKey={langKey} />
     </div>
