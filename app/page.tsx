@@ -303,31 +303,31 @@ export default function VibeAiMaster() {
   };
 
   const handleSelectPlan = async (planId: string, priceId: string) => {
-  console.log("📦 Selected plan:", planId, "Price ID:", priceId);
-  try {
-    const response = await fetch('/api/billing/create-checkout', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ 
-        priceId, 
-        userId: user?.id, 
-        successUrl: `${window.location.origin}/success`, 
-        cancelUrl: window.location.href,
-        planId: planId  // IMPORTANT: Pass planId to identify top-up
-      }),
-    });
-    const { url, error } = await response.json();
-    if (url) {
-      window.location.href = url;
-    } else {
-      console.error("Checkout error:", error);
-      alert('Unable to process payment. Please try again.');
+    console.log("📦 Selected plan:", planId, "Price ID:", priceId);
+    try {
+      const response = await fetch('/api/billing/create-checkout', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ 
+          priceId, 
+          userId: user?.id, 
+          successUrl: `${window.location.origin}/success`, 
+          cancelUrl: window.location.href,
+          planId: planId
+        }),
+      });
+      const { url, error } = await response.json();
+      if (url) {
+        window.location.href = url;
+      } else {
+        console.error("Checkout error:", error);
+        alert('Unable to process payment. Please try again.');
+      }
+    } catch (error) { 
+      console.error('Payment error:', error);
+      alert('Unable to process payment. Please try again.'); 
     }
-  } catch (error) { 
-    console.error('Payment error:', error);
-    alert('Unable to process payment. Please try again.'); 
-  }
-};
+  };
 
   const handleSourceSelect = async (sourceType: string, sourceData?: any) => {
     setIsMenuOpen(false);
@@ -443,28 +443,31 @@ export default function VibeAiMaster() {
       </div>
     );
   }
-        // Mobile view
+
+  // Mobile view
   if (systemState.isMobile) {
     if (mobilePage === 'landing') {
       return (
         <>
           <MobileLanding 
-  langKey={language} 
-  setLangKey={setLanguage as any} 
-  onAuthOpen={() => setIsAuthOpen(true)} 
-  user={user} 
-  profile={profile}
-  onNavigate={handleMobileNavigate}
-  onAnalyzeStock={(symbol) => {
-    // Navigate to analysis and analyze the stock
-    setMobilePage('analysis');
-    setMobileView('analysis');
-    // Small delay to ensure navigation completes
-    setTimeout(() => {
-      handleAnalyzeRequest(symbol, [], false);
-    }, 100);
-  }}
-/>
+            langKey={language} 
+            setLangKey={setLanguage as any} 
+            onAuthOpen={() => setIsAuthOpen(true)} 
+            user={user} 
+            profile={profile}
+            onNavigate={handleMobileNavigate}
+            onAnalyzeStock={(symbol) => {
+              setMobilePage('analysis');
+              setMobileView('analysis');
+              setTimeout(() => handleAnalyzeRequest(symbol, [], false), 100);
+            }}
+          />
+          {isAuthOpen && !user && (
+            <div style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, backgroundColor: 'rgba(0,0,0,0.5)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1000 }}>
+              <AuthModal isOpen={isAuthOpen} onClose={() => setIsAuthOpen(false)} langKey={language} />
+            </div>
+          )}
+        </>
       );
     }
     return (
@@ -490,6 +493,7 @@ export default function VibeAiMaster() {
       </>
     );
   }
+
   // Desktop view
   return (
     <ErrorBoundary>
@@ -519,22 +523,21 @@ export default function VibeAiMaster() {
                   <span style={{ fontSize: '14px' }}>{getUserDisplayName()}</span>
                 </button>
                 {showUserMenu && (
-  <div style={{ position: 'absolute', top: '100%', right: 0, marginTop: '8px', zIndex: 100 }}>
-    <UserMenu 
-  user={user} 
-  profile={profile} 
-  onLogout={handleLogout} 
-  onOpenPricingPage={() => { setShowUserMenu(false); setCurrentView('pricing'); }} 
-  onSelectPlan={handleSelectPlan} 
-  onClose={() => setShowUserMenu(false)}
-  onAnalyzeStock={(symbol) => {
-    console.log("📊 Analyzing watchlist stock:", symbol);
-    handleAnalyzeRequest(symbol, [], false);
-  }}
-/>
-  </div>
-)}
-
+                  <div style={{ position: 'absolute', top: '100%', right: 0, marginTop: '8px', zIndex: 100 }}>
+                    <UserMenu 
+                      user={user} 
+                      profile={profile} 
+                      onLogout={handleLogout} 
+                      onOpenPricingPage={() => { setShowUserMenu(false); setCurrentView('pricing'); }} 
+                      onSelectPlan={handleSelectPlan} 
+                      onClose={() => setShowUserMenu(false)}
+                      onAnalyzeStock={(symbol) => {
+                        console.log("📊 Analyzing watchlist stock:", symbol);
+                        handleAnalyzeRequest(symbol, [], false);
+                      }}
+                    />
+                  </div>
+                )}
               </div>
             ) : (
               <button onClick={() => setIsAuthOpen(true)} style={{ color: '#2563EB', fontWeight: '600', fontSize: '14px', background: 'none', border: 'none', cursor: 'pointer' }}>LOGIN</button>
