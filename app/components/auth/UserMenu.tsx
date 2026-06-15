@@ -12,7 +12,7 @@ interface UserMenuProps {
   onOpenPricingPage: () => void;
   onSelectPlan: (planId: string, priceId: string) => void;
   onClose?: () => void;
-  onAnalyzeStock?: (symbol: string) => void;  // Add this prop
+  onAnalyzeStock?: (symbol: string) => void;
 }
 
 const UserMenu: React.FC<UserMenuProps> = ({ 
@@ -22,7 +22,7 @@ const UserMenu: React.FC<UserMenuProps> = ({
   onOpenPricingPage,
   onSelectPlan,
   onClose,
-  onAnalyzeStock,  // Add this
+  onAnalyzeStock,
 }) => {
   const [mounted, setMounted] = useState(false);
   const [showUnsubscribe, setShowUnsubscribe] = useState(false);
@@ -44,30 +44,32 @@ const UserMenu: React.FC<UserMenuProps> = ({
   };
 
   const handleChangePlan = () => {
-    console.log("🟢 Change Plan clicked");
     handleClose();
     onOpenPricingPage();
   };
 
   const handleUnsubscribe = () => {
-    console.log("🔴 Unsubscribe button clicked");
     setShowUnsubscribe(true);
   };
 
   const handleLogout = () => {
-    console.log("🔴 Logout button clicked");
     handleClose();
     onLogout();
   };
 
   const handleOpenWatchlist = () => {
-    console.log("⭐ Opening watchlist");
+    console.log("⭐ Opening watchlist modal");
     handleClose();
     setShowWatchlist(true);
   };
 
+  const handleWatchlistClose = () => {
+    console.log("⭐ Closing watchlist modal");
+    setShowWatchlist(false);
+  };
+
   const handleWatchlistStockSelect = (symbol: string) => {
-    console.log("Selected stock from watchlist:", symbol);
+    console.log("📊 Selected stock from watchlist:", symbol);
     setShowWatchlist(false);
     if (onAnalyzeStock) {
       onAnalyzeStock(symbol);
@@ -128,7 +130,21 @@ const UserMenu: React.FC<UserMenuProps> = ({
         <div style={{ marginTop: '16px', display: 'flex', gap: '8px', flexDirection: 'column' }}>
           <button
             onClick={handleOpenWatchlist}
-            style={{ width: '100%', backgroundColor: '#FEF3C7', color: '#D97706', fontWeight: '500', padding: '8px', borderRadius: '12px', border: 'none', cursor: 'pointer', fontSize: '12px', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '6px' }}
+            style={{ 
+              width: '100%', 
+              backgroundColor: '#FEF3C7', 
+              color: '#D97706', 
+              fontWeight: '500', 
+              padding: '8px', 
+              borderRadius: '12px', 
+              border: 'none', 
+              cursor: 'pointer', 
+              fontSize: '12px', 
+              display: 'flex', 
+              alignItems: 'center', 
+              justifyContent: 'center', 
+              gap: '6px' 
+            }}
           >
             <span>⭐</span> My Watchlist
           </button>
@@ -174,7 +190,7 @@ const UserMenu: React.FC<UserMenuProps> = ({
 
       <WatchlistModal
         isOpen={showWatchlist}
-        onClose={() => setShowWatchlist(false)}
+        onClose={handleWatchlistClose}
         onSelectStock={handleWatchlistStockSelect}
         langKey="English"
       />

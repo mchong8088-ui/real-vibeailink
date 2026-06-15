@@ -528,7 +528,7 @@ export default function VibeAiMaster() {
   onSelectPlan={handleSelectPlan} 
   onClose={() => setShowUserMenu(false)}
   onAnalyzeStock={(symbol) => {
-    // Handle stock analysis from watchlist
+    console.log("📊 Analyzing watchlist stock:", symbol);
     handleAnalyzeRequest(symbol, [], false);
   }}
 />
