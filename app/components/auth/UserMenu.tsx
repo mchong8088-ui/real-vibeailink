@@ -3,6 +3,7 @@
 import React, { useState, useEffect } from 'react';
 import UnsubscribeModal from './UnsubscribeModal';
 import { DowngradePlanModal } from './DowngradePlanModal';
+import { WatchlistModal } from '../WatchlistModal';
 
 interface UserMenuProps {
   user: any;
@@ -11,6 +12,7 @@ interface UserMenuProps {
   onOpenPricingPage: () => void;
   onSelectPlan: (planId: string, priceId: string) => void;
   onClose?: () => void;
+  onOpenWatchlist?: () => void;  // Add this prop
 }
 
 const UserMenu: React.FC<UserMenuProps> = ({ 
@@ -19,17 +21,17 @@ const UserMenu: React.FC<UserMenuProps> = ({
   onLogout, 
   onOpenPricingPage,
   onSelectPlan,
-  onClose 
+  onClose,
+  onOpenWatchlist,  // Add this prop
 }) => {
   const [mounted, setMounted] = useState(false);
   const [showUnsubscribe, setShowUnsubscribe] = useState(false);
   const [showDowngrade, setShowDowngrade] = useState(false);
+  const [showWatchlist, setShowWatchlist] = useState(false);
 
-  // Move these INSIDE the component
-  // In UserMenu.tsx, inside the component
-const displayName = profile?.display_name || profile?.username || user?.email?.split('@')[0] || 'User';
-const credits = profile?.credits ?? 0;
-const plan = profile?.subscription_plan || profile?.subscription_status || 'Free Explorer';
+  const displayName = profile?.display_name || profile?.username || user?.email?.split('@')[0] || 'User';
+  const credits = profile?.credits ?? 0;
+  const plan = profile?.subscription_plan || profile?.subscription_status || 'Free Explorer';
 
   useEffect(() => {
     setMounted(true);
@@ -50,13 +52,27 @@ const plan = profile?.subscription_plan || profile?.subscription_status || 'Free
   const handleUnsubscribe = () => {
     console.log("🔴 Unsubscribe button clicked");
     setShowUnsubscribe(true);
-    console.log("🟢 setShowUnsubscribe(true) called, new value: true");
   };
 
   const handleLogout = () => {
     console.log("🔴 Logout button clicked");
     handleClose();
     onLogout();
+  };
+
+  const handleOpenWatchlist = () => {
+    handleClose();
+    setShowWatchlist(true);
+  };
+
+  const handleWatchlistStockSelect = (symbol: string) => {
+    // Close watchlist and trigger analysis
+    setShowWatchlist(false);
+    // You can either call onOpenWatchlist with the symbol or handle it in parent
+    if (onOpenWatchlist) {
+      // You might want to pass the symbol to parent
+      console.log("Selected stock from watchlist:", symbol);
+    }
   };
 
   return (
@@ -112,6 +128,13 @@ const plan = profile?.subscription_plan || profile?.subscription_status || 'Free
 
         <div style={{ marginTop: '16px', display: 'flex', gap: '8px', flexDirection: 'column' }}>
           <button
+            onClick={handleOpenWatchlist}
+            style={{ width: '100%', backgroundColor: '#FEF3C7', color: '#D97706', fontWeight: '500', padding: '8px', borderRadius: '12px', border: 'none', cursor: 'pointer', fontSize: '12px', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '6px' }}
+          >
+            <span>⭐</span> My Watchlist
+          </button>
+          
+          <button
             onClick={handleChangePlan}
             style={{ width: '100%', backgroundColor: '#EFF6FF', color: '#2563EB', fontWeight: '500', padding: '8px', borderRadius: '12px', border: 'none', cursor: 'pointer', fontSize: '12px' }}
           >
@@ -136,10 +159,7 @@ const plan = profile?.subscription_plan || profile?.subscription_status || 'Free
 
       <UnsubscribeModal
         isOpen={showUnsubscribe}
-        onClose={() => {
-          console.log("🟢 Closing modal, setting showUnsubscribe to false");
-          setShowUnsubscribe(false);
-        }}
+        onClose={() => setShowUnsubscribe(false)}
         user={user}
         profile={profile}
         onSelectPlan={onSelectPlan}
@@ -151,6 +171,13 @@ const plan = profile?.subscription_plan || profile?.subscription_status || 'Free
         user={user}
         profile={profile}
         onSelectPlan={onSelectPlan}
+      />
+
+      <WatchlistModal
+        isOpen={showWatchlist}
+        onClose={() => setShowWatchlist(false)}
+        onSelectStock={handleWatchlistStockSelect}
+        langKey="English"
       />
     </>
   );
