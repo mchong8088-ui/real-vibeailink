@@ -1,7 +1,6 @@
 "use client";
 import React, { useMemo, useState, useEffect } from 'react';
 import { PriceChart } from './PriceChart';
-import { WatchlistModal } from '../../modals/WatchlistModal';
 
 interface Props {
   data: any;
