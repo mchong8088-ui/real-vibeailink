@@ -112,6 +112,7 @@ const MobileAnalysis: React.FC<MobileAnalysisProps> = ({
   const [isLanguageSwitching, setIsLanguageSwitching] = useState(false);
   const [voiceLanguage, setVoiceLanguage] = useState<string>(propVoiceLanguage);
   const [showUserMenu, setShowUserMenu] = useState(false);
+  const [watchlist, setWatchlist] = useState<string[]>([]);
 
   // Load voice preference from localStorage
   useEffect(() => {
@@ -122,6 +123,14 @@ const MobileAnalysis: React.FC<MobileAnalysisProps> = ({
       setVoiceLanguage(propVoiceLanguage);
     }
   }, [propVoiceLanguage]);
+
+  // Load watchlist
+  useEffect(() => {
+    const saved = localStorage.getItem('stockWatchlist');
+    if (saved) {
+      setWatchlist(JSON.parse(saved));
+    }
+  }, []);
 
   // Close user menu when clicking outside
   useEffect(() => {
@@ -435,6 +444,16 @@ const MobileAnalysis: React.FC<MobileAnalysisProps> = ({
 
   const displayLegalTitle = legalTitle || undefined;
 
+  // Function to get watchlist
+  const getWatchlist = () => {
+    if (typeof window === 'undefined') return [];
+    try {
+      return JSON.parse(localStorage.getItem('stockWatchlist') || '[]');
+    } catch {
+      return [];
+    }
+  };
+
   return (
     <div style={{ display: 'flex', flexDirection: 'column', height: '100%', width: '100%', backgroundColor: '#f5f5f5', overflow: 'hidden', position: 'absolute', top: 0, left: 0, right: 0, bottom: 0 }}>
       <IOSVersionWarning voiceLanguage={voiceLanguage} />
@@ -459,8 +478,8 @@ const MobileAnalysis: React.FC<MobileAnalysisProps> = ({
                 style={{
                   display: 'flex',
                   alignItems: 'center',
-                  gap: '6px',
-                  padding: '4px 10px',
+                  gap: '4px',
+                  padding: '4px 8px',
                   borderRadius: '20px',
                   backgroundColor: '#F3F4F6',
                   border: 'none',
@@ -477,11 +496,11 @@ const MobileAnalysis: React.FC<MobileAnalysisProps> = ({
                   justifyContent: 'center',
                   color: 'white',
                   fontWeight: 'bold',
-                  fontSize: '11px'
+                  fontSize: '10px'
                 }}>
                   {user?.email?.charAt(0).toUpperCase() || 'U'}
                 </div>
-                <span style={{ fontSize: '11px', color: '#374151' }}>
+                <span style={{ fontSize: '10px', color: '#374151', maxWidth: '80px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
                   {user?.email?.split('@')[0] || 'User'}
                 </span>
               </button>
@@ -655,9 +674,60 @@ const MobileAnalysis: React.FC<MobileAnalysisProps> = ({
             )}
           </div>
           
+          {/* Watchlist Section - Mobile */}
+          {user && (
+            <div style={{
+              backgroundColor: '#FEF3C7',
+              borderRadius: '12px',
+              padding: '10px 12px',
+              marginBottom: '12px',
+              border: '1px solid #FDE68A'
+            }}>
+              <div style={{ display: 'flex', alignItems: 'center', marginBottom: '8px' }}>
+                <span style={{ fontSize: '11px', fontWeight: 'bold', color: '#D97706' }}>⭐ My Watchlist</span>
+              </div>
+              <div style={{ display: 'flex', gap: '6px', flexWrap: 'wrap' }}>
+                {(() => {
+                  const watchlistStocks = getWatchlist();
+                  if (watchlistStocks.length === 0) {
+                    return <span style={{ fontSize: '10px', color: '#92400E' }}>No stocks yet. Click "Add to Watchlist" on analysis to save.</span>;
+                  }
+                  return watchlistStocks.map((symbol: string) => (
+                    <button
+                      key={symbol}
+                      onClick={() => {
+                        setInputValue(symbol);
+                        handleAnalyze();
+                      }}
+                      style={{
+                        padding: '4px 10px',
+                        backgroundColor: '#FDE68A',
+                        color: '#92400E',
+                        border: 'none',
+                        borderRadius: '16px',
+                        fontSize: '11px',
+                        fontWeight: '500',
+                        cursor: 'pointer'
+                      }}
+                    >
+                      {symbol}
+                    </button>
+                  ));
+                })()}
+              </div>
+            </div>
+          )}
+          
           <div style={{ display: 'flex', gap: '8px', alignItems: 'center', marginBottom: '10px' }}>
             <button onClick={() => setIsMenuOpen(true)} style={{ width: '44px', height: '44px', borderRadius: '12px', backgroundColor: '#EF4444', color: 'white', border: 'none', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '20px', fontWeight: 'bold', flexShrink: 0 }}>+</button>
-            <input type="text" value={inputValue} onChange={(e) => setInputValue(e.target.value)} placeholder={exampleText} onKeyPress={(e) => e.key === 'Enter' && handleAnalyze()} style={{ flex: 1, padding: '10px 14px', fontSize: '14px', color: '#1F2937', backgroundColor: '#F3F4F6', borderRadius: '24px', border: '1px solid #E5E7EB', outline: 'none', minWidth: 0 }} />
+            <input 
+              type="text" 
+              value={inputValue} 
+              onChange={(e) => setInputValue(e.target.value)} 
+              placeholder={exampleText} 
+              onKeyPress={(e) => e.key === 'Enter' && handleAnalyze()} 
+              style={{ flex: 1, padding: '10px 14px', fontSize: '14px', color: '#1F2937', backgroundColor: '#F3F4F6', borderRadius: '24px', border: '1px solid #E5E7EB', outline: 'none', minWidth: 0 }} 
+            />
           </div>
           
           <div style={{ display: 'flex', gap: '8px', justifyContent: 'space-between' }}>
@@ -706,7 +776,7 @@ const MobileAnalysis: React.FC<MobileAnalysisProps> = ({
           </div>
         </div>
       )}
-
+      
       <SourceMenu isOpen={isMenuOpen} onClose={() => setIsMenuOpen(false)} onSelectSource={handleSourceSelect} langKey={langKey} />
     </div>
   );
