@@ -388,6 +388,7 @@ function generateSummary(content: string, maxLength: number = 300): string {
 }
 
 // Function to generate AI summary of news content
+// Function to generate AI summary of news content
 async function generateAISummary(content: string, title: string, language: string): Promise<string> {
   try {
     // Try to use AI gateway if available, otherwise fallback to extractive summary
@@ -402,7 +403,8 @@ Provide a concise summary that highlights:
 2. Potential positive or negative impact
 3. Key numbers or announcements if any`;
 
-    const aiSummary = await callAI(prompt, 'news-summary', 'News Summary', 0, 0, true);
+    // Fix: callAI expects 7 arguments (prompt, symbol, companyName, price, changePercent, rsi, hasContent)
+    const aiSummary = await callAI(prompt, 'news-summary', 'News Summary', 0, 0, 0, true);
     
     if (aiSummary && aiSummary.length > 50) {
       return aiSummary;
