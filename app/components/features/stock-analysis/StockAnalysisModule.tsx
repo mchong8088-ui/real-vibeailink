@@ -728,43 +728,53 @@ export const StockAnalysisModule: React.FC<Props> = ({
       <div style={{ backgroundColor: 'white', borderRadius: '12px', padding: '20px', border: '1px solid #E5E7EB' }}>
         {/* Add to Watchlist Button */}
         {data?.symbol && user && (
-          <div style={{ 
-            display: 'flex', 
-            justifyContent: 'flex-end',
-            marginBottom: '16px',
-            paddingBottom: '12px',
-            borderBottom: '1px solid #E5E7EB'
-          }}>
-            <button
-              onClick={addToWatchlist}
-              style={{
-                display: 'flex',
-                alignItems: 'center',
-                gap: '8px',
-                padding: '8px 16px',
-                backgroundColor: '#FEF3C7',
-                color: '#D97706',
-                border: '1px solid #FDE68A',
-                borderRadius: '40px',
-                cursor: 'pointer',
-                fontSize: '13px',
-                fontWeight: '500',
-                transition: 'all 0.2s ease'
-              }}
-              onMouseEnter={(e) => {
-                e.currentTarget.style.backgroundColor = '#FDE68A';
-                e.currentTarget.style.transform = 'scale(1.02)';
-              }}
-              onMouseLeave={(e) => {
-                e.currentTarget.style.backgroundColor = '#FEF3C7';
-                e.currentTarget.style.transform = 'scale(1)';
-              }}
-            >
-              <span style={{ fontSize: '16px' }}>⭐</span>
-              Add to Watchlist
-            </button>
-          </div>
-        )}
+  <div style={{ 
+    display: 'flex', 
+    justifyContent: 'flex-end',
+    marginBottom: '16px',
+    paddingBottom: '12px',
+    borderBottom: '1px solid #E5E7EB'
+  }}>
+    <button
+      onClick={addToWatchlist}
+      style={{
+        display: 'flex',
+        alignItems: 'center',
+        gap: '8px',
+        padding: '8px 16px',
+        backgroundColor: '#FEF3C7',
+        color: '#D97706',
+        border: '1px solid #FDE68A',
+        borderRadius: '40px',
+        cursor: 'pointer',
+        fontSize: '13px',
+        fontWeight: '500',
+        transition: 'all 0.2s ease'
+      }}
+      onMouseEnter={(e) => {
+        e.currentTarget.style.backgroundColor = '#FDE68A';
+        e.currentTarget.style.transform = 'scale(1.02)';
+      }}
+      onMouseLeave={(e) => {
+        e.currentTarget.style.backgroundColor = '#FEF3C7';
+        e.currentTarget.style.transform = 'scale(1)';
+      }}
+    >
+      <span style={{ fontSize: '16px' }}>⭐</span>
+      Add to Watchlist
+      <span style={{ 
+        fontSize: '9px', 
+        backgroundColor: '#F59E0B', 
+        color: 'white', 
+        padding: '2px 6px', 
+        borderRadius: '12px',
+        marginLeft: '4px'
+      }}>
+        Coming Soon
+      </span>
+    </button>
+  </div>
+)}
         
         {/* Watchlist Message */}
         {watchlistMessage && (
