@@ -706,7 +706,30 @@ const MobileAnalysis: React.FC<MobileAnalysisProps> = ({
           </div>
         </div>
       )}
-      
+      {analysisData?.symbol && user && (
+  <button
+    onClick={addToWatchlist}
+    style={{
+      position: 'fixed',
+      bottom: '100px',
+      right: '20px',
+      width: '48px',
+      height: '48px',
+      borderRadius: '24px',
+      backgroundColor: '#FEF3C7',
+      border: '1px solid #FDE68A',
+      boxShadow: '0 4px 12px rgba(0,0,0,0.15)',
+      cursor: 'pointer',
+      display: 'flex',
+      alignItems: 'center',
+      justifyContent: 'center',
+      zIndex: 100
+    }}
+  >
+    <span style={{ fontSize: '20px' }}>⭐</span>
+  </button>
+)}
+
       <SourceMenu isOpen={isMenuOpen} onClose={() => setIsMenuOpen(false)} onSelectSource={handleSourceSelect} langKey={langKey} />
     </div>
   );

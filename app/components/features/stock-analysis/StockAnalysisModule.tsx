@@ -1,6 +1,7 @@
 "use client";
 import React, { useMemo, useState, useEffect } from 'react';
 import { PriceChart } from './PriceChart';
+import { WatchlistModal } from '../../modals/WatchlistModal';
 
 interface Props {
   data: any;
@@ -470,6 +471,33 @@ export const StockAnalysisModule: React.FC<Props> = ({
   profile,
   onUpgradePlan 
 }) => {
+  const [watchlistMessage, setWatchlistMessage] = useState<string | null>(null);
+  
+  // Add to watchlist function
+  const addToWatchlist = () => {
+    const symbol = data?.symbol;
+    if (!symbol) return;
+    
+    const saved = localStorage.getItem('stockWatchlist');
+    let watchlist: string[] = saved ? JSON.parse(saved) : [];
+    
+    if (watchlist.includes(symbol)) {
+      setWatchlistMessage(`⚠️ ${symbol} is already in your watchlist!`);
+      setTimeout(() => setWatchlistMessage(null), 3000);
+      return;
+    }
+    
+    if (watchlist.length >= 10) {
+      setWatchlistMessage(`⚠️ Watchlist limit reached (max 10 stocks). Remove some stocks first.`);
+      setTimeout(() => setWatchlistMessage(null), 3000);
+      return;
+    }
+    
+    watchlist.push(symbol);
+    localStorage.setItem('stockWatchlist', JSON.stringify(watchlist));
+    setWatchlistMessage(`✅ ${symbol} added to your watchlist!`);
+    setTimeout(() => setWatchlistMessage(null), 3000);
+  };
   
   // Credit check for desktop users
   if (user && profile && profile.credits <= 0 && !isLoading) {
@@ -699,6 +727,61 @@ export const StockAnalysisModule: React.FC<Props> = ({
 
       {/* Analysis Report */}
       <div style={{ backgroundColor: 'white', borderRadius: '12px', padding: '20px', border: '1px solid #E5E7EB' }}>
+        {/* Add to Watchlist Button */}
+        {data?.symbol && user && (
+          <div style={{ 
+            display: 'flex', 
+            justifyContent: 'flex-end',
+            marginBottom: '16px',
+            paddingBottom: '12px',
+            borderBottom: '1px solid #E5E7EB'
+          }}>
+            <button
+              onClick={addToWatchlist}
+              style={{
+                display: 'flex',
+                alignItems: 'center',
+                gap: '8px',
+                padding: '8px 16px',
+                backgroundColor: '#FEF3C7',
+                color: '#D97706',
+                border: '1px solid #FDE68A',
+                borderRadius: '40px',
+                cursor: 'pointer',
+                fontSize: '13px',
+                fontWeight: '500',
+                transition: 'all 0.2s ease'
+              }}
+              onMouseEnter={(e) => {
+                e.currentTarget.style.backgroundColor = '#FDE68A';
+                e.currentTarget.style.transform = 'scale(1.02)';
+              }}
+              onMouseLeave={(e) => {
+                e.currentTarget.style.backgroundColor = '#FEF3C7';
+                e.currentTarget.style.transform = 'scale(1)';
+              }}
+            >
+              <span style={{ fontSize: '16px' }}>⭐</span>
+              Add to Watchlist
+            </button>
+          </div>
+        )}
+        
+        {/* Watchlist Message */}
+        {watchlistMessage && (
+          <div style={{
+            marginBottom: '16px',
+            padding: '10px',
+            borderRadius: '8px',
+            backgroundColor: watchlistMessage.includes('✅') ? '#ECFDF5' : '#FEF2F2',
+            color: watchlistMessage.includes('✅') ? '#10B981' : '#EF4444',
+            fontSize: '12px',
+            textAlign: 'center'
+          }}>
+            {watchlistMessage}
+          </div>
+        )}
+        
         <div style={{ whiteSpace: 'pre-wrap', lineHeight: 1.6, fontSize: '13px' }}>{data.summary}</div>
         
         {/* Share Buttons */}
