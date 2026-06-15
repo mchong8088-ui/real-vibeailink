@@ -516,8 +516,18 @@ export default function VibeAiMaster() {
                 </button>
                 {showUserMenu && (
                   <div style={{ position: 'absolute', top: '100%', right: 0, marginTop: '8px', zIndex: 100 }}>
-                    <UserMenu user={user} profile={profile} onLogout={handleLogout} onOpenPricingPage={() => { setShowUserMenu(false); setCurrentView('pricing'); }} onSelectPlan={handleSelectPlan} onClose={() => setShowUserMenu(false)} />
-                  </div>
+                    <UserMenu 
+  user={user} 
+  profile={profile} 
+  onLogout={handleLogout} 
+  onOpenPricingPage={() => { setShowUserMenu(false); setCurrentView('pricing'); }} 
+  onSelectPlan={handleSelectPlan} 
+  onClose={() => setShowUserMenu(false)}
+  onOpenWatchlist={() => {
+    // Handle watchlist open - you might want to set a state to show watchlist modal
+    console.log("Open watchlist from desktop");
+  }}
+/>
                 )}
               </div>
             ) : (
