@@ -1,7 +1,7 @@
 import React from 'react';
 import { 
   TrendingUp, 
-  Briefcase, 
+  FileText, 
   Share2, 
   Volume2, 
   Languages, 
@@ -24,7 +24,7 @@ export const FeaturesSection = ({ lang }: { lang: string }) => {
         subtitle: '讓每一次決策都更有信心',
         features: [
           { icon: <TrendingUp size={32} />, title: '即時股票分析', desc: '支援港股、台股、美股，秒級獲取技術指標與基本面數據', gradient: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)' },
-          { icon: <Briefcase size={32} />, title: '投資組合追蹤', desc: '輕鬆管理持股，實時計算盈虧，數據保存在本地', gradient: 'linear-gradient(135deg, #f093fb 0%, #f5576c 100%)' },
+          { icon: <FileText size={32} />, title: 'AI 新聞分析', desc: '貼上新聞連結，AI 自動摘要並分析對股價的影響', gradient: 'linear-gradient(135deg, #f093fb 0%, #f5576c 100%)' },
           { icon: <Share2 size={32} />, title: '一鍵分享', desc: '支援 Facebook、Twitter、LinkedIn、WhatsApp，分享你的分析見解', gradient: 'linear-gradient(135deg, #4facfe 0%, #00f2fe 100%)' },
           { icon: <Volume2 size={32} />, title: '多語音選擇', desc: '粵語、普通話、國語、英語四種語音，自由切換', gradient: 'linear-gradient(135deg, #43e97b 0%, #38f9d7 100%)' },
           { icon: <Languages size={32} />, title: '三語文字介面', desc: '繁體中文、簡體中文、英文，文字與語音獨立控制', gradient: 'linear-gradient(135deg, #fa709a 0%, #fee140 100%)' },
@@ -48,7 +48,7 @@ export const FeaturesSection = ({ lang }: { lang: string }) => {
         subtitle: '让每一次决策都更有信心',
         features: [
           { icon: <TrendingUp size={32} />, title: '实时股票分析', desc: '支持港股、台股、美股，秒级获取技术指标与基本面数据', gradient: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)' },
-          { icon: <Briefcase size={32} />, title: '投资组合追踪', desc: '轻松管理持股，实时计算盈亏，数据保存在本地', gradient: 'linear-gradient(135deg, #f093fb 0%, #f5576c 100%)' },
+          { icon: <FileText size={32} />, title: 'AI 新闻分析', desc: '粘贴新闻链接，AI 自动摘要并分析对股价的影响', gradient: 'linear-gradient(135deg, #f093fb 0%, #f5576c 100%)' },
           { icon: <Share2 size={32} />, title: '一键分享', desc: '支持 Facebook、Twitter、LinkedIn、WhatsApp，分享你的分析见解', gradient: 'linear-gradient(135deg, #4facfe 0%, #00f2fe 100%)' },
           { icon: <Volume2 size={32} />, title: '多语音选择', desc: '粤语、普通话、国语、英语四种语音，自由切换', gradient: 'linear-gradient(135deg, #43e97b 0%, #38f9d7 100%)' },
           { icon: <Languages size={32} />, title: '三语文字界面', desc: '繁体中文、简体中文、英文，文字与语音独立控制', gradient: 'linear-gradient(135deg, #fa709a 0%, #fee140 100%)' },
@@ -72,7 +72,7 @@ export const FeaturesSection = ({ lang }: { lang: string }) => {
         subtitle: 'Every decision with greater confidence',
         features: [
           { icon: <TrendingUp size={32} />, title: 'Real-Time Stock Analysis', desc: 'Support HK, TW, US markets. Get technical indicators & fundamentals instantly', gradient: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)' },
-          { icon: <Briefcase size={32} />, title: 'Portfolio Tracker', desc: 'Easily manage holdings, real-time P&L calculation, local storage', gradient: 'linear-gradient(135deg, #f093fb 0%, #f5576c 100%)' },
+          { icon: <FileText size={32} />, title: 'AI News Analysis', desc: 'Paste any news URL - AI summarizes and analyzes potential stock impact', gradient: 'linear-gradient(135deg, #f093fb 0%, #f5576c 100%)' },
           { icon: <Share2 size={32} />, title: 'One-Click Share', desc: 'Share to Facebook, Twitter, LinkedIn, WhatsApp', gradient: 'linear-gradient(135deg, #4facfe 0%, #00f2fe 100%)' },
           { icon: <Volume2 size={32} />, title: 'Multi-Voice Selection', desc: 'Cantonese, Mandarin, Taiwanese Mandarin, English - freely switch', gradient: 'linear-gradient(135deg, #43e97b 0%, #38f9d7 100%)' },
           { icon: <Languages size={32} />, title: 'Multi-Language UI', desc: 'Traditional Chinese, Simplified Chinese, English - independent control', gradient: 'linear-gradient(135deg, #fa709a 0%, #fee140 100%)' },
@@ -97,7 +97,6 @@ export const FeaturesSection = ({ lang }: { lang: string }) => {
 
   // Function to navigate to Analysis page
   const navigateToAnalysis = () => {
-    // Find and click the analysis tab button
     const buttons = document.querySelectorAll('button');
     for (const button of buttons) {
       const buttonText = button.textContent || '';
@@ -106,7 +105,6 @@ export const FeaturesSection = ({ lang }: { lang: string }) => {
         break;
       }
     }
-    // Also scroll to top for better UX
     window.scrollTo({ top: 0, behavior: 'smooth' });
   };
 
