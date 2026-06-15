@@ -12,7 +12,6 @@ interface UserMenuProps {
   onOpenPricingPage: () => void;
   onSelectPlan: (planId: string, priceId: string) => void;
   onClose?: () => void;
-  onOpenWatchlist?: () => void;  // Add this prop
 }
 
 const UserMenu: React.FC<UserMenuProps> = ({ 
@@ -22,7 +21,6 @@ const UserMenu: React.FC<UserMenuProps> = ({
   onOpenPricingPage,
   onSelectPlan,
   onClose,
-  onOpenWatchlist,  // Add this prop
 }) => {
   const [mounted, setMounted] = useState(false);
   const [showUnsubscribe, setShowUnsubscribe] = useState(false);
@@ -66,13 +64,9 @@ const UserMenu: React.FC<UserMenuProps> = ({
   };
 
   const handleWatchlistStockSelect = (symbol: string) => {
-    // Close watchlist and trigger analysis
     setShowWatchlist(false);
-    // You can either call onOpenWatchlist with the symbol or handle it in parent
-    if (onOpenWatchlist) {
-      // You might want to pass the symbol to parent
-      console.log("Selected stock from watchlist:", symbol);
-    }
+    console.log("Selected stock from watchlist:", symbol);
+    // You can add logic to analyze the stock here
   };
 
   return (
