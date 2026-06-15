@@ -268,6 +268,7 @@ async function fetchRealStockData(symbol: string) {
   }
 }
 
+// IMPROVED: Better URL content extraction
 async function extractUrlContent(url: string): Promise<{ title: string; content: string; cleanText: string }> {
   try {
     const res = await fetch(url, {
@@ -279,29 +280,52 @@ async function extractUrlContent(url: string): Promise<{ title: string; content:
     
     const html = await res.text();
     
+    // Extract title
     const titleMatch = html.match(/<title[^>]*>([^<]+)<\/title>/i);
     const title = titleMatch ? titleMatch[1].trim() : 'No title found';
     
-    let text = html.replace(/<script[^>]*>[\s\S]*?<\/script>/gi, '');
-    text = text.replace(/<style[^>]*>[\s\S]*?<\/style>/gi, '');
-    text = text.replace(/<[^>]+>/g, ' ');
-    text = text.replace(/\s+/g, ' ');
-    text = text.replace(/&nbsp;/g, ' ');
-    text = text.replace(/&[a-z]+;/gi, ' ');
-    text = text.trim();
+    // Try to find article content - look for main content areas
+    let text = '';
     
-    const sentences = text.split(/[.!?]+/);
+    // Look for article, main, or body content
+    const articleMatch = html.match(/<article[^>]*>([\s\S]*?)<\/article>/i);
+    const mainMatch = html.match(/<main[^>]*>([\s\S]*?)<\/main>/i);
+    const bodyMatch = html.match(/<body[^>]*>([\s\S]*?)<\/body>/i);
+    
+    const contentSource = articleMatch?.[1] || mainMatch?.[1] || bodyMatch?.[1] || html;
+    
+    // Remove scripts, styles, nav, footer
+    let cleaned = contentSource.replace(/<script[^>]*>[\s\S]*?<\/script>/gi, '');
+    cleaned = cleaned.replace(/<style[^>]*>[\s\S]*?<\/style>/gi, '');
+    cleaned = cleaned.replace(/<nav[^>]*>[\s\S]*?<\/nav>/gi, '');
+    cleaned = cleaned.replace(/<footer[^>]*>[\s\S]*?<\/footer>/gi, '');
+    cleaned = cleaned.replace(/<header[^>]*>[\s\S]*?<\/header>/gi, '');
+    cleaned = cleaned.replace(/<[^>]+>/g, ' ');
+    cleaned = cleaned.replace(/\s+/g, ' ');
+    cleaned = cleaned.replace(/&nbsp;/g, ' ');
+    cleaned = cleaned.replace(/&[a-z]+;/gi, ' ');
+    cleaned = cleaned.trim();
+    
+    // Find meaningful sentences (longer, substantive content)
+    const sentences = cleaned.split(/[.!?]+/);
     const meaningfulSentences = sentences.filter(s => 
-      s.trim().length > 50 && 
-      !s.includes('cookie') && 
-      !s.includes('privacy') &&
-      !s.includes('subscribe') &&
-      !s.includes('newsletter')
+      s.trim().length > 60 && 
+      !s.toLowerCase().includes('cookie') && 
+      !s.toLowerCase().includes('privacy') &&
+      !s.toLowerCase().includes('subscribe') &&
+      !s.toLowerCase().includes('newsletter') &&
+      !s.toLowerCase().includes('sign up') &&
+      !s.toLowerCase().includes('login') &&
+      !s.toLowerCase().includes('menu') &&
+      !s.toLowerCase().includes('search')
     );
     
-    const cleanText = meaningfulSentences.slice(0, 10).join('. ') + '.';
+    // Get first 15 meaningful sentences (or all if less)
+    const cleanText = meaningfulSentences.slice(0, 15).join('. ') + '.';
     
-    return { title, content: text.substring(0, 3000), cleanText: cleanText.substring(0, 1000) };
+    console.log(`📰 Extracted ${meaningfulSentences.length} meaningful sentences from ${url}`);
+    
+    return { title, content: cleaned.substring(0, 5000), cleanText: cleanText.substring(0, 2000) };
   } catch (err) {
     console.error('Error extracting URL content:', err);
     return { title: 'Unable to fetch content', content: '', cleanText: '' };
@@ -363,6 +387,34 @@ function generateSummary(content: string, maxLength: number = 300): string {
   return summary.trim() || content.substring(0, maxLength);
 }
 
+// Function to generate AI summary of news content
+async function generateAISummary(content: string, title: string, language: string): Promise<string> {
+  try {
+    // Try to use AI gateway if available, otherwise fallback to extractive summary
+    const { callAI } = await import('@/app/lib/ai/gateway');
+    
+    const prompt = `Summarize the following news/article content in 2-3 sentences, focusing on key points that would affect the stock price. 
+Title: ${title}
+Content: ${content.substring(0, 2000)}
+
+Provide a concise summary that highlights:
+1. The main news/event
+2. Potential positive or negative impact
+3. Key numbers or announcements if any`;
+
+    const aiSummary = await callAI(prompt, 'news-summary', 'News Summary', 0, 0, true);
+    
+    if (aiSummary && aiSummary.length > 50) {
+      return aiSummary;
+    }
+  } catch (err) {
+    console.log('AI summary not available, using extractive summary');
+  }
+  
+  // Fallback: extractive summary
+  return generateSummary(content, 250);
+}
+
 async function extractUserContent(userContent: string, targetLang: string): Promise<{ 
   type: string; 
   originalContent: string; 
@@ -370,22 +422,30 @@ async function extractUserContent(userContent: string, targetLang: string): Prom
   summary: string;
   title: string;
   sentiment: any;
+  aiSummary: string;
 }> {
   const urlPattern = /^(https?:\/\/)?([\da-z\.-]+)\.([a-z\.]{2,6})([\/\w \.-]*)*\/?$/;
   
   let title = '';
   let originalContent = '';
   let cleanText = '';
+  let aiSummary = '';
   
   if (urlPattern.test(userContent)) {
     const extracted = await extractUrlContent(userContent);
     title = extracted.title;
     originalContent = extracted.cleanText || extracted.content;
     cleanText = extracted.cleanText;
+    
+    // Generate AI summary for URL content
+    if (cleanText && cleanText.length > 100) {
+      aiSummary = await generateAISummary(cleanText, title, targetLang);
+    }
   } else {
     title = 'User Provided Text';
     originalContent = userContent;
     cleanText = userContent;
+    aiSummary = generateSummary(cleanText, 200);
   }
   
   const summary = generateSummary(cleanText, 300);
@@ -403,7 +463,8 @@ async function extractUserContent(userContent: string, targetLang: string): Prom
     translatedContent,
     summary,
     title,
-    sentiment
+    sentiment,
+    aiSummary
   };
 }
 
@@ -850,33 +911,58 @@ function generateSpecificAnalysis(stockData: any, fundamentals: any, symbol: str
 
 export async function POST(req: Request) {
   try {
-    // AUTH TEMPORARILY DISABLED FOR TESTING - COMMENT OUT ALL AUTH CHECKS
-    /*
-    // Authentication check
+    // Get the authenticated user and check email verification
     const cookieStore = await cookies();
-    const supabase = createRouteHandlerClient({ cookies: () => cookieStore });
-    const { data: { session } } = await supabase.auth.getSession();
-
-    if (!session) {
+    const supabase = createServerClient(
+      process.env.NEXT_PUBLIC_SUPABASE_URL!,
+      process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
+      {
+        cookies: {
+          get(name: string) {
+            return cookieStore.get(name)?.value;
+          },
+          set(name: string, value: string, options: any) {
+            cookieStore.set({ name, value, ...options });
+          },
+          remove(name: string, options: any) {
+            cookieStore.set({ name, value: '', ...options });
+          },
+        },
+      }
+    );
+    
+    const { data: { user }, error: userError } = await supabase.auth.getUser();
+    
+    // Check if user is authenticated
+    if (userError || !user) {
       return NextResponse.json({
         success: false,
-        summary: 'Please login to use this feature. Create a free account at vibeailink.com',
-        text: 'Please login to use this feature. Create a free account at vibeailink.com'
+        summary: 'Please login to continue.',
+        text: 'Please login to continue.'
       }, { status: 401 });
+    }
+    
+    // CHECK: Email verification required before using credits
+    if (!user.email_confirmed_at) {
+      return NextResponse.json({
+        success: false,
+        summary: 'Please verify your email address before using the analysis feature. Check your inbox for the confirmation link.',
+        text: 'Please verify your email address before using the analysis feature.'
+      }, { status: 403 });
     }
 
     // Check user's credits
     const { data: profile, error: profileError } = await supabase
       .from('profiles')
-      .select('credits, subscription_plan')
-      .eq('id', session.user.id)
+      .select('credits, subscription_status')
+      .eq('id', user.id)
       .single();
 
     if (profileError || !profile) {
       return NextResponse.json({
         success: false,
         summary: 'User profile not found. Please contact support.',
-        text: 'User profile not found. Please contact support.'
+        text: 'User profile not found.'
       }, { status: 403 });
     }
 
@@ -884,7 +970,7 @@ export async function POST(req: Request) {
       return NextResponse.json({
         success: false,
         summary: 'You have used all your credits. Please upgrade your plan to continue.',
-        text: 'You have used all your credits. Please upgrade your plan to continue.'
+        text: 'Insufficient credits.'
       }, { status: 403 });
     }
 
@@ -892,8 +978,7 @@ export async function POST(req: Request) {
     await supabase
       .from('profiles')
       .update({ credits: profile.credits - 1 })
-      .eq('id', session.user.id);
-    */
+      .eq('id', user.id);
 
     const { message, language = 'English', userContent = null } = await req.json();
     console.log(`Query: ${message}, Language: ${language}, UserContent: ${userContent ? 'Yes' : 'No'}`);
@@ -952,6 +1037,7 @@ export async function POST(req: Request) {
     if (userContent) {
       userContentAnalysis = await extractUserContent(userContent, language);
       console.log(`User content analyzed: ${userContentAnalysis.type}, Title: ${userContentAnalysis.title}`);
+      console.log(`AI Summary generated: ${userContentAnalysis.aiSummary?.substring(0, 100)}...`);
     }
     
     if (news && news.length > 0) {
@@ -1158,121 +1244,123 @@ export async function POST(req: Request) {
       }
     }
     
-   // Build news section - CONSISTENT LANGUAGE ONLY
-let newsText = '';
-if (userContentAnalysis && userContentAnalysis.originalContent) {
-  const sentimentText = userContentAnalysis.sentiment?.sentiment === 'Positive' ? 
-                       (language === 'Traditional Chinese' ? '正面' : language === 'Simplified Chinese' ? '正面' : 'Positive') :
-                       userContentAnalysis.sentiment?.sentiment === 'Negative' ?
-                       (language === 'Traditional Chinese' ? '負面' : language === 'Simplified Chinese' ? '負面' : 'Negative') :
-                       (language === 'Traditional Chinese' ? '中性' : language === 'Simplified Chinese' ? '中性' : 'Neutral');
-  
-  let aiContentAnalysis = '';
-  if (userContentAnalysis.sentiment?.sentiment === 'Positive') {
-    aiContentAnalysis = language === 'Traditional Chinese' ? '這份資料包含利好因素，可能支持股價向上。' :
-                        language === 'Simplified Chinese' ? '这份资料包含利好因素，可能支持股价向上。' :
-                        'This content contains positive factors that may support upward price movement.';
-  } else if (userContentAnalysis.sentiment?.sentiment === 'Negative') {
-    aiContentAnalysis = language === 'Traditional Chinese' ? '這份資料包含負面因素，可能對股價構成壓力。' :
-                        language === 'Simplified Chinese' ? '这份资料包含负面因素，可能对股价构成压力。' :
-                        'This content contains negative factors that may pressure the stock price.';
-  } else {
-    aiContentAnalysis = language === 'Traditional Chinese' ? '這份資料影響中性，沒有明確方向。' :
-                        language === 'Simplified Chinese' ? '这份资料影响中性，没有明确方向。' :
-                        'This content has neutral impact with no clear direction.';
-  }
-  
-  newsText = `文章標題: ${userContentAnalysis.title}\n${summaryOfContent}: ${userContentAnalysis.summary}\nAI內容分析: ${aiContentAnalysis}`;
-  
-} else if (news && news.length > 0 && newsSentiment) {
-  // Choose language based on user's selected language
-  if (language === 'Traditional Chinese') {
-    let sentimentMessage = '';
-    if (newsSentiment.sentiment === 'Positive') {
-      sentimentMessage = '近期新聞整體正面，市場情緒樂觀。';
-    } else if (newsSentiment.sentiment === 'Negative') {
-      sentimentMessage = '近期新聞整體負面，請關注潛在風險。';
-    } else {
-      sentimentMessage = '近期新聞情緒中性，市場沒有明顯方向。';
-    }
-    
-    newsText = `最新新聞情緒分析 (共${news.length}篇):
-整體情緒: ${newsSentiment.sentiment === 'Positive' ? '正面' : newsSentiment.sentiment === 'Negative' ? '負面' : '中性'} (分數: ${newsSentiment.score})
-正面新聞: ${newsSentiment.positiveCount}篇 | 負面新聞: ${newsSentiment.negativeCount}篇 | 中性: ${newsSentiment.neutralCount}篇
+    // Build news section with AI summary
+    let newsText = '';
+    if (userContentAnalysis && userContentAnalysis.originalContent) {
+      const sentimentText = userContentAnalysis.sentiment?.sentiment === 'Positive' ? 
+                           (language === 'Traditional Chinese' ? '正面' : language === 'Simplified Chinese' ? '正面' : 'Positive') :
+                           userContentAnalysis.sentiment?.sentiment === 'Negative' ?
+                           (language === 'Traditional Chinese' ? '負面' : language === 'Simplified Chinese' ? '負面' : 'Negative') :
+                           (language === 'Traditional Chinese' ? '中性' : language === 'Simplified Chinese' ? '中性' : 'Neutral');
+      
+      // Use AI summary if available
+      const contentSummary = userContentAnalysis.aiSummary || userContentAnalysis.summary;
+      
+      let aiContentAnalysis = '';
+      if (userContentAnalysis.sentiment?.sentiment === 'Positive') {
+        aiContentAnalysis = language === 'Traditional Chinese' ? '這份資料包含利好因素，可能支持股價向上。' :
+                            language === 'Simplified Chinese' ? '这份资料包含利好因素，可能支持股价向上。' :
+                            'This content contains positive factors that may support upward price movement.';
+      } else if (userContentAnalysis.sentiment?.sentiment === 'Negative') {
+        aiContentAnalysis = language === 'Traditional Chinese' ? '這份資料包含負面因素，可能對股價構成壓力。' :
+                            language === 'Simplified Chinese' ? '这份资料包含负面因素，可能对股价构成压力。' :
+                            'This content contains negative factors that may pressure the stock price.';
+      } else {
+        aiContentAnalysis = language === 'Traditional Chinese' ? '這份資料影響中性，沒有明確方向。' :
+                            language === 'Simplified Chinese' ? '这份资料影响中性，没有明确方向。' :
+                            'This content has neutral impact with no clear direction.';
+      }
+      
+      newsText = `文章標題: ${userContentAnalysis.title}\n\n📰 AI 智能分析:\n${contentSummary}\n\n📊 情緒分析: ${sentimentText}\n${aiContentAnalysis}`;
+      
+    } else if (news && news.length > 0 && newsSentiment) {
+      // Choose language based on user's selected language
+      if (language === 'Traditional Chinese') {
+        let sentimentMessage = '';
+        if (newsSentiment.sentiment === 'Positive') {
+          sentimentMessage = '近期新聞整體正面，市場情緒樂觀。';
+        } else if (newsSentiment.sentiment === 'Negative') {
+          sentimentMessage = '近期新聞整體負面，請關注潛在風險。';
+        } else {
+          sentimentMessage = '近期新聞情緒中性，市場沒有明顯方向。';
+        }
+        
+        newsText = `最新新聞情緒分析 (共${news.length}篇):
+📊 整體情緒: ${newsSentiment.sentiment === 'Positive' ? '正面' : newsSentiment.sentiment === 'Negative' ? '負面' : '中性'} (分數: ${newsSentiment.score})
+📈 正面新聞: ${newsSentiment.positiveCount}篇 | 📉 負面新聞: ${newsSentiment.negativeCount}篇 | 📊 中性: ${newsSentiment.neutralCount}篇
 
 ${sentimentMessage}`;
-    
-  } else if (language === 'Simplified Chinese') {
-    let sentimentMessage = '';
-    if (newsSentiment.sentiment === 'Positive') {
-      sentimentMessage = '近期新闻整体正面，市场情绪乐观。';
-    } else if (newsSentiment.sentiment === 'Negative') {
-      sentimentMessage = '近期新闻整体负面，请关注潜在风险。';
-    } else {
-      sentimentMessage = '近期新闻情绪中性，市场没有明显方向。';
-    }
-    
-    newsText = `最新新闻情绪分析 (共${news.length}篇):
-整体情绪: ${newsSentiment.sentiment === 'Positive' ? '正面' : newsSentiment.sentiment === 'Negative' ? '负面' : '中性'} (分数: ${newsSentiment.score})
-正面新闻: ${newsSentiment.positiveCount}篇 | 负面新闻: ${newsSentiment.negativeCount}篇 | 中性: ${newsSentiment.neutralCount}篇
+        
+      } else if (language === 'Simplified Chinese') {
+        let sentimentMessage = '';
+        if (newsSentiment.sentiment === 'Positive') {
+          sentimentMessage = '近期新闻整体正面，市场情绪乐观。';
+        } else if (newsSentiment.sentiment === 'Negative') {
+          sentimentMessage = '近期新闻整体负面，请关注潜在风险。';
+        } else {
+          sentimentMessage = '近期新闻情绪中性，市场没有明显方向。';
+        }
+        
+        newsText = `最新新闻情绪分析 (共${news.length}篇):
+📊 整体情绪: ${newsSentiment.sentiment === 'Positive' ? '正面' : newsSentiment.sentiment === 'Negative' ? '负面' : '中性'} (分数: ${newsSentiment.score})
+📈 正面新闻: ${newsSentiment.positiveCount}篇 | 📉 负面新闻: ${newsSentiment.negativeCount}篇 | 📊 中性: ${newsSentiment.neutralCount}篇
 
 ${sentimentMessage}`;
-    
-  } else {
-    // English
-    let sentimentMessage = '';
-    if (newsSentiment.sentiment === 'Positive') {
-      sentimentMessage = 'Recent news is overall positive, market sentiment is optimistic.';
-    } else if (newsSentiment.sentiment === 'Negative') {
-      sentimentMessage = 'Recent news is overall negative, please be aware of potential risks.';
-    } else {
-      sentimentMessage = 'Recent news sentiment is neutral, market has no clear direction.';
-    }
-    
-    newsText = `Latest News Sentiment Analysis (${news.length} articles):
-Overall Sentiment: ${newsSentiment.sentiment} (Score: ${newsSentiment.score})
-Positive: ${newsSentiment.positiveCount} | Negative: ${newsSentiment.negativeCount} | Neutral: ${newsSentiment.neutralCount}
+        
+      } else {
+        let sentimentMessage = '';
+        if (newsSentiment.sentiment === 'Positive') {
+          sentimentMessage = 'Recent news is overall positive, market sentiment is optimistic.';
+        } else if (newsSentiment.sentiment === 'Negative') {
+          sentimentMessage = 'Recent news is overall negative, please be aware of potential risks.';
+        } else {
+          sentimentMessage = 'Recent news sentiment is neutral, market has no clear direction.';
+        }
+        
+        newsText = `Latest News Sentiment Analysis (${news.length} articles):
+📊 Overall Sentiment: ${newsSentiment.sentiment} (Score: ${newsSentiment.score})
+📈 Positive: ${newsSentiment.positiveCount} | 📉 Negative: ${newsSentiment.negativeCount} | 📊 Neutral: ${newsSentiment.neutralCount}
 
 ${sentimentMessage}`;
-  }
-} else {
-  // No news available
-  if (language === 'Traditional Chinese') {
-    newsText = '近期暫無重大相關新聞。';
-  } else if (language === 'Simplified Chinese') {
-    newsText = '近期暂无重大相关新闻。';
-  } else {
-    newsText = 'No significant recent news available.';
-  }
-}
+      }
+    } else {
+      // No news available
+      if (language === 'Traditional Chinese') {
+        newsText = '近期暫無重大相關新聞。';
+      } else if (language === 'Simplified Chinese') {
+        newsText = '近期暂无重大相关新闻。';
+      } else {
+        newsText = 'No significant recent news available.';
+      }
+    }
     
     // Build bullish and bearish text
-let bullishText = '';
-if (specificAnalysis.specificBullishFactors.length > 0) {
-  bullishText = specificAnalysis.specificBullishFactors.join('\n');
-} else {
-  if (language === 'Traditional Chinese') {
-    bullishText = '暫無明顯看好因素';
-  } else if (language === 'Simplified Chinese') {
-    bullishText = '暂无明显看好因素';
-  } else {
-    bullishText = 'No significant bullish factors identified';
-  }
-}
-
-// Build bearish text - consistent language
-let bearishText = '';
-if (specificAnalysis.specificBearishFactors.length > 0) {
-  bearishText = specificAnalysis.specificBearishFactors.join('\n');
-} else {
-  if (language === 'Traditional Chinese') {
-    bearishText = '暫無明顯看淡因素';
-  } else if (language === 'Simplified Chinese') {
-    bearishText = '暂无明显看淡因素';
-  } else {
-    bearishText = 'No significant bearish factors identified';
-  }
-}
+    let bullishText = '';
+    if (specificAnalysis.specificBullishFactors.length > 0) {
+      bullishText = specificAnalysis.specificBullishFactors.join('\n');
+    } else {
+      if (language === 'Traditional Chinese') {
+        bullishText = '暫無明顯看好因素';
+      } else if (language === 'Simplified Chinese') {
+        bullishText = '暂无明显看好因素';
+      } else {
+        bullishText = 'No significant bullish factors identified';
+      }
+    }
+    
+    // Build bearish text - consistent language
+    let bearishText = '';
+    if (specificAnalysis.specificBearishFactors.length > 0) {
+      bearishText = specificAnalysis.specificBearishFactors.join('\n');
+    } else {
+      if (language === 'Traditional Chinese') {
+        bearishText = '暫無明顯看淡因素';
+      } else if (language === 'Simplified Chinese') {
+        bearishText = '暂无明显看淡因素';
+      } else {
+        bearishText = 'No significant bearish factors identified';
+      }
+    }
     
     // Generate trading advice
     let tradingAdviceText = '';
@@ -1386,4 +1474,24 @@ ${disclaimer}`;
       text: errorMsg
     });
   }
+}
+
+export async function GET() {
+  return NextResponse.json({ 
+    status: "Stock Analysis API running", 
+    timestamp: new Date().toISOString(),
+    version: "5.0",
+    features: {
+      stockDetection: true,
+      multiMarket: "HK/TW/US",
+      technicalIndicators: ["RSI", "MACD", "Trend", "SMA20", "SMA50", "Volatility", "BollingerBands"],
+      newsAnalysis: true,
+      sentimentAnalysis: true,
+      userContentIntegration: true,
+      contentSummarization: true,
+      aiSummary: true,
+      specificAnalysis: true,
+      confidenceScoring: true
+    }
+  });
 }
