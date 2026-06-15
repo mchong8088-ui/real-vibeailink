@@ -13,7 +13,7 @@ interface MobileLandingProps {
   user: any;
   profile?: any;
   onNavigate: (page: string, params?: any) => void;
-  onAnalyzeStock?: (symbol: string) => void;
+  onAnalyzeStock?: (symbol: string) => void;  // Add this
 }
 
 const MobileLanding: React.FC<MobileLandingProps> = ({

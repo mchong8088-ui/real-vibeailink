@@ -12,6 +12,7 @@ interface UserMenuProps {
   onOpenPricingPage: () => void;
   onSelectPlan: (planId: string, priceId: string) => void;
   onClose?: () => void;
+  onAnalyzeStock?: (symbol: string) => void;  // Add this prop
 }
 
 const UserMenu: React.FC<UserMenuProps> = ({ 
@@ -21,6 +22,7 @@ const UserMenu: React.FC<UserMenuProps> = ({
   onOpenPricingPage,
   onSelectPlan,
   onClose,
+  onAnalyzeStock,  // Add this
 }) => {
   const [mounted, setMounted] = useState(false);
   const [showUnsubscribe, setShowUnsubscribe] = useState(false);
@@ -59,14 +61,17 @@ const UserMenu: React.FC<UserMenuProps> = ({
   };
 
   const handleOpenWatchlist = () => {
+    console.log("⭐ Opening watchlist");
     handleClose();
     setShowWatchlist(true);
   };
 
   const handleWatchlistStockSelect = (symbol: string) => {
-    setShowWatchlist(false);
     console.log("Selected stock from watchlist:", symbol);
-    // You can add logic to analyze the stock here
+    setShowWatchlist(false);
+    if (onAnalyzeStock) {
+      onAnalyzeStock(symbol);
+    }
   };
 
   return (

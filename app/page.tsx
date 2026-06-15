@@ -449,18 +449,22 @@ export default function VibeAiMaster() {
       return (
         <>
           <MobileLanding 
-            langKey={language} 
-            setLangKey={setLanguage as any} 
-            onAuthOpen={() => setIsAuthOpen(true)} 
-            user={user} 
-            onNavigate={handleMobileNavigate} 
-          />
-          {isAuthOpen && !user && (
-            <div style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, backgroundColor: 'rgba(0,0,0,0.5)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1000 }}>
-              <AuthModal isOpen={isAuthOpen} onClose={() => setIsAuthOpen(false)} langKey={language} />
-            </div>
-          )}
-        </>
+  langKey={language} 
+  setLangKey={setLanguage as any} 
+  onAuthOpen={() => setIsAuthOpen(true)} 
+  user={user} 
+  profile={profile}
+  onNavigate={handleMobileNavigate}
+  onAnalyzeStock={(symbol) => {
+    // Navigate to analysis and analyze the stock
+    setMobilePage('analysis');
+    setMobileView('analysis');
+    // Small delay to ensure navigation completes
+    setTimeout(() => {
+      handleAnalyzeRequest(symbol, [], false);
+    }, 100);
+  }}
+/>
       );
     }
     return (
@@ -517,13 +521,17 @@ export default function VibeAiMaster() {
                 {showUserMenu && (
   <div style={{ position: 'absolute', top: '100%', right: 0, marginTop: '8px', zIndex: 100 }}>
     <UserMenu 
-      user={user} 
-      profile={profile} 
-      onLogout={handleLogout} 
-      onOpenPricingPage={() => { setShowUserMenu(false); setCurrentView('pricing'); }} 
-      onSelectPlan={handleSelectPlan} 
-      onClose={() => setShowUserMenu(false)}
-    />
+  user={user} 
+  profile={profile} 
+  onLogout={handleLogout} 
+  onOpenPricingPage={() => { setShowUserMenu(false); setCurrentView('pricing'); }} 
+  onSelectPlan={handleSelectPlan} 
+  onClose={() => setShowUserMenu(false)}
+  onAnalyzeStock={(symbol) => {
+    // Handle stock analysis from watchlist
+    handleAnalyzeRequest(symbol, [], false);
+  }}
+/>
   </div>
 )}
 
