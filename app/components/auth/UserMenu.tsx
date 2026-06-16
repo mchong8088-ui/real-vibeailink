@@ -33,21 +33,37 @@ const UserMenu: React.FC<UserMenuProps> = ({
   const credits = profile?.credits ?? 0;
   const plan = profile?.subscription_plan || profile?.subscription_status || 'Free Explorer';
 
-  // Load watchlist from localStorage
-  useEffect(() => {
+  // Load watchlist from localStorage - runs when component mounts
+  const loadWatchlist = () => {
+    console.log("📊 Loading watchlist from localStorage");
     const saved = localStorage.getItem('stockWatchlist');
+    console.log("📊 Raw saved data:", saved);
     if (saved) {
       try {
-        setWatchlist(JSON.parse(saved));
-      } catch {
+        const parsed = JSON.parse(saved);
+        console.log("📊 Parsed watchlist:", parsed);
+        setWatchlist(parsed);
+      } catch (error) {
+        console.error("📊 Error parsing watchlist:", error);
         setWatchlist([]);
       }
+    } else {
+      console.log("📊 No watchlist found in localStorage");
+      setWatchlist([]);
     }
-  }, []);
+  };
 
   useEffect(() => {
+    loadWatchlist();
     setMounted(true);
   }, []);
+
+  // Also reload watchlist when the component becomes visible (when user opens menu)
+  useEffect(() => {
+    if (mounted) {
+      loadWatchlist();
+    }
+  }, [mounted]);
 
   if (!mounted) return null;
 
@@ -70,10 +86,14 @@ const UserMenu: React.FC<UserMenuProps> = ({
   };
 
   const toggleWatchlist = () => {
+    console.log("⭐ Toggling watchlist, current state:", showWatchlist);
+    // Reload watchlist before showing
+    loadWatchlist();
     setShowWatchlist(!showWatchlist);
   };
 
   const handleWatchlistStockClick = (symbol: string) => {
+    console.log("📊 Clicked watchlist stock:", symbol);
     setShowWatchlist(false);
     handleClose();
     if (onAnalyzeStock) {

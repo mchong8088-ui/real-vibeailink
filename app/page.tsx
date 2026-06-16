@@ -535,16 +535,16 @@ export default function VibeAiMaster() {
                 {showUserMenu && (
                   <div style={{ position: 'absolute', top: '100%', right: 0, marginTop: '8px', zIndex: 100 }}>
                     <UserMenu 
-                    user={user} 
-                    profile={profile} 
-                    onLogout={handleLogout} 
-                    onOpenPricingPage={() => { setShowUserMenu(false); setCurrentView('pricing'); }} 
-                    onSelectPlan={handleSelectPlan} 
-                    onClose={() => setShowUserMenu(false)}
-                    onAnalyzeStock={(symbol) => {
-                    console.log("📊 Analyzing watchlist stock:", symbol);
-                    handleAnalyzeRequest(symbol, [], false);
-                    }}
+  user={user} 
+  profile={profile} 
+  onLogout={handleLogout} 
+  onOpenPricingPage={() => { setShowUserMenu(false); setCurrentView('pricing'); }} 
+  onSelectPlan={handleSelectPlan} 
+  onClose={() => setShowUserMenu(false)}
+  onAnalyzeStock={(symbol) => {
+    console.log("📊 Analyzing watchlist stock:", symbol);
+    handleAnalyzeRequest(symbol, [], false);
+  }}
                     />
                   </div>
                 )}
