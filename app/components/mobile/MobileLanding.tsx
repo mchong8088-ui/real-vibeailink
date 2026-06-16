@@ -4,6 +4,7 @@ import { LanguageToggle } from '../layout/LanguageToggle';
 import { initTTS } from '../../utils/ttsMaster';
 import { VoiceSelector } from '../layout/VoiceSelector';
 import { supabase } from '../../lib/supabase';
+import { DowngradePlanModal } from '../auth/DowngradePlanModal';
 
 interface MobileLandingProps {
   langKey: string;
@@ -24,7 +25,7 @@ const MobileLanding: React.FC<MobileLandingProps> = ({
 }) => {
   const [showFooterMenu, setShowFooterMenu] = useState(false);
   const [showUserMenu, setShowUserMenu] = useState(false);
-  const [showCancellationModal, setShowCancellationModal] = useState(false);
+  const [showDowngradeModal, setShowDowngradeModal] = useState(false);
   const [voiceLanguage, setVoiceLanguage] = useState<string>('English');
 
   useEffect(() => {
@@ -43,6 +44,31 @@ const MobileLanding: React.FC<MobileLandingProps> = ({
     window.location.reload();
   };
 
+  const handleSelectPlan = async (planId: string, priceId: string) => {
+    console.log('📱 Mobile Landing - Selected plan:', planId, 'Price ID:', priceId);
+    try {
+      const response = await fetch('/api/billing/create-checkout', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          priceId,
+          userId: user?.id,
+          successUrl: `${window.location.origin}/success`,
+          cancelUrl: window.location.href,
+          planId: planId
+        }),
+      });
+      const data = await response.json();
+      if (data.url) {
+        window.location.href = data.url;
+      } else {
+        alert('No checkout URL returned');
+      }
+    } catch (error) {
+      alert('Unable to process payment.');
+    }
+  };
+
   const getTranslatedText = () => {
     if (langKey === 'Traditional Chinese') {
       return {
@@ -57,17 +83,7 @@ const MobileLanding: React.FC<MobileLandingProps> = ({
         contact: '聯絡我們',
         welcome: '歡迎',
         financeText: '金融與市場分析',
-        description: '我哋係 Michael 同 Teresa，金融專員同數據分析助手。',
-        // Cancellation modal text
-        sadToSeeYouGo: '我哋好唔捨得你走！',
-        beforeYouCancel: '取消之前，你會唔會考慮降級到一個更實惠嘅計劃？',
-        coffeePlan: '☕ 每月咖啡計劃',
-        coffeePlanPrice: '只需 $10/月，獲得 300 積分',
-        coffeePlanDesc: '非常適合休閑用戶',
-        downgradeInstead: '降級',
-        returnToDashboard: '返回主頁',
-        yesCancelAnyway: '係，取消',
-        subscriptionCancelled: '訂閱已取消。希望你會再返嚟！'
+        description: '我哋係 Michael 同 Teresa，金融專員同數據分析助手。'
       };
     } else if (langKey === 'Simplified Chinese') {
       return {
@@ -82,17 +98,7 @@ const MobileLanding: React.FC<MobileLandingProps> = ({
         contact: '联系我们',
         welcome: '欢迎',
         financeText: '金融与市场分析',
-        description: '我们是 Michael 和 Teresa，金融专员和数据分析助手。',
-        // Cancellation modal text
-        sadToSeeYouGo: '我们好舍不得你走！',
-        beforeYouCancel: '取消之前，你会不会考虑降级到一个更实惠的计划？',
-        coffeePlan: '☕ 每月咖啡计划',
-        coffeePlanPrice: '只需 $10/月，获得 300 积分',
-        coffeePlanDesc: '非常适合休闲用户',
-        downgradeInstead: '降级',
-        returnToDashboard: '返回主页',
-        yesCancelAnyway: '是，取消',
-        subscriptionCancelled: '订阅已取消。希望你会再回来！'
+        description: '我们是 Michael 和 Teresa，金融专员和数据分析助手。'
       };
     } else {
       return {
@@ -107,17 +113,7 @@ const MobileLanding: React.FC<MobileLandingProps> = ({
         contact: 'Contact',
         welcome: 'Welcome',
         financeText: 'Finance & Market Analysis',
-        description: 'We are Michael and Teresa, finance specialist and data analysis assistant.',
-        // Cancellation modal text
-        sadToSeeYouGo: "We're sad to see you go!",
-        beforeYouCancel: 'Before you cancel, would you consider downgrading to a more affordable plan?',
-        coffeePlan: '☕ Monthly Coffee Plan',
-        coffeePlanPrice: 'Only $10/month for 300 credits',
-        coffeePlanDesc: 'Perfect for casual users',
-        downgradeInstead: 'Downgrade Instead',
-        returnToDashboard: 'Return to Dashboard',
-        yesCancelAnyway: 'Yes, cancel anyway',
-        subscriptionCancelled: 'Subscription cancelled. We hope to see you again!'
+        description: 'We are Michael and Teresa, finance specialist and data analysis assistant.'
       };
     }
   };
@@ -177,23 +173,23 @@ const MobileLanding: React.FC<MobileLandingProps> = ({
         flexShrink: 0,
         gap: '6px'
       }}>
-        <h1 style={{ 
-          fontSize: '15px', 
-          fontWeight: '900', 
-          fontStyle: 'italic', 
-          color: '#DC2626', 
-          margin: 0, 
-          flexShrink: 0 
+        <h1 style={{
+          fontSize: '15px',
+          fontWeight: '900',
+          fontStyle: 'italic',
+          color: '#DC2626',
+          margin: 0,
+          flexShrink: 0
         }}>
           vibeAiLink
         </h1>
         <div style={{ display: 'flex', gap: '6px', alignItems: 'center', flexShrink: 0 }}>
-          <VoiceSelector 
+          <VoiceSelector
             currentVoice={voiceLanguage}
             onVoiceChange={setVoiceLanguage}
           />
           <LanguageToggle currentLang={langKey} onLangChange={setLangKey} />
-          
+
           {user ? (
             <div className="user-menu-container" style={{ position: 'relative' }}>
               <button
@@ -227,7 +223,7 @@ const MobileLanding: React.FC<MobileLandingProps> = ({
                   {user?.email?.split('@')[0] || 'User'}
                 </span>
               </button>
-              
+
               {showUserMenu && (
                 <div style={{
                   position: 'absolute',
@@ -253,7 +249,7 @@ const MobileLanding: React.FC<MobileLandingProps> = ({
                       <p style={{ fontSize: '11px', fontWeight: '500', color: '#1F2937' }}>{profile?.subscription_status || 'Free Explorer'}</p>
                     </div>
                   </div>
-                  
+
                   {/* Watchlist Button */}
                   <button
                     onClick={() => {
@@ -277,7 +273,7 @@ const MobileLanding: React.FC<MobileLandingProps> = ({
                   >
                     <span>⭐</span> Watchlist <span style={{ fontSize: '10px', color: '#D97706' }}>({getWatchlistCount()})</span>
                   </button>
-                  
+
                   {/* Change Plan */}
                   <button
                     onClick={() => {
@@ -301,12 +297,12 @@ const MobileLanding: React.FC<MobileLandingProps> = ({
                   >
                     <span>⬆️</span> Change Plan
                   </button>
-                  
-                  {/* Unsubscribe - Now opens cancellation modal */}
+
+                  {/* Unsubscribe - Opens Downgrade Modal */}
                   <button
                     onClick={() => {
                       setShowUserMenu(false);
-                      setShowCancellationModal(true);
+                      setShowDowngradeModal(true);
                     }}
                     style={{
                       width: '100%',
@@ -325,7 +321,7 @@ const MobileLanding: React.FC<MobileLandingProps> = ({
                   >
                     <span>📴</span> Unsubscribe
                   </button>
-                  
+
                   {/* Logout */}
                   <button
                     onClick={handleLogout}
@@ -390,16 +386,16 @@ const MobileLanding: React.FC<MobileLandingProps> = ({
         </div>
 
         <h2 style={{ fontSize: '24px', fontWeight: 'bold', color: '#1F2937', margin: '0 0 8px 0', textAlign: 'center' }}>Michael & Teresa</h2>
-        
+
         <p style={{ fontSize: '14px', color: '#2563EB', fontWeight: '600', margin: '0 0 4px 0', textAlign: 'center' }}>{t.financeText}</p>
-        
+
         <p style={{ fontSize: '13px', color: '#6B7280', margin: '0 0 32px 0', textAlign: 'center', lineHeight: 1.4, padding: '0 20px' }}>{t.description}</p>
 
         <div style={{ display: 'flex', flexDirection: 'column', gap: '12px', width: '100%', maxWidth: '280px' }}>
           <button onClick={() => onNavigate('analysis')} style={{ backgroundColor: '#DC2626', color: 'white', border: 'none', borderRadius: '40px', padding: '14px 24px', fontSize: '16px', fontWeight: 'bold', cursor: 'pointer', boxShadow: '0 2px 8px rgba(220,38,38,0.3)' }}>
             {t.startAnalysis}
           </button>
-          
+
           <div style={{ display: 'flex', gap: '8px', justifyContent: 'center', flexWrap: 'nowrap' }}>
             <button onClick={() => onNavigate('content', { view: 'about' })} style={{ flex: 1, backgroundColor: 'white', color: '#4B5563', border: '1px solid #E5E7EB', borderRadius: '40px', padding: '10px 0', fontSize: '12px', fontWeight: '500', cursor: 'pointer', whiteSpace: 'nowrap', minWidth: 0 }}>{t.aboutUs}</button>
             <button onClick={() => onNavigate('content', { view: 'features' })} style={{ flex: 1, backgroundColor: 'white', color: '#4B5563', border: '1px solid #E5E7EB', borderRadius: '40px', padding: '10px 0', fontSize: '12px', fontWeight: '500', cursor: 'pointer', whiteSpace: 'nowrap', minWidth: 0 }}>{t.features}</button>
@@ -427,126 +423,14 @@ const MobileLanding: React.FC<MobileLandingProps> = ({
         )}
       </div>
 
-      {/* Cancellation/Retention Modal */}
-      {showCancellationModal && (
-        <div style={{
-          position: 'fixed',
-          top: 0,
-          left: 0,
-          right: 0,
-          bottom: 0,
-          backgroundColor: 'rgba(0,0,0,0.5)',
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'center',
-          zIndex: 1000,
-          padding: '20px'
-        }}>
-          <div style={{
-            backgroundColor: 'white',
-            borderRadius: '16px',
-            padding: '24px',
-            maxWidth: '400px',
-            width: '100%',
-            maxHeight: '90vh',
-            overflow: 'auto'
-          }}>
-            <div style={{ textAlign: 'center', marginBottom: '20px' }}>
-              <span style={{ fontSize: '48px' }}>💔</span>
-              <h3 style={{ fontSize: '20px', fontWeight: 'bold', color: '#1F2937', margin: '12px 0 8px 0' }}>
-                {t.sadToSeeYouGo}
-              </h3>
-              <p style={{ fontSize: '13px', color: '#6B7280', margin: 0 }}>
-                {t.beforeYouCancel}
-              </p>
-            </div>
-
-            {/* Coffee Plan Option */}
-            <div style={{
-              border: '1px solid #FDE68A',
-              borderRadius: '12px',
-              padding: '16px',
-              marginBottom: '12px',
-              backgroundColor: '#FEF3C7'
-            }}>
-              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                <div>
-                  <h4 style={{ fontSize: '14px', fontWeight: 'bold', color: '#92400E', margin: 0 }}>{t.coffeePlan}</h4>
-                  <p style={{ fontSize: '12px', color: '#92400E', margin: '4px 0 0 0' }}>{t.coffeePlanPrice}</p>
-                  <p style={{ fontSize: '11px', color: '#92400E', margin: '2px 0 0 0' }}>{t.coffeePlanDesc}</p>
-                </div>
-                <button
-                  onClick={() => {
-                    setShowCancellationModal(false);
-                    if (onNavigate) {
-                      onNavigate('content', { view: 'pricing' });
-                    }
-                  }}
-                  style={{
-                    padding: '8px 16px',
-                    backgroundColor: '#D97706',
-                    color: 'white',
-                    border: 'none',
-                    borderRadius: '8px',
-                    fontWeight: 'bold',
-                    fontSize: '12px',
-                    cursor: 'pointer'
-                  }}
-                >
-                  {t.downgradeInstead}
-                </button>
-              </div>
-            </div>
-
-            {/* Buttons */}
-            <div style={{ display: 'flex', gap: '8px', marginTop: '16px' }}>
-              <button
-                onClick={() => setShowCancellationModal(false)}
-                style={{
-                  flex: 1,
-                  padding: '12px',
-                  backgroundColor: '#F3F4F6',
-                  border: 'none',
-                  borderRadius: '8px',
-                  fontSize: '14px',
-                  fontWeight: '500',
-                  color: '#6B7280',
-                  cursor: 'pointer'
-                }}
-              >
-                {t.returnToDashboard}
-              </button>
-              <button
-                onClick={() => {
-                  setShowCancellationModal(false);
-                  if (user) {
-                    fetch('/api/billing/cancel-subscription', {
-                      method: 'POST',
-                      headers: { 'Content-Type': 'application/json' },
-                      body: JSON.stringify({ userId: user.id })
-                    }).then(() => {
-                      alert(t.subscriptionCancelled);
-                    });
-                  }
-                }}
-                style={{
-                  flex: 1,
-                  padding: '12px',
-                  backgroundColor: '#EF4444',
-                  border: 'none',
-                  borderRadius: '8px',
-                  fontSize: '14px',
-                  fontWeight: '500',
-                  color: 'white',
-                  cursor: 'pointer'
-                }}
-              >
-                {t.yesCancelAnyway}
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
+      {/* Downgrade Plan Modal */}
+      <DowngradePlanModal
+        isOpen={showDowngradeModal}
+        onClose={() => setShowDowngradeModal(false)}
+        user={user}
+        profile={profile}
+        onSelectPlan={handleSelectPlan}
+      />
     </div>
   );
 };

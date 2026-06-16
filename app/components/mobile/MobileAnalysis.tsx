@@ -10,7 +10,7 @@ import { StockAnalysisModule } from '../features/stock-analysis/StockAnalysisMod
 import { footerContent } from '../../constants/content';
 import { speak as speakText, stopSpeech as stopSpeaking } from '../../utils/ttsMaster';
 import { supabase } from '../../lib/supabase';
-
+import { DowngradePlanModal } from '../auth/DowngradePlanModal';
 interface MobileAnalysisProps {
   langKey: string;
   setLangKey: (lang: string) => void;
@@ -116,6 +116,8 @@ const MobileAnalysis: React.FC<MobileAnalysisProps> = ({
   const [watchlistCount, setWatchlistCount] = useState(0);
   const [watchlistItems, setWatchlistItems] = useState<string[]>([]);
   const [showCancellationModal, setShowCancellationModal] = useState(false);
+  const [showDowngradeModal, setShowDowngradeModal] = useState(false);
+
 
   // Load watchlist items on mount
   useEffect(() => {
@@ -629,7 +631,7 @@ const MobileAnalysis: React.FC<MobileAnalysisProps> = ({
                   <button
   onClick={() => {
     setShowUserMenu(false);
-    setShowCancellationModal(true);  // ← CHANGE TO THIS
+    setShowDowngradeModal(true);
   }}
   style={{
     width: '100%',
@@ -648,6 +650,14 @@ const MobileAnalysis: React.FC<MobileAnalysisProps> = ({
 >
   <span>📴</span> Unsubscribe
 </button>
+{/* Downgrade Plan Modal */}
+<DowngradePlanModal
+  isOpen={showDowngradeModal}
+  onClose={() => setShowDowngradeModal(false)}
+  user={user}
+  profile={profile}
+  onSelectPlan={handleSelectPlan}
+/>
                   <button
                     onClick={async () => {
                       await supabase.auth.signOut();
