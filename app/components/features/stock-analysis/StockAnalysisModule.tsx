@@ -473,30 +473,27 @@ export const StockAnalysisModule: React.FC<Props> = ({
   const [watchlistMessage, setWatchlistMessage] = useState<string | null>(null);
   
   // Add to watchlist function
-  const addToWatchlist = () => {
-    const symbol = data?.symbol;
-    if (!symbol) return;
-    
-    const saved = localStorage.getItem('stockWatchlist');
-    let watchlist: string[] = saved ? JSON.parse(saved) : [];
-    
-    if (watchlist.includes(symbol)) {
-      setWatchlistMessage(`⚠️ ${symbol} is already in your watchlist!`);
-      setTimeout(() => setWatchlistMessage(null), 3000);
-      return;
-    }
-    
-    if (watchlist.length >= 10) {
-      setWatchlistMessage(`⚠️ Watchlist limit reached (max 10 stocks). Remove some stocks first.`);
-      setTimeout(() => setWatchlistMessage(null), 3000);
-      return;
-    }
-    
-    watchlist.push(symbol);
-    localStorage.setItem('stockWatchlist', JSON.stringify(watchlist));
-    setWatchlistMessage(`✅ ${symbol} added to your watchlist!`);
-    setTimeout(() => setWatchlistMessage(null), 3000);
-  };
+const addToWatchlist = () => {
+  const symbol = analysisData?.symbol;
+  if (!symbol) return;
+  
+  const saved = localStorage.getItem('stockWatchlist');
+  let watchlist: string[] = saved ? JSON.parse(saved) : [];
+  
+  if (watchlist.includes(symbol)) {
+    alert(`⚠️ ${symbol} is already in your watchlist!`);
+    return;
+  }
+  
+  if (watchlist.length >= 10) {
+    alert(`⚠️ Watchlist limit reached (max 10 stocks).`);
+    return;
+  }
+  
+  watchlist.push(symbol);
+  localStorage.setItem('stockWatchlist', JSON.stringify(watchlist));
+  alert(`✅ ${symbol} added to your watchlist!`);
+};
   
   // Credit check for desktop users
   if (user && profile && profile.credits <= 0 && !isLoading) {
@@ -727,7 +724,8 @@ export const StockAnalysisModule: React.FC<Props> = ({
       {/* Analysis Report */}
       <div style={{ backgroundColor: 'white', borderRadius: '12px', padding: '20px', border: '1px solid #E5E7EB' }}>
         {/* Add to Watchlist Button */}
-        {data?.symbol && user && (
+        {/* Add to Watchlist Button */}
+{data?.symbol && user && (
   <div style={{ 
     display: 'flex', 
     justifyContent: 'flex-end',
@@ -761,17 +759,7 @@ export const StockAnalysisModule: React.FC<Props> = ({
       }}
     >
       <span style={{ fontSize: '16px' }}>⭐</span>
-      Add to Watchlist
-      <span style={{ 
-        fontSize: '9px', 
-        backgroundColor: '#F59E0B', 
-        color: 'white', 
-        padding: '2px 6px', 
-        borderRadius: '12px',
-        marginLeft: '4px'
-      }}>
-        Coming Soon
-      </span>
+      Add {data.symbol} to Watchlist
     </button>
   </div>
 )}

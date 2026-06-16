@@ -556,28 +556,29 @@ const MobileAnalysis: React.FC<MobileAnalysisProps> = ({
                   >
                     <span>📊</span> Dashboard
                   </button>
-                  <button
-                    onClick={() => {
-                      setShowUserMenu(false);
-                      onNavigate?.('content', { view: 'pricing' });
-                    }}
-                    style={{
-                      width: '100%',
-                      padding: '10px 12px',
-                      textAlign: 'left',
-                      backgroundColor: 'white',
-                      border: 'none',
-                      cursor: 'pointer',
-                      fontSize: '12px',
-                      color: '#4B5563',
-                      borderBottom: '1px solid #E5E7EB',
-                      display: 'flex',
-                      alignItems: 'center',
-                      gap: '6px'
-                    }}
-                  >
-                    <span>⬆️</span> Change Plan
-                  </button>
+                  // Find the user menu section and replace "Dashboard" with "AI Stock"
+<button
+  onClick={() => {
+    setShowUserMenu(false);
+    onNavigate?.('analysis');
+  }}
+  style={{
+    width: '100%',
+    padding: '10px 12px',
+    textAlign: 'left',
+    backgroundColor: 'white',
+    border: 'none',
+    cursor: 'pointer',
+    fontSize: '12px',
+    color: '#4B5563',
+    borderBottom: '1px solid #E5E7EB',
+    display: 'flex',
+    alignItems: 'center',
+    gap: '6px'
+  }}
+>
+  <span>📊</span> AI Stock
+</button>
                   <button
                     onClick={async () => {
                       await supabase.auth.signOut();
@@ -631,43 +632,35 @@ const MobileAnalysis: React.FC<MobileAnalysisProps> = ({
         {isAnalysisMode && !displayLegalTitle && (
           <>
             {/* Add to Watchlist Button - Mobile */}
-            {analysisData?.symbol && user && (
-              <div style={{ 
-                display: 'flex', 
-                justifyContent: 'flex-end',
-                marginBottom: '12px',
-                padding: '0 4px'
-              }}>
-                <button
-                  onClick={addToWatchlist}
-                  style={{
-                    display: 'flex',
-                    alignItems: 'center',
-                    gap: '6px',
-                    padding: '6px 14px',
-                    backgroundColor: '#FEF3C7',
-                    color: '#D97706',
-                    border: '1px solid #FDE68A',
-                    borderRadius: '40px',
-                    cursor: 'pointer',
-                    fontSize: '12px',
-                    fontWeight: '500'
-                  }}
-                >
-                  <span style={{ fontSize: '14px' }}>⭐</span>
-                  Add to Watchlist
-                  <span style={{ 
-                    fontSize: '8px', 
-                    backgroundColor: '#F59E0B', 
-                    color: 'white', 
-                    padding: '2px 6px', 
-                    borderRadius: '12px'
-                  }}>
-                    Coming Soon
-                  </span>
-                </button>
-              </div>
-            )}
+            {/* Add to Watchlist Button - Mobile Compact */}
+{analysisData?.symbol && user && (
+  <div style={{ 
+    display: 'flex', 
+    justifyContent: 'flex-end',
+    marginBottom: '8px',
+    padding: '0 4px'
+  }}>
+    <button
+      onClick={addToWatchlist}
+      style={{
+        display: 'flex',
+        alignItems: 'center',
+        gap: '4px',
+        padding: '4px 10px',
+        backgroundColor: '#FEF3C7',
+        color: '#D97706',
+        border: '1px solid #FDE68A',
+        borderRadius: '20px',
+        cursor: 'pointer',
+        fontSize: '11px',
+        fontWeight: '500'
+      }}
+    >
+      <span style={{ fontSize: '12px' }}>⭐</span>
+      Add <span style={{ fontWeight: 'bold', fontSize: '11px' }}>{analysisData.symbol}</span>
+    </button>
+  </div>
+)}
             
             <StockAnalysisModule 
               t={t} 

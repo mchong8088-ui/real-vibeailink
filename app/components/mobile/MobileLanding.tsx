@@ -235,28 +235,29 @@ const MobileLanding: React.FC<MobileLandingProps> = ({
         >
           <span>📊</span> Dashboard
         </button>
-        <button
-          onClick={() => {
-            setShowUserMenu(false);
-            onNavigate('content', { view: 'pricing' });
-          }}
-          style={{
-            width: '100%',
-            padding: '8px 10px',
-            textAlign: 'left',
-            backgroundColor: 'white',
-            border: 'none',
-            cursor: 'pointer',
-            fontSize: '10px',
-            color: '#4B5563',
-            borderBottom: '1px solid #E5E7EB',
-            display: 'flex',
-            alignItems: 'center',
-            gap: '4px'
-          }}
-        >
-          <span>⬆️</span> Change Plan
-        </button>
+        // Find the user menu section and replace "Dashboard" with "AI Stock"
+<button
+  onClick={() => {
+    setShowUserMenu(false);
+    onNavigate('analysis');
+  }}
+  style={{
+    width: '100%',
+    padding: '10px 12px',
+    textAlign: 'left',
+    backgroundColor: 'white',
+    border: 'none',
+    cursor: 'pointer',
+    fontSize: '12px',
+    color: '#4B5563',
+    borderBottom: '1px solid #E5E7EB',
+    display: 'flex',
+    alignItems: 'center',
+    gap: '6px'
+  }}
+>
+  <span>📊</span> AI Stock
+</button>
         <button
           onClick={async () => {
             await supabase.auth.signOut();
