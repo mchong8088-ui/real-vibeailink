@@ -3,7 +3,6 @@
 import React, { useState, useEffect } from 'react';
 import UnsubscribeModal from './UnsubscribeModal';
 import { DowngradePlanModal } from './DowngradePlanModal';
-import { WatchlistModal } from '../WatchlistModal';
 
 interface UserMenuProps {
   user: any;
@@ -28,10 +27,23 @@ const UserMenu: React.FC<UserMenuProps> = ({
   const [showUnsubscribe, setShowUnsubscribe] = useState(false);
   const [showDowngrade, setShowDowngrade] = useState(false);
   const [showWatchlist, setShowWatchlist] = useState(false);
+  const [watchlist, setWatchlist] = useState<string[]>([]);
 
   const displayName = profile?.display_name || profile?.username || user?.email?.split('@')[0] || 'User';
   const credits = profile?.credits ?? 0;
   const plan = profile?.subscription_plan || profile?.subscription_status || 'Free Explorer';
+
+  // Load watchlist from localStorage
+  useEffect(() => {
+    const saved = localStorage.getItem('stockWatchlist');
+    if (saved) {
+      try {
+        setWatchlist(JSON.parse(saved));
+      } catch {
+        setWatchlist([]);
+      }
+    }
+  }, []);
 
   useEffect(() => {
     setMounted(true);
@@ -57,20 +69,13 @@ const UserMenu: React.FC<UserMenuProps> = ({
     onLogout();
   };
 
-  const handleOpenWatchlist = () => {
-    console.log("⭐ Opening watchlist modal");
+  const toggleWatchlist = () => {
+    setShowWatchlist(!showWatchlist);
+  };
+
+  const handleWatchlistStockClick = (symbol: string) => {
+    setShowWatchlist(false);
     handleClose();
-    setShowWatchlist(true);
-  };
-
-  const handleWatchlistClose = () => {
-    console.log("⭐ Closing watchlist modal");
-    setShowWatchlist(false);
-  };
-
-  const handleWatchlistStockSelect = (symbol: string) => {
-    console.log("📊 Selected stock from watchlist:", symbol);
-    setShowWatchlist(false);
     if (onAnalyzeStock) {
       onAnalyzeStock(symbol);
     }
@@ -128,26 +133,85 @@ const UserMenu: React.FC<UserMenuProps> = ({
         </div>
 
         <div style={{ marginTop: '16px', display: 'flex', gap: '8px', flexDirection: 'column' }}>
-          <button
-            onClick={handleOpenWatchlist}
-            style={{ 
-              width: '100%', 
-              backgroundColor: '#FEF3C7', 
-              color: '#D97706', 
-              fontWeight: '500', 
-              padding: '8px', 
-              borderRadius: '12px', 
-              border: 'none', 
-              cursor: 'pointer', 
-              fontSize: '12px', 
-              display: 'flex', 
-              alignItems: 'center', 
-              justifyContent: 'center', 
-              gap: '6px' 
-            }}
-          >
-            <span>⭐</span> My Watchlist
-          </button>
+          {/* Watchlist Button with dropdown */}
+          <div style={{ position: 'relative' }}>
+            <button
+              onClick={toggleWatchlist}
+              style={{ 
+                width: '100%', 
+                backgroundColor: '#FEF3C7', 
+                color: '#D97706', 
+                fontWeight: '500', 
+                padding: '8px', 
+                borderRadius: '12px', 
+                border: 'none', 
+                cursor: 'pointer', 
+                fontSize: '12px', 
+                display: 'flex', 
+                alignItems: 'center', 
+                justifyContent: 'center', 
+                gap: '6px' 
+              }}
+            >
+              <span>⭐</span> My Watchlist
+              <span style={{ fontSize: '10px', color: '#92400E' }}>({watchlist.length})</span>
+            </button>
+            
+            {/* Watchlist dropdown */}
+            {showWatchlist && (
+              <div style={{
+                position: 'absolute',
+                top: '100%',
+                left: 0,
+                right: 0,
+                marginTop: '4px',
+                backgroundColor: 'white',
+                border: '1px solid #E5E7EB',
+                borderRadius: '12px',
+                boxShadow: '0 4px 12px rgba(0,0,0,0.15)',
+                zIndex: 60,
+                maxHeight: '200px',
+                overflowY: 'auto',
+                padding: '8px'
+              }}>
+                {watchlist.length === 0 ? (
+                  <div style={{ padding: '12px', textAlign: 'center', color: '#9CA3AF', fontSize: '12px' }}>
+                    No stocks in watchlist
+                  </div>
+                ) : (
+                  watchlist.map((symbol) => (
+                    <button
+                      key={symbol}
+                      onClick={() => handleWatchlistStockClick(symbol)}
+                      style={{
+                        width: '100%',
+                        padding: '8px 12px',
+                        textAlign: 'left',
+                        backgroundColor: 'white',
+                        border: 'none',
+                        borderRadius: '8px',
+                        cursor: 'pointer',
+                        fontSize: '13px',
+                        color: '#1F2937',
+                        transition: 'background-color 0.2s',
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: '8px'
+                      }}
+                      onMouseEnter={(e) => {
+                        e.currentTarget.style.backgroundColor = '#F3F4F6';
+                      }}
+                      onMouseLeave={(e) => {
+                        e.currentTarget.style.backgroundColor = 'white';
+                      }}
+                    >
+                      <span>📊</span> {symbol}
+                    </button>
+                  ))
+                )}
+              </div>
+            )}
+          </div>
           
           <button
             onClick={handleChangePlan}
@@ -186,13 +250,6 @@ const UserMenu: React.FC<UserMenuProps> = ({
         user={user}
         profile={profile}
         onSelectPlan={onSelectPlan}
-      />
-
-      <WatchlistModal
-        isOpen={showWatchlist}
-        onClose={handleWatchlistClose}
-        onSelectStock={handleWatchlistStockSelect}
-        langKey="English"
       />
     </>
   );

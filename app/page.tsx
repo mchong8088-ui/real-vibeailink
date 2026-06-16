@@ -433,6 +433,16 @@ export default function VibeAiMaster() {
   console.log("🔍 Show user menu:", showUserMenu);
   console.log("🔍 Voice language:", voiceLanguage);
 
+  // Get watchlist for display
+  const getWatchlist = () => {
+    if (typeof window === 'undefined') return [];
+    try {
+      return JSON.parse(localStorage.getItem('stockWatchlist') || '[]');
+    } catch {
+      return [];
+    }
+  };
+
   if (!isHydrated || !mounted) {
     return (
       <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '100vh', backgroundColor: '#f0f0f0' }}>
@@ -525,16 +535,16 @@ export default function VibeAiMaster() {
                 {showUserMenu && (
                   <div style={{ position: 'absolute', top: '100%', right: 0, marginTop: '8px', zIndex: 100 }}>
                     <UserMenu 
-                      user={user} 
-                      profile={profile} 
-                      onLogout={handleLogout} 
-                      onOpenPricingPage={() => { setShowUserMenu(false); setCurrentView('pricing'); }} 
-                      onSelectPlan={handleSelectPlan} 
-                      onClose={() => setShowUserMenu(false)}
-                      onAnalyzeStock={(symbol) => {
-                        console.log("📊 Analyzing watchlist stock:", symbol);
-                        handleAnalyzeRequest(symbol, [], false);
-                      }}
+                    user={user} 
+                    profile={profile} 
+                    onLogout={handleLogout} 
+                    onOpenPricingPage={() => { setShowUserMenu(false); setCurrentView('pricing'); }} 
+                    onSelectPlan={handleSelectPlan} 
+                    onClose={() => setShowUserMenu(false)}
+                    onAnalyzeStock={(symbol) => {
+                    console.log("📊 Analyzing watchlist stock:", symbol);
+                    handleAnalyzeRequest(symbol, [], false);
+                    }}
                     />
                   </div>
                 )}
@@ -591,6 +601,68 @@ export default function VibeAiMaster() {
 
             <div style={{ backgroundColor: 'white', padding: '12px 20px', borderTop: '1px solid #E5E7EB', flexShrink: 0 }}>
               <p style={{ fontSize: '12px', color: '#6B7280', textAlign: 'center', marginBottom: '8px' }}>{text.inputLabel}</p>
+              
+              {/* Watchlist Section - Desktop */}
+              {user && (
+                <div style={{
+                  backgroundColor: '#FEF3C7',
+                  borderRadius: '12px',
+                  padding: '12px 16px',
+                  marginBottom: '16px',
+                  border: '1px solid #FDE68A'
+                }}>
+                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '8px' }}>
+                    <span style={{ fontSize: '12px', fontWeight: 'bold', color: '#D97706' }}>⭐ My Watchlist</span>
+                    <button
+                      onClick={() => {
+                        const watchlist = getWatchlist();
+                        if (watchlist.length === 0) {
+                          alert('Your watchlist is empty. Click "Add to Watchlist" on any stock analysis to save it here.');
+                        }
+                      }}
+                      style={{ fontSize: '10px', color: '#92400E', background: 'none', border: 'none', cursor: 'pointer' }}
+                    >
+                      Refresh
+                    </button>
+                  </div>
+                  <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
+                    {(() => {
+                      const watchlist = getWatchlist();
+                      if (watchlist.length === 0) {
+                        return <span style={{ fontSize: '11px', color: '#92400E' }}>No stocks yet. Click "Add to Watchlist" on any analysis to save here.</span>;
+                      }
+                      return watchlist.map((symbol: string) => (
+                        <button
+                          key={symbol}
+                          onClick={() => handleAnalyzeRequest(symbol, [], false)}
+                          style={{
+                            padding: '4px 12px',
+                            backgroundColor: '#FDE68A',
+                            color: '#92400E',
+                            border: 'none',
+                            borderRadius: '20px',
+                            fontSize: '12px',
+                            fontWeight: '500',
+                            cursor: 'pointer',
+                            transition: 'all 0.2s'
+                          }}
+                          onMouseEnter={(e) => {
+                            e.currentTarget.style.backgroundColor = '#FCD34D';
+                            e.currentTarget.style.transform = 'scale(1.02)';
+                          }}
+                          onMouseLeave={(e) => {
+                            e.currentTarget.style.backgroundColor = '#FDE68A';
+                            e.currentTarget.style.transform = 'scale(1)';
+                          }}
+                        >
+                          {symbol}
+                        </button>
+                      ));
+                    })()}
+                  </div>
+                </div>
+              )}
+              
               <SmartInputSystem 
                 langKey={language} 
                 onAnalyze={handleAnalyzeRequest} 
