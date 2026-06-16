@@ -117,28 +117,6 @@ const MobileAnalysis: React.FC<MobileAnalysisProps> = ({
   const [watchlistItems, setWatchlistItems] = useState<string[]>([]);
   const [showCancellationModal, setShowCancellationModal] = useState(false);
 
-  <button
-  onClick={() => {
-    setShowUserMenu(false);
-    setShowCancellationModal(true);
-  }}
-  style={{
-    width: '100%',
-    padding: '10px 12px',
-    textAlign: 'left',
-    backgroundColor: 'white',
-    border: 'none',
-    cursor: 'pointer',
-    fontSize: '12px',
-    color: '#EF4444',
-    borderBottom: '1px solid #E5E7EB',
-    display: 'flex',
-    alignItems: 'center',
-    gap: '6px'
-  }}
->
-  <span>📴</span> Unsubscribe
-</button>
   // Load watchlist items on mount
   useEffect(() => {
     loadWatchlist();
@@ -153,128 +131,6 @@ const MobileAnalysis: React.FC<MobileAnalysisProps> = ({
       setVoiceLanguage(propVoiceLanguage);
     }
   }, [propVoiceLanguage]);
-  {showCancellationModal && (
-  <div style={{
-    position: 'fixed',
-    top: 0,
-    left: 0,
-    right: 0,
-    bottom: 0,
-    backgroundColor: 'rgba(0,0,0,0.5)',
-    display: 'flex',
-    alignItems: 'center',
-    justifyContent: 'center',
-    zIndex: 1000,
-    padding: '20px'
-  }}>
-    <div style={{
-      backgroundColor: 'white',
-      borderRadius: '16px',
-      padding: '24px',
-      maxWidth: '400px',
-      width: '100%',
-      maxHeight: '90vh',
-      overflow: 'auto'
-    }}>
-      <div style={{ textAlign: 'center', marginBottom: '20px' }}>
-        <span style={{ fontSize: '48px' }}>💔</span>
-        <h3 style={{ fontSize: '20px', fontWeight: 'bold', color: '#1F2937', margin: '12px 0 8px 0' }}>
-          We're sad to see you go!
-        </h3>
-        <p style={{ fontSize: '13px', color: '#6B7280', margin: 0 }}>
-          Before you cancel, would you consider downgrading to a more affordable plan?
-        </p>
-      </div>
-
-      {/* Coffee Plan Option */}
-      <div style={{
-        border: '1px solid #FDE68A',
-        borderRadius: '12px',
-        padding: '16px',
-        marginBottom: '12px',
-        backgroundColor: '#FEF3C7'
-      }}>
-        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-          <div>
-            <h4 style={{ fontSize: '14px', fontWeight: 'bold', color: '#92400E', margin: 0 }}>☕ Monthly Coffee Plan</h4>
-            <p style={{ fontSize: '12px', color: '#92400E', margin: '4px 0 0 0' }}>Only $10/month for 300 credits</p>
-            <p style={{ fontSize: '11px', color: '#92400E', margin: '2px 0 0 0' }}>Perfect for casual users</p>
-          </div>
-          <button
-            onClick={() => {
-              setShowCancellationModal(false);
-              // Navigate to coffee plan checkout
-              if (onNavigate) {
-                onNavigate('content', { view: 'pricing' });
-              }
-            }}
-            style={{
-              padding: '8px 16px',
-              backgroundColor: '#D97706',
-              color: 'white',
-              border: 'none',
-              borderRadius: '8px',
-              fontWeight: 'bold',
-              fontSize: '12px',
-              cursor: 'pointer'
-            }}
-          >
-            Downgrade Instead
-          </button>
-        </div>
-      </div>
-
-      {/* Buttons */}
-      <div style={{ display: 'flex', gap: '8px', marginTop: '16px' }}>
-        <button
-          onClick={() => setShowCancellationModal(false)}
-          style={{
-            flex: 1,
-            padding: '12px',
-            backgroundColor: '#F3F4F6',
-            border: 'none',
-            borderRadius: '8px',
-            fontSize: '14px',
-            fontWeight: '500',
-            color: '#6B7280',
-            cursor: 'pointer'
-          }}
-        >
-          Return to Dashboard
-        </button>
-        <button
-          onClick={() => {
-            setShowCancellationModal(false);
-            // Handle actual cancellation here
-            if (user) {
-              // Call your cancellation API
-              fetch('/api/billing/cancel-subscription', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ userId: user.id })
-              }).then(() => {
-                alert('Subscription cancelled. We hope to see you again!');
-              });
-            }
-          }}
-          style={{
-            flex: 1,
-            padding: '12px',
-            backgroundColor: '#EF4444',
-            border: 'none',
-            borderRadius: '8px',
-            fontSize: '14px',
-            fontWeight: '500',
-            color: 'white',
-            cursor: 'pointer'
-          }}
-        >
-          Yes, cancel anyway
-        </button>
-      </div>
-    </div>
-  </div>
-)}
 
   // Close user menu when clicking outside
   useEffect(() => {
@@ -749,7 +605,6 @@ const MobileAnalysis: React.FC<MobileAnalysisProps> = ({
                   <button
                     onClick={() => {
                       setShowUserMenu(false);
-                      // Navigate to watchlist view
                       if (onNavigate) {
                         onNavigate('watchlist');
                       }
@@ -796,7 +651,7 @@ const MobileAnalysis: React.FC<MobileAnalysisProps> = ({
                   <button
                     onClick={() => {
                       setShowUserMenu(false);
-                      onNavigate?.('content', { view: 'pricing' });
+                      setShowCancellationModal(true);
                     }}
                     style={{
                       width: '100%',
@@ -1152,6 +1007,127 @@ const MobileAnalysis: React.FC<MobileAnalysisProps> = ({
       )}
       
       <SourceMenu isOpen={isMenuOpen} onClose={() => setIsMenuOpen(false)} onSelectSource={handleSourceSelect} langKey={langKey} />
+
+      {/* Cancellation/Retention Modal */}
+      {showCancellationModal && (
+        <div style={{
+          position: 'fixed',
+          top: 0,
+          left: 0,
+          right: 0,
+          bottom: 0,
+          backgroundColor: 'rgba(0,0,0,0.5)',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          zIndex: 1000,
+          padding: '20px'
+        }}>
+          <div style={{
+            backgroundColor: 'white',
+            borderRadius: '16px',
+            padding: '24px',
+            maxWidth: '400px',
+            width: '100%',
+            maxHeight: '90vh',
+            overflow: 'auto'
+          }}>
+            <div style={{ textAlign: 'center', marginBottom: '20px' }}>
+              <span style={{ fontSize: '48px' }}>💔</span>
+              <h3 style={{ fontSize: '20px', fontWeight: 'bold', color: '#1F2937', margin: '12px 0 8px 0' }}>
+                We're sad to see you go!
+              </h3>
+              <p style={{ fontSize: '13px', color: '#6B7280', margin: 0 }}>
+                Before you cancel, would you consider downgrading to a more affordable plan?
+              </p>
+            </div>
+
+            {/* Coffee Plan Option */}
+            <div style={{
+              border: '1px solid #FDE68A',
+              borderRadius: '12px',
+              padding: '16px',
+              marginBottom: '12px',
+              backgroundColor: '#FEF3C7'
+            }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                <div>
+                  <h4 style={{ fontSize: '14px', fontWeight: 'bold', color: '#92400E', margin: 0 }}>☕ Monthly Coffee Plan</h4>
+                  <p style={{ fontSize: '12px', color: '#92400E', margin: '4px 0 0 0' }}>Only $10/month for 300 credits</p>
+                  <p style={{ fontSize: '11px', color: '#92400E', margin: '2px 0 0 0' }}>Perfect for casual users</p>
+                </div>
+                <button
+                  onClick={() => {
+                    setShowCancellationModal(false);
+                    if (onNavigate) {
+                      onNavigate('content', { view: 'pricing' });
+                    }
+                  }}
+                  style={{
+                    padding: '8px 16px',
+                    backgroundColor: '#D97706',
+                    color: 'white',
+                    border: 'none',
+                    borderRadius: '8px',
+                    fontWeight: 'bold',
+                    fontSize: '12px',
+                    cursor: 'pointer'
+                  }}
+                >
+                  Downgrade Instead
+                </button>
+              </div>
+            </div>
+
+            {/* Buttons */}
+            <div style={{ display: 'flex', gap: '8px', marginTop: '16px' }}>
+              <button
+                onClick={() => setShowCancellationModal(false)}
+                style={{
+                  flex: 1,
+                  padding: '12px',
+                  backgroundColor: '#F3F4F6',
+                  border: 'none',
+                  borderRadius: '8px',
+                  fontSize: '14px',
+                  fontWeight: '500',
+                  color: '#6B7280',
+                  cursor: 'pointer'
+                }}
+              >
+                Return to Dashboard
+              </button>
+              <button
+                onClick={() => {
+                  setShowCancellationModal(false);
+                  if (user) {
+                    fetch('/api/billing/cancel-subscription', {
+                      method: 'POST',
+                      headers: { 'Content-Type': 'application/json' },
+                      body: JSON.stringify({ userId: user.id })
+                    }).then(() => {
+                      alert('Subscription cancelled. We hope to see you again!');
+                    });
+                  }
+                }}
+                style={{
+                  flex: 1,
+                  padding: '12px',
+                  backgroundColor: '#EF4444',
+                  border: 'none',
+                  borderRadius: '8px',
+                  fontSize: '14px',
+                  fontWeight: '500',
+                  color: 'white',
+                  cursor: 'pointer'
+                }}
+              >
+                Yes, cancel anyway
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };
