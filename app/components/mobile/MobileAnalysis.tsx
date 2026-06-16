@@ -273,79 +273,96 @@ const MobileAnalysis: React.FC<MobileAnalysisProps> = ({
   };
 
   const handleAnalyze = async () => {
-    if (!inputValue.trim()) return;
+  if (!inputValue.trim()) return;
+  
+  if (!user) {
+    const msg = langKey === 'Traditional Chinese' ? '請先登入' : 
+                langKey === 'Simplified Chinese' ? '请先登录' : 
+                'Please login first';
+    alert(msg);
+    onAuthOpen();
+    return;
+  }
+  
+  if (profile && profile.credits <= 0) {
+    const msg = langKey === 'Traditional Chinese' ? '積分不足，是否升級計劃？' : 
+                langKey === 'Simplified Chinese' ? '积分不足，是否升级计划？' : 
+                'Insufficient credits. Would you like to upgrade?';
+    const confirmUpgrade = confirm(msg);
+    if (confirmUpgrade && onNavigate) {
+      onNavigate('content', { view: 'pricing' });
+    }
+    return;
+  }
+  
+  setIsLoading(true);
+  try {
+    const endpoint = useAIEnhancement ? '/api/chat/ai-enhanced' : '/api/chat';
+    const response = await fetch(endpoint, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ 
+        message: inputValue.trim(), 
+        language: langKey,
+        useAI: useAIEnhancement
+      }),
+    });
     
-    if (!user) {
-      const msg = langKey === 'Traditional Chinese' ? '請先登入' : 
-                  langKey === 'Simplified Chinese' ? '请先登录' : 
-                  'Please login first';
-      alert(msg);
-      onAuthOpen();
-      return;
+    const data = await response.json();
+    
+    // EXACT SAME LOGIC AS DESKTOP page.tsx
+    if (!data.success) {
+      throw new Error(data.summary || 'Analysis failed');
     }
     
-    if (profile && profile.credits <= 0) {
-      const msg = langKey === 'Traditional Chinese' ? '積分不足，是否升級計劃？' : 
-                  langKey === 'Simplified Chinese' ? '积分不足，是否升级计划？' : 
-                  'Insufficient credits. Would you like to upgrade?';
-      const confirmUpgrade = confirm(msg);
-      if (confirmUpgrade && onNavigate) {
-        onNavigate('content', { view: 'pricing' });
-      }
-      return;
-    }
-    
-    setIsLoading(true);
-    try {
-      const endpoint = useAIEnhancement ? '/api/chat/ai-enhanced' : '/api/chat';
-      const response = await fetch(endpoint, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ 
-          message: inputValue.trim(), 
-          language: langKey,
-          useAI: useAIEnhancement
-        }),
-      });
-      const data = await response.json();
-      setAnalysisData({
-        symbol: inputValue.trim().toUpperCase(),
-        summary: data.text || data.summary || `Analysis for ${inputValue.trim().toUpperCase()} completed.`,
-        price: data.price || "N/A",
-        rsi: data.rsi || "N/A",
-        macd: data.macd || "N/A",
-        marketCap: data.marketCap || "N/A",
-        peRatio: data.peRatio || "N/A",
-        volume: data.volume || "N/A",
-        historical: data.historical || [],
-        change: data.change,
-        changePercent: data.changePercent,
-        companyName: data.companyName,
-        currency: data.currency,
-        sma20: data.sma20,
-        sma50: data.sma50,
-        volatility: data.volatility,
-        avgVolume: data.avgVolume,
-        dayLow: data.dayLow,
-        dayHigh: data.dayHigh,
-        specificAnalysis: data.specificAnalysis
-      });
-    } catch (error) {
-      setAnalysisData({
-        symbol: inputValue.trim().toUpperCase(),
-        summary: `Unable to fetch analysis for ${inputValue.trim().toUpperCase()}. Please try again.`,
-        price: "N/A",
-        rsi: "N/A",
-        macd: "N/A",
-        marketCap: "N/A",
-        peRatio: "N/A",
-        volume: "N/A",
-        historical: [],
-      });
-    } finally {
-      setIsLoading(false);
-    }
-  };
+    // SAME DATA STRUCTURE AS DESKTOP
+    setAnalysisData({
+      symbol: data.symbol || inputValue.trim().toUpperCase(),
+      summary: data.text || data.summary,
+      price: data.price,
+      change: data.change,
+      changePercent: data.changePercent,
+      companyName: data.companyName,
+      currency: data.currency,
+      rsi: data.rsi,
+      macd: data.macd,
+      trend: data.trend,
+      marketCap: data.marketCap || "N/A",
+      peRatio: data.peRatio || "N/A",
+      volume: data.volume || "N/A",
+      historical: data.historical || [],
+      sma20: data.sma20,
+      sma50: data.sma50,
+      volatility: data.volatility,
+      avgVolume: data.avgVolume,
+      dayLow: data.dayLow,
+      dayHigh: data.dayHigh,
+      specificAnalysis: data.specificAnalysis
+    });
+  } catch (error) {
+    console.error('Analysis error:', error);
+    setAnalysisData({ 
+      symbol: inputValue.trim().toUpperCase(), 
+      summary: langKey === 'Traditional Chinese' ? `無法分析 ${inputValue.trim().toUpperCase()}，請稍後再試。` :
+                langKey === 'Simplified Chinese' ? `无法分析 ${inputValue.trim().toUpperCase()}，请稍后再试。` :
+                `Unable to analyze ${inputValue.trim().toUpperCase()}. Please try again.`,
+      price: "N/A",
+      change: null,
+      changePercent: null,
+      companyName: null,
+      currency: null,
+      rsi: "N/A",
+      macd: "N/A",
+      trend: "N/A",
+      marketCap: "N/A",
+      peRatio: "N/A",
+      volume: "N/A",
+      historical: [],
+    });
+  } finally {
+    setIsLoading(false);
+  }
+};
 
   const handleMicToggle = () => {
     if (recognition && !isListening) {
