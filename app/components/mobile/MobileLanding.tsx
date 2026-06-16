@@ -154,161 +154,150 @@ const MobileLanding: React.FC<MobileLandingProps> = ({
           <LanguageToggle currentLang={langKey} onLangChange={setLangKey} />
           
           {user ? (
-            <div className="user-menu-container" style={{ position: 'relative' }}>
-              <button
-                onClick={() => setShowUserMenu(!showUserMenu)}
-                style={{
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: '4px',
-                  padding: '4px 8px',
-                  borderRadius: '20px',
-                  backgroundColor: '#F3F4F6',
-                  border: 'none',
-                  cursor: 'pointer'
-                }}
-              >
-                <div style={{
-                  width: '24px',
-                  height: '24px',
-                  borderRadius: '50%',
-                  backgroundColor: '#3B82F6',
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  color: 'white',
-                  fontWeight: 'bold',
-                  fontSize: '10px'
-                }}>
-                  {user?.email?.charAt(0).toUpperCase() || 'U'}
-                </div>
-                <span style={{ fontSize: '10px', color: '#374151', maxWidth: '80px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                  {user?.email?.split('@')[0] || 'User'}
-                </span>
-              </button>
-              
-              {showUserMenu && (
-                <div style={{
-                  position: 'absolute',
-                  top: '100%',
-                  left: '50%',
-                  transform: 'translateX(-50%)',
-                  marginTop: '8px',
-                  width: '240px',
-                  backgroundColor: 'white',
-                  border: '1px solid #E5E7EB',
-                  borderRadius: '12px',
-                  boxShadow: '0 4px 20px rgba(0,0,0,0.15)',
-                  overflow: 'hidden',
-                  zIndex: 100
-                }}>
-                  <div style={{ padding: '10px 12px', borderBottom: '1px solid #E5E7EB' }}>
-                    <p style={{ fontSize: '12px', fontWeight: 'bold', color: '#1F2937', wordBreak: 'break-all' }}>{user?.email}</p>
-                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: '6px' }}>
-                      <p style={{ fontSize: '10px', color: '#6B7280' }}>Credits:</p>
-                      <p style={{ fontSize: '12px', fontWeight: 'bold', color: '#F59E0B' }}>{profile?.credits || 100}</p>
-                    </div>
-                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: '4px' }}>
-                      <p style={{ fontSize: '10px', color: '#6B7280' }}>Plan:</p>
-                      <p style={{ fontSize: '11px', fontWeight: '500', color: '#1F2937' }}>{profile?.subscription_status || 'Free Explorer'}</p>
-                    </div>
-                  </div>
-                  <button
-                    onClick={() => {
-                      setShowUserMenu(false);
-                      onNavigate('analysis');
-                    }}
-                    style={{
-                      width: '100%',
-                      padding: '10px 12px',
-                      textAlign: 'left',
-                      backgroundColor: 'white',
-                      border: 'none',
-                      cursor: 'pointer',
-                      fontSize: '12px',
-                      color: '#4B5563',
-                      borderBottom: '1px solid #E5E7EB',
-                      display: 'flex',
-                      alignItems: 'center',
-                      gap: '6px'
-                    }}
-                  >
-                    <span>📊</span> Dashboard
-                  </button>
-                  <button
-                    onClick={() => {
-                      setShowUserMenu(false);
-                      setShowWatchlist(true);
-                    }}
-                    style={{
-                      width: '100%',
-                      padding: '10px 12px',
-                      textAlign: 'left',
-                      backgroundColor: 'white',
-                      border: 'none',
-                      cursor: 'pointer',
-                      fontSize: '12px',
-                      color: '#4B5563',
-                      borderBottom: '1px solid #E5E7EB',
-                      display: 'flex',
-                      alignItems: 'center',
-                      gap: '6px'
-                    }}
-                  >
-                    <span>⭐</span> My Watchlist
-                  </button>
-                  <button
-                    onClick={() => {
-                      setShowUserMenu(false);
-                      onNavigate('content', { view: 'pricing' });
-                    }}
-                    style={{
-                      width: '100%',
-                      padding: '10px 12px',
-                      textAlign: 'left',
-                      backgroundColor: 'white',
-                      border: 'none',
-                      cursor: 'pointer',
-                      fontSize: '12px',
-                      color: '#4B5563',
-                      borderBottom: '1px solid #E5E7EB',
-                      display: 'flex',
-                      alignItems: 'center',
-                      gap: '6px'
-                    }}
-                  >
-                    <span>⬆️</span> Change Plan
-                  </button>
-                  <button
-                    onClick={async () => {
-                      await supabase.auth.signOut();
-                      setShowUserMenu(false);
-                      window.location.reload();
-                    }}
-                    style={{
-                      width: '100%',
-                      padding: '10px 12px',
-                      textAlign: 'left',
-                      backgroundColor: 'white',
-                      border: 'none',
-                      cursor: 'pointer',
-                      fontSize: '12px',
-                      color: '#EF4444',
-                      display: 'flex',
-                      alignItems: 'center',
-                      gap: '6px'
-                    }}
-                  >
-                    <span>🚪</span> Logout
-                  </button>
-                </div>
-              )}
-            </div>
-          ) : (
-            <button onClick={onAuthOpen} style={{ color: '#2563EB', fontWeight: '600', fontSize: '12px', background: 'none', border: 'none', cursor: 'pointer', whiteSpace: 'nowrap' }}>
-              {langKey === 'Traditional Chinese' ? '登入' : langKey === 'Simplified Chinese' ? '登录' : 'Login'}
-            </button>
-          )}
+  <div className="user-menu-container" style={{ position: 'relative' }}>
+    <button
+      onClick={() => setShowUserMenu(!showUserMenu)}
+      style={{
+        display: 'flex',
+        alignItems: 'center',
+        gap: '3px',
+        padding: '3px 6px',
+        borderRadius: '16px',
+        backgroundColor: '#F3F4F6',
+        border: 'none',
+        cursor: 'pointer'
+      }}
+    >
+      <div style={{
+        width: '20px',
+        height: '20px',
+        borderRadius: '50%',
+        backgroundColor: '#3B82F6',
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'center',
+        color: 'white',
+        fontWeight: 'bold',
+        fontSize: '9px'
+      }}>
+        {user?.email?.charAt(0).toUpperCase() || 'U'}
+      </div>
+      <span style={{ fontSize: '9px', color: '#374151', maxWidth: '60px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+        {user?.email?.split('@')[0] || 'User'}
+      </span>
+    </button>
+    
+    {showUserMenu && (
+      <div style={{
+        position: 'absolute',
+        top: '100%',
+        right: '0',
+        marginTop: '6px',
+        width: '200px',
+        backgroundColor: 'white',
+        border: '1px solid #E5E7EB',
+        borderRadius: '10px',
+        boxShadow: '0 4px 12px rgba(0,0,0,0.15)',
+        overflow: 'hidden',
+        zIndex: 100
+      }}>
+        {/* Menu content - keep the same but with smaller padding */}
+        <div style={{ padding: '8px 10px', borderBottom: '1px solid #E5E7EB' }}>
+          <p style={{ fontSize: '10px', fontWeight: 'bold', color: '#1F2937', wordBreak: 'break-all' }}>{user?.email}</p>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: '4px' }}>
+            <p style={{ fontSize: '9px', color: '#6B7280' }}>Credits:</p>
+            <p style={{ fontSize: '10px', fontWeight: 'bold', color: '#F59E0B' }}>{profile?.credits || 100}</p>
+          </div>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: '2px' }}>
+            <p style={{ fontSize: '9px', color: '#6B7280' }}>Plan:</p>
+            <p style={{ fontSize: '9px', fontWeight: '500', color: '#1F2937' }}>{profile?.subscription_status || 'Free Explorer'}</p>
+          </div>
+        </div>
+        <button
+          onClick={() => {
+            setShowUserMenu(false);
+            onNavigate('analysis');
+          }}
+          style={{
+            width: '100%',
+            padding: '8px 10px',
+            textAlign: 'left',
+            backgroundColor: 'white',
+            border: 'none',
+            cursor: 'pointer',
+            fontSize: '10px',
+            color: '#4B5563',
+            borderBottom: '1px solid #E5E7EB',
+            display: 'flex',
+            alignItems: 'center',
+            gap: '4px'
+          }}
+        >
+          <span>📊</span> Dashboard
+        </button>
+        <button
+          onClick={() => {
+            setShowUserMenu(false);
+            onNavigate('content', { view: 'pricing' });
+          }}
+          style={{
+            width: '100%',
+            padding: '8px 10px',
+            textAlign: 'left',
+            backgroundColor: 'white',
+            border: 'none',
+            cursor: 'pointer',
+            fontSize: '10px',
+            color: '#4B5563',
+            borderBottom: '1px solid #E5E7EB',
+            display: 'flex',
+            alignItems: 'center',
+            gap: '4px'
+          }}
+        >
+          <span>⬆️</span> Change Plan
+        </button>
+        <button
+          onClick={async () => {
+            await supabase.auth.signOut();
+            setShowUserMenu(false);
+            window.location.reload();
+          }}
+          style={{
+            width: '100%',
+            padding: '8px 10px',
+            textAlign: 'left',
+            backgroundColor: 'white',
+            border: 'none',
+            cursor: 'pointer',
+            fontSize: '10px',
+            color: '#EF4444',
+            display: 'flex',
+            alignItems: 'center',
+            gap: '4px'
+          }}
+        >
+          <span>🚪</span> Logout
+        </button>
+      </div>
+    )}
+  </div>
+) : (
+  <button
+    onClick={onAuthOpen}
+    style={{
+      color: '#2563EB',
+      fontWeight: '600',
+      fontSize: '10px',
+      background: 'none',
+      border: 'none',
+      cursor: 'pointer',
+      whiteSpace: 'nowrap'
+    }}
+  >
+    {langKey === 'Traditional Chinese' ? '登入' : langKey === 'Simplified Chinese' ? '登录' : 'Login'}
+  </button>
+)}
         </div>
       </div>
 

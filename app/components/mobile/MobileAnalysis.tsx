@@ -637,7 +637,71 @@ const MobileAnalysis: React.FC<MobileAnalysisProps> = ({
       
       {isAnalysisMode && !displayLegalTitle && (
         <div style={{ backgroundColor: 'white', borderTop: '1px solid #E5E7EB', padding: '10px 12px', paddingBottom: 'max(10px, env(safe-area-inset-bottom))', flexShrink: 0, zIndex: 20, width: '100%', boxSizing: 'border-box', position: 'relative' }}>
-          
+          {analysisData?.symbol && user && (
+      <div style={{ 
+        display: 'flex', 
+        justifyContent: 'flex-end',
+        marginBottom: '12px',
+        padding: '0 4px'
+      }}>
+        <button
+          onClick={() => {
+            const symbol = analysisData.symbol;
+            const saved = localStorage.getItem('stockWatchlist');
+            let watchlist: string[] = saved ? JSON.parse(saved) : [];
+            
+            if (watchlist.includes(symbol)) {
+              alert(`${symbol} is already in your watchlist!`);
+              return;
+            }
+            
+            if (watchlist.length >= 10) {
+              alert('Watchlist limit reached (max 10 stocks).');
+              return;
+            }
+            
+            watchlist.push(symbol);
+            localStorage.setItem('stockWatchlist', JSON.stringify(watchlist));
+            alert(`✅ ${symbol} added to your watchlist!`);
+          }}
+          style={{
+            display: 'flex',
+            alignItems: 'center',
+            gap: '6px',
+            padding: '6px 14px',
+            backgroundColor: '#FEF3C7',
+            color: '#D97706',
+            border: '1px solid #FDE68A',
+            borderRadius: '40px',
+            cursor: 'pointer',
+            fontSize: '12px',
+            fontWeight: '500'
+          }}
+        >
+          <span style={{ fontSize: '14px' }}>⭐</span>
+          Add to Watchlist
+          <span style={{ 
+            fontSize: '8px', 
+            backgroundColor: '#F59E0B', 
+            color: 'white', 
+            padding: '2px 6px', 
+            borderRadius: '12px'
+          }}>
+            Coming Soon
+          </span>
+        </button>
+      </div>
+    )}
+    
+    <StockAnalysisModule 
+      t={t} 
+      data={analysisData} 
+      isLoading={isLoading} 
+      langKey={langKey} 
+      voiceLanguage={voiceLanguage}
+    />
+  </>
+)}
           {/* AI Enhancement Toggle */}
           <div style={{ 
             marginBottom: '8px', 
