@@ -72,8 +72,8 @@ export const PricingModal: React.FC<PricingModalProps> = ({
         setLoading(false);
         return;
       } else if (isTopUp) {
-        console.log("🔍 Top-up triggered with price ID:", STRIPE_PRICE_IDS.COFFEE_TOPUP);
-        onSelectPlan('topup', STRIPE_PRICE_IDS.COFFEE_TOPUP);
+        console.log("🔍 Top-up triggered with price ID:", STRIPE_PRICE_IDS.TOPUP_100_CREDITS);
+onSelectPlan('topup', STRIPE_PRICE_IDS.TOPUP_100_CREDITS);
         setLoading(false);
         return;
       }
