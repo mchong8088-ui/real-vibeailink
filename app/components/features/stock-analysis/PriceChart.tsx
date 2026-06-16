@@ -1,220 +1,320 @@
 "use client";
-import { useMemo } from 'react';
+import { useState, useMemo } from 'react';
 import { LineChart, Line, XAxis, YAxis, Tooltip, ResponsiveContainer, Area, ComposedChart } from 'recharts';
 
-interface PriceChartProps {
-  data: any[];
-  langKey: string;
-}
-
-// Calculate Bollinger Bands
-const addBollingerBands = (data: any[], period: number = 20, multiplier: number = 2) => {
-  if (!data || data.length < period) return data;
+// Filter data by date range - improved with fallbacks
+const filterDataByRange = (data: any[], range: string) => {
+  if (!data || data.length === 0) return [];
   
-  // Create a deep copy to avoid read-only issues
-  const result = data.map(item => ({ ...item }));
-  const prices = result.map(d => d.price || d.close);
+  const now = new Date();
+  let startDate = new Date();
+  let filteredData = [];
   
-  for (let i = period - 1; i < result.length; i++) {
-    const slice = prices.slice(i - period + 1, i + 1);
-    const sma = slice.reduce((a, b) => a + b, 0) / period;
-    const squaredDiffs = slice.map(p => Math.pow(p - sma, 2));
-    const stdDev = Math.sqrt(squaredDiffs.reduce((a, b) => a + b, 0) / period);
-    
-    result[i] = {
-      ...result[i],
-      upper: sma + (multiplier * stdDev),
-      middle: sma,
-      lower: sma - (multiplier * stdDev)
-    };
+  switch (range) {
+    case '1D':
+      // For 1D, try to show last 24 hours of data
+      startDate.setDate(now.getDate() - 1);
+      filteredData = data.filter(item => new Date(item.date) >= startDate);
+      // If not enough data for 1D, show last 5 data points
+      if (filteredData.length < 2) {
+        filteredData = data.slice(-5);
+      }
+      break;
+    case '1W':
+      startDate.setDate(now.getDate() - 7);
+      filteredData = data.filter(item => new Date(item.date) >= startDate);
+      // If not enough data for 1W, show last 10 data points
+      if (filteredData.length < 3) {
+        filteredData = data.slice(-10);
+      }
+      break;
+    case '3M':
+      startDate.setMonth(now.getMonth() - 3);
+      filteredData = data.filter(item => new Date(item.date) >= startDate);
+      if (filteredData.length < 3) {
+        filteredData = data.slice(-20);
+      }
+      break;
+    case '6M':
+      startDate.setMonth(now.getMonth() - 6);
+      filteredData = data.filter(item => new Date(item.date) >= startDate);
+      if (filteredData.length < 3) {
+        filteredData = data.slice(-30);
+      }
+      break;
+    default:
+      startDate.setMonth(now.getMonth() - 3);
+      filteredData = data.filter(item => new Date(item.date) >= startDate);
   }
   
-  return result;
+  return filteredData;
 };
 
-export const PriceChart = ({ data, langKey }: PriceChartProps) => {
-  // Use all data (already filtered to 3 months from parent)
-  const chartData = useMemo(() => {
-    if (!data || data.length === 0) return [];
-    return addBollingerBands(data);
-  }, [data]);
+// Get appropriate time label
+const getTimeLabel = (range: string) => {
+  switch (range) {
+    case '1D': return '1天';
+    case '1W': return '1週';
+    case '3M': return '3個月';
+    case '6M': return '6個月';
+    default: return '3個月';
+  }
+};
+
+// Format date based on range
+const formatDate = (value: string, range: string) => {
+  const date = new Date(value);
+  if (range === '1D') {
+    return date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+  }
+  if (range === '1W') {
+    return `${date.getMonth()+1}/${date.getDate()}`;
+  }
+  return `${date.getMonth()+1}/${date.getDate()}`;
+};
+
+export const PriceChart = ({ data }: { data: any[] }) => {
+  const [selectedRange, setSelectedRange] = useState('3M');
   
-  const formatXAxis = (dateStr: string) => {
-    if (!dateStr) return '';
-    try {
-      const date = new Date(dateStr);
-      if (isNaN(date.getTime())) return dateStr;
-      return `${date.getMonth() + 1}/${date.getDate()}`;
-    } catch (e) {
-      return dateStr;
-    }
-  };
+  // Filter data based on selected range
+  const filteredData = useMemo(() => filterDataByRange(data, selectedRange), [data, selectedRange]);
   
-  const CustomTooltip = ({ active, payload, label }: any) => {
-    if (active && payload && payload.length) {
-      const priceItem = payload.find((p: any) => p.dataKey === 'price' || p.dataKey === 'close');
-      const middleItem = payload.find((p: any) => p.dataKey === 'middle');
-      
-      return (
-        <div style={{ 
-          backgroundColor: 'white', 
-          border: '1px solid #E5E7EB', 
-          borderRadius: '8px', 
-          padding: '8px 12px',
-          boxShadow: '0 4px 6px -1px rgba(0,0,0,0.1)'
-        }}>
-          <p style={{ fontSize: '10px', color: '#6B7280', margin: '0 0 4px 0' }}>{label}</p>
-          {priceItem && (
-            <p style={{ fontSize: '13px', fontWeight: 'bold', color: '#2563EB', margin: 0 }}>
-              ${priceItem.value?.toFixed(2)}
-            </p>
+  const timeRanges = [
+    { label: '1D', value: '1D' },
+    { label: '1W', value: '1W' },
+    { label: '3M', value: '3M' },
+    { label: '6M', value: '6M' },
+  ];
+  
+  // Get latest price for display
+  const latestPrice = filteredData.length > 0 ? filteredData[filteredData.length - 1]?.price || filteredData[filteredData.length - 1]?.close : null;
+  const previousPrice = filteredData.length > 1 ? filteredData[filteredData.length - 2]?.price || filteredData[filteredData.length - 2]?.close : null;
+  const priceChange = latestPrice && previousPrice ? latestPrice - previousPrice : 0;
+  const priceChangePercent = previousPrice && latestPrice ? ((priceChange / previousPrice) * 100).toFixed(2) : '0';
+
+  // Check if we have Bollinger Bands data
+  const hasBollingerBands = filteredData.some(d => d.upper && d.middle && d.lower);
+  const hasVWAP = filteredData.some(d => d.vwap);
+
+  // Determine if we have enough data for the selected range
+  const hasEnoughData = filteredData.length >= 2;
+
+  return (
+    <div style={{ width: '100%', background: '#fff', padding: '20px', borderRadius: '16px', border: '1px solid #e0e0e0', marginBottom: '20px' }}>
+      {/* Header with title and price info */}
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '15px', flexWrap: 'wrap', gap: '10px' }}>
+        <div>
+          <h4 style={{ margin: 0, color: '#1e293b' }}>
+            價格走勢圖（{getTimeLabel(selectedRange)}）
+            {!hasEnoughData && (
+              <span style={{ fontSize: '12px', color: '#f59e0b', marginLeft: '8px' }}>
+                ⚠️ 數據不足
+              </span>
+            )}
+          </h4>
+          {latestPrice && hasEnoughData && (
+            <div style={{ marginTop: '5px' }}>
+              <span style={{ fontSize: '24px', fontWeight: 'bold', color: '#1e293b' }}>
+                ${latestPrice.toFixed(2)}
+              </span>
+              <span style={{ marginLeft: '10px', color: priceChange >= 0 ? '#10b981' : '#ef4444', fontSize: '14px' }}>
+                {priceChange >= 0 ? '+' : ''}{priceChange.toFixed(2)} ({priceChangePercent}%)
+              </span>
+            </div>
           )}
-          {middleItem && middleItem.value && (
-            <p style={{ fontSize: '10px', color: '#6B7280', margin: '4px 0 0 0' }}>
-              SMA20: ${middleItem.value?.toFixed(2)}
-            </p>
+          {!hasEnoughData && (
+            <div style={{ marginTop: '5px', fontSize: '13px', color: '#64748b' }}>
+              Not enough data points for this time range
+            </div>
           )}
         </div>
-      );
-    }
-    return null;
-  };
-  
-  if (chartData.length === 0) {
-    return (
-      <div style={{ 
-        background: 'white', 
-        borderRadius: '12px', 
-        border: '1px solid #E5E7EB',
-        padding: '20px',
-        textAlign: 'center',
-        marginBottom: '12px'
-      }}>
-        <p style={{ color: '#6B7280', fontSize: '12px' }}>
-          {langKey === 'Cantonese' || langKey === 'Traditional Chinese' ? '圖表數據載入中...' : 
-           langKey === 'Simplified Chinese' ? '图表数据加载中...' : 'Loading chart data...'}
-        </p>
-      </div>
-    );
-  }
-  
-  const minPrice = Math.min(...chartData.map(d => d.price || d.close));
-  const maxPrice = Math.max(...chartData.map(d => d.price || d.close));
-  const priceRange = maxPrice - minPrice;
-  const yDomain = [minPrice - priceRange * 0.1, maxPrice + priceRange * 0.1];
-  
-  return (
-    <div style={{ 
-      width: '100%', 
-      background: 'white', 
-      borderRadius: '12px', 
-      border: '1px solid #E5E7EB',
-      marginBottom: '12px',
-      overflow: 'hidden'
-    }}>
-      <div style={{ 
-        padding: '12px 16px', 
-        borderBottom: '1px solid #E5E7EB',
-        display: 'flex',
-        justifyContent: 'space-between',
-        alignItems: 'center',
-        flexWrap: 'wrap',
-        gap: '8px'
-      }}>
-        <h4 style={{ margin: 0, fontSize: '13px', fontWeight: '600', color: '#1F2937' }}>
-          {langKey === 'Cantonese' || langKey === 'Traditional Chinese' ? '股價走勢圖 (最近3個月) - 布林通道' : 
-           langKey === 'Simplified Chinese' ? '股价走势图 (最近3个月) - 布林通道' : 'Price Chart (Last 3 Months) - Bollinger Bands'}
-        </h4>
+        
+        {/* Time range buttons */}
+        <div style={{ display: 'flex', gap: '8px', background: '#f1f5f9', padding: '4px', borderRadius: '12px' }}>
+          {timeRanges.map((range) => {
+            // Check if we have data for this range
+            const rangeData = filterDataByRange(data, range.value);
+            const hasData = rangeData.length >= 2;
+            
+            return (
+              <button
+                key={range.value}
+                onClick={() => {
+                  if (hasData || range.value === selectedRange) {
+                    setSelectedRange(range.value);
+                  } else {
+                    // Show a message if not enough data
+                    const msg = `Not enough data for ${range.label} view. Try another time range.`;
+                    if (typeof window !== 'undefined') {
+                      // Use a less intrusive notification
+                      console.log(msg);
+                    }
+                  }
+                }}
+                style={{
+                  padding: '6px 16px',
+                  borderRadius: '8px',
+                  border: 'none',
+                  background: selectedRange === range.value ? '#2563eb' : 'transparent',
+                  color: selectedRange === range.value ? '#fff' : (hasData ? '#64748b' : '#cbd5e1'),
+                  cursor: hasData || selectedRange === range.value ? 'pointer' : 'not-allowed',
+                  fontSize: '14px',
+                  fontWeight: selectedRange === range.value ? '600' : '500',
+                  transition: 'all 0.2s',
+                  opacity: hasData || selectedRange === range.value ? 1 : 0.5,
+                }}
+                title={!hasData && selectedRange !== range.value ? `Not enough data for ${range.label} view` : ''}
+              >
+                {range.label}
+                {!hasData && selectedRange !== range.value && ' ⚠️'}
+              </button>
+            );
+          })}
+        </div>
       </div>
       
-      <div style={{ padding: '12px', height: '260px' }}>
-        <ResponsiveContainer width="100%" height="100%">
-          <ComposedChart data={chartData}>
+      {/* Chart - only show if we have data */}
+      {hasEnoughData ? (
+        <ResponsiveContainer width="100%" height={320}>
+          <ComposedChart data={filteredData}>
+            <defs>
+              <linearGradient id="colorPrice" x1="0" y1="0" x2="0" y2="1">
+                <stop offset="5%" stopColor="#2563eb" stopOpacity={0.1}/>
+                <stop offset="95%" stopColor="#2563eb" stopOpacity={0}/>
+              </linearGradient>
+            </defs>
             <XAxis 
               dataKey="date" 
-              tickFormatter={formatXAxis}
-              fontSize={9}
+              tick={{ fontSize: 12, fill: '#64748b' }}
+              tickFormatter={(value) => formatDate(value, selectedRange)}
               interval="preserveStartEnd"
-              tick={{ fill: '#6B7280' }}
+              minTickGap={30}
             />
             <YAxis 
-              domain={yDomain}
-              fontSize={9}
-              width={40}
-              tick={{ fill: '#6B7280' }}
+              domain={['auto', 'auto']} 
+              fontSize={12} 
+              tick={{ fill: '#64748b' }}
+              tickFormatter={(value) => `$${value}`}
+              width={60}
             />
-            <Tooltip content={<CustomTooltip />} />
-            
-            {/* Bollinger Bands - Fill between upper and lower */}
-            <Area 
-              type="monotone" 
-              dataKey="upper" 
-              stroke="#94a3b8" 
-              strokeWidth={1}
-              fill="#e2e8f0" 
-              fillOpacity={0.2}
-              dot={false}
-            />
-            <Area 
-              type="monotone" 
-              dataKey="lower" 
-              stroke="#94a3b8" 
-              strokeWidth={1}
-              fill="none" 
-              dot={false}
-            />
-            
-            {/* Middle Band (SMA 20) */}
-            <Line 
-              type="monotone" 
-              dataKey="middle" 
-              stroke="#94a3b8" 
-              strokeWidth={1.5} 
-              strokeDasharray="4 4"
-              dot={false}
+            <Tooltip 
+              contentStyle={{ borderRadius: '8px', border: 'none', boxShadow: '0 4px 6px -1px rgb(0 0 0 / 0.1)' }}
+              formatter={(value: number, name: string) => {
+                if (value === undefined || value === null) return ['N/A', name];
+                if (name === 'price' || name === 'close') return [`$${value.toFixed(2)}`, '股價'];
+                if (name === 'upper') return [`$${value.toFixed(2)}`, '上軌 (Bollinger Upper)'];
+                if (name === 'middle') return [`$${value.toFixed(2)}`, '中軌 (SMA 20)'];
+                if (name === 'lower') return [`$${value.toFixed(2)}`, '下軌 (Bollinger Lower)'];
+                if (name === 'vwap') return [`$${value.toFixed(2)}`, 'VWAP'];
+                return [`$${value.toFixed(2)}`, name];
+              }}
+              labelFormatter={(label) => {
+                const date = new Date(label);
+                if (selectedRange === '1D') {
+                  return date.toLocaleString();
+                }
+                return date.toLocaleDateString();
+              }}
             />
             
-            {/* Price Line */}
+            {/* Bollinger Bands - Upper and Lower as Area */}
+            {hasBollingerBands && (
+              <>
+                <Area 
+                  type="monotone" 
+                  dataKey="upper" 
+                  stroke="#94a3b8" 
+                  strokeWidth={1}
+                  fill="#e2e8f0" 
+                  fillOpacity={0.2} 
+                  dot={false}
+                />
+                <Area 
+                  type="monotone" 
+                  dataKey="lower" 
+                  stroke="#94a3b8" 
+                  strokeWidth={1}
+                  fill="#ffffff" 
+                  dot={false}
+                />
+                {/* Middle Band (SMA 20) */}
+                <Line 
+                  type="monotone" 
+                  dataKey="middle" 
+                  stroke="#94a3b8" 
+                  strokeWidth={1.5} 
+                  strokeDasharray="4 4"
+                  dot={false}
+                />
+              </>
+            )}
+            
+            {/* 股價主線 */}
             <Line 
               type="monotone" 
               dataKey="price" 
               stroke="#2563eb" 
-              strokeWidth={2.5} 
-              dot={false}
-              activeDot={{ r: 4, fill: '#2563eb' }}
+              strokeWidth={3} 
+              dot={false} 
             />
+            
+            {/* VWAP (if exists) */}
+            {hasVWAP && (
+              <Line 
+                type="monotone" 
+                dataKey="vwap" 
+                stroke="#f59e0b" 
+                strokeWidth={2} 
+                strokeDasharray="5 5" 
+                dot={false} 
+              />
+            )}
           </ComposedChart>
         </ResponsiveContainer>
-      </div>
+      ) : (
+        <div style={{ 
+          height: '320px', 
+          display: 'flex', 
+          alignItems: 'center', 
+          justifyContent: 'center',
+          color: '#64748b',
+          fontSize: '14px',
+          flexDirection: 'column',
+          gap: '8px'
+        }}>
+          <span style={{ fontSize: '32px' }}>📊</span>
+          <span>Not enough data for this time range</span>
+          <span style={{ fontSize: '12px' }}>Try selecting a different time period</span>
+        </div>
+      )}
       
       {/* Legend */}
-      <div style={{ 
-        padding: '6px 16px 10px', 
-        borderTop: '1px solid #E5E7EB',
-        display: 'flex',
-        gap: '16px',
-        fontSize: '9px',
-        flexWrap: 'wrap'
-      }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-          <div style={{ width: '20px', height: '2px', backgroundColor: '#2563eb' }} />
-          <span style={{ color: '#6B7280' }}>
-            {langKey === 'Cantonese' || langKey === 'Traditional Chinese' ? '股價' : 
-             langKey === 'Simplified Chinese' ? '股价' : 'Price'}
-          </span>
+      {hasEnoughData && (
+        <div style={{ display: 'flex', gap: '20px', marginTop: '15px', justifyContent: 'center', flexWrap: 'wrap' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+            <div style={{ width: '20px', height: '3px', background: '#2563eb', borderRadius: '2px' }}></div>
+            <span style={{ fontSize: '12px', color: '#64748b' }}>股價</span>
+          </div>
+          {hasBollingerBands && (
+            <>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                <div style={{ width: '20px', height: '3px', background: '#94a3b8', borderRadius: '2px', borderStyle: 'dashed' }}></div>
+                <span style={{ fontSize: '12px', color: '#64748b' }}>SMA 20 (中軌)</span>
+              </div>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                <div style={{ width: '20px', height: '12px', background: '#e2e8f0', borderRadius: '2px', opacity: 0.5 }}></div>
+                <span style={{ fontSize: '12px', color: '#64748b' }}>布林通道 (上/下軌)</span>
+              </div>
+            </>
+          )}
+          {hasVWAP && (
+            <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+              <div style={{ width: '20px', height: '3px', background: '#f59e0b', borderRadius: '2px', borderStyle: 'dashed' }}></div>
+              <span style={{ fontSize: '12px', color: '#64748b' }}>VWAP</span>
+            </div>
+          )}
         </div>
-        <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-          <div style={{ width: '20px', height: '2px', backgroundColor: '#94a3b8', borderStyle: 'dashed' }} />
-          <span style={{ color: '#6B7280' }}>SMA20 (中軌)</span>
-        </div>
-        <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-          <div style={{ width: '20px', height: '10px', backgroundColor: '#cbd5e1', opacity: 0.3 }} />
-          <span style={{ color: '#6B7280' }}>
-            {langKey === 'Cantonese' || langKey === 'Traditional Chinese' ? '布林通道 (上/下軌)' : 
-             langKey === 'Simplified Chinese' ? '布林通道 (上/下轨)' : 'Bollinger Bands (Upper/Lower)'}
-          </span>
-        </div>
-      </div>
+      )}
     </div>
   );
 };
