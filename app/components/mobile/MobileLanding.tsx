@@ -4,7 +4,6 @@ import { LanguageToggle } from '../layout/LanguageToggle';
 import { initTTS } from '../../utils/ttsMaster';
 import { VoiceSelector } from '../layout/VoiceSelector';
 import { supabase } from '../../lib/supabase';
-import { WatchlistModal } from '../WatchlistModal';
 
 interface MobileLandingProps {
   langKey: string;
@@ -13,7 +12,6 @@ interface MobileLandingProps {
   user: any;
   profile?: any;
   onNavigate: (page: string, params?: any) => void;
-  onAnalyzeStock?: (symbol: string) => void;  // Add this
 }
 
 const MobileLanding: React.FC<MobileLandingProps> = ({
@@ -23,11 +21,9 @@ const MobileLanding: React.FC<MobileLandingProps> = ({
   user,
   profile,
   onNavigate,
-  onAnalyzeStock,
 }) => {
   const [showFooterMenu, setShowFooterMenu] = useState(false);
   const [showUserMenu, setShowUserMenu] = useState(false);
-  const [showWatchlist, setShowWatchlist] = useState(false);
   const [voiceLanguage, setVoiceLanguage] = useState<string>('English');
 
   useEffect(() => {
@@ -44,16 +40,6 @@ const MobileLanding: React.FC<MobileLandingProps> = ({
     await supabase.auth.signOut();
     setShowUserMenu(false);
     window.location.reload();
-  };
-
-  const handleWatchlistStockSelect = (symbol: string) => {
-    if (onAnalyzeStock) {
-      onAnalyzeStock(symbol);
-    } else {
-      onNavigate('analysis');
-      // Store the symbol to analyze
-      localStorage.setItem('pendingAnalysisSymbol', symbol);
-    }
   };
 
   const getTranslatedText = () => {
@@ -128,6 +114,17 @@ const MobileLanding: React.FC<MobileLandingProps> = ({
     return () => document.removeEventListener('click', handleClickOutside);
   }, [showUserMenu]);
 
+  // Get watchlist count for display
+  const getWatchlistCount = () => {
+    if (typeof window === 'undefined') return 0;
+    try {
+      const watchlist = JSON.parse(localStorage.getItem('stockWatchlist') || '[]');
+      return watchlist.length;
+    } catch {
+      return 0;
+    }
+  };
+
   return (
     <div style={{
       display: 'flex',
@@ -138,169 +135,209 @@ const MobileLanding: React.FC<MobileLandingProps> = ({
       overflow: 'hidden',
       position: 'relative'
     }}>
+      {/* Top Bar - Compact */}
       <div style={{
         backgroundColor: 'white',
-        padding: '12px 16px',
+        padding: '8px 12px',
         borderBottom: '1px solid #E5E7EB',
         display: 'flex',
         alignItems: 'center',
         justifyContent: 'space-between',
         flexShrink: 0,
-        gap: '8px'
+        gap: '6px'
       }}>
-        <h1 style={{ fontSize: '18px', fontWeight: '900', fontStyle: 'italic', color: '#DC2626', margin: 0, flexShrink: 0 }}>vibeAiLink</h1>
-        <div style={{ display: 'flex', gap: '12px', alignItems: 'center', flexShrink: 0 }}>
-          <VoiceSelector currentVoice={voiceLanguage} onVoiceChange={setVoiceLanguage} />
+        <h1 style={{ 
+          fontSize: '15px', 
+          fontWeight: '900', 
+          fontStyle: 'italic', 
+          color: '#DC2626', 
+          margin: 0, 
+          flexShrink: 0 
+        }}>
+          vibeAiLink
+        </h1>
+        <div style={{ display: 'flex', gap: '6px', alignItems: 'center', flexShrink: 0 }}>
+          <VoiceSelector 
+            currentVoice={voiceLanguage}
+            onVoiceChange={setVoiceLanguage}
+          />
           <LanguageToggle currentLang={langKey} onLangChange={setLangKey} />
           
           {user ? (
-  <div className="user-menu-container" style={{ position: 'relative' }}>
-    <button
-      onClick={() => setShowUserMenu(!showUserMenu)}
-      style={{
-        display: 'flex',
-        alignItems: 'center',
-        gap: '3px',
-        padding: '3px 6px',
-        borderRadius: '16px',
-        backgroundColor: '#F3F4F6',
-        border: 'none',
-        cursor: 'pointer'
-      }}
-    >
-      <div style={{
-        width: '20px',
-        height: '20px',
-        borderRadius: '50%',
-        backgroundColor: '#3B82F6',
-        display: 'flex',
-        alignItems: 'center',
-        justifyContent: 'center',
-        color: 'white',
-        fontWeight: 'bold',
-        fontSize: '9px'
-      }}>
-        {user?.email?.charAt(0).toUpperCase() || 'U'}
-      </div>
-      <span style={{ fontSize: '9px', color: '#374151', maxWidth: '60px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-        {user?.email?.split('@')[0] || 'User'}
-      </span>
-    </button>
-    
-    {showUserMenu && (
-  <div style={{
-    position: 'absolute',
-    top: '100%',
-    left: '50%',
-    transform: 'translateX(-50%)',
-    marginTop: '8px',
-    width: '240px',
-    backgroundColor: 'white',
-    border: '1px solid #E5E7EB',
-    borderRadius: '12px',
-    boxShadow: '0 4px 20px rgba(0,0,0,0.15)',
-    overflow: 'hidden',
-    zIndex: 100
-  }}>
-    <div style={{ padding: '10px 12px', borderBottom: '1px solid #E5E7EB' }}>
-      <p style={{ fontSize: '12px', fontWeight: 'bold', color: '#1F2937', wordBreak: 'break-all' }}>{user?.email}</p>
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: '6px' }}>
-        <p style={{ fontSize: '10px', color: '#6B7280' }}>Credits:</p>
-        <p style={{ fontSize: '12px', fontWeight: 'bold', color: '#F59E0B' }}>{profile?.credits || 100}</p>
-      </div>
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: '4px' }}>
-        <p style={{ fontSize: '10px', color: '#6B7280' }}>Plan:</p>
-        <p style={{ fontSize: '11px', fontWeight: '500', color: '#1F2937' }}>{profile?.subscription_status || 'Free Explorer'}</p>
-      </div>
-    </div>
-    <button
-      onClick={() => {
-        setShowUserMenu(false);
-        onNavigate('analysis');
-      }}
-      style={{
-        width: '100%',
-        padding: '10px 12px',
-        textAlign: 'left',
-        backgroundColor: 'white',
-        border: 'none',
-        cursor: 'pointer',
-        fontSize: '12px',
-        color: '#4B5563',
-        borderBottom: '1px solid #E5E7EB',
-        display: 'flex',
-        alignItems: 'center',
-        gap: '6px'
-      }}
-    >
-      <span>📊</span> AI Stock
-    </button>
-    <button
-      onClick={() => {
-        setShowUserMenu(false);
-        onNavigate('content', { view: 'pricing' });
-      }}
-      style={{
-        width: '100%',
-        padding: '10px 12px',
-        textAlign: 'left',
-        backgroundColor: 'white',
-        border: 'none',
-        cursor: 'pointer',
-        fontSize: '12px',
-        color: '#4B5563',
-        borderBottom: '1px solid #E5E7EB',
-        display: 'flex',
-        alignItems: 'center',
-        gap: '6px'
-      }}
-    >
-      <span>⬆️</span> Change Plan
-    </button>
-    <button
-      onClick={async () => {
-        await supabase.auth.signOut();
-        setShowUserMenu(false);
-        window.location.reload();
-      }}
-      style={{
-        width: '100%',
-        padding: '10px 12px',
-        textAlign: 'left',
-        backgroundColor: 'white',
-        border: 'none',
-        cursor: 'pointer',
-        fontSize: '12px',
-        color: '#EF4444',
-        display: 'flex',
-        alignItems: 'center',
-        gap: '6px'
-      }}
-    >
-      <span>🚪</span> Logout
-    </button>
-  </div>
-)}
-  </div>
-) : (
-  <button
-    onClick={onAuthOpen}
-    style={{
-      color: '#2563EB',
-      fontWeight: '600',
-      fontSize: '10px',
-      background: 'none',
-      border: 'none',
-      cursor: 'pointer',
-      whiteSpace: 'nowrap'
-    }}
-  >
-    {langKey === 'Traditional Chinese' ? '登入' : langKey === 'Simplified Chinese' ? '登录' : 'Login'}
-  </button>
-)}
+            <div className="user-menu-container" style={{ position: 'relative' }}>
+              <button
+                onClick={() => setShowUserMenu(!showUserMenu)}
+                style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '3px',
+                  padding: '3px 8px',
+                  borderRadius: '16px',
+                  backgroundColor: '#F3F4F6',
+                  border: 'none',
+                  cursor: 'pointer'
+                }}
+              >
+                <div style={{
+                  width: '22px',
+                  height: '22px',
+                  borderRadius: '50%',
+                  backgroundColor: '#3B82F6',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  color: 'white',
+                  fontWeight: 'bold',
+                  fontSize: '10px'
+                }}>
+                  {user?.email?.charAt(0).toUpperCase() || 'U'}
+                </div>
+                <span style={{ fontSize: '10px', color: '#374151', maxWidth: '50px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                  {user?.email?.split('@')[0] || 'User'}
+                </span>
+              </button>
+              
+              {showUserMenu && (
+                <div style={{
+                  position: 'absolute',
+                  top: '100%',
+                  right: '0',
+                  marginTop: '6px',
+                  width: '220px',
+                  backgroundColor: 'white',
+                  border: '1px solid #E5E7EB',
+                  borderRadius: '12px',
+                  boxShadow: '0 4px 20px rgba(0,0,0,0.15)',
+                  overflow: 'hidden',
+                  zIndex: 100
+                }}>
+                  <div style={{ padding: '10px 12px', borderBottom: '1px solid #E5E7EB' }}>
+                    <p style={{ fontSize: '12px', fontWeight: 'bold', color: '#1F2937', wordBreak: 'break-all' }}>{user?.email}</p>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: '6px' }}>
+                      <p style={{ fontSize: '10px', color: '#6B7280' }}>Credits:</p>
+                      <p style={{ fontSize: '12px', fontWeight: 'bold', color: '#F59E0B' }}>{profile?.credits || 100}</p>
+                    </div>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: '4px' }}>
+                      <p style={{ fontSize: '10px', color: '#6B7280' }}>Plan:</p>
+                      <p style={{ fontSize: '11px', fontWeight: '500', color: '#1F2937' }}>{profile?.subscription_status || 'Free Explorer'}</p>
+                    </div>
+                  </div>
+                  
+                  {/* Watchlist Button */}
+                  <button
+                    onClick={() => {
+                      setShowUserMenu(false);
+                      onNavigate('analysis');
+                    }}
+                    style={{
+                      width: '100%',
+                      padding: '10px 12px',
+                      textAlign: 'left',
+                      backgroundColor: 'white',
+                      border: 'none',
+                      cursor: 'pointer',
+                      fontSize: '12px',
+                      color: '#4B5563',
+                      borderBottom: '1px solid #E5E7EB',
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: '6px'
+                    }}
+                  >
+                    <span>⭐</span> Watchlist <span style={{ fontSize: '10px', color: '#D97706' }}>({getWatchlistCount()})</span>
+                  </button>
+                  
+                  {/* Change Plan */}
+                  <button
+                    onClick={() => {
+                      setShowUserMenu(false);
+                      onNavigate('content', { view: 'pricing' });
+                    }}
+                    style={{
+                      width: '100%',
+                      padding: '10px 12px',
+                      textAlign: 'left',
+                      backgroundColor: 'white',
+                      border: 'none',
+                      cursor: 'pointer',
+                      fontSize: '12px',
+                      color: '#4B5563',
+                      borderBottom: '1px solid #E5E7EB',
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: '6px'
+                    }}
+                  >
+                    <span>⬆️</span> Change Plan
+                  </button>
+                  
+                  {/* Unsubscribe */}
+                  <button
+                    onClick={() => {
+                      setShowUserMenu(false);
+                      // Navigate to pricing with unsubscribe option
+                      onNavigate('content', { view: 'pricing' });
+                    }}
+                    style={{
+                      width: '100%',
+                      padding: '10px 12px',
+                      textAlign: 'left',
+                      backgroundColor: 'white',
+                      border: 'none',
+                      cursor: 'pointer',
+                      fontSize: '12px',
+                      color: '#EF4444',
+                      borderBottom: '1px solid #E5E7EB',
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: '6px'
+                    }}
+                  >
+                    <span>📴</span> Unsubscribe
+                  </button>
+                  
+                  {/* Logout */}
+                  <button
+                    onClick={handleLogout}
+                    style={{
+                      width: '100%',
+                      padding: '10px 12px',
+                      textAlign: 'left',
+                      backgroundColor: 'white',
+                      border: 'none',
+                      cursor: 'pointer',
+                      fontSize: '12px',
+                      color: '#EF4444',
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: '6px'
+                    }}
+                  >
+                    <span>🚪</span> Logout
+                  </button>
+                </div>
+              )}
+            </div>
+          ) : (
+            <button
+              onClick={onAuthOpen}
+              style={{
+                color: '#2563EB',
+                fontWeight: '600',
+                fontSize: '10px',
+                background: 'none',
+                border: 'none',
+                cursor: 'pointer',
+                whiteSpace: 'nowrap'
+              }}
+            >
+              {langKey === 'Traditional Chinese' ? '登入' : langKey === 'Simplified Chinese' ? '登录' : 'Login'}
+            </button>
+          )}
         </div>
       </div>
 
+      {/* Main Content */}
       <div style={{
         flex: 1,
         display: 'flex',
@@ -341,6 +378,7 @@ const MobileLanding: React.FC<MobileLandingProps> = ({
         </div>
       </div>
 
+      {/* Footer Menu Button */}
       <div style={{ position: 'absolute', bottom: '20px', right: '20px', zIndex: 30 }}>
         <button onClick={() => setShowFooterMenu(!showFooterMenu)} style={{ width: '48px', height: '48px', borderRadius: '24px', backgroundColor: '#DC2626', color: 'white', border: 'none', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', boxShadow: '0 2px 8px rgba(0,0,0,0.2)' }}>
           <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2}>
@@ -358,13 +396,6 @@ const MobileLanding: React.FC<MobileLandingProps> = ({
           </div>
         )}
       </div>
-
-      <WatchlistModal
-        isOpen={showWatchlist}
-        onClose={() => setShowWatchlist(false)}
-        onSelectStock={handleWatchlistStockSelect}
-        langKey={langKey}
-      />
     </div>
   );
 };
