@@ -2,7 +2,7 @@
 import { useState, useMemo } from 'react';
 import { LineChart, Line, XAxis, YAxis, Tooltip, ResponsiveContainer, Area, ComposedChart } from 'recharts';
 
-// Filter data by date range - improved with fallbacks
+// Filter data by date range - only 1D, 1W, 3M (removed 6M)
 const filterDataByRange = (data: any[], range: string) => {
   if (!data || data.length === 0) return [];
   
@@ -13,35 +13,40 @@ const filterDataByRange = (data: any[], range: string) => {
   switch (range) {
     case '1D':
       startDate.setDate(now.getDate() - 1);
-      filteredData = data.filter(item => new Date(item.date) >= startDate);
+      filteredData = data.filter(item => {
+        const itemDate = new Date(item.date);
+        return itemDate >= startDate;
+      });
       if (filteredData.length < 2) {
         filteredData = data.slice(-5);
       }
       break;
     case '1W':
       startDate.setDate(now.getDate() - 7);
-      filteredData = data.filter(item => new Date(item.date) >= startDate);
+      filteredData = data.filter(item => {
+        const itemDate = new Date(item.date);
+        return itemDate >= startDate;
+      });
       if (filteredData.length < 3) {
         filteredData = data.slice(-10);
       }
       break;
     case '3M':
       startDate.setMonth(now.getMonth() - 3);
-      filteredData = data.filter(item => new Date(item.date) >= startDate);
+      filteredData = data.filter(item => {
+        const itemDate = new Date(item.date);
+        return itemDate >= startDate;
+      });
       if (filteredData.length < 3) {
         filteredData = data.slice(-20);
       }
       break;
-    case '6M':
-      startDate.setMonth(now.getMonth() - 6);
-      filteredData = data.filter(item => new Date(item.date) >= startDate);
-      if (filteredData.length < 3) {
-        filteredData = data.slice(-30);
-      }
-      break;
     default:
       startDate.setMonth(now.getMonth() - 3);
-      filteredData = data.filter(item => new Date(item.date) >= startDate);
+      filteredData = data.filter(item => {
+        const itemDate = new Date(item.date);
+        return itemDate >= startDate;
+      });
   }
   
   return filteredData;
@@ -53,21 +58,27 @@ const getTimeLabel = (range: string) => {
     case '1D': return '1天';
     case '1W': return '1週';
     case '3M': return '3個月';
-    case '6M': return '6個月';
     default: return '3個月';
   }
 };
 
-// Format date based on range
+// Format date properly for X-axis
 const formatDate = (value: string, range: string) => {
-  const date = new Date(value);
-  if (range === '1D') {
-    return date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
-  }
-  if (range === '1W') {
+  try {
+    const date = new Date(value);
+    if (isNaN(date.getTime())) return value;
+    
+    if (range === '1D') {
+      return date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+    }
+    if (range === '1W') {
+      return `${date.getMonth()+1}/${date.getDate()}`;
+    }
+    // 3M - show month/day
     return `${date.getMonth()+1}/${date.getDate()}`;
+  } catch (e) {
+    return value;
   }
-  return `${date.getMonth()+1}/${date.getDate()}`;
 };
 
 export const PriceChart = ({ data, langKey }: { data: any[]; langKey?: string }) => {
@@ -76,11 +87,11 @@ export const PriceChart = ({ data, langKey }: { data: any[]; langKey?: string })
   // Filter data based on selected range
   const filteredData = useMemo(() => filterDataByRange(data, selectedRange), [data, selectedRange]);
   
+  // Time ranges - removed 6M
   const timeRanges = [
     { label: '1D', value: '1D' },
     { label: '1W', value: '1W' },
     { label: '3M', value: '3M' },
-    { label: '6M', value: '6M' },
   ];
   
   // Get latest price for display
@@ -90,7 +101,7 @@ export const PriceChart = ({ data, langKey }: { data: any[]; langKey?: string })
   const priceChangePercent = previousPrice && latestPrice ? ((priceChange / previousPrice) * 100).toFixed(2) : '0';
 
   // Check if we have Bollinger Bands data
-  const hasBollingerBands = filteredData.some(d => d.upper && d.middle && d.lower);
+  const hasBollingerBands = filteredData.some(d => d.upper !== undefined && d.upper !== null && d.middle !== undefined && d.middle !== null);
   const hasVWAP = filteredData.some(d => d.vwap);
   const hasEnoughData = filteredData.length >= 2;
 
@@ -119,7 +130,7 @@ export const PriceChart = ({ data, langKey }: { data: any[]; langKey?: string })
           )}
         </div>
         
-        {/* Time range buttons - ENHANCED VISIBILITY */}
+        {/* Time range buttons */}
         <div style={{ 
           display: 'flex', 
           gap: '6px', 
@@ -153,17 +164,6 @@ export const PriceChart = ({ data, langKey }: { data: any[]; langKey?: string })
                   fontWeight: isActive ? '700' : '500',
                   transition: 'all 0.2s ease',
                   minWidth: '44px',
-                  position: 'relative',
-                }}
-                onMouseEnter={(e) => {
-                  if (!isActive && hasData) {
-                    e.currentTarget.style.backgroundColor = '#e2e8f0';
-                  }
-                }}
-                onMouseLeave={(e) => {
-                  if (!isActive) {
-                    e.currentTarget.style.backgroundColor = 'transparent';
-                  }
                 }}
                 title={!hasData && !isActive ? `Not enough data for ${range.label} view` : `View ${range.label}`}
               >
@@ -184,13 +184,18 @@ export const PriceChart = ({ data, langKey }: { data: any[]; langKey?: string })
                 <stop offset="5%" stopColor="#2563eb" stopOpacity={0.1}/>
                 <stop offset="95%" stopColor="#2563eb" stopOpacity={0}/>
               </linearGradient>
+              <linearGradient id="colorBollinger" x1="0" y1="0" x2="0" y2="1">
+                <stop offset="5%" stopColor="#94a3b8" stopOpacity={0.15}/>
+                <stop offset="95%" stopColor="#94a3b8" stopOpacity={0.05}/>
+              </linearGradient>
             </defs>
             <XAxis 
               dataKey="date" 
               tick={{ fontSize: 12, fill: '#64748b' }}
               tickFormatter={(value) => formatDate(value, selectedRange)}
               interval="preserveStartEnd"
-              minTickGap={30}
+              minTickGap={40}
+              tickCount={6}
             />
             <YAxis 
               domain={['auto', 'auto']} 
@@ -204,41 +209,50 @@ export const PriceChart = ({ data, langKey }: { data: any[]; langKey?: string })
               formatter={(value: number, name: string) => {
                 if (value === undefined || value === null) return ['N/A', name];
                 if (name === 'price' || name === 'close') return [`$${value.toFixed(2)}`, '股價'];
-                if (name === 'upper') return [`$${value.toFixed(2)}`, '上軌 (Bollinger Upper)'];
+                if (name === 'upper') return [`$${value.toFixed(2)}`, '布林上軌'];
                 if (name === 'middle') return [`$${value.toFixed(2)}`, '中軌 (SMA 20)'];
-                if (name === 'lower') return [`$${value.toFixed(2)}`, '下軌 (Bollinger Lower)'];
+                if (name === 'lower') return [`$${value.toFixed(2)}`, '布林下軌'];
                 if (name === 'vwap') return [`$${value.toFixed(2)}`, 'VWAP'];
                 return [`$${value.toFixed(2)}`, name];
               }}
               labelFormatter={(label) => {
-                const date = new Date(label);
-                if (selectedRange === '1D') {
-                  return date.toLocaleString();
+                try {
+                  const date = new Date(label);
+                  if (isNaN(date.getTime())) return label;
+                  if (selectedRange === '1D') {
+                    return date.toLocaleString();
+                  }
+                  return date.toLocaleDateString();
+                } catch (e) {
+                  return label;
                 }
-                return date.toLocaleDateString();
               }}
             />
             
             {/* Bollinger Bands - Upper and Lower as Area */}
             {hasBollingerBands && (
               <>
+                {/* Upper Band Area */}
                 <Area 
                   type="monotone" 
                   dataKey="upper" 
                   stroke="#94a3b8" 
                   strokeWidth={1}
-                  fill="#e2e8f0" 
-                  fillOpacity={0.2} 
+                  fill="url(#colorBollinger)"
+                  fillOpacity={0.3}
                   dot={false}
                 />
+                {/* Lower Band Area - overlapping to create band effect */}
                 <Area 
                   type="monotone" 
                   dataKey="lower" 
                   stroke="#94a3b8" 
                   strokeWidth={1}
                   fill="#ffffff" 
+                  fillOpacity={0.1}
                   dot={false}
                 />
+                {/* Middle Band (SMA 20) */}
                 <Line 
                   type="monotone" 
                   dataKey="middle" 
@@ -302,11 +316,11 @@ export const PriceChart = ({ data, langKey }: { data: any[]; langKey?: string })
             <>
               <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
                 <div style={{ width: '20px', height: '3px', background: '#94a3b8', borderRadius: '2px', borderStyle: 'dashed' }}></div>
-                <span style={{ fontSize: '12px', color: '#64748b' }}>SMA 20 (中軌)</span>
+                <span style={{ fontSize: '12px', color: '#64748b' }}>中軌 (SMA 20)</span>
               </div>
               <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-                <div style={{ width: '20px', height: '12px', background: '#e2e8f0', borderRadius: '2px', opacity: 0.5 }}></div>
-                <span style={{ fontSize: '12px', color: '#64748b' }}>布林通道 (上/下軌)</span>
+                <div style={{ width: '20px', height: '12px', background: '#94a3b8', borderRadius: '2px', opacity: 0.3 }}></div>
+                <span style={{ fontSize: '12px', color: '#64748b' }}>布林通道</span>
               </div>
             </>
           )}
