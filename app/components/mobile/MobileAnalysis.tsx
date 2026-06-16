@@ -113,7 +113,13 @@ const MobileAnalysis: React.FC<MobileAnalysisProps> = ({
   const [voiceLanguage, setVoiceLanguage] = useState<string>(propVoiceLanguage);
   const [showUserMenu, setShowUserMenu] = useState(false);
   const [watchlistMessage, setWatchlistMessage] = useState<string | null>(null);
-  const [watchlistCount, setWatchlistCount] = useState(0); // <-- ADD THIS
+  const [watchlistCount, setWatchlistCount] = useState(0);
+  const [watchlistItems, setWatchlistItems] = useState<string[]>([]);
+
+  // Load watchlist items on mount
+  useEffect(() => {
+    loadWatchlist();
+  }, []);
 
   // Load voice preference from localStorage
   useEffect(() => {
@@ -205,17 +211,18 @@ const MobileAnalysis: React.FC<MobileAnalysisProps> = ({
       }
     }
   }, [langKey]);
-  // Add this after the other useEffects (around line 120)
-// Load watchlist count on mount
-useEffect(() => {
-  try {
-    const saved = localStorage.getItem('stockWatchlist');
-    const watchlist: string[] = saved ? JSON.parse(saved) : [];
-    setWatchlistCount(watchlist.length);
-  } catch (error) {
-    setWatchlistCount(0);
-  }
-}, []);
+
+  const loadWatchlist = () => {
+    try {
+      const saved = localStorage.getItem('stockWatchlist');
+      const items: string[] = saved ? JSON.parse(saved) : [];
+      setWatchlistItems(items);
+      setWatchlistCount(items.length);
+    } catch (error) {
+      setWatchlistItems([]);
+      setWatchlistCount(0);
+    }
+  };
 
   const reFetchAnalysis = async (symbol: string) => {
     if (!symbol) return;
@@ -425,12 +432,14 @@ useEffect(() => {
 
   const exampleText = langKey === 'Traditional Chinese' ? '輸入股票代號 e.g.: 0700.hk, 2330.tw, TSLA' : langKey === 'Simplified Chinese' ? '输入股票代码 e.g.: 0700.hk, 2330.tw, TSLA' : 'Enter stock symbol e.g.: 0700.hk, 2330.tw, TSLA';
   const isAnalysisMode = viewType === 'analysis';
+  const isWatchlistMode = viewType === 'watchlist';
 
   const getTitle = () => {
     if (legalTitle) return legalTitle;
     if (topicId === 'about') return langKey === 'Traditional Chinese' ? '關於我們' : langKey === 'Simplified Chinese' ? '关于我们' : 'About';
     if (topicId === 'features') return langKey === 'Traditional Chinese' ? '功能介紹' : langKey === 'Simplified Chinese' ? '功能介绍' : 'Features';
     if (topicId === 'pricing') return langKey === 'Traditional Chinese' ? '服務定價' : langKey === 'Simplified Chinese' ? '服务定价' : 'Pricing';
+    if (isWatchlistMode) return langKey === 'Traditional Chinese' ? '📋 觀察清單' : langKey === 'Simplified Chinese' ? '📋 观察清单' : '📋 Watchlist';
     return langKey === 'Traditional Chinese' ? 'AI 分析' : langKey === 'Simplified Chinese' ? 'AI 分析' : 'AI Analysis';
   };
 
@@ -477,6 +486,7 @@ useEffect(() => {
       localStorage.setItem('stockWatchlist', JSON.stringify(watchlist));
       console.log(`✅ ${symbol} added to watchlist`);
       setWatchlistCount(watchlist.length);
+      setWatchlistItems(watchlist);
       setWatchlistMessage(`✅ ${symbol} added to your watchlist!`);
       
       setTimeout(() => setWatchlistMessage(null), 3000);
@@ -487,16 +497,33 @@ useEffect(() => {
       setTimeout(() => setWatchlistMessage(null), 3000);
     }
   };
-  // Add this function after addToWatchlist (around line 180)
-const getWatchlistCount = () => {
-  try {
-    const saved = localStorage.getItem('stockWatchlist');
-    const watchlist: string[] = saved ? JSON.parse(saved) : [];
-    return watchlist.length;
-  } catch (error) {
-    return 0;
-  }
-};
+
+  // Remove from watchlist
+  const removeFromWatchlist = (symbol: string) => {
+    try {
+      const updated = watchlistItems.filter(item => item !== symbol);
+      setWatchlistItems(updated);
+      setWatchlistCount(updated.length);
+      localStorage.setItem('stockWatchlist', JSON.stringify(updated));
+      setWatchlistMessage(`🗑️ ${symbol} removed from watchlist`);
+      setTimeout(() => setWatchlistMessage(null), 3000);
+    } catch (error) {
+      console.error('Error removing from watchlist:', error);
+    }
+  };
+
+  // Analyze a symbol from watchlist
+  const analyzeWatchlistItem = (symbol: string) => {
+    setInputValue(symbol);
+    // Navigate back to analysis mode
+    if (onNavigate) {
+      onNavigate('analysis');
+    }
+    // Auto-analyze after navigation
+    setTimeout(() => {
+      handleAnalyze();
+    }, 200);
+  };
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', height: '100%', width: '100%', backgroundColor: '#f5f5f5', overflow: 'hidden', position: 'absolute', top: 0, left: 0, right: 0, bottom: 0 }}>
@@ -575,27 +602,30 @@ const getWatchlistCount = () => {
                     </div>
                   </div>
                   <button
-  onClick={() => {
-    setShowUserMenu(false);
-    onNavigate?.('content', { view: 'watchlist' });
-  }}
-  style={{
-    width: '100%',
-    padding: '10px 12px',
-    textAlign: 'left',
-    backgroundColor: 'white',
-    border: 'none',
-    cursor: 'pointer',
-    fontSize: '12px',
-    color: '#4B5563',
-    borderBottom: '1px solid #E5E7EB',
-    display: 'flex',
-    alignItems: 'center',
-    gap: '6px'
-  }}
->
-  <span>⭐</span> Watchlist ({getWatchlistCount()})
-</button>
+                    onClick={() => {
+                      setShowUserMenu(false);
+                      // Navigate to watchlist view
+                      if (onNavigate) {
+                        onNavigate('watchlist');
+                      }
+                    }}
+                    style={{
+                      width: '100%',
+                      padding: '10px 12px',
+                      textAlign: 'left',
+                      backgroundColor: 'white',
+                      border: 'none',
+                      cursor: 'pointer',
+                      fontSize: '12px',
+                      color: '#4B5563',
+                      borderBottom: '1px solid #E5E7EB',
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: '6px'
+                    }}
+                  >
+                    <span>⭐</span> Watchlist ({watchlistCount})
+                  </button>
                   <button
                     onClick={() => {
                       setShowUserMenu(false);
@@ -690,6 +720,135 @@ const getWatchlistCount = () => {
         )}
         {topicId === 'about' && <AboutSection lang={langKey} />}
         {topicId === 'features' && <FeaturesSection lang={langKey} />}
+        
+        {/* Watchlist View */}
+        {isWatchlistMode && !displayLegalTitle && (
+          <div style={{ backgroundColor: 'white', borderRadius: '12px', padding: '16px' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px' }}>
+              <h3 style={{ fontSize: '16px', fontWeight: 'bold', color: '#1F2937' }}>
+                {langKey === 'Traditional Chinese' ? '📋 我的觀察清單' : 
+                 langKey === 'Simplified Chinese' ? '📋 我的观察清单' : 
+                 '📋 My Watchlist'}
+              </h3>
+              <span style={{ fontSize: '12px', color: '#6B7280', backgroundColor: '#F3F4F6', padding: '2px 10px', borderRadius: '12px' }}>
+                {watchlistCount} {langKey === 'Traditional Chinese' ? '個' : langKey === 'Simplified Chinese' ? '个' : 'items'}
+              </span>
+            </div>
+            
+            {watchlistMessage && (
+              <div style={{
+                marginBottom: '12px',
+                padding: '8px 12px',
+                borderRadius: '8px',
+                backgroundColor: watchlistMessage.includes('✅') || watchlistMessage.includes('🗑️') ? '#ECFDF5' : '#FEF2F2',
+                color: watchlistMessage.includes('✅') || watchlistMessage.includes('🗑️') ? '#10B981' : '#EF4444',
+                fontSize: '12px',
+                textAlign: 'center'
+              }}>
+                {watchlistMessage}
+              </div>
+            )}
+            
+            {watchlistItems.length === 0 ? (
+              <div style={{ 
+                textAlign: 'center', 
+                padding: '40px 20px',
+                color: '#9CA3AF'
+              }}>
+                <div style={{ fontSize: '48px', marginBottom: '12px' }}>📭</div>
+                <p style={{ fontSize: '14px', fontWeight: '500' }}>
+                  {langKey === 'Traditional Chinese' ? '你的觀察清單是空的' : 
+                   langKey === 'Simplified Chinese' ? '你的观察清单是空的' : 
+                   'Your watchlist is empty'}
+                </p>
+                <p style={{ fontSize: '12px', marginTop: '4px' }}>
+                  {langKey === 'Traditional Chinese' ? '返回分析頁面添加股票到觀察清單' : 
+                   langKey === 'Simplified Chinese' ? '返回分析页面添加股票到观察清单' : 
+                   'Go back to analysis to add stocks'}
+                </p>
+              </div>
+            ) : (
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                {watchlistItems.map((symbol, index) => (
+                  <div 
+                    key={index}
+                    style={{
+                      display: 'flex',
+                      justifyContent: 'space-between',
+                      alignItems: 'center',
+                      padding: '12px 14px',
+                      backgroundColor: '#F9FAFB',
+                      borderRadius: '10px',
+                      border: '1px solid #E5E7EB',
+                      transition: 'all 0.2s'
+                    }}
+                  >
+                    <span style={{ fontWeight: 'bold', fontSize: '14px', color: '#1F2937' }}>{symbol}</span>
+                    <div style={{ display: 'flex', gap: '8px' }}>
+                      <button
+                        onClick={() => analyzeWatchlistItem(symbol)}
+                        style={{
+                          padding: '5px 14px',
+                          backgroundColor: '#3B82F6',
+                          color: 'white',
+                          border: 'none',
+                          borderRadius: '6px',
+                          cursor: 'pointer',
+                          fontSize: '12px',
+                          fontWeight: '500'
+                        }}
+                      >
+                        {langKey === 'Traditional Chinese' ? '📊 分析' : 
+                         langKey === 'Simplified Chinese' ? '📊 分析' : 
+                         '📊 Analyze'}
+                      </button>
+                      <button
+                        onClick={() => removeFromWatchlist(symbol)}
+                        style={{
+                          padding: '5px 10px',
+                          backgroundColor: '#FEE2E2',
+                          color: '#DC2626',
+                          border: 'none',
+                          borderRadius: '6px',
+                          cursor: 'pointer',
+                          fontSize: '14px'
+                        }}
+                      >
+                        ✕
+                      </button>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+            
+            <button
+              onClick={() => {
+                if (onNavigate) {
+                  onNavigate('analysis');
+                }
+              }}
+              style={{
+                marginTop: '16px',
+                padding: '10px 16px',
+                backgroundColor: '#6B7280',
+                color: 'white',
+                border: 'none',
+                borderRadius: '8px',
+                cursor: 'pointer',
+                fontSize: '13px',
+                width: '100%',
+                fontWeight: '500'
+              }}
+            >
+              {langKey === 'Traditional Chinese' ? '← 返回分析' : 
+               langKey === 'Simplified Chinese' ? '← 返回分析' : 
+               '← Back to Analysis'}
+            </button>
+          </div>
+        )}
+        
+        {/* Analysis View */}
         {isAnalysisMode && !displayLegalTitle && (
           <>
             {/* Watchlist Message */}
@@ -698,8 +857,8 @@ const getWatchlistCount = () => {
                 marginBottom: '8px',
                 padding: '8px',
                 borderRadius: '8px',
-                backgroundColor: watchlistMessage.includes('✅') ? '#ECFDF5' : '#FEF2F2',
-                color: watchlistMessage.includes('✅') ? '#10B981' : '#EF4444',
+                backgroundColor: watchlistMessage.includes('✅') || watchlistMessage.includes('🗑️') ? '#ECFDF5' : '#FEF2F2',
+                color: watchlistMessage.includes('✅') || watchlistMessage.includes('🗑️') ? '#10B981' : '#EF4444',
                 fontSize: '12px',
                 textAlign: 'center'
               }}>
@@ -748,6 +907,7 @@ const getWatchlistCount = () => {
         )}
       </div>
       
+      {/* Only show input controls in analysis mode */}
       {isAnalysisMode && !displayLegalTitle && (
         <div style={{ backgroundColor: 'white', borderTop: '1px solid #E5E7EB', padding: '10px 12px', paddingBottom: 'max(10px, env(safe-area-inset-bottom))', flexShrink: 0, zIndex: 20, width: '100%', boxSizing: 'border-box', position: 'relative' }}>
           
