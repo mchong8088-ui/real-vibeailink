@@ -474,7 +474,7 @@ export const StockAnalysisModule: React.FC<Props> = ({
   
   // Add to watchlist function
 const addToWatchlist = () => {
-  const symbol = analysisData?.symbol;
+  const symbol = data?.symbol;
   if (!symbol) return;
   
   const saved = localStorage.getItem('stockWatchlist');
