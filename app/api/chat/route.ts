@@ -227,19 +227,27 @@ async function fetchRealStockData(symbol: string) {
     const lows = result.indicators?.quote?.[0]?.low || [];
     
     const historical = [];
-    for (let i = 0; i < timestamps.length; i++) {
-      if (timestamps[i] && closes[i] && closes[i] > 0) {
-        historical.push({
-          date: new Date(timestamps[i] * 1000).toISOString().split('T')[0],
-          price: closes[i],
-          close: closes[i],
-          open: opens[i] || null,
-          high: highs[i] || null,
-          low: lows[i] || null,
-          volume: volumes[i] || 0,
-        });
-      }
-    }
+for (let i = 0; i < timestamps.length; i++) {
+  if (timestamps[i] && closes[i] && closes[i] > 0) {
+    const date = new Date(timestamps[i] * 1000);
+    // Format as YYYY-MM-DD for consistent parsing
+    const year = date.getFullYear();
+    const month = String(date.getMonth() + 1).padStart(2, '0');
+    const day = String(date.getDate()).padStart(2, '0');
+    const dateStr = `${year}-${month}-${day}`;
+    
+    historical.push({
+      date: dateStr,
+      price: closes[i],
+      close: closes[i],
+      open: opens[i] || null,
+      high: highs[i] || null,
+      low: lows[i] || null,
+      volume: volumes[i] || 0,
+      timestamp: timestamps[i], // Keep original for debugging
+    });
+  }
+}
     
     console.log(`✅ ${symbol}: ${currency}${price} (${changePercent > 0 ? '+' : ''}${changePercent.toFixed(2)}%) - ${historical.length} data points`);
     
