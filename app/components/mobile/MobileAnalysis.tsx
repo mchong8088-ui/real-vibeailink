@@ -627,49 +627,27 @@ const MobileAnalysis: React.FC<MobileAnalysisProps> = ({
                     <span>⭐</span> Watchlist ({watchlistCount})
                   </button>
                   <button
-                    onClick={() => {
-                      setShowUserMenu(false);
-                      onNavigate?.('content', { view: 'pricing' });
-                    }}
-                    style={{
-                      width: '100%',
-                      padding: '10px 12px',
-                      textAlign: 'left',
-                      backgroundColor: 'white',
-                      border: 'none',
-                      cursor: 'pointer',
-                      fontSize: '12px',
-                      color: '#4B5563',
-                      borderBottom: '1px solid #E5E7EB',
-                      display: 'flex',
-                      alignItems: 'center',
-                      gap: '6px'
-                    }}
-                  >
-                    <span>⬆️</span> Change Plan
-                  </button>
-                  <button
-                    onClick={() => {
-                      setShowUserMenu(false);
-                      setShowCancellationModal(true);
-                    }}
-                    style={{
-                      width: '100%',
-                      padding: '10px 12px',
-                      textAlign: 'left',
-                      backgroundColor: 'white',
-                      border: 'none',
-                      cursor: 'pointer',
-                      fontSize: '12px',
-                      color: '#EF4444',
-                      borderBottom: '1px solid #E5E7EB',
-                      display: 'flex',
-                      alignItems: 'center',
-                      gap: '6px'
-                    }}
-                  >
-                    <span>📴</span> Unsubscribe
-                  </button>
+  onClick={() => {
+    setShowUserMenu(false);
+    setShowCancellationModal(true);  // ← CHANGE TO THIS
+  }}
+  style={{
+    width: '100%',
+    padding: '10px 12px',
+    textAlign: 'left',
+    backgroundColor: 'white',
+    border: 'none',
+    cursor: 'pointer',
+    fontSize: '12px',
+    color: '#EF4444',
+    borderBottom: '1px solid #E5E7EB',
+    display: 'flex',
+    alignItems: 'center',
+    gap: '6px'
+  }}
+>
+  <span>📴</span> Unsubscribe
+</button>
                   <button
                     onClick={async () => {
                       await supabase.auth.signOut();
