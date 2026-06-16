@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { supabase } from '../../lib/supabase';
 
+// Update the interface at the top of TermsModal.tsx
 interface TermsModalProps {
   isOpen: boolean;
   onClose: () => void;
@@ -8,6 +9,7 @@ interface TermsModalProps {
   displayName: string;
   email: string;
   onAccept: () => void;
+  langKey?: string;  // Add this line
 }
 
 // Define the disclaimer data type

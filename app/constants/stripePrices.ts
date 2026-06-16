@@ -11,8 +11,6 @@ export const STRIPE_PRICE_IDS = {
   // Coffee Plan (Monthly subscription)
   COFFEE_MONTHLY: 'price_1TVLGm2RTqNKntjqe6zlFWfN',
   
-  // Coffee Top-up (One-time purchase)
-  COFFEE_TOPUP: 'price_1TVLFX2RTqNKntjqdZZOlKBj',
   
   // Alias for backward compatibility
   TOPUP_100_CREDITS: 'price_1TVLFX2RTqNKntjqdZZOlKBj',

@@ -334,15 +334,21 @@ export default function VibeAiMaster() {
   };
 
   const handleMobileNavigate = (page: string, params?: any) => {
-    if (page === 'analysis') { 
-      setMobilePage('analysis'); 
-      setMobileView('analysis'); 
-    } else if (page === 'content') { 
-      setMobilePage('content'); 
-      setMobileTopic(params?.view); 
-      setMobileLegal(params?.view); 
-    }
-  };
+  if (page === 'analysis') { 
+    setMobilePage('analysis'); 
+    setMobileView('analysis'); 
+  } else if (page === 'content') { 
+    setMobilePage('content'); 
+    setMobileTopic(params?.view); 
+    setMobileLegal(params?.view); 
+  } else if (page === 'watchlist') {
+    // Navigate to watchlist view in MobileAnalysis
+    setMobilePage('analysis'); // Keep on analysis page
+    setMobileView('watchlist'); // Switch to watchlist view
+    setMobileTopic(undefined);
+    setMobileLegal(undefined);
+  }
+};
 
   const handleMobileBack = () => {
     setMobilePage('landing');
