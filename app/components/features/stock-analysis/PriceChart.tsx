@@ -12,10 +12,8 @@ const filterDataByRange = (data: any[], range: string) => {
   
   switch (range) {
     case '1D':
-      // For 1D, try to show last 24 hours of data
       startDate.setDate(now.getDate() - 1);
       filteredData = data.filter(item => new Date(item.date) >= startDate);
-      // If not enough data for 1D, show last 5 data points
       if (filteredData.length < 2) {
         filteredData = data.slice(-5);
       }
@@ -23,7 +21,6 @@ const filterDataByRange = (data: any[], range: string) => {
     case '1W':
       startDate.setDate(now.getDate() - 7);
       filteredData = data.filter(item => new Date(item.date) >= startDate);
-      // If not enough data for 1W, show last 10 data points
       if (filteredData.length < 3) {
         filteredData = data.slice(-10);
       }
@@ -73,7 +70,7 @@ const formatDate = (value: string, range: string) => {
   return `${date.getMonth()+1}/${date.getDate()}`;
 };
 
-export const PriceChart = ({ data }: { data: any[] }) => {
+export const PriceChart = ({ data, langKey }: { data: any[]; langKey?: string }) => {
   const [selectedRange, setSelectedRange] = useState('3M');
   
   // Filter data based on selected range
@@ -95,8 +92,6 @@ export const PriceChart = ({ data }: { data: any[] }) => {
   // Check if we have Bollinger Bands data
   const hasBollingerBands = filteredData.some(d => d.upper && d.middle && d.lower);
   const hasVWAP = filteredData.some(d => d.vwap);
-
-  // Determine if we have enough data for the selected range
   const hasEnoughData = filteredData.length >= 2;
 
   return (
@@ -105,7 +100,7 @@ export const PriceChart = ({ data }: { data: any[] }) => {
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '15px', flexWrap: 'wrap', gap: '10px' }}>
         <div>
           <h4 style={{ margin: 0, color: '#1e293b' }}>
-            價格走勢圖（{getTimeLabel(selectedRange)}）
+            📈 價格走勢圖（{getTimeLabel(selectedRange)}）
             {!hasEnoughData && (
               <span style={{ fontSize: '12px', color: '#f59e0b', marginLeft: '8px' }}>
                 ⚠️ 數據不足
@@ -117,56 +112,63 @@ export const PriceChart = ({ data }: { data: any[] }) => {
               <span style={{ fontSize: '24px', fontWeight: 'bold', color: '#1e293b' }}>
                 ${latestPrice.toFixed(2)}
               </span>
-              <span style={{ marginLeft: '10px', color: priceChange >= 0 ? '#10b981' : '#ef4444', fontSize: '14px' }}>
+              <span style={{ marginLeft: '10px', color: priceChange >= 0 ? '#10b981' : '#ef4444', fontSize: '14px', fontWeight: '600' }}>
                 {priceChange >= 0 ? '+' : ''}{priceChange.toFixed(2)} ({priceChangePercent}%)
               </span>
             </div>
           )}
-          {!hasEnoughData && (
-            <div style={{ marginTop: '5px', fontSize: '13px', color: '#64748b' }}>
-              Not enough data points for this time range
-            </div>
-          )}
         </div>
         
-        {/* Time range buttons */}
-        <div style={{ display: 'flex', gap: '8px', background: '#f1f5f9', padding: '4px', borderRadius: '12px' }}>
+        {/* Time range buttons - ENHANCED VISIBILITY */}
+        <div style={{ 
+          display: 'flex', 
+          gap: '6px', 
+          background: '#f1f5f9', 
+          padding: '4px', 
+          borderRadius: '12px',
+          border: '1px solid #e2e8f0',
+          boxShadow: '0 1px 2px rgba(0,0,0,0.05)'
+        }}>
           {timeRanges.map((range) => {
-            // Check if we have data for this range
             const rangeData = filterDataByRange(data, range.value);
             const hasData = rangeData.length >= 2;
+            const isActive = selectedRange === range.value;
             
             return (
               <button
                 key={range.value}
                 onClick={() => {
-                  if (hasData || range.value === selectedRange) {
+                  if (hasData || isActive) {
                     setSelectedRange(range.value);
-                  } else {
-                    // Show a message if not enough data
-                    const msg = `Not enough data for ${range.label} view. Try another time range.`;
-                    if (typeof window !== 'undefined') {
-                      // Use a less intrusive notification
-                      console.log(msg);
-                    }
                   }
                 }}
                 style={{
-                  padding: '6px 16px',
+                  padding: '8px 20px',
                   borderRadius: '8px',
                   border: 'none',
-                  background: selectedRange === range.value ? '#2563eb' : 'transparent',
-                  color: selectedRange === range.value ? '#fff' : (hasData ? '#64748b' : '#cbd5e1'),
-                  cursor: hasData || selectedRange === range.value ? 'pointer' : 'not-allowed',
+                  background: isActive ? '#2563eb' : 'transparent',
+                  color: isActive ? '#ffffff' : (hasData ? '#475569' : '#94a3b8'),
+                  cursor: (hasData || isActive) ? 'pointer' : 'not-allowed',
                   fontSize: '14px',
-                  fontWeight: selectedRange === range.value ? '600' : '500',
-                  transition: 'all 0.2s',
-                  opacity: hasData || selectedRange === range.value ? 1 : 0.5,
+                  fontWeight: isActive ? '700' : '500',
+                  transition: 'all 0.2s ease',
+                  minWidth: '44px',
+                  position: 'relative',
                 }}
-                title={!hasData && selectedRange !== range.value ? `Not enough data for ${range.label} view` : ''}
+                onMouseEnter={(e) => {
+                  if (!isActive && hasData) {
+                    e.currentTarget.style.backgroundColor = '#e2e8f0';
+                  }
+                }}
+                onMouseLeave={(e) => {
+                  if (!isActive) {
+                    e.currentTarget.style.backgroundColor = 'transparent';
+                  }
+                }}
+                title={!hasData && !isActive ? `Not enough data for ${range.label} view` : `View ${range.label}`}
               >
                 {range.label}
-                {!hasData && selectedRange !== range.value && ' ⚠️'}
+                {!hasData && !isActive && ' ⚠️'}
               </button>
             );
           })}
@@ -237,7 +239,6 @@ export const PriceChart = ({ data }: { data: any[] }) => {
                   fill="#ffffff" 
                   dot={false}
                 />
-                {/* Middle Band (SMA 20) */}
                 <Line 
                   type="monotone" 
                   dataKey="middle" 
@@ -249,7 +250,7 @@ export const PriceChart = ({ data }: { data: any[] }) => {
               </>
             )}
             
-            {/* 股價主線 */}
+            {/* Price Line */}
             <Line 
               type="monotone" 
               dataKey="price" 
@@ -280,7 +281,9 @@ export const PriceChart = ({ data }: { data: any[] }) => {
           color: '#64748b',
           fontSize: '14px',
           flexDirection: 'column',
-          gap: '8px'
+          gap: '8px',
+          background: '#fafafa',
+          borderRadius: '12px'
         }}>
           <span style={{ fontSize: '32px' }}>📊</span>
           <span>Not enough data for this time range</span>
