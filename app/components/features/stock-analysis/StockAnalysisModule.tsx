@@ -470,29 +470,54 @@ export const StockAnalysisModule: React.FC<Props> = ({
   profile,
   onUpgradePlan 
 }) => {
-  const [watchlistMessage, setWatchlistMessage] = useState<string | null>(null);
-  
-  // Add to watchlist function
+  // Inside the StockAnalysisModule component
+const [watchlistMessage, setWatchlistMessage] = useState<string | null>(null);
+
+// Add to watchlist function
 const addToWatchlist = () => {
+  console.log("⭐ Add to Watchlist clicked"); // Debug log
   const symbol = data?.symbol;
-  if (!symbol) return;
+  console.log("Symbol:", symbol); // Debug log
   
-  const saved = localStorage.getItem('stockWatchlist');
-  let watchlist: string[] = saved ? JSON.parse(saved) : [];
-  
-  if (watchlist.includes(symbol)) {
-    alert(`⚠️ ${symbol} is already in your watchlist!`);
+  if (!symbol) {
+    console.log("No symbol found");
     return;
   }
   
-  if (watchlist.length >= 10) {
-    alert(`⚠️ Watchlist limit reached (max 10 stocks).`);
-    return;
+  try {
+    const saved = localStorage.getItem('stockWatchlist');
+    console.log("Saved watchlist:", saved); // Debug log
+    
+    let watchlist: string[] = saved ? JSON.parse(saved) : [];
+    
+    if (watchlist.includes(symbol)) {
+      setWatchlistMessage(`⚠️ ${symbol} is already in your watchlist!`);
+      setTimeout(() => setWatchlistMessage(null), 3000);
+      return;
+    }
+    
+    if (watchlist.length >= 10) {
+      setWatchlistMessage(`⚠️ Watchlist limit reached (max 10 stocks).`);
+      setTimeout(() => setWatchlistMessage(null), 3000);
+      return;
+    }
+    
+    watchlist.push(symbol);
+    localStorage.setItem('stockWatchlist', JSON.stringify(watchlist));
+    setWatchlistMessage(`✅ ${symbol} added to your watchlist!`);
+    
+    // Refresh the watchlist display in parent component
+    if (typeof window !== 'undefined') {
+      // Force a refresh of any watchlist display
+      window.dispatchEvent(new Event('watchlistUpdated'));
+    }
+    
+    setTimeout(() => setWatchlistMessage(null), 3000);
+  } catch (error) {
+    console.error("Error adding to watchlist:", error);
+    setWatchlistMessage(`⚠️ Error adding ${symbol} to watchlist`);
+    setTimeout(() => setWatchlistMessage(null), 3000);
   }
-  
-  watchlist.push(symbol);
-  localStorage.setItem('stockWatchlist', JSON.stringify(watchlist));
-  alert(`✅ ${symbol} added to your watchlist!`);
 };
   
   // Credit check for desktop users
