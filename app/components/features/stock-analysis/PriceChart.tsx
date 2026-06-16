@@ -104,11 +104,8 @@ export const PriceChart = ({ data, langKey }: { data: any[]; langKey?: string })
 
   // Check if we have Bollinger Bands data - check if any item has all three bands
   const hasBollingerBands = filteredData.some(d => 
-    d.upper !== undefined && d.upper !== null && 
-    d.middle !== undefined && d.middle !== null && 
-    d.lower !== undefined && d.lower !== null &&
-    d.upper > 0 && d.middle > 0 && d.lower > 0
-  );
+  d.upper !== null && d.upper !== undefined && d.upper > 0
+);
   
   const hasVWAP = filteredData.some(d => d.vwap !== undefined && d.vwap !== null && d.vwap > 0);
   const hasEnoughData = filteredData.length >= 2;

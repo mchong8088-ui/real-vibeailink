@@ -621,11 +621,24 @@ const addToWatchlist = () => {
     
     const threeMonthsData = historical.slice(-90);
     
-    return threeMonthsData.map((item: any) => ({
-      date: new Date(item.date).toLocaleDateString(undefined, { month: 'short', day: 'numeric' }),
-      price: item.close,
-      close: item.close,
+    const mapped = threeMonthsData.map((item: any) => ({
+      date: item.date,
+      price: item.close || item.price,
+      close: item.close || item.price,
+      upper: item.upper || null,
+      middle: item.middle || null,
+      lower: item.lower || null,
+      volume: item.volume || 0,
+      open: item.open || null,
+      high: item.high || null,
+      low: item.low || null,
     }));
+    
+    console.log('📊 chartData sample:', mapped[0]);
+    console.log('📊 chartData has Bollinger Bands:', mapped.some(d => d.upper !== null && d.middle !== null && d.lower !== null));
+    console.log('📊 Total data points:', mapped.length);
+    
+    return mapped;
   }, [data?.historical]);
 
   if (isLoading) {
@@ -744,7 +757,7 @@ const addToWatchlist = () => {
       </div>
 
       {/* Price Chart */}
-      <PriceChart data={chartData} langKey={langKey} />
+      <PriceChart data={chartData} />
 
       {/* Analysis Report */}
       <div style={{ backgroundColor: 'white', borderRadius: '12px', padding: '20px', border: '1px solid #E5E7EB' }}>
@@ -816,3 +829,4 @@ const addToWatchlist = () => {
     </div>
   );
 };
+// After chartData is calculated, log it
