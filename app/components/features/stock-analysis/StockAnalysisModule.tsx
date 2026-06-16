@@ -634,8 +634,6 @@ const addToWatchlist = () => {
       low: item.low || null,
     }));
     
-    console.log('📊 chartData sample:', mapped[0]);
-    console.log('📊 chartData has Bollinger Bands:', mapped.some(d => d.upper !== null && d.middle !== null && d.lower !== null));
     console.log('📊 Total data points:', mapped.length);
     
     return mapped;
