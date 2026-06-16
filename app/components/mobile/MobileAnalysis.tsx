@@ -11,6 +11,7 @@ import { footerContent } from '../../constants/content';
 import { speak as speakText, stopSpeech as stopSpeaking } from '../../utils/ttsMaster';
 import { supabase } from '../../lib/supabase';
 import { DowngradePlanModal } from '../auth/DowngradePlanModal';
+
 interface MobileAnalysisProps {
   langKey: string;
   setLangKey: (lang: string) => void;
@@ -115,9 +116,8 @@ const MobileAnalysis: React.FC<MobileAnalysisProps> = ({
   const [watchlistMessage, setWatchlistMessage] = useState<string | null>(null);
   const [watchlistCount, setWatchlistCount] = useState(0);
   const [watchlistItems, setWatchlistItems] = useState<string[]>([]);
-  const [showCancellationModal, setShowCancellationModal] = useState(false);
+  const [showRetentionModal, setShowRetentionModal] = useState(false);
   const [showDowngradeModal, setShowDowngradeModal] = useState(false);
-
 
   // Load watchlist items on mount
   useEffect(() => {
@@ -629,35 +629,49 @@ const MobileAnalysis: React.FC<MobileAnalysisProps> = ({
                     <span>⭐</span> Watchlist ({watchlistCount})
                   </button>
                   <button
-  onClick={() => {
-    setShowUserMenu(false);
-    setShowDowngradeModal(true);
-  }}
-  style={{
-    width: '100%',
-    padding: '10px 12px',
-    textAlign: 'left',
-    backgroundColor: 'white',
-    border: 'none',
-    cursor: 'pointer',
-    fontSize: '12px',
-    color: '#EF4444',
-    borderBottom: '1px solid #E5E7EB',
-    display: 'flex',
-    alignItems: 'center',
-    gap: '6px'
-  }}
->
-  <span>📴</span> Unsubscribe
-</button>
-{/* Downgrade Plan Modal */}
-<DowngradePlanModal
-  isOpen={showDowngradeModal}
-  onClose={() => setShowDowngradeModal(false)}
-  user={user}
-  profile={profile}
-  onSelectPlan={handleSelectPlan}
-/>
+                    onClick={() => {
+                      setShowUserMenu(false);
+                      onNavigate?.('content', { view: 'pricing' });
+                    }}
+                    style={{
+                      width: '100%',
+                      padding: '10px 12px',
+                      textAlign: 'left',
+                      backgroundColor: 'white',
+                      border: 'none',
+                      cursor: 'pointer',
+                      fontSize: '12px',
+                      color: '#4B5563',
+                      borderBottom: '1px solid #E5E7EB',
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: '6px'
+                    }}
+                  >
+                    <span>⬆️</span> Change Plan
+                  </button>
+                  <button
+                    onClick={() => {
+                      setShowUserMenu(false);
+                      setShowRetentionModal(true);
+                    }}
+                    style={{
+                      width: '100%',
+                      padding: '10px 12px',
+                      textAlign: 'left',
+                      backgroundColor: 'white',
+                      border: 'none',
+                      cursor: 'pointer',
+                      fontSize: '12px',
+                      color: '#EF4444',
+                      borderBottom: '1px solid #E5E7EB',
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: '6px'
+                    }}
+                  >
+                    <span>📴</span> Unsubscribe
+                  </button>
                   <button
                     onClick={async () => {
                       await supabase.auth.signOut();
@@ -996,8 +1010,8 @@ const MobileAnalysis: React.FC<MobileAnalysisProps> = ({
       
       <SourceMenu isOpen={isMenuOpen} onClose={() => setIsMenuOpen(false)} onSelectSource={handleSourceSelect} langKey={langKey} />
 
-      {/* Cancellation/Retention Modal */}
-      {showCancellationModal && (
+      {/* Retention Modal */}
+      {showRetentionModal && (
         <div style={{
           position: 'fixed',
           top: 0,
@@ -1030,7 +1044,6 @@ const MobileAnalysis: React.FC<MobileAnalysisProps> = ({
               </p>
             </div>
 
-            {/* Coffee Plan Option */}
             <div style={{
               border: '1px solid #FDE68A',
               borderRadius: '12px',
@@ -1046,10 +1059,8 @@ const MobileAnalysis: React.FC<MobileAnalysisProps> = ({
                 </div>
                 <button
                   onClick={() => {
-                    setShowCancellationModal(false);
-                    if (onNavigate) {
-                      onNavigate('content', { view: 'pricing' });
-                    }
+                    setShowRetentionModal(false);
+                    setShowDowngradeModal(true);
                   }}
                   style={{
                     padding: '8px 16px',
@@ -1067,10 +1078,9 @@ const MobileAnalysis: React.FC<MobileAnalysisProps> = ({
               </div>
             </div>
 
-            {/* Buttons */}
             <div style={{ display: 'flex', gap: '8px', marginTop: '16px' }}>
               <button
-                onClick={() => setShowCancellationModal(false)}
+                onClick={() => setShowRetentionModal(false)}
                 style={{
                   flex: 1,
                   padding: '12px',
@@ -1087,7 +1097,7 @@ const MobileAnalysis: React.FC<MobileAnalysisProps> = ({
               </button>
               <button
                 onClick={() => {
-                  setShowCancellationModal(false);
+                  setShowRetentionModal(false);
                   if (user) {
                     fetch('/api/billing/cancel-subscription', {
                       method: 'POST',
@@ -1110,12 +1120,21 @@ const MobileAnalysis: React.FC<MobileAnalysisProps> = ({
                   cursor: 'pointer'
                 }}
               >
-                Yes, cancel anyway
+                No, cancel anyway
               </button>
             </div>
           </div>
         </div>
       )}
+
+      {/* Downgrade Plan Modal */}
+      <DowngradePlanModal
+        isOpen={showDowngradeModal}
+        onClose={() => setShowDowngradeModal(false)}
+        user={user}
+        profile={profile}
+        onSelectPlan={handleSelectPlan}
+      />
     </div>
   );
 };

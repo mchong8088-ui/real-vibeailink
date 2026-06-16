@@ -25,6 +25,7 @@ const MobileLanding: React.FC<MobileLandingProps> = ({
 }) => {
   const [showFooterMenu, setShowFooterMenu] = useState(false);
   const [showUserMenu, setShowUserMenu] = useState(false);
+  const [showRetentionModal, setShowRetentionModal] = useState(false);
   const [showDowngradeModal, setShowDowngradeModal] = useState(false);
   const [voiceLanguage, setVoiceLanguage] = useState<string>('English');
 
@@ -162,7 +163,7 @@ const MobileLanding: React.FC<MobileLandingProps> = ({
       overflow: 'hidden',
       position: 'relative'
     }}>
-      {/* Top Bar - Compact */}
+      {/* Top Bar */}
       <div style={{
         backgroundColor: 'white',
         padding: '8px 12px',
@@ -250,7 +251,6 @@ const MobileLanding: React.FC<MobileLandingProps> = ({
                     </div>
                   </div>
 
-                  {/* Watchlist Button */}
                   <button
                     onClick={() => {
                       setShowUserMenu(false);
@@ -274,7 +274,6 @@ const MobileLanding: React.FC<MobileLandingProps> = ({
                     <span>⭐</span> Watchlist <span style={{ fontSize: '10px', color: '#D97706' }}>({getWatchlistCount()})</span>
                   </button>
 
-                  {/* Change Plan */}
                   <button
                     onClick={() => {
                       setShowUserMenu(false);
@@ -298,11 +297,10 @@ const MobileLanding: React.FC<MobileLandingProps> = ({
                     <span>⬆️</span> Change Plan
                   </button>
 
-                  {/* Unsubscribe - Opens Downgrade Modal */}
                   <button
                     onClick={() => {
                       setShowUserMenu(false);
-                      setShowDowngradeModal(true);
+                      setShowRetentionModal(true);
                     }}
                     style={{
                       width: '100%',
@@ -322,7 +320,6 @@ const MobileLanding: React.FC<MobileLandingProps> = ({
                     <span>📴</span> Unsubscribe
                   </button>
 
-                  {/* Logout */}
                   <button
                     onClick={handleLogout}
                     style={{
@@ -386,16 +383,13 @@ const MobileLanding: React.FC<MobileLandingProps> = ({
         </div>
 
         <h2 style={{ fontSize: '24px', fontWeight: 'bold', color: '#1F2937', margin: '0 0 8px 0', textAlign: 'center' }}>Michael & Teresa</h2>
-
         <p style={{ fontSize: '14px', color: '#2563EB', fontWeight: '600', margin: '0 0 4px 0', textAlign: 'center' }}>{t.financeText}</p>
-
         <p style={{ fontSize: '13px', color: '#6B7280', margin: '0 0 32px 0', textAlign: 'center', lineHeight: 1.4, padding: '0 20px' }}>{t.description}</p>
 
         <div style={{ display: 'flex', flexDirection: 'column', gap: '12px', width: '100%', maxWidth: '280px' }}>
           <button onClick={() => onNavigate('analysis')} style={{ backgroundColor: '#DC2626', color: 'white', border: 'none', borderRadius: '40px', padding: '14px 24px', fontSize: '16px', fontWeight: 'bold', cursor: 'pointer', boxShadow: '0 2px 8px rgba(220,38,38,0.3)' }}>
             {t.startAnalysis}
           </button>
-
           <div style={{ display: 'flex', gap: '8px', justifyContent: 'center', flexWrap: 'nowrap' }}>
             <button onClick={() => onNavigate('content', { view: 'about' })} style={{ flex: 1, backgroundColor: 'white', color: '#4B5563', border: '1px solid #E5E7EB', borderRadius: '40px', padding: '10px 0', fontSize: '12px', fontWeight: '500', cursor: 'pointer', whiteSpace: 'nowrap', minWidth: 0 }}>{t.aboutUs}</button>
             <button onClick={() => onNavigate('content', { view: 'features' })} style={{ flex: 1, backgroundColor: 'white', color: '#4B5563', border: '1px solid #E5E7EB', borderRadius: '40px', padding: '10px 0', fontSize: '12px', fontWeight: '500', cursor: 'pointer', whiteSpace: 'nowrap', minWidth: 0 }}>{t.features}</button>
@@ -404,14 +398,13 @@ const MobileLanding: React.FC<MobileLandingProps> = ({
         </div>
       </div>
 
-      {/* Footer Menu Button */}
+      {/* Footer Menu */}
       <div style={{ position: 'absolute', bottom: '20px', right: '20px', zIndex: 30 }}>
         <button onClick={() => setShowFooterMenu(!showFooterMenu)} style={{ width: '48px', height: '48px', borderRadius: '24px', backgroundColor: '#DC2626', color: 'white', border: 'none', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', boxShadow: '0 2px 8px rgba(0,0,0,0.2)' }}>
           <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2}>
             <path strokeLinecap="round" strokeLinejoin="round" d="M4 6h16M4 12h16M4 18h16" />
           </svg>
         </button>
-
         {showFooterMenu && (
           <div style={{ position: 'absolute', bottom: '56px', right: '0', backgroundColor: 'white', border: '1px solid #E5E7EB', borderRadius: '12px', boxShadow: '0 4px 12px rgba(0,0,0,0.15)', minWidth: '140px', overflow: 'hidden' }}>
             {footerItems.map((item, index) => (
@@ -422,6 +415,123 @@ const MobileLanding: React.FC<MobileLandingProps> = ({
           </div>
         )}
       </div>
+
+      {/* Retention Modal */}
+      {showRetentionModal && (
+        <div style={{
+          position: 'fixed',
+          top: 0,
+          left: 0,
+          right: 0,
+          bottom: 0,
+          backgroundColor: 'rgba(0,0,0,0.5)',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          zIndex: 1000,
+          padding: '20px'
+        }}>
+          <div style={{
+            backgroundColor: 'white',
+            borderRadius: '16px',
+            padding: '24px',
+            maxWidth: '400px',
+            width: '100%',
+            maxHeight: '90vh',
+            overflow: 'auto'
+          }}>
+            <div style={{ textAlign: 'center', marginBottom: '20px' }}>
+              <span style={{ fontSize: '48px' }}>💔</span>
+              <h3 style={{ fontSize: '20px', fontWeight: 'bold', color: '#1F2937', margin: '12px 0 8px 0' }}>
+                We're sad to see you go!
+              </h3>
+              <p style={{ fontSize: '13px', color: '#6B7280', margin: 0 }}>
+                Before you cancel, would you consider downgrading to a more affordable plan?
+              </p>
+            </div>
+
+            <div style={{
+              border: '1px solid #FDE68A',
+              borderRadius: '12px',
+              padding: '16px',
+              marginBottom: '12px',
+              backgroundColor: '#FEF3C7'
+            }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                <div>
+                  <h4 style={{ fontSize: '14px', fontWeight: 'bold', color: '#92400E', margin: 0 }}>☕ Monthly Coffee Plan</h4>
+                  <p style={{ fontSize: '12px', color: '#92400E', margin: '4px 0 0 0' }}>Only $10/month for 300 credits</p>
+                  <p style={{ fontSize: '11px', color: '#92400E', margin: '2px 0 0 0' }}>Perfect for casual users</p>
+                </div>
+                <button
+                  onClick={() => {
+                    setShowRetentionModal(false);
+                    setShowDowngradeModal(true);
+                  }}
+                  style={{
+                    padding: '8px 16px',
+                    backgroundColor: '#D97706',
+                    color: 'white',
+                    border: 'none',
+                    borderRadius: '8px',
+                    fontWeight: 'bold',
+                    fontSize: '12px',
+                    cursor: 'pointer'
+                  }}
+                >
+                  Downgrade Instead
+                </button>
+              </div>
+            </div>
+
+            <div style={{ display: 'flex', gap: '8px', marginTop: '16px' }}>
+              <button
+                onClick={() => setShowRetentionModal(false)}
+                style={{
+                  flex: 1,
+                  padding: '12px',
+                  backgroundColor: '#F3F4F6',
+                  border: 'none',
+                  borderRadius: '8px',
+                  fontSize: '14px',
+                  fontWeight: '500',
+                  color: '#6B7280',
+                  cursor: 'pointer'
+                }}
+              >
+                Return to Dashboard
+              </button>
+              <button
+                onClick={() => {
+                  setShowRetentionModal(false);
+                  if (user) {
+                    fetch('/api/billing/cancel-subscription', {
+                      method: 'POST',
+                      headers: { 'Content-Type': 'application/json' },
+                      body: JSON.stringify({ userId: user.id })
+                    }).then(() => {
+                      alert('Subscription cancelled. We hope to see you again!');
+                    });
+                  }
+                }}
+                style={{
+                  flex: 1,
+                  padding: '12px',
+                  backgroundColor: '#EF4444',
+                  border: 'none',
+                  borderRadius: '8px',
+                  fontSize: '14px',
+                  fontWeight: '500',
+                  color: 'white',
+                  cursor: 'pointer'
+                }}
+              >
+                No, cancel anyway
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Downgrade Plan Modal */}
       <DowngradePlanModal
