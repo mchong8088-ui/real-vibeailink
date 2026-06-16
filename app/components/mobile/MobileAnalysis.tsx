@@ -26,7 +26,7 @@ interface MobileAnalysisProps {
   onNavigate?: (page: string, params?: any) => void;
 }
 
-// iOS Version Warning Component
+// iOS Version Warning Component - Updated to be more generic
 const IOSVersionWarning = ({ voiceLanguage }: { voiceLanguage: string }) => {
   const [iosVersion, setIosVersion] = useState<number | null>(null);
   const [visible, setVisible] = useState(true);
@@ -65,8 +65,8 @@ const IOSVersionWarning = ({ voiceLanguage }: { voiceLanguage: string }) => {
     }}>
       <span style={{ fontSize: '16px' }}>⚠️</span>
       <span style={{ flex: 1 }}>
-        Your iOS version ({iosVersion}) has limited voice support. 
-        Please change system default voice in: 
+        Your iOS may have limited voice support for some languages. 
+        For better experience, please check your system voice settings: 
         Settings &gt; Accessibility &gt; Spoken Content &gt; Voices &gt; Chinese
       </span>
       <button 
