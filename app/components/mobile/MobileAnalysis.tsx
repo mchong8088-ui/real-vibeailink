@@ -112,6 +112,7 @@ const MobileAnalysis: React.FC<MobileAnalysisProps> = ({
   const [isLanguageSwitching, setIsLanguageSwitching] = useState(false);
   const [voiceLanguage, setVoiceLanguage] = useState<string>(propVoiceLanguage);
   const [showUserMenu, setShowUserMenu] = useState(false);
+  const [watchlistMessage, setWatchlistMessage] = useState<string | null>(null);
 
   // Load voice preference from localStorage
   useEffect(() => {
@@ -252,7 +253,6 @@ const MobileAnalysis: React.FC<MobileAnalysisProps> = ({
   const handleAnalyze = async () => {
     if (!inputValue.trim()) return;
     
-    // Check if user is logged in
     if (!user) {
       const msg = langKey === 'Traditional Chinese' ? '請先登入' : 
                   langKey === 'Simplified Chinese' ? '请先登录' : 
@@ -262,7 +262,6 @@ const MobileAnalysis: React.FC<MobileAnalysisProps> = ({
       return;
     }
     
-    // Check credits
     if (profile && profile.credits <= 0) {
       const msg = langKey === 'Traditional Chinese' ? '積分不足，是否升級計劃？' : 
                   langKey === 'Simplified Chinese' ? '积分不足，是否升级计划？' : 
@@ -438,24 +437,42 @@ const MobileAnalysis: React.FC<MobileAnalysisProps> = ({
   // Watchlist add function for mobile
   const addToWatchlist = () => {
     const symbol = analysisData?.symbol;
-    if (!symbol) return;
-    
-    const saved = localStorage.getItem('stockWatchlist');
-    let watchlist: string[] = saved ? JSON.parse(saved) : [];
-    
-    if (watchlist.includes(symbol)) {
-      alert(`⚠️ ${symbol} is already in your watchlist!`);
+    if (!symbol) {
+      console.log('No symbol to add');
       return;
     }
     
-    if (watchlist.length >= 10) {
-      alert(`⚠️ Watchlist limit reached (max 10 stocks).`);
-      return;
+    try {
+      console.log(`Adding ${symbol} to watchlist...`);
+      
+      const saved = localStorage.getItem('stockWatchlist');
+      let watchlist: string[] = saved ? JSON.parse(saved) : [];
+      console.log('Current watchlist:', watchlist);
+      
+      if (watchlist.includes(symbol)) {
+        setWatchlistMessage(`⚠️ ${symbol} is already in your watchlist!`);
+        setTimeout(() => setWatchlistMessage(null), 3000);
+        return;
+      }
+      
+      if (watchlist.length >= 10) {
+        setWatchlistMessage(`⚠️ Watchlist limit reached (max 10 stocks).`);
+        setTimeout(() => setWatchlistMessage(null), 3000);
+        return;
+      }
+      
+      watchlist.push(symbol);
+      localStorage.setItem('stockWatchlist', JSON.stringify(watchlist));
+      console.log(`✅ ${symbol} added to watchlist`);
+      
+      setWatchlistMessage(`✅ ${symbol} added to your watchlist!`);
+      setTimeout(() => setWatchlistMessage(null), 3000);
+      
+    } catch (error) {
+      console.error('Error adding to watchlist:', error);
+      setWatchlistMessage(`⚠️ Error adding ${symbol} to watchlist`);
+      setTimeout(() => setWatchlistMessage(null), 3000);
     }
-    
-    watchlist.push(symbol);
-    localStorage.setItem('stockWatchlist', JSON.stringify(watchlist));
-    alert(`✅ ${symbol} added to your watchlist!`);
   };
 
   return (
@@ -652,6 +669,21 @@ const MobileAnalysis: React.FC<MobileAnalysisProps> = ({
         {topicId === 'features' && <FeaturesSection lang={langKey} />}
         {isAnalysisMode && !displayLegalTitle && (
           <>
+            {/* Watchlist Message */}
+            {watchlistMessage && (
+              <div style={{
+                marginBottom: '8px',
+                padding: '8px',
+                borderRadius: '8px',
+                backgroundColor: watchlistMessage.includes('✅') ? '#ECFDF5' : '#FEF2F2',
+                color: watchlistMessage.includes('✅') ? '#10B981' : '#EF4444',
+                fontSize: '12px',
+                textAlign: 'center'
+              }}>
+                {watchlistMessage}
+              </div>
+            )}
+            
             {/* Add to Watchlist Button - Mobile Compact */}
             {analysisData?.symbol && user && (
               <div style={{ 
