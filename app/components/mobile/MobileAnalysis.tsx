@@ -113,6 +113,7 @@ const MobileAnalysis: React.FC<MobileAnalysisProps> = ({
   const [voiceLanguage, setVoiceLanguage] = useState<string>(propVoiceLanguage);
   const [showUserMenu, setShowUserMenu] = useState(false);
   const [watchlistMessage, setWatchlistMessage] = useState<string | null>(null);
+  const [watchlistCount, setWatchlistCount] = useState(0); // <-- ADD THIS
 
   // Load voice preference from localStorage
   useEffect(() => {
@@ -204,6 +205,17 @@ const MobileAnalysis: React.FC<MobileAnalysisProps> = ({
       }
     }
   }, [langKey]);
+  // Add this after the other useEffects (around line 120)
+// Load watchlist count on mount
+useEffect(() => {
+  try {
+    const saved = localStorage.getItem('stockWatchlist');
+    const watchlist: string[] = saved ? JSON.parse(saved) : [];
+    setWatchlistCount(watchlist.length);
+  } catch (error) {
+    setWatchlistCount(0);
+  }
+}, []);
 
   const reFetchAnalysis = async (symbol: string) => {
     if (!symbol) return;
@@ -464,8 +476,9 @@ const MobileAnalysis: React.FC<MobileAnalysisProps> = ({
       watchlist.push(symbol);
       localStorage.setItem('stockWatchlist', JSON.stringify(watchlist));
       console.log(`✅ ${symbol} added to watchlist`);
-      
+      setWatchlistCount(watchlist.length);
       setWatchlistMessage(`✅ ${symbol} added to your watchlist!`);
+      
       setTimeout(() => setWatchlistMessage(null), 3000);
       
     } catch (error) {
@@ -474,6 +487,16 @@ const MobileAnalysis: React.FC<MobileAnalysisProps> = ({
       setTimeout(() => setWatchlistMessage(null), 3000);
     }
   };
+  // Add this function after addToWatchlist (around line 180)
+const getWatchlistCount = () => {
+  try {
+    const saved = localStorage.getItem('stockWatchlist');
+    const watchlist: string[] = saved ? JSON.parse(saved) : [];
+    return watchlist.length;
+  } catch (error) {
+    return 0;
+  }
+};
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', height: '100%', width: '100%', backgroundColor: '#f5f5f5', overflow: 'hidden', position: 'absolute', top: 0, left: 0, right: 0, bottom: 0 }}>
@@ -552,27 +575,27 @@ const MobileAnalysis: React.FC<MobileAnalysisProps> = ({
                     </div>
                   </div>
                   <button
-                    onClick={() => {
-                      setShowUserMenu(false);
-                      onNavigate?.('analysis');
-                    }}
-                    style={{
-                      width: '100%',
-                      padding: '10px 12px',
-                      textAlign: 'left',
-                      backgroundColor: 'white',
-                      border: 'none',
-                      cursor: 'pointer',
-                      fontSize: '12px',
-                      color: '#4B5563',
-                      borderBottom: '1px solid #E5E7EB',
-                      display: 'flex',
-                      alignItems: 'center',
-                      gap: '6px'
-                    }}
-                  >
-                    <span>⭐</span> Watchlist
-                  </button>
+  onClick={() => {
+    setShowUserMenu(false);
+    onNavigate?.('content', { view: 'watchlist' });
+  }}
+  style={{
+    width: '100%',
+    padding: '10px 12px',
+    textAlign: 'left',
+    backgroundColor: 'white',
+    border: 'none',
+    cursor: 'pointer',
+    fontSize: '12px',
+    color: '#4B5563',
+    borderBottom: '1px solid #E5E7EB',
+    display: 'flex',
+    alignItems: 'center',
+    gap: '6px'
+  }}
+>
+  <span>⭐</span> Watchlist ({getWatchlistCount()})
+</button>
                   <button
                     onClick={() => {
                       setShowUserMenu(false);
