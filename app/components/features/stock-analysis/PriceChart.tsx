@@ -10,11 +10,9 @@ const filterDataByRange = (data: any[], range: string) => {
   let startDate = new Date();
   let filteredData = [];
   
-  // Make a copy of data with proper date parsing
   const cleanData = data.map(item => ({
     ...item,
     dateObj: new Date(item.date),
-    // Ensure price/close values exist
     price: item.price || item.close || 0,
     close: item.close || item.price || 0,
     upper: item.upper || null,
@@ -23,13 +21,6 @@ const filterDataByRange = (data: any[], range: string) => {
   }));
   
   switch (range) {
-    case '1D':
-      startDate.setDate(now.getDate() - 1);
-      filteredData = cleanData.filter(item => item.dateObj >= startDate);
-      if (filteredData.length < 2) {
-        filteredData = cleanData.slice(-5);
-      }
-      break;
     case '1W':
       startDate.setDate(now.getDate() - 7);
       filteredData = cleanData.filter(item => item.dateObj >= startDate);
@@ -37,6 +28,14 @@ const filterDataByRange = (data: any[], range: string) => {
         filteredData = cleanData.slice(-10);
       }
       break;
+	case '1M':
+      startDate.setMonth(now.getMonth() - 1);
+      filteredData = cleanData.filter(item => item.dateObj >= startDate);
+      if (filteredData.length < 3) {
+        filteredData = cleanData.slice(-20);
+      }
+      break;
+
     case '3M':
       startDate.setMonth(now.getMonth() - 3);
       filteredData = cleanData.filter(item => item.dateObj >= startDate);
@@ -55,8 +54,8 @@ const filterDataByRange = (data: any[], range: string) => {
 // Get appropriate time label
 const getTimeLabel = (range: string) => {
   switch (range) {
-    case '1D': return '1天';
     case '1W': return '1週';
+    case '1M': return '1個月';
     case '3M': return '3個月';
     default: return '3個月';
   }
@@ -69,9 +68,6 @@ const formatDate = (value: string, range: string) => {
     const date = new Date(value);
     if (isNaN(date.getTime())) return '';
     
-    if (range === '1D') {
-      return date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
-    }
     // For 1W and 3M, show month/day
     return `${date.getMonth()+1}/${date.getDate()}`;
   } catch (e) {
@@ -86,10 +82,10 @@ export const PriceChart = ({ data, langKey }: { data: any[]; langKey?: string })
   const filteredData = useMemo(() => filterDataByRange(data, selectedRange), [data, selectedRange]);
   
   const timeRanges = [
-    { label: '1D', value: '1D' },
-    { label: '1W', value: '1W' },
-    { label: '3M', value: '3M' },
-  ];
+  { label: '1W', value: '1W' },
+  { label: '1M', value: '1M' }
+  { label: '3M', value: '3M' },
+];
   
   // Get latest price for display
   const latestItem = filteredData.length > 0 ? filteredData[filteredData.length - 1] : null;
