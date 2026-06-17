@@ -28,13 +28,13 @@ const filterDataByRange = (data: any[], range: string) => {
         filteredData = cleanData.slice(-10);
       }
       break;
-	case '1M':
-      startDate.setMonth(now.getMonth() - 1);
-      filteredData = cleanData.filter(item => item.dateObj >= startDate);
-      if (filteredData.length < 3) {
-        filteredData = cleanData.slice(-20);
-      }
-      break;
+	case '1M':  // ← Make sure this exists
+    startDate.setMonth(now.getMonth() - 1);
+    filteredData = cleanData.filter(item => item.dateObj >= startDate);
+    if (filteredData.length < 3) {
+      filteredData = cleanData.slice(-20);
+    }
+    break;
 
     case '3M':
       startDate.setMonth(now.getMonth() - 3);
@@ -83,7 +83,7 @@ export const PriceChart = ({ data, langKey }: { data: any[]; langKey?: string })
   
   const timeRanges = [
   { label: '1W', value: '1W' },
-  { label: '1M', value: '1M' }
+  { label: '1M', value: '1M' },
   { label: '3M', value: '3M' },
 ];
   
