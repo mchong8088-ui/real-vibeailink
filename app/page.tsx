@@ -4,19 +4,18 @@ import { SourceMenu } from './components/features/controls/SourceMenu';
 import { SmartInputSystem } from './components/features/controls/SmartInputSystem';
 import { StockAnalysisModule } from './components/features/stock-analysis/StockAnalysisModule';
 import { PortfolioModule } from './components/features/portfolio/PortfolioModule';
+import { AIResearchAssistant } from './components/AIResearchAssistant';
+import { VoiceProviderModal } from './components/VoiceProviderModal';
 import { AuthModal } from './components/modals/AuthModal';
 import { LanguageToggle } from './components/layout/LanguageToggle'; 
 import { VoiceSelector } from './components/layout/VoiceSelector';
 import { AboutSection } from './components/sections/AboutSection';
 import { FeaturesSection } from './components/sections/FeaturesSection';
 import { PricingModal } from './components/features/pricing/PricingModal';
-import MobileLanding from './components/mobile/MobileLanding';
-import MobileAnalysis from './components/mobile/MobileAnalysis';
 import UserMenu from './components/auth/UserMenu';
 import { supabase } from './lib/supabase';
 import { useLanguage } from './context/LanguageContext';
 
-// Error Boundary Component
 class ErrorBoundary extends React.Component<{ children: React.ReactNode }, { hasError: boolean }> {
   constructor(props: { children: React.ReactNode }) {
     super(props);
@@ -62,25 +61,16 @@ export default function VibeAiMaster() {
   const [isLoading, setIsLoading] = useState(false);
   const [showUserMenu, setShowUserMenu] = useState(false);
   const [isHydrated, setIsHydrated] = useState(false);
-
-  const [mobilePage, setMobilePage] = useState<'landing' | 'analysis' | 'content'>('landing');
-  const [mobileView, setMobileView] = useState<string>('analysis');
-  const [mobileTopic, setMobileTopic] = useState<string | null>(null);
-  const [mobileLegal, setMobileLegal] = useState<string | null>(null);
+  
+  // Voice Provider & AI Enhancement States
+  const [showVoiceProvider, setShowVoiceProvider] = useState(false);
+  const [enableAIEnhancement, setEnableAIEnhancement] = useState(false);
 
   const [stockOfTheDay, setStockOfTheDay] = useState<any>(null);
   const [loadingStockOfDay, setLoadingStockOfDay] = useState(false);
-
-  const [autoPostStatus, setAutoPostStatus] = useState<any>(null);
-  const [autoPostLoading, setAutoPostLoading] = useState(false);
-  const [showAdminPanel, setShowAdminPanel] = useState(false);
-
   const [voiceLanguage, setVoiceLanguage] = useState<string>('English');
 
   const systemInfo = { system: `VibeAI-${systemState.os}`, voiceEngine: "Local Synthesis" };
-
-  const adminEmails = (process.env.NEXT_PUBLIC_ADMIN_EMAILS || '').split(',').map(email => email.trim().toLowerCase());
-  const isAdmin = user?.email ? adminEmails.includes(user.email.toLowerCase()) : false;
 
   useEffect(() => {
     const savedVoice = localStorage.getItem('preferredVoice');
@@ -122,7 +112,6 @@ export default function VibeAiMaster() {
 
   useEffect(() => {
     supabase.auth.getSession().then(({ data: { session } }) => {
-      console.log("Initial session:", session?.user?.email);
       setUser(session?.user || null);
       if (session?.user) {
         fetchUserProfile(session.user.id, session.user.email);
@@ -130,7 +119,6 @@ export default function VibeAiMaster() {
     });
     
     const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
-      console.log("Auth event:", event, session?.user?.email);
       setUser(session?.user || null);
       if (event === 'SIGNED_IN' && session?.user) {
         fetchUserProfile(session.user.id, session.user.email);
@@ -157,14 +145,6 @@ export default function VibeAiMaster() {
     
     fetchStockOfTheDay();
   }, []);
-  
-  useEffect(() => {
-    if (analysisData && analysisData.symbol && !isLoading && mounted) {
-      const currentSymbol = analysisData.symbol;
-      console.log(`🔄 Language changed to ${language}, re-fetching ${currentSymbol}...`);
-      handleAnalyzeRequest(currentSymbol, [], false);
-    }
-  }, [language]);
 
   const fetchStockOfTheDay = async () => {
     setLoadingStockOfDay(true);
@@ -182,30 +162,6 @@ export default function VibeAiMaster() {
   const analyzeStockOfTheDay = () => {
     if (stockOfTheDay?.symbol) {
       handleAnalyzeRequest(stockOfTheDay.symbol, [], false);
-    }
-  };
-
-  const triggerAutoPost = async (platforms: string[] = ['facebook']) => {
-    setAutoPostLoading(true);
-    try {
-      const response = await fetch('/api/social/auto-post', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          language: 'English',
-          platforms: platforms,
-          testMode: false,
-        }),
-      });
-      const data = await response.json();
-      setAutoPostStatus(data);
-      alert(`Auto-post completed: ${data.results?.length || 0} stocks posted`);
-    } catch (error) {
-      console.error('Auto-post failed:', error);
-      alert('Auto-post failed.');
-    } finally {
-      setAutoPostLoading(false);
-      setTimeout(() => setAutoPostStatus(null), 5000);
     }
   };
 
@@ -260,9 +216,7 @@ export default function VibeAiMaster() {
         }
       }
       
-      const endpoint = useAI ? '/api/chat/ai-enhanced' : '/api/chat';
-      
-      console.log(`📡 Calling endpoint: ${endpoint}, AI: ${useAI}`);
+      const endpoint = (useAI || enableAIEnhancement) ? '/api/chat/ai-enhanced' : '/api/chat';
       
       const response = await fetch(endpoint, {
         method: 'POST',
@@ -271,7 +225,7 @@ export default function VibeAiMaster() {
           message: ticker, 
           language: language,
           userContent: userContent,
-          useAI: useAI || false
+          useAI: useAI || enableAIEnhancement
         }),
       });
       
@@ -291,11 +245,13 @@ export default function VibeAiMaster() {
       }, 100);
     } catch (error) {
       console.error('Analysis error:', error);
+      const errorMsg = language === 'Traditional Chinese' ? `無法分析 ${ticker}，請重新輸入。` :
+                       language === 'Simplified Chinese' ? `无法分析 ${ticker}，请重新输入。` :
+                       `Unable to analyze ${ticker}. Please try again.`;
+      
       setAnalysisData({ 
         symbol: ticker, 
-        summary: language === 'Traditional Chinese' ? `無法分析 ${ticker}，請稍後再試。` :
-                  language === 'Simplified Chinese' ? `无法分析 ${ticker}，请稍后再试。` :
-                  `Unable to analyze ${ticker}. Please try again.` 
+        summary: errorMsg
       });
     } finally {
       setIsLoading(false);
@@ -303,7 +259,6 @@ export default function VibeAiMaster() {
   };
 
   const handleSelectPlan = async (planId: string, priceId: string) => {
-    console.log("📦 Selected plan:", planId, "Price ID:", priceId);
     try {
       const response = await fetch('/api/billing/create-checkout', {
         method: 'POST',
@@ -316,45 +271,15 @@ export default function VibeAiMaster() {
           planId: planId
         }),
       });
-      const { url, error } = await response.json();
+      const { url } = await response.json();
       if (url) {
         window.location.href = url;
       } else {
-        console.error("Checkout error:", error);
         alert('Unable to process payment. Please try again.');
       }
     } catch (error) { 
-      console.error('Payment error:', error);
       alert('Unable to process payment. Please try again.'); 
     }
-  };
-
-  const handleSourceSelect = async (sourceType: string, sourceData?: any) => {
-    setIsMenuOpen(false);
-  };
-
-  const handleMobileNavigate = (page: string, params?: any) => {
-  if (page === 'analysis') { 
-    setMobilePage('analysis'); 
-    setMobileView('analysis'); 
-  } else if (page === 'content') { 
-    setMobilePage('content'); 
-    setMobileTopic(params?.view); 
-    setMobileLegal(params?.view); 
-  } else if (page === 'watchlist') {
-    // Navigate to watchlist view in MobileAnalysis
-    setMobilePage('analysis'); // Keep on analysis page
-    setMobileView('watchlist'); // Switch to watchlist view
-    setMobileTopic(undefined);
-    setMobileLegal(undefined);
-  }
-};
-
-  const handleMobileBack = () => {
-    setMobilePage('landing');
-    setMobileView('analysis');
-    setMobileTopic(null);
-    setMobileLegal(null);
   };
 
   const getUserDisplayName = () => {
@@ -367,7 +292,7 @@ export default function VibeAiMaster() {
     if (language === 'Traditional Chinese') {
       return {
         financeText: '您的財務及市場分析師',
-        inputLabel: '請在下方輸入股票代號',
+        inputLabel: '例如: 2330.TW, 0700.HK, TSLA',
         disclaimer: '免責聲明',
         terms: '服務條款',
         privacy: '隱私政策',
@@ -378,18 +303,20 @@ export default function VibeAiMaster() {
         about: '關於',
         features: '功能',
         pricing: '定價',
-        welcome: '歡迎',
         stockOfDay: '今日精選股票',
         analyze: '分析',
-        adminPanel: '管理員面板',
-        autoPost: '自動發文',
-        postToFacebook: '發文到 Facebook',
-        posting: '發文中...',
+        checkAiPrompt: '請勾選「啟用 AI 增強功能」以進行深度問答與研判',
+        inputPlaceholderDisabled: '請啟用 AI 增強功能以開始提問與分析',
+        inputPlaceholderEnabled: '輸入股票代號、策略或任何市場問題...',
+        myWatchlist: '⭐ 我的關注列表',
+        refresh: '重新整理',
+        noWatchlist: '暫無股票',
+        voiceProviderBtn: '🎙️ Voice Provider',
       };
     } else if (language === 'Simplified Chinese') {
       return {
         financeText: '您的财务及市场分析师',
-        inputLabel: '请在下方输入股票代码',
+        inputLabel: '例如: 2330.TW, 0700.HK, TSLA',
         disclaimer: '免责声明',
         terms: '服务条款',
         privacy: '隐私政策',
@@ -400,18 +327,20 @@ export default function VibeAiMaster() {
         about: '关于',
         features: '功能',
         pricing: '定价',
-        welcome: '欢迎',
         stockOfDay: '今日精选股票',
         analyze: '分析',
-        adminPanel: '管理员面板',
-        autoPost: '自动发文',
-        postToFacebook: '发文到 Facebook',
-        posting: '发文中...',
+        checkAiPrompt: '请勾选“开启 AI 增强功能”以进行深度问答与研判',
+        inputPlaceholderDisabled: '请开启 AI 增强功能以开始提问与分析',
+        inputPlaceholderEnabled: '输入股票代码、策略或任何市场问题...',
+        myWatchlist: '⭐ 我的关注列表',
+        refresh: '刷新',
+        noWatchlist: '暂无股票',
+        voiceProviderBtn: '🎙️ Voice Provider',
       };
     } else {
       return {
         financeText: 'Your Finance & Market Analysts',
-        inputLabel: 'Please input stock symbol below',
+        inputLabel: 'Enter a stock symbol or ask any general market/strategy question',
         disclaimer: 'DISCLAIMER',
         terms: 'TERMS',
         privacy: 'PRIVACY',
@@ -422,24 +351,21 @@ export default function VibeAiMaster() {
         about: 'ABOUT',
         features: 'FEATURES',
         pricing: 'PRICING',
-        welcome: 'Welcome',
         stockOfDay: '⭐ Stock of the Day',
         analyze: 'Analyze',
-        adminPanel: 'Admin Panel',
-        autoPost: 'Auto-Post',
-        postToFacebook: 'Post to Facebook',
-        posting: 'Posting...',
+        checkAiPrompt: 'Check "Enable AI Enhancement" to start comprehensive analysis',
+        inputPlaceholderDisabled: 'Enable AI Enhancement to ask questions',
+        inputPlaceholderEnabled: 'Type stock ticker, strategy, or general financial questions...',
+        myWatchlist: '⭐ My Watchlist',
+        refresh: 'Refresh',
+        noWatchlist: 'No stocks yet',
+        voiceProviderBtn: '🎙️ Voice Provider',
       };
     }
   };
 
   const text = getTranslatedText();
 
-  console.log("🔍 Current user state:", user?.email);
-  console.log("🔍 Show user menu:", showUserMenu);
-  console.log("🔍 Voice language:", voiceLanguage);
-
-  // Get watchlist for display
   const getWatchlist = () => {
     if (typeof window === 'undefined') return [];
     try {
@@ -460,55 +386,10 @@ export default function VibeAiMaster() {
     );
   }
 
-  // Mobile view
-  if (systemState.isMobile) {
-    if (mobilePage === 'landing') {
-      return (
-        <>
-          <MobileLanding 
-  langKey={language} 
-  setLangKey={setLanguage as any} 
-  onAuthOpen={() => setIsAuthOpen(true)} 
-  user={user} 
-  profile={profile}
-  onNavigate={handleMobileNavigate}
-/>
-          {isAuthOpen && !user && (
-            <div style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, backgroundColor: 'rgba(0,0,0,0.5)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1000 }}>
-              <AuthModal isOpen={isAuthOpen} onClose={() => setIsAuthOpen(false)} langKey={language} />
-            </div>
-          )}
-        </>
-      );
-    }
-    return (
-      <>
-        <MobileAnalysis 
-          langKey={language} 
-          setLangKey={setLanguage as any} 
-          user={user}
-          profile={profile}
-          onAuthOpen={() => setIsAuthOpen(true)} 
-          viewType={mobileView} 
-          topicId={mobileTopic || undefined}
-          legalTitle={mobileLegal || undefined}
-          onBack={handleMobileBack}
-          voiceLanguage={voiceLanguage}
-          onNavigate={handleMobileNavigate}
-        />
-        {isAuthOpen && !user && (
-          <div style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, backgroundColor: 'rgba(0,0,0,0.5)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1000 }}>
-            <AuthModal isOpen={isAuthOpen} onClose={() => setIsAuthOpen(false)} langKey={language} />
-          </div>
-        )}
-      </>
-    );
-  }
-
-  // Desktop view
   return (
     <ErrorBoundary>
       <div style={{ display: 'flex', flexDirection: 'column', height: '100vh', width: '100%', overflow: 'hidden', backgroundColor: '#f0f0f0' }}>
+        {/* Header Bar */}
         <div style={{ backgroundColor: 'white', padding: '16px 32px', borderBottom: '1px solid #E5E7EB', display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexShrink: 0 }}>
           <h1 style={{ fontSize: '24px', fontWeight: '900', fontStyle: 'italic', color: '#DC2626', margin: 0 }}>vibeAiLink</h1>
           <div style={{ display: 'flex', gap: '48px' }}>
@@ -527,7 +408,7 @@ export default function VibeAiMaster() {
             <LanguageToggle currentLang={language} onLangChange={setLanguage as any} />
             {user ? (
               <div style={{ position: 'relative' }}>
-                <button onClick={() => { console.log("🖱️ User button clicked, toggling menu"); setShowUserMenu(!showUserMenu); }} style={{ display: 'flex', alignItems: 'center', gap: '8px', padding: '4px 12px', borderRadius: '20px', backgroundColor: '#F3F4F6', border: 'none', cursor: 'pointer' }}>
+                <button onClick={() => setShowUserMenu(!showUserMenu)} style={{ display: 'flex', alignItems: 'center', gap: '8px', padding: '4px 12px', borderRadius: '20px', backgroundColor: '#F3F4F6', border: 'none', cursor: 'pointer' }}>
                   <div style={{ width: '32px', height: '32px', borderRadius: '50%', backgroundColor: '#3B82F6', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'white', fontWeight: 'bold', fontSize: '14px' }}>
                     {getUserDisplayName().charAt(0).toUpperCase()}
                   </div>
@@ -536,16 +417,13 @@ export default function VibeAiMaster() {
                 {showUserMenu && (
                   <div style={{ position: 'absolute', top: '100%', right: 0, marginTop: '8px', zIndex: 100 }}>
                     <UserMenu 
-  user={user} 
-  profile={profile} 
-  onLogout={handleLogout} 
-  onOpenPricingPage={() => { setShowUserMenu(false); setCurrentView('pricing'); }} 
-  onSelectPlan={handleSelectPlan} 
-  onClose={() => setShowUserMenu(false)}
-  onAnalyzeStock={(symbol) => {
-    console.log("📊 Analyzing watchlist stock:", symbol);
-    handleAnalyzeRequest(symbol, [], false);
-  }}
+                      user={user} 
+                      profile={profile} 
+                      onLogout={handleLogout} 
+                      onOpenPricingPage={() => { setShowUserMenu(false); setCurrentView('pricing'); }} 
+                      onSelectPlan={handleSelectPlan} 
+                      onClose={() => setShowUserMenu(false)}
+                      onAnalyzeStock={(symbol) => handleAnalyzeRequest(symbol, [], false)}
                     />
                   </div>
                 )}
@@ -556,16 +434,22 @@ export default function VibeAiMaster() {
           </div>
         </div>
 
+        {/* Workspace Container */}
         <div style={{ display: 'flex', flex: 1, overflow: 'hidden' }}>
+          {/* Avatar Panel */}
           <div style={{ width: '28%', backgroundColor: '#FEF08A', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', padding: '40px 24px', overflow: 'auto', minWidth: '260px' }}>
             <div style={{ width: '180px', height: '180px', borderRadius: '50%', overflow: 'hidden', marginBottom: '24px', backgroundColor: 'white', boxShadow: '0 4px 12px rgba(0,0,0,0.15)' }}>
-              <img src="/avatars/michael_teresa.jpg" style={{ width: '100%', height: '100%', objectFit: 'cover' }} alt="Michael & Teresa" />
+              <img src="/avatars/michael_teresa.jpg" style={{ width: '100%', height: '100%', objectFit: 'cover' }} alt="Michael & Sofia" />
             </div>
-            <h2 style={{ fontWeight: 'bold', color: '#1F2937', fontSize: '22px', textAlign: 'center', margin: '0 0 8px 0' }}>Michael & Teresa</h2>
+            <h2 style={{ fontWeight: 'bold', color: '#1F2937', fontSize: '22px', textAlign: 'center', margin: '0 0 8px 0' }}>
+              Michael & Sofia
+            </h2>
             <p style={{ fontSize: '15px', fontWeight: '600', color: '#2563EB', textAlign: 'center', margin: '0' }}>{text.financeText}</p>
           </div>
 
+          {/* Main Display Area */}
           <div style={{ width: '72%', backgroundColor: '#E0F2FE', display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
+            {/* Scrollable View Panel */}
             <div id="analysis-content" style={{ flex: 1, overflowY: 'auto', padding: '20px' }}>
               {currentView === "analysis" && (
                 <>
@@ -582,12 +466,23 @@ export default function VibeAiMaster() {
                       <button onClick={analyzeStockOfTheDay} style={{ backgroundColor: '#D97706', color: 'white', border: 'none', borderRadius: '8px', padding: '8px 16px', fontSize: '13px', fontWeight: 'bold', cursor: 'pointer' }}>{text.analyze}</button>
                     </div>
                   )}
+
+                  {/* Main AI Assistant Block */}
+                  <AIResearchAssistant
+                    langKey={language}
+                    user={user}
+                    profile={profile}
+                    onUpgradePlan={() => setCurrentView('pricing')}
+                    placeholderText={enableAIEnhancement ? text.inputPlaceholderEnabled : text.inputPlaceholderDisabled}
+                    promptNotice={!enableAIEnhancement ? text.checkAiPrompt : undefined}
+                  />
+
                   <StockAnalysisModule 
                     t={t} 
                     data={analysisData} 
                     isLoading={isLoading} 
                     langKey={language} 
-                    onAnalyze={(symbol) => handleAnalyzeRequest(symbol, [], false)}
+                    onAnalyze={(symbol) => handleAnalyzeRequest(symbol, [], enableAIEnhancement)}
                     user={user}
                     profile={profile}
                     onUpgradePlan={() => setCurrentView('pricing')}
@@ -600,106 +495,113 @@ export default function VibeAiMaster() {
               {currentView === "features" && <FeaturesSection lang={language} />}
             </div>
 
+            {/* Bottom Controls Panel */}
             <div style={{ backgroundColor: 'white', padding: '12px 20px', borderTop: '1px solid #E5E7EB', flexShrink: 0 }}>
               <p style={{ fontSize: '12px', color: '#6B7280', textAlign: 'center', marginBottom: '8px' }}>{text.inputLabel}</p>
               
-              {/* Watchlist Section - Desktop */}
-              {user && (
-                <div style={{
-                  backgroundColor: '#FEF3C7',
-                  borderRadius: '12px',
-                  padding: '12px 16px',
-                  marginBottom: '16px',
-                  border: '1px solid #FDE68A'
-                }}>
-                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '8px' }}>
-                    <span style={{ fontSize: '12px', fontWeight: 'bold', color: '#D97706' }}>⭐ My Watchlist</span>
-                    <button
-                      onClick={() => {
+              {/* Row with Voice Provider Button (Left) & Shrunken 50% Watchlist (Right) */}
+              <div style={{ display: 'flex', alignItems: 'stretch', gap: '12px', marginBottom: '12px' }}>
+                <button 
+                  onClick={() => setShowVoiceProvider(true)}
+                  style={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    gap: '6px',
+                    backgroundColor: '#2563EB',
+                    color: 'white',
+                    border: 'none',
+                    borderRadius: '12px',
+                    padding: '0 16px',
+                    fontSize: '13px',
+                    fontWeight: 'bold',
+                    cursor: 'pointer',
+                    boxShadow: '0 2px 4px rgba(37,99,235,0.2)',
+                    whiteSpace: 'nowrap'
+                  }}
+                >
+                  {text.voiceProviderBtn}
+                </button>
+
+                {user && (
+                  <div style={{ flex: 1, backgroundColor: '#FEF3C7', borderRadius: '12px', padding: '8px 12px', border: '1px solid #FDE68A' }}>
+                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '4px' }}>
+                      <span style={{ fontSize: '11px', fontWeight: 'bold', color: '#D97706' }}>{text.myWatchlist}</span>
+                      <button
+                        onClick={() => {
+                          const watchlist = getWatchlist();
+                          if (watchlist.length === 0) {
+                            alert(text.noWatchlist);
+                          }
+                        }}
+                        style={{ fontSize: '10px', color: '#92400E', background: 'none', border: 'none', cursor: 'pointer' }}
+                      >
+                        {text.refresh}
+                      </button>
+                    </div>
+                    <div style={{ display: 'flex', gap: '6px', flexWrap: 'wrap' }}>
+                      {(() => {
                         const watchlist = getWatchlist();
                         if (watchlist.length === 0) {
-                          alert('Your watchlist is empty. Click "Add to Watchlist" on any stock analysis to save it here.');
+                          return <span style={{ fontSize: '10px', color: '#92400E' }}>{text.noWatchlist}</span>;
                         }
-                      }}
-                      style={{ fontSize: '10px', color: '#92400E', background: 'none', border: 'none', cursor: 'pointer' }}
-                    >
-                      Refresh
-                    </button>
+                        return watchlist.map((symbol: string) => (
+                          <button
+                            key={symbol}
+                            onClick={() => handleAnalyzeRequest(symbol, [], false)}
+                            style={{
+                              padding: '2px 8px',
+                              backgroundColor: '#FDE68A',
+                              color: '#92400E',
+                              border: 'none',
+                              borderRadius: '12px',
+                              fontSize: '11px',
+                              fontWeight: '500',
+                              cursor: 'pointer'
+                            }}
+                          >
+                            {symbol}
+                          </button>
+                        ));
+                      })()}
+                    </div>
                   </div>
-                  <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
-                    {(() => {
-                      const watchlist = getWatchlist();
-                      if (watchlist.length === 0) {
-                        return <span style={{ fontSize: '11px', color: '#92400E' }}>No stocks yet. Click "Add to Watchlist" on any analysis to save here.</span>;
-                      }
-                      return watchlist.map((symbol: string) => (
-                        <button
-                          key={symbol}
-                          onClick={() => handleAnalyzeRequest(symbol, [], false)}
-                          style={{
-                            padding: '4px 12px',
-                            backgroundColor: '#FDE68A',
-                            color: '#92400E',
-                            border: 'none',
-                            borderRadius: '20px',
-                            fontSize: '12px',
-                            fontWeight: '500',
-                            cursor: 'pointer',
-                            transition: 'all 0.2s'
-                          }}
-                          onMouseEnter={(e) => {
-                            e.currentTarget.style.backgroundColor = '#FCD34D';
-                            e.currentTarget.style.transform = 'scale(1.02)';
-                          }}
-                          onMouseLeave={(e) => {
-                            e.currentTarget.style.backgroundColor = '#FDE68A';
-                            e.currentTarget.style.transform = 'scale(1)';
-                          }}
-                        >
-                          {symbol}
-                        </button>
-                      ));
-                    })()}
-                  </div>
-                </div>
-              )}
+                )}
+              </div>
               
               <SmartInputSystem 
                 langKey={language} 
-                onAnalyze={handleAnalyzeRequest} 
+                onAnalyze={(symbol, attachments) => handleAnalyzeRequest(symbol, attachments, enableAIEnhancement)} 
                 onPlusClick={() => setIsMenuOpen(true)} 
                 systemInfo={systemInfo} 
                 analysisText={analysisData?.summary}
                 voiceLanguage={voiceLanguage}
+                placeholder={enableAIEnhancement ? text.inputPlaceholderEnabled : text.inputPlaceholderDisabled}
               />
             </div>
 
+            {/* Footer */}
             <div style={{ backgroundColor: 'white', padding: '8px 20px', borderTop: '1px solid #E5E7EB', display: 'flex', justifyContent: 'center', gap: '24px', flexWrap: 'wrap', flexShrink: 0 }}>
               <button onClick={() => setLegalTitle('DISCLAIMER')} style={{ fontSize: '10px', color: '#3B82F6', background: 'none', border: 'none', cursor: 'pointer' }}>{text.disclaimer}</button>
-              <button onClick={() => setLegalTitle('服務條款')} style={{ fontSize: '10px', color: '#3B82F6', background: 'none', border: 'none', cursor: 'pointer' }}>{text.terms}</button>
-              <button onClick={() => setLegalTitle('隱私政策')} style={{ fontSize: '10px', color: '#3B82F6', background: 'none', border: 'none', cursor: 'pointer' }}>{text.privacy}</button>
-              <button onClick={() => setLegalTitle('退款政策')} style={{ fontSize: '10px', color: '#3B82F6', background: 'none', border: 'none', cursor: 'pointer' }}>{text.refund}</button>
-              <button onClick={() => setLegalTitle('聯絡我們')} style={{ fontSize: '10px', color: '#3B82F6', background: 'none', border: 'none', cursor: 'pointer' }}>{text.contact}</button>
+              <button onClick={() => setLegalTitle('條款')} style={{ fontSize: '10px', color: '#3B82F6', background: 'none', border: 'none', cursor: 'pointer' }}>{text.terms}</button>
+              <button onClick={() => setLegalTitle('隱私')} style={{ fontSize: '10px', color: '#3B82F6', background: 'none', border: 'none', cursor: 'pointer' }}>{text.privacy}</button>
+              <button onClick={() => setLegalTitle('退款')} style={{ fontSize: '10px', color: '#3B82F6', background: 'none', border: 'none', cursor: 'pointer' }}>{text.refund}</button>
+              <button onClick={() => setLegalTitle('聯絡')} style={{ fontSize: '10px', color: '#3B82F6', background: 'none', border: 'none', cursor: 'pointer' }}>{text.contact}</button>
             </div>
           </div>
         </div>
 
-        {showAdminPanel && isAdmin && (
-          <div style={{ position: 'fixed', bottom: '20px', right: '20px', backgroundColor: 'white', borderRadius: '12px', boxShadow: '0 4px 20px rgba(0,0,0,0.15)', padding: '16px', zIndex: 200, minWidth: '220px', border: '1px solid #E5E7EB' }}>
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '12px' }}>
-              <h4 style={{ margin: 0, fontSize: '14px', fontWeight: 'bold', color: '#D97706' }}>{text.adminPanel}</h4>
-              <button onClick={() => setShowAdminPanel(false)} style={{ background: 'none', border: 'none', fontSize: '16px', cursor: 'pointer', color: '#6B7280' }}>✕</button>
-            </div>
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
-              <button onClick={() => triggerAutoPost(['facebook'])} disabled={autoPostLoading} style={{ padding: '8px 12px', backgroundColor: '#1877F2', color: 'white', border: 'none', borderRadius: '8px', cursor: 'pointer', fontSize: '12px', fontWeight: 'bold', opacity: autoPostLoading ? 0.6 : 1 }}>
-                {autoPostLoading ? text.posting : `📘 ${text.postToFacebook}`}
-              </button>
-              {autoPostStatus && <div style={{ fontSize: '10px', color: '#6B7280', marginTop: '8px', paddingTop: '8px', borderTop: '1px solid #E5E7EB' }}>✅ Posted: {autoPostStatus.results?.length || 0} stocks</div>}
-            </div>
-          </div>
-        )}
+        {/* Voice Provider Modal */}
+        <VoiceProviderModal
+          isOpen={showVoiceProvider}
+          onClose={() => setShowVoiceProvider(false)}
+          user={user}
+          profile={profile}
+          onUpgradePlan={() => setCurrentView('pricing')}
+          langKey={language}
+        />
 
-        <SourceMenu isOpen={isMenuOpen} onClose={() => setIsMenuOpen(false)} onSelectSource={handleSourceSelect} langKey={language} />
+        <SourceMenu isOpen={isMenuOpen} onClose={() => setIsMenuOpen(false)} onSelectSource={() => setIsMenuOpen(false)} langKey={language} />
         
         {isAuthOpen && !user && (
           <div style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, backgroundColor: 'rgba(0,0,0,0.5)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1000 }}>

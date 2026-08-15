@@ -339,29 +339,32 @@ const MobileAnalysis: React.FC<MobileAnalysisProps> = ({
       dayHigh: data.dayHigh,
       specificAnalysis: data.specificAnalysis
     });
-  } catch (error) {
-    console.error('Analysis error:', error);
-    setAnalysisData({ 
-      symbol: inputValue.trim().toUpperCase(), 
-      summary: langKey === 'Traditional Chinese' ? `無法分析 ${inputValue.trim().toUpperCase()}，請稍後再試。` :
-                langKey === 'Simplified Chinese' ? `无法分析 ${inputValue.trim().toUpperCase()}，请稍后再试。` :
-                `Unable to analyze ${inputValue.trim().toUpperCase()}. Please try again.`,
-      price: "N/A",
-      change: null,
-      changePercent: null,
-      companyName: null,
-      currency: null,
-      rsi: "N/A",
-      macd: "N/A",
-      trend: "N/A",
-      marketCap: "N/A",
-      peRatio: "N/A",
-      volume: "N/A",
-      historical: [],
-    });
-  } finally {
-    setIsLoading(false);
-  }
+      } catch (error) {
+      console.error('Analysis error:', error);
+      // ✅ 修改此处提示语
+      const errorMsg = langKey === 'Traditional Chinese' ? `無法分析 ${inputValue.trim().toUpperCase()}，請重新輸入正確的股票代號。` :
+                       langKey === 'Simplified Chinese' ? `无法分析 ${inputValue.trim().toUpperCase()}，请重新输入正确的股票代码。` :
+                       `Unable to analyze ${inputValue.trim().toUpperCase()}. Please try to enter a correct stock symbol again.`;
+      
+      setAnalysisData({ 
+        symbol: inputValue.trim().toUpperCase(), 
+        summary: errorMsg,
+        price: "N/A",
+        change: null,
+        changePercent: null,
+        companyName: null,
+        currency: null,
+        rsi: "N/A",
+        macd: "N/A",
+        trend: "N/A",
+        marketCap: "N/A",
+        peRatio: "N/A",
+        volume: "N/A",
+        historical: [],
+      });
+    } finally {
+      setIsLoading(false);
+    }
 };
 
   const handleMicToggle = () => {

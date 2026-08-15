@@ -201,21 +201,22 @@ export const SmartInputSystem: React.FC<SmartInputSystemProps> = ({
         window.speechSynthesis.cancel();
       }
       
-      // CRITICAL: Wait for iOS voices to load
+      // CRITICAL: Wait for system voices to load
       const voices = await waitForVoices();
       console.log('✅ Voices loaded:', voices.map(v => `${v.name} (${v.lang})`));
       
       // Combine intro message + report
       const intro = getIntroMessage();
       const cleanedReport = prepareTextForTTS(analysisText);
-      const fullText = `${intro} ${cleanedReport}`;
+      // Web Speech API can crash on extremely long strings; slice to keep safe length
+      const fullText = `${intro} ${cleanedReport}`.slice(0, 1500);
       
       const utterance = new SpeechSynthesisUtterance(fullText);
       
       const voiceLang = voiceLanguage || localStorage.getItem('preferredVoice') || 'English';
       
       // Set language and find the correct voice
-      let selectedVoice = null;
+      let selectedVoice: SpeechSynthesisVoice | undefined = undefined;
       
       if (voiceLang === 'Mandarin') {
         utterance.lang = 'zh-CN';
@@ -231,9 +232,12 @@ export const SmartInputSystem: React.FC<SmartInputSystemProps> = ({
       }
       else if (voiceLang === 'Cantonese') {
         utterance.lang = 'zh-HK';
-        selectedVoice = voices.find(v => v.name === 'Sin-ji') ||
-                        voices.find(v => v.name.includes('Sin-ji')) ||
-                        voices.find(v => v.lang === 'zh-HK');
+        // Priority: Male Cantonese Voice (Danny) -> any Danny voice -> any male zh-HK -> fallback zh-HK
+        selectedVoice = voices.find(v => v.name === 'Danny') ||
+                        voices.find(v => v.name.includes('Danny')) ||
+                        voices.find(v => v.lang === 'zh-HK' && v.name.toLowerCase().includes('male')) ||
+                        voices.find(v => v.lang === 'zh-HK') ||
+                        voices.find(v => v.lang.includes('HK'));
       }
       else {
         utterance.lang = 'en-US';
@@ -252,17 +256,27 @@ export const SmartInputSystem: React.FC<SmartInputSystemProps> = ({
       utterance.rate = 0.85;
       utterance.pitch = 1.0;
       utterance.volume = 1;
+      
       utterance.onend = () => { 
         utteranceRef.current = null;
         console.log('✅ Speech finished');
       };
+      
       utterance.onerror = (e) => { 
-        console.error('Speech error:', e);
+        // Handles speech cancellation / browser boundary errors gracefully
+        if (e.error !== 'interrupted' && e.error !== 'canceled') {
+          console.error('Speech error details:', { error: e.error, message: e });
+        }
         utteranceRef.current = null;
       };
       
       utteranceRef.current = utterance;
-      window.speechSynthesis.speak(utterance);
+      
+      // Ensure engine is clear before triggering new utterance
+      window.speechSynthesis.cancel();
+      setTimeout(() => {
+        window.speechSynthesis.speak(utterance);
+      }, 50);
     };
     
     speakAnalysis();

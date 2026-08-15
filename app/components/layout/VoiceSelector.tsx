@@ -49,7 +49,7 @@ export const VoiceSelector: React.FC<VoiceSelectorProps> = ({ currentVoice, onVo
     }
     switch (voice) {
       case 'English': return 'English Voice (Samantha/Alex)';
-      case 'Cantonese': return '粵語 (Cantonese) - Sin-ji';
+      case 'Cantonese': return '粵語 (Cantonese) - Danny';
       case 'Mandarin': return '普通話 (Mandarin) - Ting-Ting';
       case 'Taiwanese': return '國語 (Taiwanese) - Mei-Jia';
       default: return voice;
@@ -58,26 +58,26 @@ export const VoiceSelector: React.FC<VoiceSelectorProps> = ({ currentVoice, onVo
 
   const voiceOptions = ['English', 'Cantonese', 'Mandarin', 'Taiwanese'];
 
-  // Get the Michael & Teresa greeting for each voice
+  // Get the Michael & Sofia greeting for each voice
   const getMichaelTeresaGreeting = (voice: string): string => {
     switch (voice) {
       case 'Cantonese':
-        return '你好，我哋係米高和杜麗莎，你嘅財務和市場分析員，好高興為你服務。';
+        return '你好，我哋係 Michael 和 Sofia，你嘅財務和市場分析員，好高興為你服務。';
       case 'Mandarin':
-        return '你好，我们是米高和杜丽莎，你的财务和市场分析师，很高兴为你服务。';
+        return '你好，我们是 Michael 和 Sofia，你的财务和市场分析师，很高兴为你服务。';
       case 'Taiwanese':
-        return '你好，我們是米高和杜麗莎，你的財務和市場分析員，很高興為你服務。';
+        return '你好，我們是 Michael 和 Sofia，你的財務和市場分析員，很高興為你服務。';
       default:
-        return 'Hello, this is Michael and Teresa, your Finance and Market Analysts, here to serve you.';
+        return 'Hello, this is Michael and Sofia, your Finance and Market Analysts, here to serve you.';
     }
   };
+
   // In VoiceSelector.tsx, add debug
-const handleVoiceChange = (voice: string) => {
-  console.log("🔄 VOICE CHANGED TO:", voice);
-  onVoiceChange(voice);
-  localStorage.setItem('preferredVoice', voice);
-  // ... rest
-};
+  const handleVoiceChange = (voice: string) => {
+    console.log("🔄 VOICE CHANGED TO:", voice);
+    onVoiceChange(voice);
+    localStorage.setItem('preferredVoice', voice);
+  };
 
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
@@ -131,11 +131,8 @@ const handleVoiceChange = (voice: string) => {
             <button
               key={voice}
               onClick={() => {
-                onVoiceChange(voice);
-                localStorage.setItem('preferredVoice', voice);
+                handleVoiceChange(voice);
                 setIsOpen(false);
-                // Test the voice with Michael & Teresa greeting after selection
-                // setTimeout(() => testVoice(voice), 100);
               }}
               style={{
                 display: 'block',

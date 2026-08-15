@@ -53,10 +53,11 @@ const generateShareText = (data: any, langKey: string, customMessage: string = '
     parts.push('');
   }
 
-  // 1. Stock Watch of the Day
+  // 1. Stock of the Day with Date
+  const today = new Date().toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' });
   parts.push(isChinese 
-    ? `📊 今日關注股票：${companyName} (${symbol})` 
-    : `📊 Stock Watch of the Day: ${companyName} (${symbol})`);
+    ? `📊 今日關注股票 (${today})：${companyName} (${symbol})` 
+    : `📊 Stock of the Day (${today}): ${companyName} (${symbol})`);
   
   // 2. Price and change
   parts.push(isChinese 
@@ -78,12 +79,17 @@ const generateShareText = (data: any, langKey: string, customMessage: string = '
     ? `💡 AI建議 ${recommendation}` 
     : `💡 AI Recommendation ${recommendation}`);
   
-  // 6. Powered by
+  // 6. Add Disclaimer
   parts.push('');
   parts.push(isChinese 
-    ? `⚡ 由 VibeAILink.com 提供 AI 分析` 
-    : `⚡ Powered by VibeAILink.com`);
-  parts.push(`🔗 https://vibeailink.com`);
+    ? `⚠️ 免責聲明：選股基於自主決策原則！` 
+    : `⚠️ Disclaimer: Stock selection is based on self-decision principle!`);
+  
+  // 7. Powered by (已删除多余链接)
+  parts.push('');
+  parts.push(isChinese 
+    ? `⚡ 由 VibeAiLink 提供 AI 分析` 
+    : `⚡ Powered by VibeAiLink AI Analysis`);
   
   return parts.join('\n');
 };
@@ -299,19 +305,10 @@ const FacebookAPIShareButton = ({
   );
 };
 
-// ── Share Buttons Component (UPDATED) ──
+// ── Share Buttons Component (UPDATED - Removed duplicate social block) ──
 const ShareButtons = ({ data, langKey }: { data: any; langKey: string }) => {
   const [showShareMenu, setShowShareMenu] = useState(false);
   const [shareMessage, setShareMessage] = useState('');
-  const [fbAccessToken, setFbAccessToken] = useState<string | null>(null);
-  const [showFbLogin, setShowFbLogin] = useState(false);
-
-  useEffect(() => {
-    const token = localStorage.getItem('fb_access_token');
-    if (token) {
-      setFbAccessToken(token);
-    }
-  }, []);
 
   // Get the RSI display from data
   const rsiDisplay = data?.rsi !== undefined && data?.rsi !== null ? data.rsi.toFixed(1) : 'N/A';
@@ -323,20 +320,27 @@ const ShareButtons = ({ data, langKey }: { data: any; langKey: string }) => {
 
   // Generate the share text using the helper
   const shareText = generateShareText(data, langKey, shareMessage);
-  const shareUrl = typeof window !== 'undefined' ? window.location.href : '';
-
+  
+  // ✅ 获取纯净的网址（过滤掉 OAuth 登录错误的尾巴）
+  const getCleanUrl = () => {
+    if (typeof window === 'undefined') return '';
+    const url = new URL(window.location.href);
+    // 删除与登录错误相关的参数
+    url.searchParams.delete('error');
+    url.searchParams.delete('error_code');
+    url.searchParams.delete('error_description');
+    return url.toString();
+  };
+  const shareUrl = getCleanUrl();
+  
   // ── Share Handlers ──
   const shareToFacebook = () => {
-    // Use the Facebook API if token exists, otherwise use the dialog
-    if (fbAccessToken) {
-      // The FacebookAPIShareButton handles this
-      return;
-    }
+    const encodedUrl = encodeURIComponent(shareUrl);
+    const encodedQuote = encodeURIComponent(shareText);
     
-    // Fallback: open Facebook share dialog
-    const encodedText = encodeURIComponent(shareText);
+    // ✅ 改用 sharer.php，这是目前 Facebook 唯一稳定支持的通用分享方式
     window.open(
-      `https://www.facebook.com/dialog/feed?display=popup&quote=${encodedText}&hashtag=%23VibeAILink%23StockAnalysis`,
+      `https://www.facebook.com/sharer/sharer.php?u=${encodedUrl}&quote=${encodedQuote}`,
       'facebook-share-dialog',
       'width=626,height=436,toolbar=0,menubar=0,scrollbars=yes'
     );
@@ -371,14 +375,6 @@ const ShareButtons = ({ data, langKey }: { data: any; langKey: string }) => {
     alert(langKey === 'Traditional Chinese' ? '✅ 文字已儲存！' : 
           langKey === 'Simplified Chinese' ? '✅ 文字已保存！' : 
           '✅ Text saved!');
-  };
-
-  const handleFbLoginSuccess = (token: string) => {
-    setFbAccessToken(token);
-    setShowFbLogin(false);
-    alert(langKey === 'Traditional Chinese' ? '✅ Facebook 帳號已連接！' :
-          langKey === 'Simplified Chinese' ? '✅ Facebook 账号已连接！' :
-          '✅ Facebook account connected!');
   };
 
   // Buttons configuration
@@ -453,71 +449,6 @@ const ShareButtons = ({ data, langKey }: { data: any; langKey: string }) => {
               💡 {rsiSignal}
             </div>
           )}
-
-          <div style={{ 
-            marginTop: '12px', 
-            paddingTop: '12px', 
-            borderTop: '1px dashed #E5E7EB',
-            backgroundColor: '#F0F9FF',
-            borderRadius: '8px',
-            padding: '12px'
-          }}>
-            <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '12px' }}>
-              <span style={{ fontSize: '11px', fontWeight: 'bold', color: '#1877F2' }}>
-                🤖 {langKey === 'Traditional Chinese' ? '自動發帖模式' : langKey === 'Simplified Chinese' ? '自动发帖模式' : 'Auto-Post Mode'}
-              </span>
-              <span style={{ fontSize: '9px', color: '#6B7280' }}>
-                {langKey === 'Traditional Chinese' ? '(需 Facebook 授權)' : langKey === 'Simplified Chinese' ? '(需 Facebook 授权)' : '(Facebook authorization required)'}
-              </span>
-            </div>
-
-            {fbAccessToken ? (
-              <FacebookAPIShareButton
-                accessToken={fbAccessToken}
-                symbol={data?.symbol || ''}
-                reportData={data}
-                reportUrl={shareUrl}
-                langKey={langKey}
-                customMessage={shareMessage}
-                onSuccess={() => console.log('Share success')}
-                onError={(error) => alert(error)}
-              />
-            ) : showFbLogin ? (
-              <div>
-                <FacebookLoginButton onLogin={handleFbLoginSuccess} langKey={langKey} />
-                <button
-                  onClick={() => setShowFbLogin(false)}
-                  style={{ marginTop: '8px', fontSize: '10px', color: '#6B7280', background: 'none', border: 'none', cursor: 'pointer' }}
-                >
-                  {langKey === 'Traditional Chinese' ? '取消' : langKey === 'Simplified Chinese' ? '取消' : 'Cancel'}
-                </button>
-              </div>
-            ) : (
-              <button
-                onClick={() => setShowFbLogin(true)}
-                style={{
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  gap: '8px',
-                  width: '100%',
-                  padding: '10px 16px',
-                  backgroundColor: '#E8F0FE',
-                  color: '#1877F2',
-                  border: '1px solid #1877F2',
-                  borderRadius: '8px',
-                  cursor: 'pointer',
-                  fontSize: '13px',
-                  fontWeight: '500',
-                }}
-              >
-                <svg width="14" height="14" viewBox="0 0 24 24" fill="#1877F2">
-                  <path d="M22 12c0-5.52-4.48-10-10-10S2 6.48 2 12c0 4.84 3.44 8.87 8 9.8V15H8v-3h2V9.5C10 7.57 11.57 6 13.5 6H16v3h-2c-.55 0-1 .45-1 1v2h3v3h-3v6.95c5.05-.5 9-4.76 9-9.95z"/>
-                </svg>
-                <span>{langKey === 'Traditional Chinese' ? '連接 Facebook 以啟用一鍵發帖' : langKey === 'Simplified Chinese' ? '连接 Facebook 以启用一键发帖' : 'Connect Facebook to enable one-click posting'}</span>
-              </button>
-            )}
-          </div>
         </div>
       )}
     </div>
