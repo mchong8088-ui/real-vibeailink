@@ -12,6 +12,7 @@ interface VoiceProviderModalProps {
   profile: any;
   initialScript?: string;
   onUpgradePlan?: () => void;
+ langKey?: string;
 }
 
 export const VoiceProviderModal: React.FC<VoiceProviderModalProps> = ({
@@ -21,6 +22,7 @@ export const VoiceProviderModal: React.FC<VoiceProviderModalProps> = ({
   profile,
   initialScript = '',
   onUpgradePlan,
+  
 }) => {
   const [script, setScript] = useState(initialScript);
   const [language, setLanguage] = useState<'Cantonese' | 'Mandarin' | 'English'>('Cantonese');

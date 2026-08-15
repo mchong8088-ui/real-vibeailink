@@ -20,12 +20,12 @@ export async function POST(req: Request) {
       speed
     });
 
-    return new Response(audioBuffer, {
-      headers: {
-        'Content-Type': 'audio/mpeg',
-        'Content-Length': audioBuffer.length.toString(),
-      },
-    });
+    return new Response(new Uint8Array(audioBuffer), {
+  headers: {
+    'Content-Type': 'audio/mpeg',
+    'Content-Length': audioBuffer.length.toString(),
+  },
+});
   } catch (error) {
     console.error('Preview error:', error);
     return NextResponse.json({ error: 'Failed to generate preview' }, { status: 500 });

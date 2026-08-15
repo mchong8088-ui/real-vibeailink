@@ -7,10 +7,6 @@ import { randomUUID } from 'crypto';
 import { createClient } from '@supabase/supabase-js';
 
 const execAsync = promisify(exec);
-const supabase = createClient(
-  process.env.NEXT_PUBLIC_SUPABASE_URL!,
-  process.env.SUPABASE_SERVICE_ROLE_KEY!
-);
 
 // Updated voice mapping: Cantonese set to 'Danny', Taiwanese set to 'Mei-Jia'
 const voiceMap: Record<string, string> = {
@@ -21,6 +17,9 @@ const voiceMap: Record<string, string> = {
   'Default': 'Alex'
 };
 
+// Force dynamic rendering to prevent build-time pre-rendering issues
+export const dynamic = "force-dynamic";
+
 export async function POST(req: Request) {
   try {
     const { userId, script, language = 'Cantonese', useGateway = false } = await req.json();
@@ -28,6 +27,21 @@ export async function POST(req: Request) {
     if (!userId || !script) {
       return NextResponse.json({ error: "Missing required fields" }, { status: 400 });
     }
+
+    const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
+    const supabaseServiceKey =
+      process.env.SUPABASE_SERVICE_ROLE_KEY ||
+      process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
+
+    if (!supabaseUrl || !supabaseServiceKey) {
+      console.error("Missing Supabase credentials in env.");
+      return NextResponse.json(
+        { error: "Server configuration error" },
+        { status: 500 }
+      );
+    }
+
+    const supabase = createClient(supabaseUrl, supabaseServiceKey);
 
     // 1. Fetch user profile and check subscription/credits
     const { data: profile, error } = await supabase

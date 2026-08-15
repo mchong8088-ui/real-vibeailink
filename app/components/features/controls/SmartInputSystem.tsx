@@ -8,6 +8,7 @@ interface SmartInputSystemProps {
   systemInfo: any;
   analysisText?: string;
   voiceLanguage?: string;
+  placeholder?: string;
 }
 
 export const SmartInputSystem: React.FC<SmartInputSystemProps> = ({
@@ -17,6 +18,7 @@ export const SmartInputSystem: React.FC<SmartInputSystemProps> = ({
   systemInfo,
   analysisText,
   voiceLanguage = 'English',
+  placeholder,
 }) => {
   const [inputValue, setInputValue] = useState('');
   const [isLoading, setIsLoading] = useState(false);
@@ -160,7 +162,7 @@ export const SmartInputSystem: React.FC<SmartInputSystemProps> = ({
       result = result.replace(/信心评分: (\d+)% 五颗星 \(非常高\)/g, '信心评分 $1 百分之，非常高，五星级');
       result = result.replace(/信心评分: (\d+)% 四颗星 \(高\)/g, '信心评分 $1 百分之，高，四星级');
       result = result.replace(/信心评分: (\d+)% 三颗星 \(中等\)/g, '信心评分 $1 百分之，中等，三星级');
-      result = result.replace(/信心评分: (\d+)% 两颗星 \(低\)/g, '信心评分 $1 百分之，低，两星级');
+      result = result.replace(/信心评分: (\d+)% 两颗星 \(低\)/g, '信心评分 $1 百分之，低，两国级');
       result = result.replace(/信心评分: (\d+)% 一颗星 \(极低\)/g, '信心评分 $1 百分之，极低，一星级');
       result = result.replace(/HK\$/g, '港币');
       result = result.replace(/NT\$/g, '新台币');
@@ -263,7 +265,6 @@ export const SmartInputSystem: React.FC<SmartInputSystemProps> = ({
       };
       
       utterance.onerror = (e) => { 
-        // Handles speech cancellation / browser boundary errors gracefully
         if (e.error !== 'interrupted' && e.error !== 'canceled') {
           console.error('Speech error details:', { error: e.error, message: e });
         }
@@ -346,6 +347,7 @@ export const SmartInputSystem: React.FC<SmartInputSystemProps> = ({
   };
 
   const getPlaceholder = () => {
+    if (placeholder) return placeholder;
     if (langKey === 'Cantonese') return '輸入股票代號 e.g.: 0700.hk, 2330.tw, TSLA';
     if (langKey === '简体中文') return '输入股票代码 e.g.: 0700.hk, 2330.tw, TSLA';
     return 'Enter stock symbol e.g.: 0700.hk, 2330.tw, TSLA';

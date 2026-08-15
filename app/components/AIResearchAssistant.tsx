@@ -8,6 +8,8 @@ interface AIResearchAssistantProps {
   profile: any;
   onUpgradePlan?: () => void;
   onOpenVoiceModalWithScript?: (scriptText: string) => void;
+  placeholderText?: string;
+  promptNotice?: string;
 }
 
 export const AIResearchAssistant: React.FC<AIResearchAssistantProps> = ({
@@ -16,6 +18,8 @@ export const AIResearchAssistant: React.FC<AIResearchAssistantProps> = ({
   profile,
   onUpgradePlan,
   onOpenVoiceModalWithScript,
+  placeholderText,
+  promptNotice,
 }) => {
   const [input, setInput] = useState('');
   const [messages, setMessages] = useState<Array<{ role: 'user' | 'assistant'; content: string }>>([]);
@@ -335,6 +339,21 @@ export const AIResearchAssistant: React.FC<AIResearchAssistantProps> = ({
 
       {isExpanded && (
         <div style={{ padding: '10px 14px' }}>
+          {/* Optional Prompt Notice */}
+          {promptNotice && (
+            <div style={{
+              marginBottom: '8px',
+              padding: '6px 10px',
+              backgroundColor: '#FEF3C7',
+              color: '#92400E',
+              fontSize: '11px',
+              borderRadius: '8px',
+              border: '1px solid #FCD34D'
+            }}>
+              {promptNotice}
+            </div>
+          )}
+
           {/* Messages display */}
           <div style={{
             maxHeight: '220px',
@@ -426,7 +445,13 @@ export const AIResearchAssistant: React.FC<AIResearchAssistantProps> = ({
                   handleSend();
                 }
               }}
-              placeholder={isEnabled ? "Ask any question or request a script..." : "Enable AI Enhancement to ask questions"}
+              placeholder={
+                placeholderText 
+                  ? placeholderText 
+                  : isEnabled 
+                  ? "Ask any question or request a script..." 
+                  : "Enable AI Enhancement to ask questions"
+              }
               disabled={!isEnabled || !isLoggedIn}
               style={{
                 flex: 1,

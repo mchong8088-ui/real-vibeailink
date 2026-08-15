@@ -1,10 +1,8 @@
 import { NextResponse } from "next/server";
 import { createClient } from '@supabase/supabase-js';
 
-const supabase = createClient(
-  process.env.NEXT_PUBLIC_SUPABASE_URL!,
-  process.env.SUPABASE_SERVICE_ROLE_KEY!
-);
+// Prevent Next.js from pre-rendering or statically evaluating this route during build time
+export const dynamic = 'force-dynamic';
 
 export async function POST(req: Request) {
   try {
@@ -19,6 +17,17 @@ export async function POST(req: Request) {
     if (!userId) {
       return NextResponse.json({ error: "User not authenticated" }, { status: 401 });
     }
+
+    // Lazy instantiation inside the handler to prevent build-time crashes
+    const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
+    const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
+
+    if (!supabaseUrl || !supabaseServiceKey) {
+      console.error("Missing Supabase configuration environment variables.");
+      return NextResponse.json({ error: "Server configuration error" }, { status: 500 });
+    }
+
+    const supabase = createClient(supabaseUrl, supabaseServiceKey);
 
     const { data: profile, error } = await supabase
       .from('profiles')
@@ -71,6 +80,12 @@ export async function POST(req: Request) {
     });
 
     const aiData = await aiResponse.json();
+
+    if (!aiResponse.ok || !aiData.choices?.[0]?.message?.content) {
+      console.error("OpenAI API error:", aiData);
+      return NextResponse.json({ error: "Failed to generate script from AI" }, { status: 500 });
+    }
+
     const scriptOutput = aiData.choices[0].message.content;
 
     // Credit calculation
