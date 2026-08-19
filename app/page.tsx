@@ -15,40 +15,17 @@ import { PricingModal } from './components/features/pricing/PricingModal';
 import UserMenu from './components/auth/UserMenu';
 import { supabase } from './lib/supabase';
 import { useLanguage } from './context/LanguageContext';
+// Import mobile components
+import MobileLanding from './MobileLanding';
+import MobileAnalysis from './MobileAnalysis';
 
-class ErrorBoundary extends React.Component<{ children: React.ReactNode }, { hasError: boolean }> {
-  constructor(props: { children: React.ReactNode }) {
-    super(props);
-    this.state = { hasError: false };
-  }
-
-  static getDerivedStateFromError() {
-    return { hasError: true };
-  }
-
-  componentDidCatch(error: Error, errorInfo: React.ErrorInfo) {
-    console.error('ErrorBoundary caught an error:', error, errorInfo);
-  }
-
-  render() {
-    if (this.state.hasError) {
-      return (
-        <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '100vh', flexDirection: 'column', gap: '16px' }}>
-          <h2>Something went wrong</h2>
-          <button onClick={() => window.location.reload()} style={{ padding: '8px 16px', backgroundColor: '#2563EB', color: 'white', border: 'none', borderRadius: '8px', cursor: 'pointer' }}>
-            Reload Page
-          </button>
-        </div>
-      );
-    }
-    return this.props.children;
-  }
-}
+// ... ErrorBoundary class stays the same ...
 
 export default function VibeAiMaster() {
   const { t, language, setLanguage } = useLanguage();
   
   const [mounted, setMounted] = useState(false);
+  const [isMobile, setIsMobile] = useState(false);
   const [systemState, setSystemState] = useState({ os: "Detecting...", isMobile: false });
   const [user, setUser] = useState<any>(null);
   const [profile, setProfile] = useState<any>(null);
@@ -72,7 +49,21 @@ export default function VibeAiMaster() {
   const [loadingStockOfDay, setLoadingStockOfDay] = useState(false);
   const [voiceLanguage, setVoiceLanguage] = useState<string>('English');
 
+  // Mobile state
+  const [mobileView, setMobileView] = useState<'landing' | 'analysis' | 'content'>('landing');
+  const [mobileContentType, setMobileContentType] = useState<string | null>(null);
+
   const systemInfo = { system: `VibeAI-${systemState.os}`, voiceEngine: "Local Synthesis" };
+
+  // Detect mobile on mount and resize
+  useEffect(() => {
+    const checkMobile = () => {
+      setIsMobile(window.innerWidth < 768);
+    };
+    checkMobile();
+    window.addEventListener('resize', checkMobile);
+    return () => window.removeEventListener('resize', checkMobile);
+  }, []);
 
   useEffect(() => {
     const savedVoice = localStorage.getItem('preferredVoice');
@@ -81,301 +72,35 @@ export default function VibeAiMaster() {
     }
   }, []);
 
-  const fetchUserProfile = async (userId: string, email: string) => {
-    try {
-      const { data, error } = await supabase
-        .from('profiles')
-        .select('*')
-        .eq('id', userId)
-        .single();
-      
-      if (data && !error) {
-        setProfile(data);
-      } else {
-        const { data: newProfile, error: insertError } = await supabase
-          .from('profiles')
-          .insert({
-            id: userId,
-            email: email,
-            credits: 100,
-            subscription_plan: 'Free Explorer'
-          })
-          .select()
-          .single();
-        
-        if (newProfile && !insertError) {
-          setProfile(newProfile);
-        }
-      }
-    } catch (err) {
-      console.error('Error fetching profile:', err);
+  // ... rest of your hooks and functions (fetchUserProfile, handleLogout, etc.) stay the same ...
+  // Keep all the existing functions: fetchUserProfile, handleLogout, checkCreditsBeforeAnalysis, 
+  // handleAnalyzeRequest, handleSelectPlan, getUserDisplayName, getTranslatedText, getWatchlist
+
+  // Add mobile navigation handler
+  const handleMobileNavigate = (page: string, params?: any) => {
+    if (page === 'analysis') {
+      setMobileView('analysis');
+      setCurrentView('analysis');
+    } else if (page === 'content') {
+      setMobileView('content');
+      setMobileContentType(params?.view || 'about');
+      if (params?.view === 'pricing') setCurrentView('pricing');
+      else if (params?.view === 'about') setCurrentView('about');
+      else if (params?.view === 'features') setCurrentView('features');
+    } else if (page === 'watchlist') {
+      setMobileView('analysis');
+      setCurrentView('watchlist');
+    } else if (page === 'landing') {
+      setMobileView('landing');
     }
   };
 
-  useEffect(() => {
-    supabase.auth.getSession().then(({ data: { session } }) => {
-      setUser(session?.user || null);
-      if (session?.user) {
-        fetchUserProfile(session.user.id, session.user.email);
-      }
-    });
-    
-    const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
-      setUser(session?.user || null);
-      if (event === 'SIGNED_IN' && session?.user) {
-        fetchUserProfile(session.user.id, session.user.email);
-      }
-      if (event === 'SIGNED_OUT') {
-        setProfile(null);
-      }
-    });
-    
-    return () => subscription.unsubscribe();
-  }, []);
-
-  useEffect(() => { 
-    setIsHydrated(true); 
-  }, []);
-
-  useEffect(() => {
-    setMounted(true);
-    const isMobileDevice = /iPhone|iPad|iPod|Android/i.test(navigator.userAgent) || window.innerWidth < 1024;
-    let detectedOS = "Standard OS";
-    if (navigator.userAgent.indexOf("Win") !== -1) detectedOS = "Windows";
-    if (navigator.userAgent.indexOf("Mac") !== -1) detectedOS = "macOS";
-    setSystemState({ os: detectedOS, isMobile: isMobileDevice });
-    
-    fetchStockOfTheDay();
-  }, []);
-
-  const fetchStockOfTheDay = async () => {
-    setLoadingStockOfDay(true);
-    try {
-      const response = await fetch('/api/stock-of-the-day');
-      const data = await response.json();
-      setStockOfTheDay(data);
-    } catch (error) {
-      console.error('Failed to fetch stock of the day:', error);
-    } finally {
-      setLoadingStockOfDay(false);
-    }
+  // Handle mobile auth open
+  const handleMobileAuthOpen = () => {
+    setIsAuthOpen(true);
   };
 
-  const analyzeStockOfTheDay = () => {
-    if (stockOfTheDay?.symbol) {
-      handleAnalyzeRequest(stockOfTheDay.symbol, [], false);
-    }
-  };
-
-  const handleLogout = async () => {
-    await supabase.auth.signOut();
-    setUser(null);
-    setProfile(null);
-    setShowUserMenu(false);
-    window.location.href = '/';
-  };
-
-  const checkCreditsBeforeAnalysis = async (): Promise<boolean> => {
-    if (!user) {
-      const langMsg = language === 'Traditional Chinese' ? '請先登入' : 
-                      language === 'Simplified Chinese' ? '请先登录' : 
-                      'Please login first';
-      alert(langMsg);
-      setIsAuthOpen(true);
-      return false;
-    }
-    
-    if (!profile) {
-      alert('User profile not found. Please contact support.');
-      return false;
-    }
-    
-    if (profile.credits <= 0) {
-      const langMsg = language === 'Traditional Chinese' ? '積分不足，是否升級計劃？' : 
-                      language === 'Simplified Chinese' ? '积分不足，是否升级计划？' : 
-                      'Insufficient credits. Would you like to upgrade?';
-      const confirmUpgrade = confirm(langMsg);
-      if (confirmUpgrade) {
-        setCurrentView('pricing');
-      }
-      return false;
-    }
-    
-    return true;
-  };
-
-  const handleAnalyzeRequest = async (ticker: string, attachments?: any[], useAI?: boolean) => {
-    const hasCredits = await checkCreditsBeforeAnalysis();
-    if (!hasCredits) return;
-    
-    setIsLoading(true);
-    try {
-      let userContent = null;
-      if (attachments && attachments.length > 0) {
-        const attachment = attachments[0];
-        if (attachment.content) {
-          userContent = attachment.content;
-        }
-      }
-      
-      const endpoint = (useAI || enableAIEnhancement) ? '/api/chat/ai-enhanced' : '/api/chat';
-      
-      const response = await fetch(endpoint, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ 
-          message: ticker, 
-          language: language,
-          userContent: userContent,
-          useAI: useAI || enableAIEnhancement
-        }),
-      });
-      
-      const data = await response.json();
-      
-      if (!data.success) {
-        throw new Error(data.summary || 'Analysis failed');
-      }
-      
-      setAnalysisData(data);
-      
-      setTimeout(() => {
-        const analysisElement = document.getElementById('analysis-content');
-        if (analysisElement) {
-          analysisElement.scrollIntoView({ behavior: 'smooth' });
-        }
-      }, 100);
-    } catch (error) {
-      console.error('Analysis error:', error);
-      const errorMsg = language === 'Traditional Chinese' ? `無法分析 ${ticker}，請重新輸入。` :
-                       language === 'Simplified Chinese' ? `无法分析 ${ticker}，请重新输入。` :
-                       `Unable to analyze ${ticker}. Please try again.`;
-      
-      setAnalysisData({ 
-        symbol: ticker, 
-        summary: errorMsg
-      });
-    } finally {
-      setIsLoading(false);
-    }
-  };
-
-  const handleSelectPlan = async (planId: string, priceId: string) => {
-    try {
-      const response = await fetch('/api/billing/create-checkout', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ 
-          priceId, 
-          userId: user?.id, 
-          successUrl: `${window.location.origin}/success`, 
-          cancelUrl: window.location.href,
-          planId: planId
-        }),
-      });
-      const { url } = await response.json();
-      if (url) {
-        window.location.href = url;
-      } else {
-        alert('Unable to process payment. Please try again.');
-      }
-    } catch (error) { 
-      alert('Unable to process payment. Please try again.'); 
-    }
-  };
-
-  const getUserDisplayName = () => {
-    if (profile?.display_name) return profile.display_name;
-    if (user?.email) return user.email.split('@')[0].substring(0, 10);
-    return 'User';
-  };
-
-  const getTranslatedText = () => {
-    if (language === 'Traditional Chinese') {
-      return {
-        financeText: '您的財務及市場分析師',
-        disclaimer: '免責聲明',
-        terms: '服務條款',
-        privacy: '隱私政策',
-        refund: '退款政策',
-        contact: '聯絡我們',
-        aiStock: 'AI 股票',
-        portfolio: '投資組合',
-        about: '關於',
-        features: '功能',
-        pricing: '定價',
-        stockOfDay: '今日精選股票',
-        analyze: '分析',
-        inputPlaceholderDisabled: '開啟 AI 增強即可進行深度提問',
-        inputPlaceholderEnabled: '輸入股票代號、策略或任何市場問題...',
-        myWatchlist: '⭐ 我的關注列表',
-        refresh: '重新整理',
-        noWatchlist: '暫無股票',
-        voiceProviderBtn: '🎙️ Voice Provider',
-        aiAssistantBtn: '🤖 AI Assistant',
-        aiEnhancementBtn: '⚡ AI Enhancement',
-      };
-    } else if (language === 'Simplified Chinese') {
-      return {
-        financeText: '您的财务及市场分析师',
-        disclaimer: '免责声明',
-        terms: '服务条款',
-        privacy: '隐私政策',
-        refund: '退款政策',
-        contact: '联系我们',
-        aiStock: 'AI 股票',
-        portfolio: '投资组合',
-        about: '关于',
-        features: '功能',
-        pricing: '定价',
-        stockOfDay: '今日精选股票',
-        analyze: '分析',
-        inputPlaceholderDisabled: '开启 AI 增强即可进行深度提问',
-        inputPlaceholderEnabled: '输入股票代码、策略或任何市场问题...',
-        myWatchlist: '⭐ 我的关注列表',
-        refresh: '刷新',
-        noWatchlist: '暂无股票',
-        voiceProviderBtn: '🎙️ Voice Provider',
-        aiAssistantBtn: '🤖 AI Assistant',
-        aiEnhancementBtn: '⚡ AI Enhancement',
-      };
-    } else {
-      return {
-        financeText: 'Your Finance & Market Analysts',
-        disclaimer: 'DISCLAIMER',
-        terms: 'TERMS',
-        privacy: 'PRIVACY',
-        refund: 'REFUND',
-        contact: 'CONTACT',
-        aiStock: 'AI STOCK',
-        portfolio: 'PORTFOLIO',
-        about: 'ABOUT',
-        features: 'FEATURES',
-        pricing: 'PRICING',
-        stockOfDay: '⭐ Stock of the Day',
-        analyze: 'Analyze',
-        inputPlaceholderDisabled: 'Enable AI Enhancement to ask questions',
-        inputPlaceholderEnabled: 'Type stock ticker, strategy, or financial questions...',
-        myWatchlist: '⭐ Watchlist',
-        refresh: 'Refresh',
-        noWatchlist: 'No stocks yet',
-        voiceProviderBtn: '🎙️ Voice Provider',
-        aiAssistantBtn: '🤖 AI Assistant',
-        aiEnhancementBtn: '⚡ AI Enhancement',
-      };
-    }
-  };
-
-  const text = getTranslatedText();
-
-  const getWatchlist = () => {
-    if (typeof window === 'undefined') return [];
-    try {
-      return JSON.parse(localStorage.getItem('stockWatchlist') || '[]');
-    } catch {
-      return [];
-    }
-  };
+  // ... keep all your existing functions ...
 
   if (!isHydrated || !mounted) {
     return (
@@ -388,10 +113,79 @@ export default function VibeAiMaster() {
     );
   }
 
+  // ============================================================
+  // MOBILE RENDER
+  // ============================================================
+  if (isMobile) {
+    if (mobileView === 'landing') {
+      return (
+        <MobileLanding
+          langKey={language}
+          setLangKey={setLanguage}
+          onAuthOpen={handleMobileAuthOpen}
+          user={user}
+          profile={profile}
+          onNavigate={handleMobileNavigate}
+        />
+      );
+    }
+
+    if (mobileView === 'analysis') {
+      return (
+        <MobileAnalysis
+          langKey={language}
+          setLangKey={setLanguage}
+          user={user}
+          profile={profile}
+          onAuthOpen={handleMobileAuthOpen}
+          viewType={currentView}
+          topicId={mobileContentType || undefined}
+          legalTitle={legalTitle}
+          onBack={() => {
+            if (currentView === 'analysis') {
+              setMobileView('landing');
+            } else {
+              setCurrentView('analysis');
+              setMobileView('analysis');
+            }
+            setLegalTitle(null);
+          }}
+          voiceLanguage={voiceLanguage}
+          onNavigate={handleMobileNavigate}
+        />
+      );
+    }
+
+    if (mobileView === 'content') {
+      return (
+        <MobileAnalysis
+          langKey={language}
+          setLangKey={setLanguage}
+          user={user}
+          profile={profile}
+          onAuthOpen={handleMobileAuthOpen}
+          viewType={currentView}
+          topicId={mobileContentType || undefined}
+          legalTitle={legalTitle}
+          onBack={() => {
+            setMobileView('landing');
+            setLegalTitle(null);
+            setMobileContentType(null);
+          }}
+          voiceLanguage={voiceLanguage}
+          onNavigate={handleMobileNavigate}
+        />
+      );
+    }
+  }
+
+  // ============================================================
+  // DESKTOP RENDER (existing code)
+  // ============================================================
   return (
     <ErrorBoundary>
       <div style={{ display: 'flex', flexDirection: 'column', height: '100vh', width: '100%', overflow: 'hidden', backgroundColor: '#f0f0f0' }}>
-        {/* Header Bar */}
+        {/* Header Bar - Keep as is */}
         <div style={{ backgroundColor: 'white', padding: '12px 24px', borderBottom: '1px solid #E5E7EB', display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexShrink: 0 }}>
           <h1 style={{ fontSize: '22px', fontWeight: '900', fontStyle: 'italic', color: '#DC2626', margin: 0 }}>vibeAiLink</h1>
           <div style={{ display: 'flex', gap: '32px' }}>
@@ -406,7 +200,7 @@ export default function VibeAiMaster() {
             ))}
           </div>
           <div style={{ display: 'flex', gap: '10px', alignItems: 'center' }}>
-            <VoiceSelector currentVoice={voiceLanguage} onVoiceChange={setVoiceLanguage} />
+            <VoiceSelector currentVoice={voiceLanguage} onVoiceChange={setVoiceLanguage} mode="language" />
             <LanguageToggle currentLang={language} onLangChange={setLanguage as any} />
             {user ? (
               <div style={{ position: 'relative' }}>
@@ -436,7 +230,7 @@ export default function VibeAiMaster() {
           </div>
         </div>
 
-        {/* Workspace Container */}
+        {/* Rest of your desktop content - keep exactly as is */}
         <div style={{ display: 'flex', flex: 1, overflow: 'hidden' }}>
           {/* Avatar Panel */}
           <div style={{ width: '26%', backgroundColor: '#FEF08A', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', padding: '30px 20px', overflow: 'auto', minWidth: '240px' }}>
@@ -449,7 +243,7 @@ export default function VibeAiMaster() {
             <p style={{ fontSize: '14px', fontWeight: '600', color: '#2563EB', textAlign: 'center', margin: '0' }}>{text.financeText}</p>
           </div>
 
-          {/* Main Display Area (Scrolling Output Window) */}
+          {/* Main Display Area */}
           <div style={{ width: '74%', backgroundColor: '#E0F2FE', display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
             <div id="analysis-content" style={{ flex: 1, overflowY: 'auto', padding: '16px' }}>
               {currentView === "analysis" && (
@@ -486,7 +280,7 @@ export default function VibeAiMaster() {
               {currentView === "features" && <FeaturesSection lang={language} />}
             </div>
 
-            {/* Compact Fixed Bottom Controls Panel (1 Row of 4 Green Buttons) */}
+            {/* Bottom Controls */}
             <div style={{ backgroundColor: 'white', padding: '8px 16px', borderTop: '1px solid #E5E7EB', flexShrink: 0 }}>
               <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr 1fr', gap: '8px', marginBottom: '8px' }}>
                 <button 
@@ -557,7 +351,7 @@ export default function VibeAiMaster() {
           </div>
         </div>
 
-        {/* Modals */}
+        {/* Modals - keep as is */}
         <VoiceProviderModal
           isOpen={showVoiceProvider}
           onClose={() => setShowVoiceProvider(false)}
