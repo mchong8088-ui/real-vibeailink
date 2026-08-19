@@ -16,8 +16,8 @@ import UserMenu from './components/auth/UserMenu';
 import { supabase } from './lib/supabase';
 import { useLanguage } from './context/LanguageContext';
 // Import mobile components
-import MobileLanding from './MobileLanding';
-import MobileAnalysis from './MobileAnalysis';
+import MobileLanding from './components/mobile/MobileLanding';
+import MobileAnalysis from './components/mobile/MobileAnalysis';
 
 // ... ErrorBoundary class stays the same ...
 
