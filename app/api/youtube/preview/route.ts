@@ -49,6 +49,62 @@ async function voiceExists(voiceName: string): Promise<boolean> {
   }
 }
 
+// Simple AIFF to WAV conversion
+function simpleAiffToWav(aiffBuffer: Buffer): Buffer {
+  try {
+    console.log('Starting AIFF to WAV conversion...');
+    
+    const ssndIndex = aiffBuffer.indexOf('SSND');
+    if (ssndIndex === -1) {
+      console.error('SSND chunk not found');
+      return Buffer.alloc(0);
+    }
+
+    const chunkSize = aiffBuffer.readUInt32BE(ssndIndex + 4);
+    const audioStart = ssndIndex + 16;
+    const audioSize = chunkSize - 8;
+    const audioData = aiffBuffer.slice(audioStart, audioStart + audioSize);
+    
+    console.log('Audio data size:', audioData.length);
+
+    if (audioData.length === 0) {
+      console.error('No audio data extracted');
+      return Buffer.alloc(0);
+    }
+
+    const sampleRate = 22050;
+    const numChannels = 1;
+    const bitsPerSample = 16;
+    const bytesPerSample = bitsPerSample / 2;
+    const blockAlign = numChannels * bytesPerSample;
+    const byteRate = sampleRate * blockAlign;
+    const dataSize = audioData.length;
+
+    const header = Buffer.alloc(44);
+    header.write('RIFF', 0);
+    header.writeUInt32LE(36 + dataSize, 4);
+    header.write('WAVE', 8);
+    header.write('fmt ', 12);
+    header.writeUInt32LE(16, 16);
+    header.writeUInt16LE(1, 20);
+    header.writeUInt16LE(numChannels, 22);
+    header.writeUInt32LE(sampleRate, 24);
+    header.writeUInt32LE(byteRate, 28);
+    header.writeUInt16LE(blockAlign, 32);
+    header.writeUInt16LE(bitsPerSample, 34);
+    header.write('data', 36);
+    header.writeUInt32LE(dataSize, 40);
+
+    const result = Buffer.concat([header, audioData]);
+    console.log('WAV size:', result.length);
+    return result;
+
+  } catch (error) {
+    console.error('Conversion error:', error);
+    return Buffer.alloc(0);
+  }
+}
+
 export async function POST(req: Request) {
   try {
     const { script, langCode, language, speed, voiceType, selectedVoice } = await req.json();
@@ -57,11 +113,9 @@ export async function POST(req: Request) {
     console.log('Original script:', script);
     console.log('Language:', language);
 
-    // Clean the text
     const cleanScript = cleanTextForTTS(script || '你好');
     console.log('Cleaned text:', cleanScript);
 
-    // Determine language
     const isCantonese = langCode === 'zh-HK' || language === 'Cantonese';
     const isMandarin = langCode === 'zh-CN' || language === 'Mandarin';
     const isEnglish = langCode === 'en-US' || language === 'English';
@@ -86,90 +140,54 @@ export async function POST(req: Request) {
 
     console.log('Final voice to use:', voiceToUse);
 
-    // Speech rate
     let speechRate = 160;
     if (isEnglish) speechRate = 185;
     if (speed) speechRate = Math.round(speed * 175);
 
-    // Use temporary files
     const tempTxt = path.join(os.tmpdir(), `preview_${Date.now()}.txt`);
     const tempAiff = path.join(os.tmpdir(), `preview_${Date.now()}.aiff`);
-    const tempWav = path.join(os.tmpdir(), `preview_${Date.now()}.wav`);
 
     try {
-      // Write text to file
       await fs.promises.writeFile(tempTxt, cleanScript, 'utf-8');
 
-      // Step 1: Generate AIFF using say
       const sayCommand = `say -v "${voiceToUse}" -r ${speechRate} -f "${tempTxt}" -o "${tempAiff}"`;
       console.log('Say Command:', sayCommand);
       await execAsync(sayCommand);
 
-      // Step 2: Convert AIFF to WAV using afconvert (macOS built-in)
-      const afconvertCommand = `afconvert -f WAVE -d LEI16@22050 "${tempAiff}" "${tempWav}"`;
-      console.log('Afconvert Command:', afconvertCommand);
-      
-      try {
-        await execAsync(afconvertCommand);
-        console.log('afconvert succeeded');
-      } catch (afconvertError) {
-        console.error('afconvert failed, trying alternative method...');
-        // If afconvert fails, try using the built-in conversion
-        const altCommand = `afconvert -f WAVE -d LEI16 "${tempAiff}" "${tempWav}"`;
-        await execAsync(altCommand);
+      const aiffBuffer = await fs.promises.readFile(tempAiff);
+      console.log('AIFF file size:', aiffBuffer.length, 'bytes');
+
+      if (!aiffBuffer || aiffBuffer.length === 0) {
+        throw new Error('Audio generation produced empty file');
       }
 
-      // Read the WAV file
-      const wavBuffer = await fs.promises.readFile(tempWav);
-      console.log('WAV file size:', wavBuffer.length, 'bytes');
+      // Convert to WAV
+      const wavBuffer = simpleAiffToWav(aiffBuffer);
+      console.log('WAV buffer size:', wavBuffer.length, 'bytes');
 
-      if (!wavBuffer || wavBuffer.length === 0) {
-        throw new Error('Audio conversion produced empty file');
-      }
-
-      // Verify WAV header
-      const isWav = wavBuffer.toString('ascii', 0, 4) === 'RIFF';
-      console.log('Is valid WAV?', isWav);
-
-      if (!isWav) {
-        console.error('Invalid WAV file, using fallback method');
-        // Fallback: Try to create WAV manually
-        const aiffBuffer = await fs.promises.readFile(tempAiff);
-        const wavFallback = createWavFromAiff(aiffBuffer);
-        if (wavFallback.length > 44) {
-          console.log('Fallback WAV size:', wavFallback.length);
-          return new NextResponse(wavFallback, {
-            status: 200,
-            headers: {
-              'Content-Type': 'audio/wav',
-              'Content-Length': wavFallback.length.toString(),
-              'Cache-Control': 'no-cache, no-store, must-revalidate',
-              'X-Voice-Used': voiceToUse,
-              'X-Method': 'fallback',
-            },
-          });
-        }
+      if (!wavBuffer || wavBuffer.length < 44) {
+        throw new Error('Failed to convert AIFF to WAV');
       }
 
       console.log('========== PREVIEW COMPLETE ==========');
 
-      return new NextResponse(wavBuffer, {
+      // Convert Buffer to Uint8Array for NextResponse compatibility
+      const wavData = new Uint8Array(wavBuffer);
+      
+      return new NextResponse(wavData, {
         status: 200,
         headers: {
           'Content-Type': 'audio/wav',
-          'Content-Length': wavBuffer.length.toString(),
+          'Content-Length': wavData.length.toString(),
           'Cache-Control': 'no-cache, no-store, must-revalidate',
           'X-Voice-Used': voiceToUse,
           'X-Language-Used': language,
-          'X-Method': 'afconvert',
         },
       });
 
     } finally {
-      // Clean up temporary files
       await fs.promises.unlink(tempTxt).catch(() => {});
       await fs.promises.unlink(tempAiff).catch(() => {});
-      await fs.promises.unlink(tempWav).catch(() => {});
     }
 
   } catch (error: any) {
@@ -178,57 +196,5 @@ export async function POST(req: Request) {
       success: false, 
       error: error.message || 'TTS generation failed',
     }, { status: 500 });
-  }
-}
-
-// Fallback: Manual AIFF to WAV conversion
-function createWavFromAiff(aiffBuffer: Buffer): Buffer {
-  try {
-    // Find SSND chunk
-    const ssndIndex = aiffBuffer.indexOf('SSND');
-    if (ssndIndex === -1) {
-      console.warn('SSND chunk not found');
-      return Buffer.alloc(0);
-    }
-
-    // Extract audio data
-    const chunkSize = aiffBuffer.readUInt32BE(ssndIndex + 4);
-    const audioData = aiffBuffer.slice(ssndIndex + 16, ssndIndex + 16 + chunkSize - 8);
-    console.log('Extracted audio data size:', audioData.length);
-
-    // Create WAV with standard format
-    const sampleRate = 22050;
-    const numChannels = 1;
-    const bitsPerSample = 16;
-    const bytesPerSample = bitsPerSample / 8;
-    const blockAlign = numChannels * bytesPerSample;
-    const byteRate = sampleRate * blockAlign;
-    const dataSize = audioData.length;
-
-    const header = Buffer.alloc(44);
-    
-    // RIFF
-    header.write('RIFF', 0);
-    header.writeUInt32LE(36 + dataSize, 4);
-    header.write('WAVE', 8);
-    
-    // fmt
-    header.write('fmt ', 12);
-    header.writeUInt32LE(16, 16);
-    header.writeUInt16LE(1, 20);
-    header.writeUInt16LE(numChannels, 22);
-    header.writeUInt32LE(sampleRate, 24);
-    header.writeUInt32LE(byteRate, 28);
-    header.writeUInt16LE(blockAlign, 32);
-    header.writeUInt16LE(bitsPerSample, 34);
-    
-    // data
-    header.write('data', 36);
-    header.writeUInt32LE(dataSize, 40);
-
-    return Buffer.concat([header, audioData]);
-  } catch (error) {
-    console.error('Fallback conversion error:', error);
-    return Buffer.alloc(0);
   }
 }

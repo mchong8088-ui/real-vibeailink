@@ -13,8 +13,10 @@ const supabaseAdmin = createClient(
   process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
 );
 
+// Clean text for TTS
 function cleanTextForTTS(text: string): string {
   if (!text) return '你好';
+  
   let cleaned = text
     .replace(/[？?]/g, '')
     .replace(/[！!]/g, '')
@@ -22,17 +24,22 @@ function cleanTextForTTS(text: string): string {
     .replace(/[，,、]/g, ' ')
     .replace(/\s+/g, ' ')
     .trim();
+  
   if (!cleaned) {
     cleaned = text.replace(/[？?！!。.，,、\s]/g, '').trim();
   }
+  
   if (!cleaned) {
     cleaned = '你好';
   }
+  
   return cleaned;
 }
 
+// Check if voice exists
 async function voiceExists(voiceName: string): Promise<boolean> {
   if (!voiceName) return false;
+  
   try {
     const { stdout } = await execAsync(`say -v "?"`);
     const lines = stdout.split('\n');
@@ -48,8 +55,11 @@ async function voiceExists(voiceName: string): Promise<boolean> {
   }
 }
 
-function convertAiffToWav(aiffBuffer: Buffer): Buffer {
+// Simple AIFF to WAV conversion
+function simpleAiffToWav(aiffBuffer: Buffer): Buffer {
   try {
+    console.log('Starting AIFF to WAV conversion...');
+    
     const ssndIndex = aiffBuffer.indexOf('SSND');
     if (ssndIndex === -1) {
       console.error('SSND chunk not found');
@@ -57,38 +67,51 @@ function convertAiffToWav(aiffBuffer: Buffer): Buffer {
     }
 
     const chunkSize = aiffBuffer.readUInt32BE(ssndIndex + 4);
-    const offset = aiffBuffer.readUInt32BE(ssndIndex + 8);
-    const audioStart = ssndIndex + 16 + offset;
+    const audioStart = ssndIndex + 16;
     const audioSize = chunkSize - 8;
     const audioData = aiffBuffer.slice(audioStart, audioStart + audioSize);
     
+    console.log('Audio data size:', audioData.length);
+
     if (audioData.length === 0) {
       console.error('No audio data extracted');
       return Buffer.alloc(0);
     }
 
+    const sampleRate = 22050;
+    const numChannels = 1;
+    const bitsPerSample = 16;
+    const bytesPerSample = bitsPerSample / 2;
+    const blockAlign = numChannels * bytesPerSample;
+    const byteRate = sampleRate * blockAlign;
+    const dataSize = audioData.length;
+
     const header = Buffer.alloc(44);
     header.write('RIFF', 0);
-    header.writeUInt32LE(36 + audioData.length, 4);
+    header.writeUInt32LE(36 + dataSize, 4);
     header.write('WAVE', 8);
     header.write('fmt ', 12);
     header.writeUInt32LE(16, 16);
     header.writeUInt16LE(1, 20);
-    header.writeUInt16LE(1, 22);
-    header.writeUInt32LE(22050, 24);
-    header.writeUInt32LE(44100, 28);
-    header.writeUInt16LE(2, 32);
-    header.writeUInt16LE(16, 34);
+    header.writeUInt16LE(numChannels, 22);
+    header.writeUInt32LE(sampleRate, 24);
+    header.writeUInt32LE(byteRate, 28);
+    header.writeUInt16LE(blockAlign, 32);
+    header.writeUInt16LE(bitsPerSample, 34);
     header.write('data', 36);
-    header.writeUInt32LE(audioData.length, 40);
+    header.writeUInt32LE(dataSize, 40);
 
-    return Buffer.concat([header, audioData]);
+    const result = Buffer.concat([header, audioData]);
+    console.log('WAV size:', result.length);
+    return result;
+
   } catch (error) {
     console.error('Conversion error:', error);
     return Buffer.alloc(0);
   }
 }
 
+// Convert WAV to MP3 using ffmpeg
 async function convertWavToMp3(wavBuffer: Buffer): Promise<Buffer> {
   const tempWav = path.join(os.tmpdir(), `temp_${Date.now()}.wav`);
   const tempMp3 = path.join(os.tmpdir(), `temp_${Date.now()}.mp3`);
@@ -107,14 +130,12 @@ async function convertWavToMp3(wavBuffer: Buffer): Promise<Buffer> {
   }
 }
 
-// NEW: Get audio duration from WAV file
+// Get audio duration from WAV buffer
 async function getAudioDuration(wavBuffer: Buffer): Promise<number> {
   try {
-    // Create a temporary WAV file
     const tempWav = path.join(os.tmpdir(), `duration_${Date.now()}.wav`);
     await fs.promises.writeFile(tempWav, wavBuffer);
     
-    // Use afinfo to get duration
     const { stdout } = await execAsync(`afinfo "${tempWav}"`);
     await fs.promises.unlink(tempWav).catch(() => {});
     
@@ -129,7 +150,7 @@ async function getAudioDuration(wavBuffer: Buffer): Promise<number> {
   }
 }
 
-// NEW: Alternative using ffprobe (more accurate)
+// Get duration using ffprobe (more accurate)
 async function getAudioDurationFfprobe(wavBuffer: Buffer): Promise<number> {
   try {
     const tempWav = path.join(os.tmpdir(), `duration_${Date.now()}.wav`);
@@ -146,6 +167,14 @@ async function getAudioDurationFfprobe(wavBuffer: Buffer): Promise<number> {
   }
 }
 
+// Format duration as MM:SS
+function formatDuration(seconds: number): string {
+  if (!seconds || seconds === 0) return '0:00';
+  const mins = Math.floor(seconds / 60);
+  const secs = Math.floor(seconds % 60);
+  return `${mins}:${secs.toString().padStart(2, '0')}`;
+}
+
 export async function POST(req: Request) {
   try {
     const { userId, script, langCode, language, selectedVoice, speed, format = 'wav' } = await req.json();
@@ -160,6 +189,7 @@ export async function POST(req: Request) {
       return NextResponse.json({ success: false, error: 'Unauthorized' }, { status: 401 });
     }
 
+    // Fetch user profile
     let { data: profile } = await supabaseAdmin
       .from('profiles')
       .select('*')
@@ -186,7 +216,9 @@ export async function POST(req: Request) {
     const isMandarin = langCode === 'zh-CN' || language === 'Mandarin';
     const isEnglish = langCode === 'en-US' || language === 'English';
 
+    // Get voice
     let voiceToUse = selectedVoice;
+    
     if (isCantonese) {
       const voices = ['Aasing (Enhanced)', 'Aasing', 'Sinji'];
       for (const v of voices) {
@@ -241,14 +273,14 @@ export async function POST(req: Request) {
 
       if (!wavBuffer || wavBuffer.length < 44) {
         console.log('Falling back to manual conversion...');
-        wavBuffer = convertAiffToWav(aiffBuffer);
+        wavBuffer = simpleAiffToWav(aiffBuffer);
       }
 
       if (!wavBuffer || wavBuffer.length < 44 || wavBuffer.toString('ascii', 0, 4) !== 'RIFF') {
         throw new Error('Failed to convert AIFF to WAV');
       }
 
-      // NEW: Get audio duration
+      // Get audio duration
       let audioDuration = 0;
       try {
         // Try ffprobe first (more accurate)
@@ -296,13 +328,16 @@ export async function POST(req: Request) {
         .update({ credits: (profile.credits || 0) - creditsToDeduct })
         .eq('id', userId);
 
+      // Convert Buffer to base64 string for JSON response
+      const audioBase64 = audioBuffer.toString('base64');
+
       return NextResponse.json({
         success: true,
-        audio: audioBuffer.toString('base64'),
+        audio: audioBase64,
         format: audioFormat,
         voiceUsed: voiceToUse,
-        duration: audioDuration, // NEW: Return duration
-        durationFormatted: formatDuration(audioDuration), // NEW: Formatted duration
+        duration: audioDuration,
+        durationFormatted: formatDuration(audioDuration),
         creditsUsed: creditsToDeduct,
         remainingCredits: (profile.credits || 0) - creditsToDeduct,
       });
@@ -320,12 +355,4 @@ export async function POST(req: Request) {
       error: error.message || 'TTS generation failed',
     }, { status: 500 });
   }
-}
-
-// Helper: Format duration as MM:SS
-function formatDuration(seconds: number): string {
-  if (!seconds || seconds === 0) return '0:00';
-  const mins = Math.floor(seconds / 60);
-  const secs = Math.floor(seconds % 60);
-  return `${mins}:${secs.toString().padStart(2, '0')}`;
 }
