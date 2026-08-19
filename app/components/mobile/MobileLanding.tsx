@@ -185,10 +185,11 @@ const MobileLanding: React.FC<MobileLandingProps> = ({
           vibeAiLink
         </h1>
         <div style={{ display: 'flex', gap: '6px', alignItems: 'center', flexShrink: 0 }}>
-          <VoiceSelector
-            currentVoice={voiceLanguage}
-            onVoiceChange={setVoiceLanguage}
-          />
+          <VoiceSelector 
+  currentVoice={voiceLanguage}
+  onVoiceChange={setVoiceLanguage}
+  mode="language"  // Add this line
+/>
           <LanguageToggle currentLang={langKey} onLangChange={setLangKey} />
 
           {user ? (

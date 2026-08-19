@@ -560,9 +560,10 @@ const MobileAnalysis: React.FC<MobileAnalysisProps> = ({
         <h2 style={{ fontSize: '15px', fontWeight: '600', color: '#1F2937', margin: 0 }}>{getTitle()}</h2>
         <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
           <VoiceSelector 
-            currentVoice={voiceLanguage}
-            onVoiceChange={setVoiceLanguage}
-          />
+  currentVoice={voiceLanguage}
+  onVoiceChange={setVoiceLanguage}
+  mode="language"  // Add this line
+/>
           <LanguageToggle currentLang={langKey} onLangChange={setLangKey} />
           
           {user ? (

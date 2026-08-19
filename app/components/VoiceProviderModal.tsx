@@ -643,10 +643,10 @@ export const VoiceProviderModal: React.FC<VoiceProviderModalProps> = ({
             </label>
             <div style={{ width: '100%' }}>
               <VoiceSelector 
-                currentVoice={selectedVoice}
-                onVoiceChange={handleVoiceChange}
-                mode="voice"
-              />
+  currentVoice={selectedVoice}
+  onVoiceChange={handleVoiceChange}
+  mode="voice"  // This shows specific voices (Aasing, Sinji, etc.)
+/>
             </div>
           </div>
         </div>
