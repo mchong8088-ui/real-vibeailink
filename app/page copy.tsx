@@ -4,7 +4,7 @@ import { SourceMenu } from './components/features/controls/SourceMenu';
 import { SmartInputSystem } from './components/features/controls/SmartInputSystem';
 import { StockAnalysisModule } from './components/features/stock-analysis/StockAnalysisModule';
 import { PortfolioModule } from './components/features/portfolio/PortfolioModule';
-import { AIResearchAssistantModal } from './components/AIResearchAssistant';
+import { AIResearchAssistant } from './components/AIResearchAssistant';
 import { VoiceProviderModal } from './components/VoiceProviderModal';
 import { AuthModal } from './components/modals/AuthModal';
 import { LanguageToggle } from './components/layout/LanguageToggle'; 
@@ -62,11 +62,9 @@ export default function VibeAiMaster() {
   const [showUserMenu, setShowUserMenu] = useState(false);
   const [isHydrated, setIsHydrated] = useState(false);
   
-  // Modals & Button Toggles
+  // Voice Provider & AI Enhancement States
   const [showVoiceProvider, setShowVoiceProvider] = useState(false);
-  const [showAIAssistant, setShowAIAssistant] = useState(false);
   const [enableAIEnhancement, setEnableAIEnhancement] = useState(false);
-  const [showWatchlistModal, setShowWatchlistModal] = useState(false);
 
   const [stockOfTheDay, setStockOfTheDay] = useState<any>(null);
   const [loadingStockOfDay, setLoadingStockOfDay] = useState(false);
@@ -76,7 +74,7 @@ export default function VibeAiMaster() {
 
   useEffect(() => {
     const savedVoice = localStorage.getItem('preferredVoice');
-    if (savedVoice === 'Cantonese' || savedVoice === 'Mandarin' || savedVoice === 'English' || savedVoice === 'Taiwanese') {
+    if (savedVoice === 'Cantonese' || savedVoice === 'Mandarin' || savedVoice === 'English') {
       setVoiceLanguage(savedVoice);
     }
   }, []);
@@ -294,6 +292,7 @@ export default function VibeAiMaster() {
     if (language === 'Traditional Chinese') {
       return {
         financeText: '您的財務及市場分析師',
+        inputLabel: '例如: 2330.TW, 0700.HK, TSLA',
         disclaimer: '免責聲明',
         terms: '服務條款',
         privacy: '隱私政策',
@@ -306,18 +305,18 @@ export default function VibeAiMaster() {
         pricing: '定價',
         stockOfDay: '今日精選股票',
         analyze: '分析',
-        inputPlaceholderDisabled: '開啟 AI 增強即可進行深度提問',
+        checkAiPrompt: '請勾選「啟用 AI 增強功能」以進行深度問答與研判',
+        inputPlaceholderDisabled: '請啟用 AI 增強功能以開始提問與分析',
         inputPlaceholderEnabled: '輸入股票代號、策略或任何市場問題...',
         myWatchlist: '⭐ 我的關注列表',
         refresh: '重新整理',
         noWatchlist: '暫無股票',
         voiceProviderBtn: '🎙️ Voice Provider',
-        aiAssistantBtn: '🤖 AI Assistant',
-        aiEnhancementBtn: '⚡ AI Enhancement',
       };
     } else if (language === 'Simplified Chinese') {
       return {
         financeText: '您的财务及市场分析师',
+        inputLabel: '例如: 2330.TW, 0700.HK, TSLA',
         disclaimer: '免责声明',
         terms: '服务条款',
         privacy: '隐私政策',
@@ -330,18 +329,18 @@ export default function VibeAiMaster() {
         pricing: '定价',
         stockOfDay: '今日精选股票',
         analyze: '分析',
-        inputPlaceholderDisabled: '开启 AI 增强即可进行深度提问',
+        checkAiPrompt: '请勾选“开启 AI 增强功能”以进行深度问答与研判',
+        inputPlaceholderDisabled: '请开启 AI 增强功能以开始提问与分析',
         inputPlaceholderEnabled: '输入股票代码、策略或任何市场问题...',
         myWatchlist: '⭐ 我的关注列表',
         refresh: '刷新',
         noWatchlist: '暂无股票',
         voiceProviderBtn: '🎙️ Voice Provider',
-        aiAssistantBtn: '🤖 AI Assistant',
-        aiEnhancementBtn: '⚡ AI Enhancement',
       };
     } else {
       return {
         financeText: 'Your Finance & Market Analysts',
+        inputLabel: 'Enter a stock symbol or ask any general market/strategy question',
         disclaimer: 'DISCLAIMER',
         terms: 'TERMS',
         privacy: 'PRIVACY',
@@ -354,14 +353,13 @@ export default function VibeAiMaster() {
         pricing: 'PRICING',
         stockOfDay: '⭐ Stock of the Day',
         analyze: 'Analyze',
+        checkAiPrompt: 'Check "Enable AI Enhancement" to start comprehensive analysis',
         inputPlaceholderDisabled: 'Enable AI Enhancement to ask questions',
-        inputPlaceholderEnabled: 'Type stock ticker, strategy, or financial questions...',
-        myWatchlist: '⭐ Watchlist',
+        inputPlaceholderEnabled: 'Type stock ticker, strategy, or general financial questions...',
+        myWatchlist: '⭐ My Watchlist',
         refresh: 'Refresh',
         noWatchlist: 'No stocks yet',
         voiceProviderBtn: '🎙️ Voice Provider',
-        aiAssistantBtn: '🤖 AI Assistant',
-        aiEnhancementBtn: '⚡ AI Enhancement',
       };
     }
   };
@@ -392,29 +390,29 @@ export default function VibeAiMaster() {
     <ErrorBoundary>
       <div style={{ display: 'flex', flexDirection: 'column', height: '100vh', width: '100%', overflow: 'hidden', backgroundColor: '#f0f0f0' }}>
         {/* Header Bar */}
-        <div style={{ backgroundColor: 'white', padding: '12px 24px', borderBottom: '1px solid #E5E7EB', display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexShrink: 0 }}>
-          <h1 style={{ fontSize: '22px', fontWeight: '900', fontStyle: 'italic', color: '#DC2626', margin: 0 }}>vibeAiLink</h1>
-          <div style={{ display: 'flex', gap: '32px' }}>
+        <div style={{ backgroundColor: 'white', padding: '16px 32px', borderBottom: '1px solid #E5E7EB', display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexShrink: 0 }}>
+          <h1 style={{ fontSize: '24px', fontWeight: '900', fontStyle: 'italic', color: '#DC2626', margin: 0 }}>vibeAiLink</h1>
+          <div style={{ display: 'flex', gap: '48px' }}>
             {['analysis', 'portfolio', 'about', 'features', 'pricing'].map(v => (
               <button 
                 key={v} 
                 onClick={() => setCurrentView(v as any)} 
-                style={{ fontSize: '14px', fontWeight: currentView === v ? 'bold' : 'normal', color: currentView === v ? '#2563EB' : '#6B7280', background: 'none', border: 'none', cursor: 'pointer', padding: '4px 0', borderBottom: currentView === v ? '2px solid #2563EB' : 'none' }}
+                style={{ fontSize: '15px', fontWeight: currentView === v ? 'bold' : 'normal', color: currentView === v ? '#2563EB' : '#6B7280', background: 'none', border: 'none', cursor: 'pointer', padding: '8px 0', borderBottom: currentView === v ? '2px solid #2563EB' : 'none' }}
               >
                 {v === 'analysis' ? text.aiStock : v === 'portfolio' ? text.portfolio : text[v as keyof typeof text]}
               </button>
             ))}
           </div>
-          <div style={{ display: 'flex', gap: '10px', alignItems: 'center' }}>
+          <div style={{ display: 'flex', gap: '12px', alignItems: 'center' }}>
             <VoiceSelector currentVoice={voiceLanguage} onVoiceChange={setVoiceLanguage} />
             <LanguageToggle currentLang={language} onLangChange={setLanguage as any} />
             {user ? (
               <div style={{ position: 'relative' }}>
-                <button onClick={() => setShowUserMenu(!showUserMenu)} style={{ display: 'flex', alignItems: 'center', gap: '6px', padding: '4px 10px', borderRadius: '20px', backgroundColor: '#F3F4F6', border: 'none', cursor: 'pointer' }}>
-                  <div style={{ width: '28px', height: '28px', borderRadius: '50%', backgroundColor: '#3B82F6', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'white', fontWeight: 'bold', fontSize: '12px' }}>
+                <button onClick={() => setShowUserMenu(!showUserMenu)} style={{ display: 'flex', alignItems: 'center', gap: '8px', padding: '4px 12px', borderRadius: '20px', backgroundColor: '#F3F4F6', border: 'none', cursor: 'pointer' }}>
+                  <div style={{ width: '32px', height: '32px', borderRadius: '50%', backgroundColor: '#3B82F6', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'white', fontWeight: 'bold', fontSize: '14px' }}>
                     {getUserDisplayName().charAt(0).toUpperCase()}
                   </div>
-                  <span style={{ fontSize: '13px' }}>{getUserDisplayName()}</span>
+                  <span style={{ fontSize: '14px' }}>{getUserDisplayName()}</span>
                 </button>
                 {showUserMenu && (
                   <div style={{ position: 'absolute', top: '100%', right: 0, marginTop: '8px', zIndex: 100 }}>
@@ -431,7 +429,7 @@ export default function VibeAiMaster() {
                 )}
               </div>
             ) : (
-              <button onClick={() => setIsAuthOpen(true)} style={{ color: '#2563EB', fontWeight: '600', fontSize: '13px', background: 'none', border: 'none', cursor: 'pointer' }}>LOGIN</button>
+              <button onClick={() => setIsAuthOpen(true)} style={{ color: '#2563EB', fontWeight: '600', fontSize: '14px', background: 'none', border: 'none', cursor: 'pointer' }}>LOGIN</button>
             )}
           </div>
         </div>
@@ -439,34 +437,45 @@ export default function VibeAiMaster() {
         {/* Workspace Container */}
         <div style={{ display: 'flex', flex: 1, overflow: 'hidden' }}>
           {/* Avatar Panel */}
-          <div style={{ width: '26%', backgroundColor: '#FEF08A', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', padding: '30px 20px', overflow: 'auto', minWidth: '240px' }}>
-            <div style={{ width: '160px', height: '160px', borderRadius: '50%', overflow: 'hidden', marginBottom: '20px', backgroundColor: 'white', boxShadow: '0 4px 12px rgba(0,0,0,0.15)' }}>
+          <div style={{ width: '28%', backgroundColor: '#FEF08A', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', padding: '40px 24px', overflow: 'auto', minWidth: '260px' }}>
+            <div style={{ width: '180px', height: '180px', borderRadius: '50%', overflow: 'hidden', marginBottom: '24px', backgroundColor: 'white', boxShadow: '0 4px 12px rgba(0,0,0,0.15)' }}>
               <img src="/avatars/michael_teresa.jpg" style={{ width: '100%', height: '100%', objectFit: 'cover' }} alt="Michael & Sofia" />
             </div>
-            <h2 style={{ fontWeight: 'bold', color: '#1F2937', fontSize: '20px', textAlign: 'center', margin: '0 0 6px 0' }}>
+            <h2 style={{ fontWeight: 'bold', color: '#1F2937', fontSize: '22px', textAlign: 'center', margin: '0 0 8px 0' }}>
               Michael & Sofia
             </h2>
-            <p style={{ fontSize: '14px', fontWeight: '600', color: '#2563EB', textAlign: 'center', margin: '0' }}>{text.financeText}</p>
+            <p style={{ fontSize: '15px', fontWeight: '600', color: '#2563EB', textAlign: 'center', margin: '0' }}>{text.financeText}</p>
           </div>
 
-          {/* Main Display Area (Scrolling Output Window) */}
-          <div style={{ width: '74%', backgroundColor: '#E0F2FE', display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
-            <div id="analysis-content" style={{ flex: 1, overflowY: 'auto', padding: '16px' }}>
+          {/* Main Display Area */}
+          <div style={{ width: '72%', backgroundColor: '#E0F2FE', display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
+            {/* Scrollable View Panel */}
+            <div id="analysis-content" style={{ flex: 1, overflowY: 'auto', padding: '20px' }}>
               {currentView === "analysis" && (
                 <>
                   {stockOfTheDay && !analysisData && (
-                    <div style={{ backgroundColor: '#FEF3C7', border: '1px solid #FDE68A', borderRadius: '12px', padding: '10px 14px', marginBottom: '14px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '10px' }}>
-                      <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-                        <span style={{ fontSize: '20px' }}>⭐</span>
+                    <div style={{ backgroundColor: '#FEF3C7', border: '1px solid #FDE68A', borderRadius: '12px', padding: '12px 16px', marginBottom: '16px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '12px' }}>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+                        <span style={{ fontSize: '24px' }}>⭐</span>
                         <div>
-                          <div style={{ fontSize: '10px', fontWeight: 'bold', color: '#92400E' }}>{text.stockOfDay}</div>
-                          <div style={{ fontSize: '15px', fontWeight: 'bold', color: '#D97706' }}>{stockOfTheDay.symbol} - {stockOfTheDay.name}</div>
-                          {stockOfTheDay.price && <div style={{ fontSize: '11px', color: '#B45309' }}>Price: {stockOfTheDay.price}</div>}
+                          <div style={{ fontSize: '11px', fontWeight: 'bold', color: '#92400E' }}>{text.stockOfDay}</div>
+                          <div style={{ fontSize: '16px', fontWeight: 'bold', color: '#D97706' }}>{stockOfTheDay.symbol} - {stockOfTheDay.name}</div>
+                          {stockOfTheDay.price && <div style={{ fontSize: '12px', color: '#B45309' }}>Price: {stockOfTheDay.price}</div>}
                         </div>
                       </div>
-                      <button onClick={analyzeStockOfTheDay} style={{ backgroundColor: '#D97706', color: 'white', border: 'none', borderRadius: '6px', padding: '6px 12px', fontSize: '12px', fontWeight: 'bold', cursor: 'pointer' }}>{text.analyze}</button>
+                      <button onClick={analyzeStockOfTheDay} style={{ backgroundColor: '#D97706', color: 'white', border: 'none', borderRadius: '8px', padding: '8px 16px', fontSize: '13px', fontWeight: 'bold', cursor: 'pointer' }}>{text.analyze}</button>
                     </div>
                   )}
+
+                  {/* Main AI Assistant Block */}
+                  <AIResearchAssistant
+                    langKey={language}
+                    user={user}
+                    profile={profile}
+                    onUpgradePlan={() => setCurrentView('pricing')}
+                    placeholderText={enableAIEnhancement ? text.inputPlaceholderEnabled : text.inputPlaceholderDisabled}
+                    promptNotice={!enableAIEnhancement ? text.checkAiPrompt : undefined}
+                  />
 
                   <StockAnalysisModule 
                     t={t} 
@@ -486,53 +495,78 @@ export default function VibeAiMaster() {
               {currentView === "features" && <FeaturesSection lang={language} />}
             </div>
 
-            {/* Compact Fixed Bottom Controls Panel (1 Row of 4 Green Buttons) */}
-            <div style={{ backgroundColor: 'white', padding: '8px 16px', borderTop: '1px solid #E5E7EB', flexShrink: 0 }}>
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr 1fr', gap: '8px', marginBottom: '8px' }}>
+            {/* Bottom Controls Panel */}
+            <div style={{ backgroundColor: 'white', padding: '12px 20px', borderTop: '1px solid #E5E7EB', flexShrink: 0 }}>
+              <p style={{ fontSize: '12px', color: '#6B7280', textAlign: 'center', marginBottom: '8px' }}>{text.inputLabel}</p>
+              
+              {/* Row with Voice Provider Button (Left) & Shrunken 50% Watchlist (Right) */}
+              <div style={{ display: 'flex', alignItems: 'stretch', gap: '12px', marginBottom: '12px' }}>
                 <button 
                   onClick={() => setShowVoiceProvider(true)}
                   style={{
-                    backgroundColor: '#10B981', color: 'white', border: 'none',
-                    borderRadius: '8px', padding: '6px 8px', fontSize: '11px', fontWeight: 'bold',
-                    cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '4px'
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    gap: '6px',
+                    backgroundColor: '#2563EB',
+                    color: 'white',
+                    border: 'none',
+                    borderRadius: '12px',
+                    padding: '0 16px',
+                    fontSize: '13px',
+                    fontWeight: 'bold',
+                    cursor: 'pointer',
+                    boxShadow: '0 2px 4px rgba(37,99,235,0.2)',
+                    whiteSpace: 'nowrap'
                   }}
                 >
                   {text.voiceProviderBtn}
                 </button>
 
-                <button 
-                  onClick={() => setShowAIAssistant(true)}
-                  style={{
-                    backgroundColor: '#10B981', color: 'white', border: 'none',
-                    borderRadius: '8px', padding: '6px 8px', fontSize: '11px', fontWeight: 'bold',
-                    cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '4px'
-                  }}
-                >
-                  {text.aiAssistantBtn}
-                </button>
-
-                <button 
-                  onClick={() => setEnableAIEnhancement(!enableAIEnhancement)}
-                  style={{
-                    backgroundColor: enableAIEnhancement ? '#059669' : '#10B981',
-                    color: 'white', border: 'none', borderRadius: '8px', padding: '6px 8px',
-                    fontSize: '11px', fontWeight: 'bold', cursor: 'pointer',
-                    display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '4px'
-                  }}
-                >
-                  {text.aiEnhancementBtn} {enableAIEnhancement ? ' (ON)' : ' (OFF)'}
-                </button>
-
-                <button 
-                  onClick={() => setShowWatchlistModal(true)}
-                  style={{
-                    backgroundColor: '#10B981', color: 'white', border: 'none',
-                    borderRadius: '8px', padding: '6px 8px', fontSize: '11px', fontWeight: 'bold',
-                    cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '4px'
-                  }}
-                >
-                  {text.myWatchlist}
-                </button>
+                {user && (
+                  <div style={{ flex: 1, backgroundColor: '#FEF3C7', borderRadius: '12px', padding: '8px 12px', border: '1px solid #FDE68A' }}>
+                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '4px' }}>
+                      <span style={{ fontSize: '11px', fontWeight: 'bold', color: '#D97706' }}>{text.myWatchlist}</span>
+                      <button
+                        onClick={() => {
+                          const watchlist = getWatchlist();
+                          if (watchlist.length === 0) {
+                            alert(text.noWatchlist);
+                          }
+                        }}
+                        style={{ fontSize: '10px', color: '#92400E', background: 'none', border: 'none', cursor: 'pointer' }}
+                      >
+                        {text.refresh}
+                      </button>
+                    </div>
+                    <div style={{ display: 'flex', gap: '6px', flexWrap: 'wrap' }}>
+                      {(() => {
+                        const watchlist = getWatchlist();
+                        if (watchlist.length === 0) {
+                          return <span style={{ fontSize: '10px', color: '#92400E' }}>{text.noWatchlist}</span>;
+                        }
+                        return watchlist.map((symbol: string) => (
+                          <button
+                            key={symbol}
+                            onClick={() => handleAnalyzeRequest(symbol, [], false)}
+                            style={{
+                              padding: '2px 8px',
+                              backgroundColor: '#FDE68A',
+                              color: '#92400E',
+                              border: 'none',
+                              borderRadius: '12px',
+                              fontSize: '11px',
+                              fontWeight: '500',
+                              cursor: 'pointer'
+                            }}
+                          >
+                            {symbol}
+                          </button>
+                        ));
+                      })()}
+                    </div>
+                  </div>
+                )}
               </div>
               
               <SmartInputSystem 
@@ -547,7 +581,7 @@ export default function VibeAiMaster() {
             </div>
 
             {/* Footer */}
-            <div style={{ backgroundColor: 'white', padding: '6px 16px', borderTop: '1px solid #E5E7EB', display: 'flex', justifyContent: 'center', gap: '20px', flexWrap: 'wrap', flexShrink: 0 }}>
+            <div style={{ backgroundColor: 'white', padding: '8px 20px', borderTop: '1px solid #E5E7EB', display: 'flex', justifyContent: 'center', gap: '24px', flexWrap: 'wrap', flexShrink: 0 }}>
               <button onClick={() => setLegalTitle('DISCLAIMER')} style={{ fontSize: '10px', color: '#3B82F6', background: 'none', border: 'none', cursor: 'pointer' }}>{text.disclaimer}</button>
               <button onClick={() => setLegalTitle('條款')} style={{ fontSize: '10px', color: '#3B82F6', background: 'none', border: 'none', cursor: 'pointer' }}>{text.terms}</button>
               <button onClick={() => setLegalTitle('隱私')} style={{ fontSize: '10px', color: '#3B82F6', background: 'none', border: 'none', cursor: 'pointer' }}>{text.privacy}</button>
@@ -557,7 +591,7 @@ export default function VibeAiMaster() {
           </div>
         </div>
 
-        {/* Modals */}
+        {/* Voice Provider Modal */}
         <VoiceProviderModal
           isOpen={showVoiceProvider}
           onClose={() => setShowVoiceProvider(false)}
@@ -566,45 +600,6 @@ export default function VibeAiMaster() {
           onUpgradePlan={() => setCurrentView('pricing')}
           langKey={language}
         />
-
-        <AIResearchAssistantModal
-          isOpen={showAIAssistant}
-          onClose={() => setShowAIAssistant(false)}
-          user={user}
-          profile={profile}
-          onUpgradePlan={() => setCurrentView('pricing')}
-          langKey={language}
-        />
-
-        {showWatchlistModal && (
-          <div style={{
-            position: 'fixed', top: 0, left: 0, right: 0, bottom: 0,
-            backgroundColor: 'rgba(0,0,0,0.5)', display: 'flex', alignItems: 'center',
-            justifyContent: 'center', zIndex: 1000, padding: '16px'
-          }}>
-            <div style={{ backgroundColor: 'white', padding: '20px', borderRadius: '12px', width: '320px', border: '1px solid #E5E7EB' }}>
-              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '12px' }}>
-                <h4 style={{ margin: 0, color: '#059669', fontSize: '14px' }}>{text.myWatchlist}</h4>
-                <button onClick={() => setShowWatchlistModal(false)} style={{ background: 'none', border: 'none', cursor: 'pointer' }}>✕</button>
-              </div>
-              <div style={{ display: 'flex', gap: '6px', flexWrap: 'wrap', minHeight: '60px' }}>
-                {(() => {
-                  const watchlist = getWatchlist();
-                  if (watchlist.length === 0) return <span style={{ fontSize: '12px', color: '#9CA3AF' }}>{text.noWatchlist}</span>;
-                  return watchlist.map((symbol: string) => (
-                    <button
-                      key={symbol}
-                      onClick={() => { setShowWatchlistModal(false); handleAnalyzeRequest(symbol, [], false); }}
-                      style={{ padding: '4px 8px', backgroundColor: '#ECFDF5', color: '#047857', border: '1px solid #A7F3D0', borderRadius: '6px', fontSize: '11px', cursor: 'pointer' }}
-                    >
-                      {symbol}
-                    </button>
-                  ));
-                })()}
-              </div>
-            </div>
-          </div>
-        )}
 
         <SourceMenu isOpen={isMenuOpen} onClose={() => setIsMenuOpen(false)} onSelectSource={() => setIsMenuOpen(false)} langKey={language} />
         

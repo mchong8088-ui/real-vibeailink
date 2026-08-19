@@ -1,12 +1,15 @@
 "use client";
 import React, { useState, useRef, useEffect } from 'react';
-import { Send, Sparkles, Loader2, Volume2, VolumeX, Download } from 'lucide-react';
+import { Send, Sparkles, Loader2, Volume2, VolumeX, Download, Mic } from 'lucide-react';
 
 interface AIResearchAssistantProps {
   langKey: string;
   user: any;
   profile: any;
   onUpgradePlan?: () => void;
+  onOpenVoiceModalWithScript?: (scriptText: string) => void;
+  placeholderText?: string;
+  promptNotice?: string;
 }
 
 export const AIResearchAssistant: React.FC<AIResearchAssistantProps> = ({
@@ -14,6 +17,9 @@ export const AIResearchAssistant: React.FC<AIResearchAssistantProps> = ({
   user,
   profile,
   onUpgradePlan,
+  onOpenVoiceModalWithScript,
+  placeholderText,
+  promptNotice,
 }) => {
   const [input, setInput] = useState('');
   const [messages, setMessages] = useState<Array<{ role: 'user' | 'assistant'; content: string }>>([]);
@@ -181,38 +187,28 @@ export const AIResearchAssistant: React.FC<AIResearchAssistantProps> = ({
     setIsExportingMP3(true);
 
     try {
-      // Call TTS API audio generation or local synthesis export endpoint
-      const response = await fetch('/api/tts/export-mp3', {
+      const response = await fetch('/api/youtube/voice', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          text: lastAssistantMsg.content,
+          userId: user?.id,
+          script: lastAssistantMsg.content,
           language: langKey,
-          voice: 'Danny', // Updated male voice route
+          useGateway: false,
         }),
       });
 
-      if (response.ok) {
-        const blob = await response.blob();
-        const url = URL.createObjectURL(blob);
+      const data = await response.json();
+
+      if (data.success && data.audio) {
         const a = document.createElement('a');
-        a.href = url;
+        a.href = `data:audio/mp3;base64,${data.audio}`;
         a.download = `voice_report_${Date.now()}.mp3`;
         document.body.appendChild(a);
         a.click();
         document.body.removeChild(a);
-        URL.revokeObjectURL(url);
       } else {
-        // Fallback: Create text file download if audio stream API is unavailable
-        const blob = new Blob([lastAssistantMsg.content], { type: 'audio/mp3;charset=utf-8' });
-        const url = URL.createObjectURL(blob);
-        const a = document.createElement('a');
-        a.href = url;
-        a.download = `voice_report_${Date.now()}.mp3`;
-        document.body.appendChild(a);
-        a.click();
-        document.body.removeChild(a);
-        URL.revokeObjectURL(url);
+        alert(data.error || 'Failed to export MP3 audio.');
       }
     } catch (err) {
       console.error('Failed to export MP3:', err);
@@ -343,9 +339,24 @@ export const AIResearchAssistant: React.FC<AIResearchAssistantProps> = ({
 
       {isExpanded && (
         <div style={{ padding: '10px 14px' }}>
+          {/* Optional Prompt Notice */}
+          {promptNotice && (
+            <div style={{
+              marginBottom: '8px',
+              padding: '6px 10px',
+              backgroundColor: '#FEF3C7',
+              color: '#92400E',
+              fontSize: '11px',
+              borderRadius: '8px',
+              border: '1px solid #FCD34D'
+            }}>
+              {promptNotice}
+            </div>
+          )}
+
           {/* Messages display */}
           <div style={{
-            maxHeight: '180px',
+            maxHeight: '220px',
             overflowY: 'auto',
             backgroundColor: isEnabled ? '#F9FAFB' : '#F3F4F6',
             borderRadius: '10px',
@@ -361,18 +372,19 @@ export const AIResearchAssistant: React.FC<AIResearchAssistantProps> = ({
             )}
             {isEnabled && messages.length === 0 && (
               <div style={{ textAlign: 'center', color: '#9CA3AF', fontSize: '12px', padding: '8px 0' }}>
-                <p style={{ margin: 0 }}>Ask me anything! (Stocks, travel, scripts, general knowledge)</p>
+                <p style={{ margin: 0 }}>Ask me anything! (Stocks, travel, YouTube scripts, general knowledge)</p>
               </div>
             )}
             {messages.map((msg, idx) => (
               <div key={idx} style={{
                 display: 'flex',
-                justifyContent: msg.role === 'user' ? 'flex-end' : 'flex-start',
-                marginBottom: '4px',
+                flexDirection: 'column',
+                alignItems: msg.role === 'user' ? 'flex-end' : 'flex-start',
+                marginBottom: '8px',
               }}>
                 <div style={{
                   maxWidth: '88%',
-                  padding: '5px 10px',
+                  padding: '6px 12px',
                   borderRadius: '10px',
                   backgroundColor: msg.role === 'user' ? '#3B82F6' : 'white',
                   color: msg.role === 'user' ? 'white' : '#1F2937',
@@ -381,9 +393,34 @@ export const AIResearchAssistant: React.FC<AIResearchAssistantProps> = ({
                   lineHeight: '1.5',
                   whiteSpace: 'pre-wrap',
                   wordBreak: 'break-word',
+                  boxShadow: msg.role === 'assistant' ? '0 1px 2px rgba(0,0,0,0.05)' : 'none'
                 }}>
                   {msg.content}
                 </div>
+
+                {/* Send to Voice Provider Action Connector */}
+                {msg.role === 'assistant' && onOpenVoiceModalWithScript && (
+                  <button
+                    onClick={() => onOpenVoiceModalWithScript(msg.content)}
+                    style={{
+                      marginTop: '4px',
+                      display: 'inline-flex',
+                      alignItems: 'center',
+                      gap: '4px',
+                      fontSize: '11px',
+                      padding: '3px 8px',
+                      borderRadius: '6px',
+                      border: '1px solid #8B5CF6',
+                      backgroundColor: '#F3E8FF',
+                      color: '#6B21A8',
+                      cursor: 'pointer',
+                      fontWeight: '500',
+                      transition: 'all 0.15s ease'
+                    }}
+                  >
+                    <Mic size={11} /> Send Script to Voice Provider (MP3 / SRT)
+                  </button>
+                )}
               </div>
             ))}
             {isLoading && (
@@ -408,7 +445,13 @@ export const AIResearchAssistant: React.FC<AIResearchAssistantProps> = ({
                   handleSend();
                 }
               }}
-              placeholder={isEnabled ? "Ask any question..." : "Enable AI Enhancement to ask questions"}
+              placeholder={
+                placeholderText 
+                  ? placeholderText 
+                  : isEnabled 
+                  ? "Ask any question or request a script..." 
+                  : "Enable AI Enhancement to ask questions"
+              }
               disabled={!isEnabled || !isLoggedIn}
               style={{
                 flex: 1,

