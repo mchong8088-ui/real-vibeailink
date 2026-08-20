@@ -108,27 +108,105 @@ function simpleAiffToWav(aiffBuffer: Buffer): Buffer {
   }
 }
 
-// Generate TTS using OpenAI Cloud
-async function generateCloudTTS(text: string, language: string, speed: number = 1.0, selectedVoice: string = 'Auto-Female'): Promise<Buffer> {
-  // Map language and voice selection to OpenAI voice
+// Generate TTS using Google Cloud TTS (Supports Cantonese!)
+async function generateGoogleCloudTTSCantonese(text: string, speed: number = 1.0, selectedVoice: string = 'Auto-Female'): Promise<Buffer | null> {
+  const cleanText = cleanTextForTTS(text);
+  console.log('Google Cloud TTS (Cantonese) text length:', cleanText.length);
+  
+  // Google Cloud TTS Cantonese voices
+  // Female: 'zh-HK-Standard-A', 'zh-HK-Wavenet-A'
+  // Male: 'zh-HK-Standard-B', 'zh-HK-Wavenet-B'
   const getVoice = (): string => {
-    // OpenAI voice options: alloy, echo, fable, onyx, nova, shimmer
-    // onyx = deeper/male-like, nova = brighter/female-like
+    if (selectedVoice === 'Auto-Male') {
+      return 'zh-HK-Standard-B'; // Male Cantonese voice
+    }
+    if (selectedVoice === 'Auto-Female') {
+      return 'zh-HK-Standard-A'; // Female Cantonese voice
+    }
+    return 'zh-HK-Standard-A'; // Default female
+  };
+  
+  const voiceName = getVoice();
+  console.log('Using Google Cantonese voice:', voiceName);
+  
+  try {
+    // Using Google Cloud TTS REST API
+    const apiKey = process.env.GOOGLE_CLOUD_API_KEY || process.env.GEMINI_API_KEY;
+    
+    if (!apiKey) {
+      console.error('No Google Cloud API key found');
+      return null;
+    }
+    
+    // Adjust speaking rate (Google uses different scale: 0.25 to 4.0)
+    // Map our speed (0.5-1.5) to Google's scale
+    const googleSpeed = Math.min(4.0, Math.max(0.25, speed * 0.9));
+    
+    const response = await fetch(
+      `https://texttospeech.googleapis.com/v1/text:synthesize?key=${apiKey}`,
+      {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          input: {
+            text: cleanText,
+          },
+          voice: {
+            languageCode: 'zh-HK',
+            name: voiceName,
+            ssmlGender: selectedVoice === 'Auto-Male' ? 'MALE' : 'FEMALE',
+          },
+          audioConfig: {
+            audioEncoding: 'LINEAR16', // WAV format
+            speakingRate: googleSpeed,
+            pitch: 0,
+          },
+        }),
+      }
+    );
+
+    if (!response.ok) {
+      const errorText = await response.text();
+      console.error('Google Cloud TTS error:', errorText);
+      return null;
+    }
+
+    const data = await response.json();
+    
+    if (!data.audioContent) {
+      console.error('No audio content in response');
+      return null;
+    }
+    
+    // Decode base64 audio content
+    const audioBuffer = Buffer.from(data.audioContent, 'base64');
+    console.log('Google Cloud TTS generated, size:', audioBuffer.length, 'bytes');
+    
+    // Google returns WAV format with LINEAR16 encoding, we can use it directly
+    return audioBuffer;
+    
+  } catch (error) {
+    console.error('Google Cloud TTS error:', error);
+    return null;
+  }
+}
+
+// Generate TTS using OpenAI Cloud (Mandarin/English only)
+async function generateOpenAITTS(text: string, language: string, speed: number = 1.0, selectedVoice: string = 'Auto-Female'): Promise<Buffer | null> {
+  const cleanText = cleanTextForTTS(text);
+  console.log('OpenAI TTS text length:', cleanText.length);
+  
+  const getVoice = (): string => {
     if (selectedVoice === 'Auto-Male') {
       return 'onyx'; // Deeper voice
     }
     if (selectedVoice === 'Auto-Female') {
       return 'nova'; // Brighter voice
     }
-    // Default fallback
     return 'nova';
   };
-  
-  const openAIVoice = getVoice();
-  const cleanText = cleanTextForTTS(text);
-  console.log('Cloud TTS text length:', cleanText.length);
-  console.log('Using OpenAI voice:', openAIVoice);
-  console.log('Speed:', speed);
   
   try {
     const response = await fetch('https://api.openai.com/v1/audio/speech', {
@@ -139,9 +217,9 @@ async function generateCloudTTS(text: string, language: string, speed: number = 
       },
       body: JSON.stringify({
         model: 'tts-1',
-        voice: openAIVoice,
-        input: cleanText.slice(0, 200), // Preview only first 200 chars
-        speed: Math.min(1.5, Math.max(0.5, speed)), // Clamp between 0.5 and 1.5
+        voice: getVoice(),
+        input: cleanText,
+        speed: Math.min(1.5, Math.max(0.5, speed)),
         response_format: 'wav',
       }),
     });
@@ -149,22 +227,27 @@ async function generateCloudTTS(text: string, language: string, speed: number = 
     if (!response.ok) {
       const errorData = await response.json().catch(() => ({}));
       console.error('OpenAI TTS error response:', errorData);
-      throw new Error(`OpenAI TTS failed: ${response.status}`);
+      return null;
     }
 
     const audioArrayBuffer = await response.arrayBuffer();
     const audioBuffer = Buffer.from(audioArrayBuffer);
-    console.log('Cloud TTS generated, size:', audioBuffer.length, 'bytes');
+    console.log('OpenAI TTS generated, size:', audioBuffer.length, 'bytes');
     return audioBuffer;
   } catch (error) {
-    console.error('Cloud TTS error:', error);
-    throw error;
+    console.error('OpenAI TTS error:', error);
+    return null;
   }
 }
 
 // Check if voice is an auto voice
 function isAutoVoice(voice: string): boolean {
   return voice === 'Auto-Male' || voice === 'Auto-Female';
+}
+
+// Check if language is Cantonese
+function isCantonese(langCode: string, language: string): boolean {
+  return langCode === 'zh-HK' || language === 'Cantonese';
 }
 
 export async function POST(req: Request) {
@@ -181,62 +264,122 @@ export async function POST(req: Request) {
     const cleanScript = cleanTextForTTS(script || '你好');
     console.log('Cleaned text:', cleanScript);
 
-    const isCantonese = langCode === 'zh-HK' || language === 'Cantonese';
+    const isCantoneseLang = isCantonese(langCode, language);
     const isMandarin = langCode === 'zh-CN' || language === 'Mandarin';
     const isEnglish = langCode === 'en-US' || language === 'English';
 
-    // ALWAYS use cloud TTS on Vercel or when Auto voice is selected
-    const shouldUseCloud = isVercel || isAutoVoice(selectedVoice);
-
-    if (shouldUseCloud) {
-      console.log('Using cloud TTS (OpenAI) for preview...');
+    // --- CANTONESE ON VERCELL OR ANY CLOUD ---
+    if (isCantoneseLang) {
+      console.log('Cantonese detected - trying Google Cloud TTS...');
       
+      // Try Google Cloud TTS first (supports Cantonese!)
       try {
-        const audioBuffer = await generateCloudTTS(cleanScript, language, speed || 1.0, selectedVoice);
-        
-        console.log('Cloud TTS generated, size:', audioBuffer.length);
-        console.log('========== PREVIEW COMPLETE ==========');
-        
-        const audioData = new Uint8Array(audioBuffer);
-        
-        return new NextResponse(audioData, {
-          status: 200,
-          headers: {
-            'Content-Type': 'audio/wav',
-            'Content-Length': audioData.length.toString(),
-            'Cache-Control': 'no-cache, no-store, must-revalidate',
-            'X-Voice-Used': selectedVoice,
-            'X-Language-Used': language,
-            'X-Conversion-Method': 'cloud-tts',
-            'X-Speed': speed?.toString() || '1.0',
-          },
-        });
-      } catch (cloudError: any) {
-        console.error('Cloud TTS failed:', cloudError);
+        const googleAudio = await generateGoogleCloudTTSCantonese(cleanScript, speed || 1.0, selectedVoice);
+        if (googleAudio) {
+          console.log('Google Cloud TTS (Cantonese) successful!');
+          const audioData = new Uint8Array(googleAudio);
+          return new NextResponse(audioData, {
+            status: 200,
+            headers: {
+              'Content-Type': 'audio/wav',
+              'Content-Length': audioData.length.toString(),
+              'Cache-Control': 'no-cache, no-store, must-revalidate',
+              'X-Voice-Used': selectedVoice || 'google-cantonese',
+              'X-Language-Used': 'Cantonese (Google Cloud)',
+              'X-Provider': 'Google-Cloud-TTS',
+            },
+          });
+        }
+      } catch (googleError) {
+        console.error('Google Cloud TTS failed:', googleError);
+      }
+      
+      // If Google fails, try local macOS (if available)
+      if (!isVercel) {
+        console.log('Google Cloud TTS failed, trying local macOS TTS...');
+        // Fall through to local macOS TTS
+      } else {
+        // On Vercel with no Google fallback
         return NextResponse.json({ 
           success: false, 
-          error: 'Voice generation temporarily unavailable. Please try again later.',
-          fallback: 'You can also use the desktop app for voice features.'
+          error: 'Cantonese voice generation is not available on the web. Please use the desktop app on macOS.',
+          fallback: 'For Cantonese, please download and run the app locally on macOS.'
         }, { status: 503 });
       }
     }
 
-    // --- LOCAL macOS TTS (only runs locally, not on Vercel) ---
+    // --- MANDARIN OR ENGLISH ON VERCEL ---
+    if (isVercel && (isMandarin || isEnglish)) {
+      console.log(`Using OpenAI TTS for ${language} on Vercel...`);
+      
+      try {
+        const audioBuffer = await generateOpenAITTS(cleanScript, language, speed || 1.0, selectedVoice);
+        if (audioBuffer) {
+          console.log('OpenAI TTS successful!');
+          const audioData = new Uint8Array(audioBuffer);
+          return new NextResponse(audioData, {
+            status: 200,
+            headers: {
+              'Content-Type': 'audio/wav',
+              'Content-Length': audioData.length.toString(),
+              'Cache-Control': 'no-cache, no-store, must-revalidate',
+              'X-Voice-Used': selectedVoice || 'openai',
+              'X-Language-Used': language,
+              'X-Provider': 'OpenAI-TTS',
+            },
+          });
+        }
+      } catch (openAIError) {
+        console.error('OpenAI TTS failed:', openAIError);
+        return NextResponse.json({ 
+          success: false, 
+          error: 'Voice generation temporarily unavailable. Please try again later.'
+        }, { status: 503 });
+      }
+    }
+
+    // --- LOCAL macOS TTS (FALLBACK) ---
+    console.log('Using local macOS TTS as fallback...');
+    
     // Get voice
     let voiceToUse = selectedVoice;
     
-    if (isCantonese) {
-      const voices = ['Aasing (Enhanced)', 'Aasing', 'Sinji'];
-      for (const v of voices) {
+    if (isCantoneseLang) {
+      const cantoneseVoices = ['Aasing (Enhanced)', 'Aasing', 'Sinji'];
+      for (const v of cantoneseVoices) {
         if (await voiceExists(v)) {
           voiceToUse = v;
           console.log('Using Cantonese voice:', v);
           break;
         }
       }
-    } else if (voiceToUse && await voiceExists(voiceToUse)) {
-      console.log('Using selected voice:', voiceToUse);
-    } else {
+    }
+    
+    if (!voiceToUse || isAutoVoice(voiceToUse)) {
+      if (isCantoneseLang) {
+        const voices = ['Aasing (Enhanced)', 'Aasing', 'Sinji'];
+        for (const v of voices) {
+          if (await voiceExists(v)) {
+            voiceToUse = v;
+            console.log('Auto-selected Cantonese voice:', v);
+            break;
+          }
+        }
+      } else if (isMandarin) {
+        const voices = ['Tingting', 'Han (Enhanced)'];
+        for (const v of voices) {
+          if (await voiceExists(v)) {
+            voiceToUse = v;
+            console.log('Auto-selected Mandarin voice:', v);
+            break;
+          }
+        }
+      } else {
+        voiceToUse = 'Samantha';
+      }
+    }
+
+    if (!voiceToUse) {
       voiceToUse = 'Samantha';
     }
 
