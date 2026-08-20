@@ -2,7 +2,8 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { 
   X, Upload, Play, Pause, Download, Sparkles, 
-  FileText, Music, Video, Globe, Settings, AlertCircle, Loader2 
+  FileText, Music, Video, Globe, Settings, AlertCircle, Loader2,
+  User, Send, CheckSquare, Square, Mail
 } from 'lucide-react';
 import { supabase } from '../lib/supabase';
 import { VoiceSelector } from './layout/VoiceSelector';
@@ -23,6 +24,15 @@ interface Voice {
   language: string;
   gender?: string;
   quality?: string;
+}
+
+// Digital Twin Survey State
+interface SurveyState {
+  isOpen: boolean;
+  selectedOptions: string[];
+  customFeedback: string;
+  isSubmitting: boolean;
+  submitted: boolean;
 }
 
 export const VoiceProviderModal: React.FC<VoiceProviderModalProps> = ({
@@ -57,16 +67,36 @@ export const VoiceProviderModal: React.FC<VoiceProviderModalProps> = ({
   const [generatedSrt, setGeneratedSrt] = useState<string | null>(null);
   const [generatedChapters, setGeneratedChapters] = useState<string | null>(null);
   const [generatedSegments, setGeneratedSegments] = useState<any[] | null>(null);
-  const [audioDuration, setAudioDuration] = useState<number>(0); // NEW: Store audio duration
+  const [audioDuration, setAudioDuration] = useState<number>(0);
+
+  // Digital Twin Survey State
+  const [survey, setSurvey] = useState<SurveyState>({
+    isOpen: false,
+    selectedOptions: [],
+    customFeedback: '',
+    isSubmitting: false,
+    submitted: false
+  });
 
   const audioRef = useRef<HTMLAudioElement | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
+
+  // Survey options
+  const surveyOptions = [
+    { id: 'youtube_intro', label: 'Create YouTube intro/outro videos' },
+    { id: 'talking_avatar', label: 'Create a talking avatar of myself' },
+    { id: 'voice_clone', label: 'Clone my own voice' },
+    { id: 'video_tutorials', label: 'Create video tutorials without filming' },
+    { id: 'marketing_videos', label: 'Generate marketing videos quickly' },
+    { id: 'education', label: 'Educational content with animated talking head' },
+    { id: 'personalized', label: 'Personalized video messages' },
+    { id: 'other', label: 'Other (please specify)' },
+  ];
 
   // ============================================
   // DEFINE FUNCTIONS FIRST
   // ============================================
 
-  // Load available voices from the system
   const loadAvailableVoices = async () => {
     setIsLoadingVoices(true);
     try {
@@ -76,7 +106,6 @@ export const VoiceProviderModal: React.FC<VoiceProviderModalProps> = ({
       if (data.success && data.voices) {
         setAvailableVoices(data.voices);
         
-        // Find the best voice based on current language
         const languageMap: Record<string, string> = {
           'Cantonese': 'Cantonese',
           'Mandarin': 'Mandarin',
@@ -91,7 +120,6 @@ export const VoiceProviderModal: React.FC<VoiceProviderModalProps> = ({
           (filterLang === 'English' && v.language.includes('en_'))
         );
         
-        // Set the first available voice for the language
         if (filtered.length > 0) {
           setSelectedVoice(filtered[0].name);
         } else if (data.voices.length > 0) {
@@ -107,24 +135,20 @@ export const VoiceProviderModal: React.FC<VoiceProviderModalProps> = ({
     }
   };
 
-  // Handle voice change from selector
   const handleVoiceChange = (voice: string) => {
     setSelectedVoice(voice);
   };
 
-  // Check if text contains Chinese
   const containsChinese = (text: string): boolean => {
     return /[\u4e00-\u9fff]/.test(text);
   };
 
-  // Check if text is primarily Chinese
   const isChineseText = (text: string): boolean => {
     const chineseChars = text.match(/[\u4e00-\u9fff]/g) || [];
     const totalChars = text.replace(/\s/g, '').length;
     return totalChars > 0 && (chineseChars.length / totalChars) > 0.3;
   };
 
-  // Get language warning
   const getLanguageWarning = () => {
     const hasChinese = containsChinese(script);
     const hasEnglish = /[a-zA-Z]/.test(script);
@@ -142,7 +166,6 @@ export const VoiceProviderModal: React.FC<VoiceProviderModalProps> = ({
     return null;
   };
 
-  // Get suggested language based on text
   const getSuggestedLanguage = () => {
     if (isChineseText(script)) {
       return 'Cantonese';
@@ -150,7 +173,6 @@ export const VoiceProviderModal: React.FC<VoiceProviderModalProps> = ({
     return null;
   };
 
-  // Language to standard BCP-47 locale mapping
   const languageCodeMap: Record<string, string> = {
     'Cantonese': 'zh-HK',
     'Mandarin': 'zh-CN',
@@ -158,22 +180,97 @@ export const VoiceProviderModal: React.FC<VoiceProviderModalProps> = ({
   };
 
   // ============================================
+  // SURVEY FUNCTIONS
+  // ============================================
+
+  const toggleSurveyOption = (optionId: string) => {
+    setSurvey(prev => ({
+      ...prev,
+      selectedOptions: prev.selectedOptions.includes(optionId)
+        ? prev.selectedOptions.filter(id => id !== optionId)
+        : [...prev.selectedOptions, optionId]
+    }));
+  };
+
+  const handleSurveySubmit = async () => {
+    if (survey.selectedOptions.length === 0 && !survey.customFeedback.trim()) {
+      alert('Please select at least one option or provide feedback.');
+      return;
+    }
+
+    setSurvey(prev => ({ ...prev, isSubmitting: true }));
+
+    try {
+      // Get user info
+      const userEmail = propUser?.email || 'anonymous@user.com';
+      const userName = propUser?.user_metadata?.full_name || propUser?.email?.split('@')[0] || 'Anonymous';
+
+      // Build email content
+      const selectedLabels = surveyOptions
+        .filter(opt => survey.selectedOptions.includes(opt.id))
+        .map(opt => `• ${opt.label}`)
+        .join('\n');
+
+      const emailBody = `
+        🎯 Digital Twin Feature Request
+
+        User: ${userName}
+        Email: ${userEmail}
+        Date: ${new Date().toLocaleString()}
+
+        Selected Features:
+        ${selectedLabels || 'None selected'}
+
+        Additional Feedback:
+        ${survey.customFeedback || 'None provided'}
+
+        ---
+        This survey was submitted from the Voice Provider Studio.
+      `;
+
+      // Send email via API
+      const response = await fetch('/api/send-survey', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          to: 'vibeailink@gmail.com',
+          subject: `🎯 Digital Twin Feature Request - ${userName}`,
+          body: emailBody,
+          userEmail: userEmail,
+          userName: userName,
+          selectedFeatures: survey.selectedOptions,
+          feedback: survey.customFeedback,
+        }),
+      });
+
+      if (response.ok) {
+        setSurvey(prev => ({ ...prev, submitted: true, isSubmitting: false }));
+        setTimeout(() => {
+          setSurvey(prev => ({ ...prev, isOpen: false, submitted: false, selectedOptions: [], customFeedback: '' }));
+        }, 3000);
+      } else {
+        throw new Error('Failed to send survey');
+      }
+    } catch (error) {
+      console.error('Survey submission error:', error);
+      alert('Failed to submit survey. Please try again or email us directly at vibeailink@gmail.com');
+      setSurvey(prev => ({ ...prev, isSubmitting: false }));
+    }
+  };
+
+  // ============================================
   // USE EFFECTS
   // ============================================
 
-  // Load available voices on mount
   useEffect(() => {
     if (isOpen) {
       loadAvailableVoices();
-      
-      // Auto-detect language from script
       if (script && isChineseText(script)) {
         setLanguage('Cantonese');
       }
     }
   }, [isOpen]);
 
-  // Clean up audio URL on unmount
   useEffect(() => {
     return () => {
       if (audioRef.current?.src) {
@@ -181,10 +278,6 @@ export const VoiceProviderModal: React.FC<VoiceProviderModalProps> = ({
       }
     };
   }, []);
-
-  // ============================================
-  // EARLY RETURN
-  // ============================================
 
   if (!isOpen) return null;
 
@@ -200,22 +293,18 @@ export const VoiceProviderModal: React.FC<VoiceProviderModalProps> = ({
     if (fileName.endsWith('.txt') || fileName.endsWith('.docx')) {
       const text = await file.text();
       setScript(text);
-      
-      // Auto-detect language from uploaded script
       if (isChineseText(text)) {
         setLanguage('Cantonese');
       }
     }
   };
 
-  // 1. Audio Preview
   const handleAudioPreview = async () => {
     if (!script.trim()) {
       alert("Please enter some script text first.");
       return;
     }
     
-    // Auto-correct language if needed
     if (isChineseText(script) && language === 'English') {
       const confirmSwitch = confirm(
         "You have Chinese text but selected English voice. This will not pronounce correctly. Would you like to switch to Cantonese?"
@@ -283,7 +372,6 @@ export const VoiceProviderModal: React.FC<VoiceProviderModalProps> = ({
     }
   };
 
-  // 2. Full Package Generation
   const handleGenerate = async () => {
     let activeUser = propUser;
     if (!activeUser) {
@@ -301,7 +389,6 @@ export const VoiceProviderModal: React.FC<VoiceProviderModalProps> = ({
       return;
     }
 
-    // Auto-correct language if needed
     if (isChineseText(script) && language === 'English') {
       const confirmSwitch = confirm(
         "You have Chinese text but selected English voice. This will not pronounce correctly. Would you like to switch to Cantonese?"
@@ -317,7 +404,6 @@ export const VoiceProviderModal: React.FC<VoiceProviderModalProps> = ({
     const langCode = languageCodeMap[language] || 'zh-HK';
 
     try {
-      // 2.1 Generate Voice - Pass the requested format
       const voiceRes = await fetch('/api/youtube/voice', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -329,7 +415,7 @@ export const VoiceProviderModal: React.FC<VoiceProviderModalProps> = ({
           useGateway: voiceType === 'gateway',
           speed,
           selectedVoice,
-          format: downloadFormat, // Pass the selected format
+          format: downloadFormat,
         }),
       });
 
@@ -337,7 +423,6 @@ export const VoiceProviderModal: React.FC<VoiceProviderModalProps> = ({
       console.log('Voice API response:', voiceData);
 
       if (voiceData.success) {
-        // Clean the base64 data - remove any whitespace or line breaks
         const cleanAudio = voiceData.audio.replace(/\s/g, '');
         console.log('Clean audio data length:', cleanAudio.length);
         console.log('Audio format:', voiceData.format);
@@ -345,14 +430,13 @@ export const VoiceProviderModal: React.FC<VoiceProviderModalProps> = ({
         console.log('Duration formatted:', voiceData.durationFormatted);
         
         setGeneratedMp3Base64(cleanAudio);
-        setAudioDuration(voiceData.duration || 0); // Store the duration
+        setAudioDuration(voiceData.duration || 0);
       } else {
         alert(voiceData.error || "Voice generation failed.");
         setIsLoading(false);
         return;
       }
 
-      // 2.2 Generate Subtitles - Pass the audio duration for sync
       const subRes = await fetch('/api/youtube/subtitles', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -361,7 +445,7 @@ export const VoiceProviderModal: React.FC<VoiceProviderModalProps> = ({
           language,
           langCode,
           targetLanguage: targetLanguage !== 'None' ? targetLanguage : undefined,
-          totalDuration: audioDuration, // Pass the actual audio duration
+          totalDuration: audioDuration,
         }),
       });
 
@@ -370,7 +454,6 @@ export const VoiceProviderModal: React.FC<VoiceProviderModalProps> = ({
         setGeneratedSrt(subData.srt);
         setGeneratedChapters(subData.youtubeChapters);
         setGeneratedSegments(subData.segments || []);
-        
         console.log('Subtitles generated:', subData.metadata);
         console.log('Duration source:', subData.metadata?.durationSource);
       } else {
@@ -395,7 +478,6 @@ export const VoiceProviderModal: React.FC<VoiceProviderModalProps> = ({
     URL.revokeObjectURL(url);
   };
 
-  // Download audio with format selection
   const downloadAudio = () => {
     if (!generatedMp3Base64) {
       alert('No audio data available. Please generate audio first.');
@@ -412,10 +494,7 @@ export const VoiceProviderModal: React.FC<VoiceProviderModalProps> = ({
       console.log('Format:', downloadFormat);
       console.log('Data length:', generatedMp3Base64.length);
       
-      // Clean the base64 data
       const cleanBase64 = generatedMp3Base64.replace(/\s/g, '');
-      
-      // Use fetch with data URL
       const dataUrl = `data:${mimeType};base64,${cleanBase64}`;
       
       fetch(dataUrl)
@@ -431,7 +510,6 @@ export const VoiceProviderModal: React.FC<VoiceProviderModalProps> = ({
             throw new Error('Blob is empty');
           }
           
-          // Create download
           const url = URL.createObjectURL(blob);
           const a = document.createElement('a');
           a.href = url;
@@ -489,7 +567,6 @@ export const VoiceProviderModal: React.FC<VoiceProviderModalProps> = ({
 
   const suggestedLang = getSuggestedLanguage();
 
-  // Format duration for display
   const formatDurationDisplay = (seconds: number): string => {
     if (!seconds || seconds === 0) return '0:00';
     const mins = Math.floor(seconds / 60);
@@ -643,10 +720,10 @@ export const VoiceProviderModal: React.FC<VoiceProviderModalProps> = ({
             </label>
             <div style={{ width: '100%' }}>
               <VoiceSelector 
-  currentVoice={selectedVoice}
-  onVoiceChange={handleVoiceChange}
-  mode="voice"  // This shows specific voices (Aasing, Sinji, etc.)
-/>
+                currentVoice={selectedVoice}
+                onVoiceChange={handleVoiceChange}
+                mode="voice"
+              />
             </div>
           </div>
         </div>
@@ -770,7 +847,7 @@ export const VoiceProviderModal: React.FC<VoiceProviderModalProps> = ({
               )}
             </div>
 
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '8px' }}>
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr 1fr', gap: '8px' }}>
               <button 
                 onClick={downloadScript} 
                 style={{ 
@@ -826,6 +903,53 @@ export const VoiceProviderModal: React.FC<VoiceProviderModalProps> = ({
               >
                 <Video size={12} /> Subtitles
               </button>
+
+              {/* Digital Twin Survey Button */}
+              <button 
+                onClick={() => setSurvey(prev => ({ ...prev, isOpen: true }))}
+                style={{ 
+                  display: 'flex', 
+                  alignItems: 'center', 
+                  justifyContent: 'center', 
+                  gap: '4px', 
+                  padding: '8px', 
+                  borderRadius: '6px', 
+                  border: 'none', 
+                  background: 'linear-gradient(135deg, #9333EA 0%, #7C3AED 100%)',
+                  color: 'white', 
+                  fontSize: '11px', 
+                  cursor: 'pointer',
+                  fontWeight: '500',
+                  boxShadow: '0 2px 8px rgba(147, 51, 234, 0.3)',
+                  transition: 'all 0.2s ease',
+                  position: 'relative',
+                  overflow: 'hidden'
+                }}
+                onMouseEnter={(e) => {
+                  e.currentTarget.style.transform = 'translateY(-1px)';
+                  e.currentTarget.style.boxShadow = '0 4px 12px rgba(147, 51, 234, 0.4)';
+                }}
+                onMouseLeave={(e) => {
+                  e.currentTarget.style.transform = 'translateY(0)';
+                  e.currentTarget.style.boxShadow = '0 2px 8px rgba(147, 51, 234, 0.3)';
+                }}
+              >
+                <span style={{ 
+                  position: 'absolute',
+                  top: '-2px',
+                  right: '-2px',
+                  background: '#EF4444',
+                  color: 'white',
+                  fontSize: '7px',
+                  fontWeight: 'bold',
+                  padding: '1px 6px',
+                  borderRadius: '10px',
+                  animation: 'pulse 2s infinite'
+                }}>
+                  NEW
+                </span>
+                <User size={12} /> Digital Twin
+              </button>
             </div>
             
             {/* Info text */}
@@ -843,6 +967,268 @@ export const VoiceProviderModal: React.FC<VoiceProviderModalProps> = ({
           </div>
         )}
       </div>
+
+      {/* Digital Twin Survey Modal */}
+      {survey.isOpen && (
+        <div style={{
+          position: 'fixed',
+          top: 0,
+          left: 0,
+          right: 0,
+          bottom: 0,
+          backgroundColor: 'rgba(0,0,0,0.6)',
+          backdropFilter: 'blur(8px)',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          zIndex: 9999,
+          padding: '20px',
+          animation: 'fadeIn 0.3s ease'
+        }} onClick={() => {
+          if (!survey.submitted) {
+            setSurvey(prev => ({ ...prev, isOpen: false }));
+          }
+        }}>
+          <div style={{
+            backgroundColor: '#FFFFFF',
+            borderRadius: '24px',
+            maxWidth: '500px',
+            width: '100%',
+            maxHeight: '90vh',
+            overflowY: 'auto',
+            padding: '32px',
+            boxShadow: '0 40px 80px -20px rgba(0,0,0,0.4)',
+            position: 'relative',
+            animation: 'slideUp 0.3s ease'
+          }} onClick={(e) => e.stopPropagation()}>
+            
+            {survey.submitted ? (
+              // Success State
+              <div style={{ textAlign: 'center', padding: '20px 0' }}>
+                <div style={{ 
+                  fontSize: '60px', 
+                  marginBottom: '16px',
+                  background: 'linear-gradient(135deg, #9333EA, #7C3AED)',
+                  borderRadius: '50%',
+                  width: '80px',
+                  height: '80px',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  margin: '0 auto 20px auto'
+                }}>
+                  ✅
+                </div>
+                <h3 style={{ fontSize: '22px', fontWeight: 'bold', color: '#0F172A', margin: '0 0 8px 0' }}>
+                  Thank You! 🎉
+                </h3>
+                <p style={{ fontSize: '14px', color: '#64748B', margin: '0 0 20px 0', lineHeight: '1.6' }}>
+                  Your feedback has been sent successfully!<br />
+                  We'll keep you updated on the Digital Twin feature development.
+                </p>
+                <button
+                  onClick={() => {
+                    setSurvey(prev => ({ ...prev, isOpen: false, submitted: false, selectedOptions: [], customFeedback: '' }));
+                  }}
+                  style={{
+                    background: 'linear-gradient(135deg, #9333EA 0%, #7C3AED 100%)',
+                    color: 'white',
+                    border: 'none',
+                    borderRadius: '12px',
+                    padding: '12px 32px',
+                    fontSize: '14px',
+                    fontWeight: '600',
+                    cursor: 'pointer'
+                  }}
+                >
+                  Close
+                </button>
+              </div>
+            ) : (
+              // Survey Content
+              <>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '16px' }}>
+                  <div>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '4px' }}>
+                      <User size={24} color="#9333EA" />
+                      <h3 style={{ fontSize: '20px', fontWeight: 'bold', color: '#0F172A', margin: 0 }}>
+                        🎯 Digital Twin
+                      </h3>
+                      <span style={{
+                        background: 'linear-gradient(135deg, #9333EA, #7C3AED)',
+                        color: 'white',
+                        fontSize: '9px',
+                        fontWeight: '700',
+                        padding: '2px 10px',
+                        borderRadius: '100px'
+                      }}>
+                        COMING SOON
+                      </span>
+                    </div>
+                    <p style={{ fontSize: '13px', color: '#64748B', margin: '4px 0 0 0' }}>
+                      Help us build the perfect Digital Twin feature for you!
+                    </p>
+                  </div>
+                  <button
+                    onClick={() => {
+                      if (!survey.submitted) {
+                        setSurvey(prev => ({ ...prev, isOpen: false }));
+                      }
+                    }}
+                    style={{
+                      background: '#F1F5F9',
+                      border: 'none',
+                      borderRadius: '50%',
+                      width: '32px',
+                      height: '32px',
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      cursor: 'pointer'
+                    }}
+                  >
+                    <X size={16} color="#64748B" />
+                  </button>
+                </div>
+
+                <div style={{ 
+                  background: '#F5F3FF', 
+                  borderRadius: '12px', 
+                  padding: '12px 16px',
+                  marginBottom: '20px',
+                  border: '1px solid #E9D5FF'
+                }}>
+                  <p style={{ fontSize: '12px', color: '#6B21A8', margin: 0, lineHeight: '1.5' }}>
+                    💡 <strong>Imagine:</strong> Upload a photo, and watch it come alive to speak your script. 
+                    Perfect for YouTube intros, tutorials, and marketing videos!
+                  </p>
+                </div>
+
+                <div style={{ marginBottom: '20px' }}>
+                  <p style={{ fontSize: '13px', fontWeight: '600', color: '#0F172A', margin: '0 0 12px 0' }}>
+                    What would you use Digital Twin for? (Select all that apply)
+                  </p>
+                  <div style={{ display: 'grid', gap: '8px' }}>
+                    {surveyOptions.map((option) => (
+                      <label
+                        key={option.id}
+                        style={{
+                          display: 'flex',
+                          alignItems: 'center',
+                          gap: '10px',
+                          padding: '10px 14px',
+                          backgroundColor: survey.selectedOptions.includes(option.id) ? '#F5F3FF' : '#F8FAFC',
+                          borderRadius: '10px',
+                          cursor: 'pointer',
+                          border: survey.selectedOptions.includes(option.id) ? '2px solid #9333EA' : '1px solid #E2E8F0',
+                          transition: 'all 0.2s ease'
+                        }}
+                      >
+                        <span style={{ fontSize: '16px', color: survey.selectedOptions.includes(option.id) ? '#9333EA' : '#94A3B8' }}>
+                          {survey.selectedOptions.includes(option.id) ? '☑️' : '☐'}
+                        </span>
+                        <span style={{ fontSize: '13px', color: '#1E293B' }}>{option.label}</span>
+                      </label>
+                    ))}
+                  </div>
+                </div>
+
+                <div style={{ marginBottom: '20px' }}>
+                  <label style={{ fontSize: '13px', fontWeight: '600', color: '#0F172A', display: 'block', marginBottom: '6px' }}>
+                    Additional Feedback 💬
+                  </label>
+                  <textarea
+                    value={survey.customFeedback}
+                    onChange={(e) => setSurvey(prev => ({ ...prev, customFeedback: e.target.value }))}
+                    placeholder="Share your ideas, feature requests, or anything else..."
+                    rows={3}
+                    style={{
+                      width: '100%',
+                      padding: '10px 14px',
+                      border: '1px solid #E2E8F0',
+                      borderRadius: '10px',
+                      fontSize: '13px',
+                      fontFamily: 'inherit',
+                      resize: 'vertical',
+                      backgroundColor: '#F8FAFC',
+                      transition: 'border 0.2s ease'
+                    }}
+                    onFocus={(e) => e.target.style.border = '2px solid #9333EA'}
+                    onBlur={(e) => e.target.style.border = '1px solid #E2E8F0'}
+                  />
+                </div>
+
+                <button
+                  onClick={handleSurveySubmit}
+                  disabled={survey.isSubmitting}
+                  style={{
+                    width: '100%',
+                    padding: '12px',
+                    background: survey.isSubmitting ? '#9CA3AF' : 'linear-gradient(135deg, #9333EA 0%, #7C3AED 100%)',
+                    color: 'white',
+                    border: 'none',
+                    borderRadius: '12px',
+                    fontSize: '14px',
+                    fontWeight: '600',
+                    cursor: survey.isSubmitting ? 'not-allowed' : 'pointer',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    gap: '8px',
+                    transition: 'all 0.2s ease'
+                  }}
+                >
+                  {survey.isSubmitting ? (
+                    <>
+                      <Loader2 size={18} className="animate-spin" /> Submitting...
+                    </>
+                  ) : (
+                    <>
+                      <Send size={18} /> Submit Feedback
+                    </>
+                  )}
+                </button>
+
+                <p style={{ 
+                  fontSize: '10px', 
+                  color: '#94A3B8', 
+                  textAlign: 'center', 
+                  margin: '12px 0 0 0',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  gap: '4px'
+                }}>
+                  <Mail size={12} /> Your feedback will be sent to vibeailink@gmail.com
+                </p>
+              </>
+            )}
+          </div>
+        </div>
+      )}
+
+      {/* Styles for animations */}
+      <style>{`
+        @keyframes fadeIn {
+          from { opacity: 0; }
+          to { opacity: 1; }
+        }
+        @keyframes slideUp {
+          from { 
+            opacity: 0;
+            transform: translateY(20px);
+          }
+          to { 
+            opacity: 1;
+            transform: translateY(0);
+          }
+        }
+        @keyframes pulse {
+          0% { opacity: 1; }
+          50% { opacity: 0.7; }
+          100% { opacity: 1; }
+        }
+      `}</style>
     </div>
   );
 };
