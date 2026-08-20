@@ -178,16 +178,24 @@ function formatDuration(seconds: number): string {
   return `${mins}:${secs.toString().padStart(2, '0')}`;
 }
 
-// Generate TTS using OpenAI Cloud
-async function generateCloudTTS(text: string, language: string, speed: number = 1.0): Promise<Buffer> {
-  const voiceMap: Record<string, string> = {
-    'Cantonese': 'nova',
-    'Mandarin': 'nova',
-    'English': 'nova',
+// In the voice route, update the generateCloudTTS function:
+async function generateCloudTTS(text: string, language: string, speed: number = 1.0, selectedVoice: string = 'Auto-Female'): Promise<Buffer> {
+  // Map language and voice selection to OpenAI voice
+  const getVoice = (): string => {
+    if (selectedVoice === 'Auto-Male') {
+      return 'onyx'; // Deeper voice
+    }
+    if (selectedVoice === 'Auto-Female') {
+      return 'nova'; // Brighter voice
+    }
+    return 'nova';
   };
   
+  const openAIVoice = getVoice();
   const cleanText = cleanTextForTTS(text);
   console.log('Cloud TTS text length:', cleanText.length);
+  console.log('Using OpenAI voice:', openAIVoice);
+  console.log('Speed:', speed);
   
   try {
     const response = await fetch('https://api.openai.com/v1/audio/speech', {
@@ -198,9 +206,9 @@ async function generateCloudTTS(text: string, language: string, speed: number = 
       },
       body: JSON.stringify({
         model: 'tts-1',
-        voice: voiceMap[language] || 'nova',
+        voice: openAIVoice,
         input: cleanText,
-        speed: Math.min(1.2, Math.max(0.8, speed)),
+        speed: Math.min(1.5, Math.max(0.5, speed)), // Clamp between 0.5 and 1.5
         response_format: 'wav',
       }),
     });
