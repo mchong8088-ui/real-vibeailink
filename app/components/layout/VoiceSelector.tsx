@@ -29,8 +29,12 @@ export const VoiceSelector: React.FC<VoiceSelectorProps> = ({
     { id: 'Taiwanese', label: '國語 (Taiwanese)', emoji: '🔊' },
   ];
 
-  // Voice options - EXACT names as they appear in `say -v "?"`
+  // Voice options - INCLUDING Auto-Male and Auto-Female
   const voiceOptions = [
+    // Auto Voices (Cloud-compatible)
+    { id: 'Auto-Male', label: '🤖 Auto-Male (Cloud)', category: 'Auto', emoji: '🤖' },
+    { id: 'Auto-Female', label: '🤖 Auto-Female (Cloud)', category: 'Auto', emoji: '🤖' },
+    
     // Cantonese Voices (zh_HK)
     { id: 'Aasing (Enhanced)', label: 'Aasing (Enhanced)', category: 'Cantonese', emoji: '🇭🇰' },
     { id: 'Aasing', label: 'Aasing', category: 'Cantonese', emoji: '🇭🇰' },
@@ -148,7 +152,7 @@ export const VoiceSelector: React.FC<VoiceSelectorProps> = ({
                   backgroundColor: '#F9FAFB',
                   borderBottom: '1px solid #E5E7EB'
                 }}>
-                  {category}
+                  {category === 'Auto' ? '🤖 Cloud Voices' : category}
                 </div>
                 {voices.map((voice) => (
                   <button

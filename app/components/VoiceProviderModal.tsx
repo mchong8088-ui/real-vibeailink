@@ -97,6 +97,18 @@ export const VoiceProviderModal: React.FC<VoiceProviderModalProps> = ({
   // DEFINE FUNCTIONS FIRST
   // ============================================
 
+  // NEW: Get voice selection with Auto-Male/Female support
+  const getSelectedVoiceName = (): string => {
+    // If it's Auto-Male or Auto-Female, we keep it as-is
+    // The backend will handle cloud fallback
+    return selectedVoice;
+  };
+
+  // Check if selected voice is an auto voice
+  const isAutoVoice = (voice: string): boolean => {
+    return voice === 'Auto-Male' || voice === 'Auto-Female';
+  };
+
   const loadAvailableVoices = async () => {
     setIsLoadingVoices(true);
     try {
@@ -105,28 +117,6 @@ export const VoiceProviderModal: React.FC<VoiceProviderModalProps> = ({
       
       if (data.success && data.voices) {
         setAvailableVoices(data.voices);
-        
-        const languageMap: Record<string, string> = {
-          'Cantonese': 'Cantonese',
-          'Mandarin': 'Mandarin',
-          'English': 'English'
-        };
-        
-        const filterLang = languageMap[language];
-        const filtered = data.voices.filter((v: Voice) => 
-          v.language.includes(filterLang) ||
-          (filterLang === 'Cantonese' && v.language.includes('zh-HK')) ||
-          (filterLang === 'Mandarin' && v.language.includes('zh-CN')) ||
-          (filterLang === 'English' && v.language.includes('en_'))
-        );
-        
-        // Set the first available voice for the language
-        if (filtered.length > 0) {
-          setSelectedVoice(filtered[0].name);
-        } else if (data.voices.length > 0) {
-          setSelectedVoice(data.voices[0].name);
-        }
-        
         console.log('Available voices loaded:', data.voices);
       }
     } catch (error) {
@@ -134,43 +124,6 @@ export const VoiceProviderModal: React.FC<VoiceProviderModalProps> = ({
     } finally {
       setIsLoadingVoices(false);
     }
-  };
-
-  // NEW: Get voice selection with Auto-Male/Female support
-  const getSelectedVoiceName = (): string => {
-    if (selectedVoice === 'Auto-Male') {
-      // Auto-select male voice based on language
-      const maleVoices: Record<string, string[]> = {
-        'Cantonese': ['Aasing (Enhanced)', 'Aasing'],
-        'Mandarin': ['Han (Enhanced)'],
-        'English': ['Evan (Enhanced)', 'Daniel']
-      };
-      const voices = maleVoices[language] || ['Samantha'];
-      for (const v of voices) {
-        if (availableVoices.some(av => av.name === v)) {
-          return v;
-        }
-      }
-      return voices[0] || 'Samantha';
-    }
-    
-    if (selectedVoice === 'Auto-Female') {
-      // Auto-select female voice based on language
-      const femaleVoices: Record<string, string[]> = {
-        'Cantonese': ['Sinji'],
-        'Mandarin': ['Tingting', 'Lili (Enhanced)'],
-        'English': ['Samantha', 'Ava (Enhanced)']
-      };
-      const voices = femaleVoices[language] || ['Samantha'];
-      for (const v of voices) {
-        if (availableVoices.some(av => av.name === v)) {
-          return v;
-        }
-      }
-      return voices[0] || 'Samantha';
-    }
-    
-    return selectedVoice;
   };
 
   const handleVoiceChange = (voice: string) => {
@@ -354,7 +307,6 @@ export const VoiceProviderModal: React.FC<VoiceProviderModalProps> = ({
     setPreviewError(null);
 
     const langCode = languageCodeMap[language] || 'zh-HK';
-    const actualVoice = getSelectedVoiceName();
 
     try {
       const res = await fetch('/api/youtube/preview', {
@@ -366,7 +318,7 @@ export const VoiceProviderModal: React.FC<VoiceProviderModalProps> = ({
           langCode,
           speed,
           voiceType,
-          selectedVoice: actualVoice // Pass the resolved voice name
+          selectedVoice, // Pass Auto-Male or Auto-Female
         }),
       });
 
@@ -438,7 +390,6 @@ export const VoiceProviderModal: React.FC<VoiceProviderModalProps> = ({
     setIsLoading(true);
 
     const langCode = languageCodeMap[language] || 'zh-HK';
-    const actualVoice = getSelectedVoiceName();
 
     try {
       const voiceRes = await fetch('/api/youtube/voice', {
@@ -451,7 +402,7 @@ export const VoiceProviderModal: React.FC<VoiceProviderModalProps> = ({
           langCode,
           useGateway: voiceType === 'gateway',
           speed,
-          selectedVoice: actualVoice,
+          selectedVoice, // Pass Auto-Male or Auto-Female
           format: downloadFormat,
         }),
       });
@@ -611,6 +562,17 @@ export const VoiceProviderModal: React.FC<VoiceProviderModalProps> = ({
     return `${mins}:${secs.toString().padStart(2, '0')}`;
   };
 
+  // Get language-specific text for voice selector explanation
+  const getVoiceSelectorHelpText = () => {
+    if (language === 'Traditional Chinese') {
+      return '💡 如果您的電腦未安裝語音，請選擇「自動男聲」或「自動女聲」以使用雲端語音';
+    } else if (language === 'Simplified Chinese') {
+      return '💡 如果您的电脑未安装语音，请选择「自动男声」或「自动女声」以使用云端语音';
+    } else {
+      return '💡 If you don\'t have voices installed, select "Auto-Male" or "Auto-Female" for cloud voices';
+    }
+  };
+
   // ============================================
   // RENDER
   // ============================================
@@ -762,11 +724,23 @@ export const VoiceProviderModal: React.FC<VoiceProviderModalProps> = ({
                 mode="voice"
               />
             </div>
+            {/* Help text for auto voice */}
+            <div style={{
+              fontSize: '10px',
+              color: '#6B7280',
+              marginTop: '6px',
+              padding: '6px 10px',
+              backgroundColor: '#F3F4F6',
+              borderRadius: '6px',
+              lineHeight: '1.4'
+            }}>
+              {getVoiceSelectorHelpText()}
+            </div>
           </div>
         </div>
 
-        {/* NEW: Speed Control Bar */}
-        <div style={{ marginBottom: '16px' }}>
+        {/* Speed Control Bar */}
+        <div style={{ marginBottom: '16px', marginTop: '8px' }}>
           <label style={{ 
             fontSize: '12px', 
             fontWeight: '500', 
