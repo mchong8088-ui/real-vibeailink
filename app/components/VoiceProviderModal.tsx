@@ -42,6 +42,7 @@ export const VoiceProviderModal: React.FC<VoiceProviderModalProps> = ({
   profile,
   initialScript = '',
   onUpgradePlan,
+  langKey = 'English',
 }) => {
   const [script, setScript] = useState(initialScript);
   const [language, setLanguage] = useState<'Cantonese' | 'Mandarin' | 'English'>('Cantonese');
@@ -96,18 +97,6 @@ export const VoiceProviderModal: React.FC<VoiceProviderModalProps> = ({
   // ============================================
   // DEFINE FUNCTIONS FIRST
   // ============================================
-
-  // NEW: Get voice selection with Auto-Male/Female support
-  const getSelectedVoiceName = (): string => {
-    // If it's Auto-Male or Auto-Female, we keep it as-is
-    // The backend will handle cloud fallback
-    return selectedVoice;
-  };
-
-  // Check if selected voice is an auto voice
-  const isAutoVoice = (voice: string): boolean => {
-    return voice === 'Auto-Male' || voice === 'Auto-Female';
-  };
 
   const loadAvailableVoices = async () => {
     setIsLoadingVoices(true);
@@ -318,7 +307,7 @@ export const VoiceProviderModal: React.FC<VoiceProviderModalProps> = ({
           langCode,
           speed,
           voiceType,
-          selectedVoice, // Pass Auto-Male or Auto-Female
+          selectedVoice,
         }),
       });
 
@@ -402,7 +391,7 @@ export const VoiceProviderModal: React.FC<VoiceProviderModalProps> = ({
           langCode,
           useGateway: voiceType === 'gateway',
           speed,
-          selectedVoice, // Pass Auto-Male or Auto-Female
+          selectedVoice,
           format: downloadFormat,
         }),
       });
@@ -563,10 +552,11 @@ export const VoiceProviderModal: React.FC<VoiceProviderModalProps> = ({
   };
 
   // Get language-specific text for voice selector explanation
+  // Use langKey prop instead of language state
   const getVoiceSelectorHelpText = () => {
-    if (language === 'Traditional Chinese') {
+    if (langKey === 'Traditional Chinese') {
       return '💡 如果您的電腦未安裝語音，請選擇「自動男聲」或「自動女聲」以使用雲端語音';
-    } else if (language === 'Simplified Chinese') {
+    } else if (langKey === 'Simplified Chinese') {
       return '💡 如果您的电脑未安装语音，请选择「自动男声」或「自动女声」以使用云端语音';
     } else {
       return '💡 If you don\'t have voices installed, select "Auto-Male" or "Auto-Female" for cloud voices';
@@ -724,7 +714,7 @@ export const VoiceProviderModal: React.FC<VoiceProviderModalProps> = ({
                 mode="voice"
               />
             </div>
-            {/* Help text for auto voice */}
+            {/* Help text for auto voice - using langKey prop */}
             <div style={{
               fontSize: '10px',
               color: '#6B7280',
