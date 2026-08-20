@@ -105,6 +105,19 @@ function simpleAiffToWav(aiffBuffer: Buffer): Buffer {
   }
 }
 
+// Use afconvert as a backup conversion method
+async function convertWithAfconvert(aiffPath: string, wavPath: string): Promise<boolean> {
+  try {
+    const command = `afconvert -f WAVE -d LEI16@22050 "${aiffPath}" "${wavPath}"`;
+    console.log('Trying afconvert:', command);
+    await execAsync(command);
+    return true;
+  } catch (error) {
+    console.error('afconvert failed:', error);
+    return false;
+  }
+}
+
 export async function POST(req: Request) {
   try {
     const { script, langCode, language, speed, voiceType, selectedVoice } = await req.json();
@@ -112,6 +125,7 @@ export async function POST(req: Request) {
     console.log('========== PREVIEW REQUEST ==========');
     console.log('Original script:', script);
     console.log('Language:', language);
+    console.log('Selected voice:', selectedVoice);
 
     const cleanScript = cleanTextForTTS(script || '你好');
     console.log('Cleaned text:', cleanScript);
@@ -146,6 +160,7 @@ export async function POST(req: Request) {
 
     const tempTxt = path.join(os.tmpdir(), `preview_${Date.now()}.txt`);
     const tempAiff = path.join(os.tmpdir(), `preview_${Date.now()}.aiff`);
+    const tempWav = path.join(os.tmpdir(), `preview_${Date.now()}.wav`);
 
     try {
       await fs.promises.writeFile(tempTxt, cleanScript, 'utf-8');
@@ -161,14 +176,40 @@ export async function POST(req: Request) {
         throw new Error('Audio generation produced empty file');
       }
 
-      // Convert to WAV
-      const wavBuffer = simpleAiffToWav(aiffBuffer);
-      console.log('WAV buffer size:', wavBuffer.length, 'bytes');
+      // Try afconvert first (more reliable)
+      let wavBuffer: Buffer | null = null;
+      let conversionMethod = 'manual';
+      
+      try {
+        // Write AIFF to temp file for afconvert
+        await fs.promises.writeFile(tempAiff, aiffBuffer);
+        const afconvertResult = await convertWithAfconvert(tempAiff, tempWav);
+        
+        if (afconvertResult) {
+          const wavData = await fs.promises.readFile(tempWav);
+          if (wavData.length > 44 && wavData.toString('ascii', 0, 4) === 'RIFF') {
+            wavBuffer = wavData;
+            conversionMethod = 'afconvert';
+            console.log('afconvert produced valid WAV!');
+          }
+        }
+      } catch (afconvertError) {
+        console.error('afconvert error:', afconvertError);
+      }
+
+      // If afconvert failed, use manual conversion
+      if (!wavBuffer || wavBuffer.length < 44) {
+        console.log('Falling back to manual AIFF to WAV conversion...');
+        wavBuffer = simpleAiffToWav(aiffBuffer);
+        conversionMethod = 'manual';
+      }
 
       if (!wavBuffer || wavBuffer.length < 44) {
         throw new Error('Failed to convert AIFF to WAV');
       }
 
+      console.log('WAV buffer size:', wavBuffer.length, 'bytes');
+      console.log('Conversion method:', conversionMethod);
       console.log('========== PREVIEW COMPLETE ==========');
 
       // Convert Buffer to Uint8Array for NextResponse compatibility
@@ -182,12 +223,14 @@ export async function POST(req: Request) {
           'Cache-Control': 'no-cache, no-store, must-revalidate',
           'X-Voice-Used': voiceToUse,
           'X-Language-Used': language,
+          'X-Conversion-Method': conversionMethod,
         },
       });
 
     } finally {
       await fs.promises.unlink(tempTxt).catch(() => {});
       await fs.promises.unlink(tempAiff).catch(() => {});
+      await fs.promises.unlink(tempWav).catch(() => {});
     }
 
   } catch (error: any) {
@@ -195,6 +238,7 @@ export async function POST(req: Request) {
     return NextResponse.json({ 
       success: false, 
       error: error.message || 'TTS generation failed',
+      details: error.stack 
     }, { status: 500 });
   }
 }
