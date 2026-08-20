@@ -7,9 +7,6 @@ import os from 'os';
 
 const execAsync = promisify(exec);
 
-// Check if running on Vercel
-const isVercel = process.env.VERCEL === 'true';
-
 // Clean text for TTS
 function cleanTextForTTS(text: string): string {
   if (!text) return '你好';
@@ -37,12 +34,6 @@ function cleanTextForTTS(text: string): string {
 async function voiceExists(voiceName: string): Promise<boolean> {
   if (!voiceName) return false;
   
-  // On Vercel, skip this check entirely
-  if (isVercel) {
-    console.log('On Vercel - skipping voice existence check');
-    return false;
-  }
-  
   try {
     const { stdout } = await execAsync(`say -v "?"`);
     const lines = stdout.split('\n');
@@ -54,6 +45,16 @@ async function voiceExists(voiceName: string): Promise<boolean> {
     return false;
   } catch (error) {
     console.error('Error checking voice:', error);
+    return false;
+  }
+}
+
+// Check if say command is available
+async function isSayAvailable(): Promise<boolean> {
+  try {
+    await execAsync('say -v "?"');
+    return true;
+  } catch {
     return false;
   }
 }
@@ -83,7 +84,7 @@ async function generateOpenAITTS(text: string, language: string, speed: number =
       body: JSON.stringify({
         model: 'tts-1',
         voice: getVoice(),
-        input: cleanText.slice(0, 200), // Preview only first 200 chars
+        input: cleanText.slice(0, 200),
         speed: Math.min(1.5, Math.max(0.5, speed)),
         response_format: 'wav',
       }),
@@ -109,42 +110,26 @@ async function generateOpenAITTS(text: string, language: string, speed: number =
 async function generateWithSay(text: string, voice: string, rate: number): Promise<Buffer> {
   const tempTxt = path.join(os.tmpdir(), `preview_${Date.now()}.txt`);
   const tempAiff = path.join(os.tmpdir(), `preview_${Date.now()}.aiff`);
+  const tempWav = path.join(os.tmpdir(), `preview_${Date.now()}.wav`);
   
   try {
     await fs.promises.writeFile(tempTxt, text, 'utf-8');
     
-    const command = `say -v "${voice}" -r ${rate} -f "${tempTxt}" -o "${tempAiff}"`;
-    console.log('Executing:', command);
+    const sayCommand = `say -v "${voice}" -r ${rate} -f "${tempTxt}" -o "${tempAiff}"`;
+    console.log('Say Command:', sayCommand);
+    await execAsync(sayCommand, { shell: '/bin/bash' });
     
-    const { stdout, stderr } = await execAsync(command, { shell: '/bin/bash' });
-    if (stdout) console.log('stdout:', stdout);
-    if (stderr) console.error('stderr:', stderr);
+    // Convert using afconvert
+    const afconvertCommand = `afconvert -f WAVE -d LEI16@22050 "${tempAiff}" "${tempWav}"`;
+    console.log('Afconvert Command:', afconvertCommand);
+    await execAsync(afconvertCommand, { shell: '/bin/bash' });
     
-    const aiffBuffer = await fs.promises.readFile(tempAiff);
-    console.log('AIFF size:', aiffBuffer.length, 'bytes');
-    
-    return aiffBuffer;
+    const wavBuffer = await fs.promises.readFile(tempWav);
+    console.log('WAV size:', wavBuffer.length, 'bytes');
+    return wavBuffer;
     
   } finally {
     await fs.promises.unlink(tempTxt).catch(() => {});
-    await fs.promises.unlink(tempAiff).catch(() => {});
-  }
-}
-
-// Convert AIFF to WAV using afconvert (macOS only)
-async function convertWithAfconvert(aiffBuffer: Buffer): Promise<Buffer> {
-  const tempAiff = path.join(os.tmpdir(), `temp_${Date.now()}.aiff`);
-  const tempWav = path.join(os.tmpdir(), `temp_${Date.now()}.wav`);
-  
-  try {
-    await fs.promises.writeFile(tempAiff, aiffBuffer);
-    const command = `afconvert -f WAVE -d LEI16@22050 "${tempAiff}" "${tempWav}"`;
-    console.log('Afconvert Command:', command);
-    await execAsync(command, { shell: '/bin/bash' });
-    const wavBuffer = await fs.promises.readFile(tempWav);
-    console.log('WAV size from afconvert:', wavBuffer.length, 'bytes');
-    return wavBuffer;
-  } finally {
     await fs.promises.unlink(tempAiff).catch(() => {});
     await fs.promises.unlink(tempWav).catch(() => {});
   }
@@ -158,7 +143,6 @@ export async function POST(req: Request) {
     console.log('Script:', script);
     console.log('Language:', language);
     console.log('Selected voice:', selectedVoice);
-    console.log('Is Vercel?', isVercel);
 
     const cleanScript = cleanTextForTTS(script || '你好');
     console.log('Cleaned text:', cleanScript);
@@ -168,14 +152,20 @@ export async function POST(req: Request) {
     const isEnglish = langCode === 'en-US' || language === 'English';
 
     // ============================================================
-    // ON VERCEL - ALWAYS USE CLOUD TTS
+    // CHECK IF SAY COMMAND IS AVAILABLE
     // ============================================================
-    if (isVercel) {
-      console.log('On Vercel - using cloud TTS (OpenAI)');
+    const sayAvailable = await isSayAvailable();
+    console.log('Say command available:', sayAvailable);
+
+    // ============================================================
+    // IF SAY IS NOT AVAILABLE -> USE CLOUD TTS
+    // ============================================================
+    if (!sayAvailable) {
+      console.log('Say command not available - using cloud TTS (OpenAI)');
       
-      // For Cantonese on Vercel, use Mandarin fallback
+      // For Cantonese, use Mandarin fallback
       if (isCantonese) {
-        console.log('Cantonese on Vercel - using Mandarin fallback with OpenAI');
+        console.log('Cantonese on cloud - using Mandarin fallback');
         try {
           const audioBuffer = await generateOpenAITTS(cleanScript, 'Mandarin', speed || 1.0, selectedVoice || 'Auto-Female');
           if (audioBuffer) {
@@ -189,7 +179,7 @@ export async function POST(req: Request) {
                 'X-Voice-Used': selectedVoice || 'openai-fallback',
                 'X-Language-Used': 'Cantonese (Mandarin fallback)',
                 'X-Provider': 'OpenAI-TTS',
-                'X-Environment': 'vercel',
+                'X-Environment': 'cloud',
               },
             });
           }
@@ -198,13 +188,13 @@ export async function POST(req: Request) {
         }
         return NextResponse.json({ 
           success: false, 
-          error: 'Cantonese voice generation unavailable on web. Please use the desktop app or select Mandarin/English.',
+          error: 'Cantonese voice generation unavailable. Please select Mandarin or English for web.',
         }, { status: 503 });
       }
       
       // For Mandarin or English, use OpenAI TTS
       if (isMandarin || isEnglish) {
-        console.log(`Using OpenAI TTS for ${language} on Vercel`);
+        console.log(`Using OpenAI TTS for ${language}`);
         try {
           const audioBuffer = await generateOpenAITTS(cleanScript, language, speed || 1.0, selectedVoice || 'Auto-Female');
           if (audioBuffer) {
@@ -218,7 +208,7 @@ export async function POST(req: Request) {
                 'X-Voice-Used': selectedVoice || 'openai',
                 'X-Language-Used': language,
                 'X-Provider': 'OpenAI-TTS',
-                'X-Environment': 'vercel',
+                'X-Environment': 'cloud',
               },
             });
           }
@@ -275,18 +265,11 @@ export async function POST(req: Request) {
     if (speed) speechRate = Math.round(speed * 175);
 
     try {
-      // Generate AIFF using say
-      const aiffBuffer = await generateWithSay(cleanScript, voiceToUse, speechRate);
-      
-      if (!aiffBuffer || aiffBuffer.length === 0) {
-        throw new Error('Audio generation produced empty file');
-      }
-      
-      // Convert to WAV using afconvert
-      const wavBuffer = await convertWithAfconvert(aiffBuffer);
+      // Generate audio using say + afconvert
+      const wavBuffer = await generateWithSay(cleanScript, voiceToUse, speechRate);
       
       if (!wavBuffer || wavBuffer.length < 44) {
-        throw new Error('Failed to convert AIFF to WAV');
+        throw new Error('Failed to generate valid WAV');
       }
       
       console.log('Final WAV size:', wavBuffer.length, 'bytes');
@@ -308,6 +291,28 @@ export async function POST(req: Request) {
       
     } catch (error: any) {
       console.error('Local generation error:', error);
+      // If local fails, try cloud fallback
+      console.log('Local failed, trying cloud fallback...');
+      try {
+        const audioBuffer = await generateOpenAITTS(cleanScript, isCantonese ? 'Mandarin' : language, speed || 1.0, selectedVoice || 'Auto-Female');
+        if (audioBuffer) {
+          const audioData = new Uint8Array(audioBuffer);
+          return new NextResponse(audioData, {
+            status: 200,
+            headers: {
+              'Content-Type': 'audio/wav',
+              'Content-Length': audioData.length.toString(),
+              'Cache-Control': 'no-cache, no-store, must-revalidate',
+              'X-Voice-Used': 'cloud-fallback',
+              'X-Language-Used': isCantonese ? 'Cantonese (Mandarin fallback)' : language,
+              'X-Provider': 'OpenAI-TTS',
+              'X-Environment': 'cloud-fallback',
+            },
+          });
+        }
+      } catch (fallbackError) {
+        console.error('Cloud fallback also failed:', fallbackError);
+      }
       return NextResponse.json({ 
         success: false, 
         error: error.message || 'TTS generation failed',
