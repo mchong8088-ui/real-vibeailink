@@ -8,9 +8,6 @@ import os from 'os';
 
 const execAsync = promisify(exec);
 
-// Check if running on Vercel
-const isVercel = process.env.VERCEL === 'true';
-
 const supabaseAdmin = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL!,
   process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
@@ -39,7 +36,7 @@ function cleanTextForTTS(text: string): string {
   return cleaned;
 }
 
-// Check if voice exists (macOS only)
+// Check if voice exists
 async function voiceExists(voiceName: string): Promise<boolean> {
   if (!voiceName) return false;
   
@@ -58,59 +55,50 @@ async function voiceExists(voiceName: string): Promise<boolean> {
   }
 }
 
-// Simple AIFF to WAV conversion
-function simpleAiffToWav(aiffBuffer: Buffer): Buffer {
+// Generate audio using say command and convert with afconvert
+async function generateAndConvertAudio(text: string, voice: string, rate: number): Promise<Buffer> {
+  const tempTxt = path.join(os.tmpdir(), `full_${Date.now()}.txt`);
+  const tempAiff = path.join(os.tmpdir(), `full_${Date.now()}.aiff`);
+  const tempWav = path.join(os.tmpdir(), `full_${Date.now()}.wav`);
+  
   try {
-    console.log('Starting AIFF to WAV conversion...');
+    // Step 1: Generate AIFF using say
+    await fs.promises.writeFile(tempTxt, text, 'utf-8');
     
-    const ssndIndex = aiffBuffer.indexOf('SSND');
-    if (ssndIndex === -1) {
-      console.error('SSND chunk not found');
-      return Buffer.alloc(0);
-    }
-
-    const chunkSize = aiffBuffer.readUInt32BE(ssndIndex + 4);
-    const audioStart = ssndIndex + 16;
-    const audioSize = chunkSize - 8;
-    const audioData = aiffBuffer.slice(audioStart, audioStart + audioSize);
+    const sayCommand = `say -v "${voice}" -r ${rate} -f "${tempTxt}" -o "${tempAiff}"`;
+    console.log('Say Command:', sayCommand);
+    await execAsync(sayCommand, { shell: '/bin/bash' });
     
-    console.log('Audio data size:', audioData.length);
-
-    if (audioData.length === 0) {
-      console.error('No audio data extracted');
-      return Buffer.alloc(0);
+    // Step 2: Convert AIFF to WAV using afconvert (macOS built-in)
+    const afconvertCommand = `afconvert -f WAVE -d LEI16@22050 "${tempAiff}" "${tempWav}"`;
+    console.log('Afconvert Command:', afconvertCommand);
+    await execAsync(afconvertCommand, { shell: '/bin/bash' });
+    
+    // Step 3: Read the WAV file
+    const wavBuffer = await fs.promises.readFile(tempWav);
+    console.log('WAV size from afconvert:', wavBuffer.length, 'bytes');
+    
+    // Verify WAV header
+    const isWav = wavBuffer.toString('ascii', 0, 4) === 'RIFF';
+    console.log('Is valid WAV from afconvert?', isWav);
+    
+    if (!isWav) {
+      console.error('afconvert produced invalid WAV, trying fallback...');
+      // Fallback: try to convert with different settings
+      const fallbackCommand = `afconvert -f WAVE -d LEI16 "${tempAiff}" "${tempWav}"`;
+      console.log('Fallback afconvert:', fallbackCommand);
+      await execAsync(fallbackCommand, { shell: '/bin/bash' });
+      const fallbackWav = await fs.promises.readFile(tempWav);
+      console.log('Fallback WAV size:', fallbackWav.length);
+      return fallbackWav;
     }
-
-    const sampleRate = 22050;
-    const numChannels = 1;
-    const bitsPerSample = 16;
-    const bytesPerSample = bitsPerSample / 2;
-    const blockAlign = numChannels * bytesPerSample;
-    const byteRate = sampleRate * blockAlign;
-    const dataSize = audioData.length;
-
-    const header = Buffer.alloc(44);
-    header.write('RIFF', 0);
-    header.writeUInt32LE(36 + dataSize, 4);
-    header.write('WAVE', 8);
-    header.write('fmt ', 12);
-    header.writeUInt32LE(16, 16);
-    header.writeUInt16LE(1, 20);
-    header.writeUInt16LE(numChannels, 22);
-    header.writeUInt32LE(sampleRate, 24);
-    header.writeUInt32LE(byteRate, 28);
-    header.writeUInt16LE(blockAlign, 32);
-    header.writeUInt16LE(bitsPerSample, 34);
-    header.write('data', 36);
-    header.writeUInt32LE(dataSize, 40);
-
-    const result = Buffer.concat([header, audioData]);
-    console.log('WAV size:', result.length);
-    return result;
-
-  } catch (error) {
-    console.error('Conversion error:', error);
-    return Buffer.alloc(0);
+    
+    return wavBuffer;
+    
+  } finally {
+    await fs.promises.unlink(tempTxt).catch(() => {});
+    await fs.promises.unlink(tempAiff).catch(() => {});
+    await fs.promises.unlink(tempWav).catch(() => {});
   }
 }
 
@@ -133,28 +121,8 @@ async function convertWavToMp3(wavBuffer: Buffer): Promise<Buffer> {
   }
 }
 
-// Get audio duration from WAV buffer
+// Get audio duration using ffprobe
 async function getAudioDuration(wavBuffer: Buffer): Promise<number> {
-  try {
-    const tempWav = path.join(os.tmpdir(), `duration_${Date.now()}.wav`);
-    await fs.promises.writeFile(tempWav, wavBuffer);
-    
-    const { stdout } = await execAsync(`afinfo "${tempWav}"`);
-    await fs.promises.unlink(tempWav).catch(() => {});
-    
-    const match = stdout.match(/estimated duration: ([\d.]+) sec/);
-    if (match) {
-      return parseFloat(match[1]);
-    }
-    return 0;
-  } catch (error) {
-    console.error('Error getting audio duration:', error);
-    return 0;
-  }
-}
-
-// Get duration using ffprobe (more accurate)
-async function getAudioDurationFfprobe(wavBuffer: Buffer): Promise<number> {
   try {
     const tempWav = path.join(os.tmpdir(), `duration_${Date.now()}.wav`);
     await fs.promises.writeFile(tempWav, wavBuffer);
@@ -165,7 +133,7 @@ async function getAudioDurationFfprobe(wavBuffer: Buffer): Promise<number> {
     const duration = parseFloat(stdout.trim());
     return isNaN(duration) ? 0 : duration;
   } catch (error) {
-    console.error('Error getting duration with ffprobe:', error);
+    console.error('Error getting duration:', error);
     return 0;
   }
 }
@@ -178,62 +146,6 @@ function formatDuration(seconds: number): string {
   return `${mins}:${secs.toString().padStart(2, '0')}`;
 }
 
-// In the voice route, update the generateCloudTTS function:
-async function generateCloudTTS(text: string, language: string, speed: number = 1.0, selectedVoice: string = 'Auto-Female'): Promise<Buffer> {
-  // Map language and voice selection to OpenAI voice
-  const getVoice = (): string => {
-    if (selectedVoice === 'Auto-Male') {
-      return 'onyx'; // Deeper voice
-    }
-    if (selectedVoice === 'Auto-Female') {
-      return 'nova'; // Brighter voice
-    }
-    return 'nova';
-  };
-  
-  const openAIVoice = getVoice();
-  const cleanText = cleanTextForTTS(text);
-  console.log('Cloud TTS text length:', cleanText.length);
-  console.log('Using OpenAI voice:', openAIVoice);
-  console.log('Speed:', speed);
-  
-  try {
-    const response = await fetch('https://api.openai.com/v1/audio/speech', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'Authorization': `Bearer ${process.env.OPENAI_API_KEY}`,
-      },
-      body: JSON.stringify({
-        model: 'tts-1',
-        voice: openAIVoice,
-        input: cleanText,
-        speed: Math.min(1.5, Math.max(0.5, speed)), // Clamp between 0.5 and 1.5
-        response_format: 'wav',
-      }),
-    });
-
-    if (!response.ok) {
-      const errorData = await response.json().catch(() => ({}));
-      console.error('OpenAI TTS error response:', errorData);
-      throw new Error(`OpenAI TTS failed: ${response.status}`);
-    }
-
-    const audioArrayBuffer = await response.arrayBuffer();
-    const audioBuffer = Buffer.from(audioArrayBuffer);
-    console.log('Cloud TTS generated, size:', audioBuffer.length, 'bytes');
-    return audioBuffer;
-  } catch (error) {
-    console.error('Cloud TTS error:', error);
-    throw error;
-  }
-}
-
-// Check if voice is an auto voice
-function isAutoVoice(voice: string): boolean {
-  return voice === 'Auto-Male' || voice === 'Auto-Female';
-}
-
 export async function POST(req: Request) {
   try {
     const { userId, script, langCode, language, selectedVoice, speed, format = 'wav' } = await req.json();
@@ -242,9 +154,8 @@ export async function POST(req: Request) {
     console.log('User ID:', userId);
     console.log('Script length:', script?.length || 0);
     console.log('Language:', language);
-    console.log('Format requested:', format);
     console.log('Selected voice:', selectedVoice);
-    console.log('Environment:', isVercel ? 'Vercel (cloud TTS)' : 'Local (macOS)');
+    console.log('Format requested:', format);
 
     if (!userId) {
       return NextResponse.json({ success: false, error: 'Unauthorized' }, { status: 401 });
@@ -277,168 +188,65 @@ export async function POST(req: Request) {
     const isMandarin = langCode === 'zh-CN' || language === 'Mandarin';
     const isEnglish = langCode === 'en-US' || language === 'English';
 
-    // NEW: If Auto-Male or Auto-Female is selected, use cloud TTS
-    if (isAutoVoice(selectedVoice)) {
-      console.log('Auto voice selected, using cloud TTS (OpenAI) for full generation...');
-      
-      try {
-        const audioBuffer = await generateCloudTTS(cleanScript, language, speed || 1.0);
-        const audioFormat = 'wav';
-        const audioBase64 = audioBuffer.toString('base64');
-
-        const isChinese = /[\u4e00-\u9fff]/.test(cleanScript);
-        const estimatedDuration = isChinese 
-          ? Math.max(1.5, cleanScript.length / 4)
-          : Math.max(1.5, cleanScript.split(/\s+/).length / 3);
-
-        const creditsToDeduct = 2;
-        await supabaseAdmin
-          .from('profiles')
-          .update({ credits: (profile.credits || 0) - creditsToDeduct })
-          .eq('id', userId);
-
-        console.log('========== FULL GENERATION COMPLETE (CLOUD) ==========');
-        console.log('Audio size:', audioBuffer.length);
-        console.log('Format:', audioFormat);
-
-        return NextResponse.json({
-          success: true,
-          audio: audioBase64,
-          format: audioFormat,
-          voiceUsed: selectedVoice,
-          duration: estimatedDuration,
-          durationFormatted: formatDuration(estimatedDuration),
-          creditsUsed: creditsToDeduct,
-          remainingCredits: (profile.credits || 0) - creditsToDeduct,
-        });
-
-      } catch (cloudError: any) {
-        console.error('Cloud TTS failed:', cloudError);
-        return NextResponse.json({ 
-          success: false, 
-          error: 'Voice generation temporarily unavailable. Please try again later.',
-          fallback: 'You can also use the desktop app for voice features.'
-        }, { status: 503 });
-      }
-    }
-
-    // If on Vercel and NOT auto voice, also use cloud TTS
-    if (isVercel) {
-      console.log('On Vercel, using cloud TTS (OpenAI) for full generation...');
-      
-      try {
-        const audioBuffer = await generateCloudTTS(cleanScript, language, speed || 1.0);
-        const audioFormat = 'wav';
-        const audioBase64 = audioBuffer.toString('base64');
-
-        const isChinese = /[\u4e00-\u9fff]/.test(cleanScript);
-        const estimatedDuration = isChinese 
-          ? Math.max(1.5, cleanScript.length / 4)
-          : Math.max(1.5, cleanScript.split(/\s+/).length / 3);
-
-        const creditsToDeduct = 2;
-        await supabaseAdmin
-          .from('profiles')
-          .update({ credits: (profile.credits || 0) - creditsToDeduct })
-          .eq('id', userId);
-
-        console.log('========== FULL GENERATION COMPLETE (CLOUD) ==========');
-        console.log('Audio size:', audioBuffer.length);
-        console.log('Format:', audioFormat);
-
-        return NextResponse.json({
-          success: true,
-          audio: audioBase64,
-          format: audioFormat,
-          voiceUsed: 'openai-cloud',
-          duration: estimatedDuration,
-          durationFormatted: formatDuration(estimatedDuration),
-          creditsUsed: creditsToDeduct,
-          remainingCredits: (profile.credits || 0) - creditsToDeduct,
-        });
-
-      } catch (cloudError: any) {
-        console.error('Cloud TTS failed:', cloudError);
-        return NextResponse.json({ 
-          success: false, 
-          error: 'Voice generation temporarily unavailable. Please try again later.',
-          fallback: 'You can also use the desktop app for voice features.'
-        }, { status: 503 });
-      }
-    }
-
-    // --- LOCAL macOS TTS (only runs locally, not on Vercel) ---
-    // Get voice
+    // ============================================================
+    // DETERMINE VOICE TO USE
+    // ============================================================
     let voiceToUse = selectedVoice;
     
-    if (isCantonese) {
-      const voices = ['Aasing (Enhanced)', 'Aasing', 'Sinji'];
-      for (const v of voices) {
-        if (await voiceExists(v)) {
-          voiceToUse = v;
-          console.log('Using Cantonese voice:', v);
-          break;
+    if (!voiceToUse || voiceToUse === 'Auto-Male' || voiceToUse === 'Auto-Female') {
+      if (isCantonese) {
+        const voices = ['Aasing (Enhanced)', 'Aasing', 'Sinji'];
+        for (const v of voices) {
+          if (await voiceExists(v)) {
+            voiceToUse = v;
+            console.log('Using Cantonese voice:', v);
+            break;
+          }
         }
+      } else if (isMandarin) {
+        const voices = ['Tingting', 'Han (Enhanced)'];
+        for (const v of voices) {
+          if (await voiceExists(v)) {
+            voiceToUse = v;
+            console.log('Using Mandarin voice:', v);
+            break;
+          }
+        }
+      } else {
+        voiceToUse = 'Samantha';
       }
-    } else if (voiceToUse && await voiceExists(voiceToUse)) {
-      console.log('Using selected voice:', voiceToUse);
-    } else {
+    }
+
+    if (!voiceToUse) {
       voiceToUse = 'Samantha';
     }
 
     console.log('Final voice to use:', voiceToUse);
 
+    // ============================================================
+    // GENERATE AUDIO
+    // ============================================================
     let speechRate = 160;
     if (isEnglish) speechRate = 185;
     if (speed) speechRate = Math.round(speed * 175);
 
-    const tempTxt = path.join(os.tmpdir(), `full_${Date.now()}.txt`);
-    const tempAiff = path.join(os.tmpdir(), `full_${Date.now()}.aiff`);
-    const tempWav = path.join(os.tmpdir(), `full_${Date.now()}.wav`);
-
     try {
-      await fs.promises.writeFile(tempTxt, cleanScript, 'utf-8');
-      const sayCommand = `say -v "${voiceToUse}" -r ${speechRate} -f "${tempTxt}" -o "${tempAiff}"`;
-      console.log('Say Command:', sayCommand);
-      await execAsync(sayCommand);
-
-      const aiffBuffer = await fs.promises.readFile(tempAiff);
-      console.log('AIFF file size:', aiffBuffer.length, 'bytes');
-
-      if (!aiffBuffer || aiffBuffer.length === 0) {
-        throw new Error('Audio generation produced empty file');
-      }
-
-      // Try afconvert first
-      let wavBuffer: Buffer | null = null;
-      try {
-        const command = `afconvert -f WAVE -d LEI16@22050 "${tempAiff}" "${tempWav}"`;
-        await execAsync(command);
-        wavBuffer = await fs.promises.readFile(tempWav);
-        console.log('afconvert WAV size:', wavBuffer.length);
-        if (wavBuffer.toString('ascii', 0, 4) !== 'RIFF') {
-          wavBuffer = null;
-        }
-      } catch (afconvertError) {
-        console.error('afconvert error:', afconvertError);
-      }
-
+      // Generate audio using say and afconvert
+      const wavBuffer = await generateAndConvertAudio(cleanScript, voiceToUse, speechRate);
+      
       if (!wavBuffer || wavBuffer.length < 44) {
-        console.log('Falling back to manual conversion...');
-        wavBuffer = simpleAiffToWav(aiffBuffer);
+        throw new Error('Audio generation produced invalid file');
       }
-
-      if (!wavBuffer || wavBuffer.length < 44 || wavBuffer.toString('ascii', 0, 4) !== 'RIFF') {
-        throw new Error('Failed to convert AIFF to WAV');
-      }
+      
+      // Verify WAV header
+      const isWavValid = wavBuffer.toString('ascii', 0, 4) === 'RIFF';
+      console.log('Final WAV valid:', isWavValid);
+      console.log('Final WAV size:', wavBuffer.length, 'bytes');
 
       // Get audio duration
       let audioDuration = 0;
       try {
-        audioDuration = await getAudioDurationFfprobe(wavBuffer);
-        if (audioDuration === 0) {
-          audioDuration = await getAudioDuration(wavBuffer);
-        }
+        audioDuration = await getAudioDuration(wavBuffer);
         console.log('Audio duration:', audioDuration, 'seconds');
       } catch (e) {
         console.warn('Could not get audio duration:', e);
@@ -467,8 +275,9 @@ export async function POST(req: Request) {
 
       console.log('Final audio size:', audioBuffer.length);
       console.log('Final format:', audioFormat);
-      console.log('========== FULL GENERATION COMPLETE (LOCAL) ==========');
+      console.log('========== FULL GENERATION COMPLETE ==========');
 
+      // Deduct credits
       const creditsToDeduct = 2;
       await supabaseAdmin
         .from('profiles')
@@ -488,10 +297,12 @@ export async function POST(req: Request) {
         remainingCredits: (profile.credits || 0) - creditsToDeduct,
       });
 
-    } finally {
-      await fs.promises.unlink(tempTxt).catch(() => {});
-      await fs.promises.unlink(tempAiff).catch(() => {});
-      await fs.promises.unlink(tempWav).catch(() => {});
+    } catch (error: any) {
+      console.error('Generation error:', error);
+      return NextResponse.json({ 
+        success: false, 
+        error: error.message || 'TTS generation failed',
+      }, { status: 500 });
     }
 
   } catch (error: any) {
