@@ -178,12 +178,11 @@ function formatDuration(seconds: number): string {
   return `${mins}:${secs.toString().padStart(2, '0')}`;
 }
 
-// NEW: Generate TTS using OpenAI Cloud
-async function generateCloudTTS(text: string, language: string, speed: number = 1.0): Promise<Buffer> {
-  // Map language to OpenAI voice
+// Generate TTS using OpenAI Cloud
+async function generateCloudTTS(text: string, language: string): Promise<Buffer> {
   const voiceMap: Record<string, string> = {
     'Cantonese': 'nova',
-    'Mandarin': 'nova', 
+    'Mandarin': 'nova',
     'English': 'nova',
   };
   
@@ -201,7 +200,7 @@ async function generateCloudTTS(text: string, language: string, speed: number = 
         model: 'tts-1',
         voice: voiceMap[language] || 'nova',
         input: cleanText,
-        speed: Math.min(1.2, Math.max(0.8, speed)),
+        speed: 1.0,
         response_format: 'wav',
       }),
     });
@@ -209,7 +208,7 @@ async function generateCloudTTS(text: string, language: string, speed: number = 
     if (!response.ok) {
       const errorData = await response.json().catch(() => ({}));
       console.error('OpenAI TTS error response:', errorData);
-      throw new Error(`OpenAI TTS failed: ${response.status} - ${JSON.stringify(errorData)}`);
+      throw new Error(`OpenAI TTS failed: ${response.status}`);
     }
 
     const audioArrayBuffer = await response.arrayBuffer();
@@ -269,7 +268,7 @@ export async function POST(req: Request) {
       console.log('Using cloud TTS (OpenAI) for full generation...');
       
       try {
-        const audioBuffer = await generateCloudTTS(cleanScript, language, speed);
+        const audioBuffer = await generateCloudTTS(cleanScript, language);
         const audioFormat = 'wav';
         const audioBase64 = audioBuffer.toString('base64');
 

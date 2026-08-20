@@ -33,7 +33,7 @@ function cleanTextForTTS(text: string): string {
   return cleaned;
 }
 
-// Check if voice exists
+// Check if voice exists (macOS only)
 async function voiceExists(voiceName: string): Promise<boolean> {
   if (!voiceName) return false;
   
@@ -121,17 +121,16 @@ async function convertWithAfconvert(aiffPath: string, wavPath: string): Promise<
   }
 }
 
-// NEW: Generate TTS using a cloud service (OpenAI TTS example)
+// Generate TTS using OpenAI Cloud
 async function generateCloudTTS(text: string, language: string): Promise<Buffer> {
-  // Map language to voice
   const voiceMap: Record<string, string> = {
-    'Cantonese': 'nova', // Using OpenAI voice
+    'Cantonese': 'nova',
     'Mandarin': 'nova',
     'English': 'nova',
   };
   
-  // Clean the text
   const cleanText = cleanTextForTTS(text);
+  console.log('Cloud TTS text length:', cleanText.length);
   
   try {
     const response = await fetch('https://api.openai.com/v1/audio/speech', {
@@ -143,18 +142,22 @@ async function generateCloudTTS(text: string, language: string): Promise<Buffer>
       body: JSON.stringify({
         model: 'tts-1',
         voice: voiceMap[language] || 'nova',
-        input: cleanText,
+        input: cleanText.slice(0, 200), // Preview only first 200 chars
         speed: 1.0,
-        response_format: 'wav', // or 'mp3'
+        response_format: 'wav',
       }),
     });
 
     if (!response.ok) {
+      const errorData = await response.json().catch(() => ({}));
+      console.error('OpenAI TTS error response:', errorData);
       throw new Error(`OpenAI TTS failed: ${response.status}`);
     }
 
-    const audioBuffer = await response.arrayBuffer();
-    return Buffer.from(audioBuffer);
+    const audioArrayBuffer = await response.arrayBuffer();
+    const audioBuffer = Buffer.from(audioArrayBuffer);
+    console.log('Cloud TTS generated, size:', audioBuffer.length, 'bytes');
+    return audioBuffer;
   } catch (error) {
     console.error('Cloud TTS error:', error);
     throw error;
@@ -188,11 +191,14 @@ export async function POST(req: Request) {
         console.log('Cloud TTS generated, size:', audioBuffer.length);
         console.log('========== PREVIEW COMPLETE ==========');
         
-        return new NextResponse(audioBuffer, {
+        // Convert Buffer to Uint8Array for NextResponse compatibility
+        const audioData = new Uint8Array(audioBuffer);
+        
+        return new NextResponse(audioData, {
           status: 200,
           headers: {
             'Content-Type': 'audio/wav',
-            'Content-Length': audioBuffer.length.toString(),
+            'Content-Length': audioData.length.toString(),
             'Cache-Control': 'no-cache, no-store, must-revalidate',
             'X-Voice-Used': 'openai-cloud',
             'X-Language-Used': language,
