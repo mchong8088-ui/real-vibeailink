@@ -39,7 +39,7 @@ function cleanTextForTTS(text: string): string {
   return cleaned;
 }
 
-// Check if voice exists
+// Check if voice exists (macOS only)
 async function voiceExists(voiceName: string): Promise<boolean> {
   if (!voiceName) return false;
   
@@ -178,16 +178,51 @@ function formatDuration(seconds: number): string {
   return `${mins}:${secs.toString().padStart(2, '0')}`;
 }
 
-// SINGLE POST function - with early return inside
-export async function POST(req: Request) {
-  // If on Vercel, return a friendly error
-  if (isVercel) {
-    return NextResponse.json({ 
-      success: false, 
-      error: 'Voice generation is only available in development mode. Please use the desktop app for voice generation.' 
-    }, { status: 503 });
-  }
+// NEW: Generate TTS using OpenAI Cloud
+async function generateCloudTTS(text: string, language: string, speed: number = 1.0): Promise<Buffer> {
+  // Map language to OpenAI voice
+  const voiceMap: Record<string, string> = {
+    'Cantonese': 'nova',
+    'Mandarin': 'nova', 
+    'English': 'nova',
+  };
+  
+  const cleanText = cleanTextForTTS(text);
+  console.log('Cloud TTS text length:', cleanText.length);
+  
+  try {
+    const response = await fetch('https://api.openai.com/v1/audio/speech', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${process.env.OPENAI_API_KEY}`,
+      },
+      body: JSON.stringify({
+        model: 'tts-1',
+        voice: voiceMap[language] || 'nova',
+        input: cleanText,
+        speed: Math.min(1.2, Math.max(0.8, speed)),
+        response_format: 'wav',
+      }),
+    });
 
+    if (!response.ok) {
+      const errorData = await response.json().catch(() => ({}));
+      console.error('OpenAI TTS error response:', errorData);
+      throw new Error(`OpenAI TTS failed: ${response.status} - ${JSON.stringify(errorData)}`);
+    }
+
+    const audioArrayBuffer = await response.arrayBuffer();
+    const audioBuffer = Buffer.from(audioArrayBuffer);
+    console.log('Cloud TTS generated, size:', audioBuffer.length, 'bytes');
+    return audioBuffer;
+  } catch (error) {
+    console.error('Cloud TTS error:', error);
+    throw error;
+  }
+}
+
+export async function POST(req: Request) {
   try {
     const { userId, script, langCode, language, selectedVoice, speed, format = 'wav' } = await req.json();
 
@@ -196,6 +231,7 @@ export async function POST(req: Request) {
     console.log('Script length:', script?.length || 0);
     console.log('Language:', language);
     console.log('Format requested:', format);
+    console.log('Environment:', isVercel ? 'Vercel (cloud TTS)' : 'Local (macOS)');
 
     if (!userId) {
       return NextResponse.json({ success: false, error: 'Unauthorized' }, { status: 401 });
@@ -228,6 +264,53 @@ export async function POST(req: Request) {
     const isMandarin = langCode === 'zh-CN' || language === 'Mandarin';
     const isEnglish = langCode === 'en-US' || language === 'English';
 
+    // --- IF ON VERCEL: USE CLOUD TTS ---
+    if (isVercel) {
+      console.log('Using cloud TTS (OpenAI) for full generation...');
+      
+      try {
+        const audioBuffer = await generateCloudTTS(cleanScript, language, speed);
+        const audioFormat = 'wav';
+        const audioBase64 = audioBuffer.toString('base64');
+
+        // Estimate duration (OpenAI TTS doesn't return duration, so estimate)
+        const isChinese = /[\u4e00-\u9fff]/.test(cleanScript);
+        const estimatedDuration = isChinese 
+          ? Math.max(1.5, cleanScript.length / 4)
+          : Math.max(1.5, cleanScript.split(/\s+/).length / 3);
+
+        const creditsToDeduct = 2;
+        await supabaseAdmin
+          .from('profiles')
+          .update({ credits: (profile.credits || 0) - creditsToDeduct })
+          .eq('id', userId);
+
+        console.log('========== FULL GENERATION COMPLETE (CLOUD) ==========');
+        console.log('Audio size:', audioBuffer.length);
+        console.log('Format:', audioFormat);
+
+        return NextResponse.json({
+          success: true,
+          audio: audioBase64,
+          format: audioFormat,
+          voiceUsed: 'openai-cloud',
+          duration: estimatedDuration,
+          durationFormatted: formatDuration(estimatedDuration),
+          creditsUsed: creditsToDeduct,
+          remainingCredits: (profile.credits || 0) - creditsToDeduct,
+        });
+
+      } catch (cloudError: any) {
+        console.error('Cloud TTS failed:', cloudError);
+        return NextResponse.json({ 
+          success: false, 
+          error: 'Voice generation temporarily unavailable. Please try again later.',
+          fallback: 'You can also use the desktop app for voice features.'
+        }, { status: 503 });
+      }
+    }
+
+    // --- LOCAL macOS TTS (only runs locally, not on Vercel) ---
     // Get voice
     let voiceToUse = selectedVoice;
     
@@ -295,22 +378,17 @@ export async function POST(req: Request) {
       // Get audio duration
       let audioDuration = 0;
       try {
-        // Try ffprobe first (more accurate)
         audioDuration = await getAudioDurationFfprobe(wavBuffer);
         if (audioDuration === 0) {
-          // Fallback to afinfo
           audioDuration = await getAudioDuration(wavBuffer);
         }
         console.log('Audio duration:', audioDuration, 'seconds');
-        console.log('Duration formatted:', formatDuration(audioDuration));
       } catch (e) {
         console.warn('Could not get audio duration:', e);
-        // Estimate duration based on text length
         const isChinese = /[\u4e00-\u9fff]/.test(cleanScript);
-        const estimatedDuration = isChinese 
-          ? Math.max(1.5, cleanScript.length / 4) // Chinese: ~4 chars/sec
-          : Math.max(1.5, cleanScript.split(/\s+/).length / 3); // English: ~3 words/sec
-        audioDuration = estimatedDuration;
+        audioDuration = isChinese 
+          ? Math.max(1.5, cleanScript.length / 4)
+          : Math.max(1.5, cleanScript.split(/\s+/).length / 3);
         console.log('Estimated duration (fallback):', audioDuration, 'seconds');
       }
 
@@ -332,7 +410,7 @@ export async function POST(req: Request) {
 
       console.log('Final audio size:', audioBuffer.length);
       console.log('Final format:', audioFormat);
-      console.log('========== FULL GENERATION COMPLETE ==========');
+      console.log('========== FULL GENERATION COMPLETE (LOCAL) ==========');
 
       const creditsToDeduct = 2;
       await supabaseAdmin
@@ -340,7 +418,6 @@ export async function POST(req: Request) {
         .update({ credits: (profile.credits || 0) - creditsToDeduct })
         .eq('id', userId);
 
-      // Convert Buffer to base64 string for JSON response
       const audioBase64 = audioBuffer.toString('base64');
 
       return NextResponse.json({

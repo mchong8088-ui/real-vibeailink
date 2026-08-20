@@ -121,15 +121,47 @@ async function convertWithAfconvert(aiffPath: string, wavPath: string): Promise<
   }
 }
 
-// SINGLE POST function - with early return inside
-export async function POST(req: Request) {
-  // If on Vercel, return a friendly error
-  if (isVercel) {
-    return NextResponse.json({ 
-      error: 'Voice preview is only available in development mode. Please use the desktop app for voice generation.' 
-    }, { status: 503 });
-  }
+// NEW: Generate TTS using a cloud service (OpenAI TTS example)
+async function generateCloudTTS(text: string, language: string): Promise<Buffer> {
+  // Map language to voice
+  const voiceMap: Record<string, string> = {
+    'Cantonese': 'nova', // Using OpenAI voice
+    'Mandarin': 'nova',
+    'English': 'nova',
+  };
+  
+  // Clean the text
+  const cleanText = cleanTextForTTS(text);
+  
+  try {
+    const response = await fetch('https://api.openai.com/v1/audio/speech', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${process.env.OPENAI_API_KEY}`,
+      },
+      body: JSON.stringify({
+        model: 'tts-1',
+        voice: voiceMap[language] || 'nova',
+        input: cleanText,
+        speed: 1.0,
+        response_format: 'wav', // or 'mp3'
+      }),
+    });
 
+    if (!response.ok) {
+      throw new Error(`OpenAI TTS failed: ${response.status}`);
+    }
+
+    const audioBuffer = await response.arrayBuffer();
+    return Buffer.from(audioBuffer);
+  } catch (error) {
+    console.error('Cloud TTS error:', error);
+    throw error;
+  }
+}
+
+export async function POST(req: Request) {
   try {
     const { script, langCode, language, speed, voiceType, selectedVoice } = await req.json();
 
@@ -137,6 +169,7 @@ export async function POST(req: Request) {
     console.log('Original script:', script);
     console.log('Language:', language);
     console.log('Selected voice:', selectedVoice);
+    console.log('Environment:', isVercel ? 'Vercel (cloud)' : 'Local (macOS)');
 
     const cleanScript = cleanTextForTTS(script || '你好');
     console.log('Cleaned text:', cleanScript);
@@ -145,6 +178,38 @@ export async function POST(req: Request) {
     const isMandarin = langCode === 'zh-CN' || language === 'Mandarin';
     const isEnglish = langCode === 'en-US' || language === 'English';
 
+    // If on Vercel, use cloud TTS
+    if (isVercel) {
+      console.log('Using cloud TTS (OpenAI) for preview...');
+      
+      try {
+        const audioBuffer = await generateCloudTTS(cleanScript, language);
+        
+        console.log('Cloud TTS generated, size:', audioBuffer.length);
+        console.log('========== PREVIEW COMPLETE ==========');
+        
+        return new NextResponse(audioBuffer, {
+          status: 200,
+          headers: {
+            'Content-Type': 'audio/wav',
+            'Content-Length': audioBuffer.length.toString(),
+            'Cache-Control': 'no-cache, no-store, must-revalidate',
+            'X-Voice-Used': 'openai-cloud',
+            'X-Language-Used': language,
+            'X-Conversion-Method': 'cloud-tts',
+          },
+        });
+      } catch (cloudError: any) {
+        console.error('Cloud TTS failed:', cloudError);
+        return NextResponse.json({ 
+          success: false, 
+          error: 'Voice generation temporarily unavailable. Please try again later.',
+          fallback: 'You can also use the desktop app for voice features.'
+        }, { status: 503 });
+      }
+    }
+
+    // --- Local macOS TTS (only runs locally, not on Vercel) ---
     // Get voice
     let voiceToUse = selectedVoice;
     
@@ -192,6 +257,7 @@ export async function POST(req: Request) {
       let conversionMethod = 'manual';
       
       try {
+        // Write AIFF to temp file for afconvert
         await fs.promises.writeFile(tempAiff, aiffBuffer);
         const afconvertResult = await convertWithAfconvert(tempAiff, tempWav);
         
@@ -207,6 +273,7 @@ export async function POST(req: Request) {
         console.error('afconvert error:', afconvertError);
       }
 
+      // If afconvert failed, use manual conversion
       if (!wavBuffer || wavBuffer.length < 44) {
         console.log('Falling back to manual AIFF to WAV conversion...');
         wavBuffer = simpleAiffToWav(aiffBuffer);
@@ -221,6 +288,7 @@ export async function POST(req: Request) {
       console.log('Conversion method:', conversionMethod);
       console.log('========== PREVIEW COMPLETE ==========');
 
+      // Convert Buffer to Uint8Array for NextResponse compatibility
       const wavData = new Uint8Array(wavBuffer);
       
       return new NextResponse(wavData, {
