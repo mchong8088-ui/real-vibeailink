@@ -8,6 +8,9 @@ import os from 'os';
 
 const execAsync = promisify(exec);
 
+// Check if running on Vercel
+const isVercel = process.env.VERCEL === 'true';
+
 const supabaseAdmin = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL!,
   process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
@@ -175,7 +178,16 @@ function formatDuration(seconds: number): string {
   return `${mins}:${secs.toString().padStart(2, '0')}`;
 }
 
+// SINGLE POST function - with early return inside
 export async function POST(req: Request) {
+  // If on Vercel, return a friendly error
+  if (isVercel) {
+    return NextResponse.json({ 
+      success: false, 
+      error: 'Voice generation is only available in development mode. Please use the desktop app for voice generation.' 
+    }, { status: 503 });
+  }
+
   try {
     const { userId, script, langCode, language, selectedVoice, speed, format = 'wav' } = await req.json();
 

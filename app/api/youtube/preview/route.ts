@@ -7,6 +7,9 @@ import os from 'os';
 
 const execAsync = promisify(exec);
 
+// Check if running on Vercel
+const isVercel = process.env.VERCEL === 'true';
+
 // Clean text for TTS
 function cleanTextForTTS(text: string): string {
   if (!text) return '你好';
@@ -118,7 +121,15 @@ async function convertWithAfconvert(aiffPath: string, wavPath: string): Promise<
   }
 }
 
+// SINGLE POST function - with early return inside
 export async function POST(req: Request) {
+  // If on Vercel, return a friendly error
+  if (isVercel) {
+    return NextResponse.json({ 
+      error: 'Voice preview is only available in development mode. Please use the desktop app for voice generation.' 
+    }, { status: 503 });
+  }
+
   try {
     const { script, langCode, language, speed, voiceType, selectedVoice } = await req.json();
 
@@ -181,7 +192,6 @@ export async function POST(req: Request) {
       let conversionMethod = 'manual';
       
       try {
-        // Write AIFF to temp file for afconvert
         await fs.promises.writeFile(tempAiff, aiffBuffer);
         const afconvertResult = await convertWithAfconvert(tempAiff, tempWav);
         
@@ -197,7 +207,6 @@ export async function POST(req: Request) {
         console.error('afconvert error:', afconvertError);
       }
 
-      // If afconvert failed, use manual conversion
       if (!wavBuffer || wavBuffer.length < 44) {
         console.log('Falling back to manual AIFF to WAV conversion...');
         wavBuffer = simpleAiffToWav(aiffBuffer);
@@ -212,7 +221,6 @@ export async function POST(req: Request) {
       console.log('Conversion method:', conversionMethod);
       console.log('========== PREVIEW COMPLETE ==========');
 
-      // Convert Buffer to Uint8Array for NextResponse compatibility
       const wavData = new Uint8Array(wavBuffer);
       
       return new NextResponse(wavData, {
