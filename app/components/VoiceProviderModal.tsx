@@ -3,7 +3,7 @@ import React, { useState, useRef, useEffect } from 'react';
 import { 
   X, Upload, Play, Pause, Download, Sparkles, 
   FileText, Music, Video, Globe, Settings, AlertCircle, Loader2,
-  User, Send, CheckSquare, Square, Mail
+  User, Send, CheckSquare, Square, Mail, Gauge, Mic
 } from 'lucide-react';
 import { supabase } from '../lib/supabase';
 import { VoiceSelector } from './layout/VoiceSelector';
@@ -54,7 +54,7 @@ export const VoiceProviderModal: React.FC<VoiceProviderModalProps> = ({
   
   // Voice selection state
   const [availableVoices, setAvailableVoices] = useState<Voice[]>([]);
-  const [selectedVoice, setSelectedVoice] = useState<string>('Aasing (Enhanced)');
+  const [selectedVoice, setSelectedVoice] = useState<string>('Auto-Male');
   const [isLoadingVoices, setIsLoadingVoices] = useState(false);
 
   const [isLoading, setIsLoading] = useState(false);
@@ -120,6 +120,7 @@ export const VoiceProviderModal: React.FC<VoiceProviderModalProps> = ({
           (filterLang === 'English' && v.language.includes('en_'))
         );
         
+        // Set the first available voice for the language
         if (filtered.length > 0) {
           setSelectedVoice(filtered[0].name);
         } else if (data.voices.length > 0) {
@@ -133,6 +134,43 @@ export const VoiceProviderModal: React.FC<VoiceProviderModalProps> = ({
     } finally {
       setIsLoadingVoices(false);
     }
+  };
+
+  // NEW: Get voice selection with Auto-Male/Female support
+  const getSelectedVoiceName = (): string => {
+    if (selectedVoice === 'Auto-Male') {
+      // Auto-select male voice based on language
+      const maleVoices: Record<string, string[]> = {
+        'Cantonese': ['Aasing (Enhanced)', 'Aasing'],
+        'Mandarin': ['Han (Enhanced)'],
+        'English': ['Evan (Enhanced)', 'Daniel']
+      };
+      const voices = maleVoices[language] || ['Samantha'];
+      for (const v of voices) {
+        if (availableVoices.some(av => av.name === v)) {
+          return v;
+        }
+      }
+      return voices[0] || 'Samantha';
+    }
+    
+    if (selectedVoice === 'Auto-Female') {
+      // Auto-select female voice based on language
+      const femaleVoices: Record<string, string[]> = {
+        'Cantonese': ['Sinji'],
+        'Mandarin': ['Tingting', 'Lili (Enhanced)'],
+        'English': ['Samantha', 'Ava (Enhanced)']
+      };
+      const voices = femaleVoices[language] || ['Samantha'];
+      for (const v of voices) {
+        if (availableVoices.some(av => av.name === v)) {
+          return v;
+        }
+      }
+      return voices[0] || 'Samantha';
+    }
+    
+    return selectedVoice;
   };
 
   const handleVoiceChange = (voice: string) => {
@@ -201,11 +239,9 @@ export const VoiceProviderModal: React.FC<VoiceProviderModalProps> = ({
     setSurvey(prev => ({ ...prev, isSubmitting: true }));
 
     try {
-      // Get user info
       const userEmail = propUser?.email || 'anonymous@user.com';
       const userName = propUser?.user_metadata?.full_name || propUser?.email?.split('@')[0] || 'Anonymous';
 
-      // Build email content
       const selectedLabels = surveyOptions
         .filter(opt => survey.selectedOptions.includes(opt.id))
         .map(opt => `• ${opt.label}`)
@@ -228,7 +264,6 @@ export const VoiceProviderModal: React.FC<VoiceProviderModalProps> = ({
         This survey was submitted from the Voice Provider Studio.
       `;
 
-      // Send email via API
       const response = await fetch('/api/send-survey', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -319,6 +354,7 @@ export const VoiceProviderModal: React.FC<VoiceProviderModalProps> = ({
     setPreviewError(null);
 
     const langCode = languageCodeMap[language] || 'zh-HK';
+    const actualVoice = getSelectedVoiceName();
 
     try {
       const res = await fetch('/api/youtube/preview', {
@@ -330,7 +366,7 @@ export const VoiceProviderModal: React.FC<VoiceProviderModalProps> = ({
           langCode,
           speed,
           voiceType,
-          selectedVoice
+          selectedVoice: actualVoice // Pass the resolved voice name
         }),
       });
 
@@ -402,6 +438,7 @@ export const VoiceProviderModal: React.FC<VoiceProviderModalProps> = ({
     setIsLoading(true);
 
     const langCode = languageCodeMap[language] || 'zh-HK';
+    const actualVoice = getSelectedVoiceName();
 
     try {
       const voiceRes = await fetch('/api/youtube/voice', {
@@ -414,7 +451,7 @@ export const VoiceProviderModal: React.FC<VoiceProviderModalProps> = ({
           langCode,
           useGateway: voiceType === 'gateway',
           speed,
-          selectedVoice,
+          selectedVoice: actualVoice,
           format: downloadFormat,
         }),
       });
@@ -725,6 +762,50 @@ export const VoiceProviderModal: React.FC<VoiceProviderModalProps> = ({
                 mode="voice"
               />
             </div>
+          </div>
+        </div>
+
+        {/* NEW: Speed Control Bar */}
+        <div style={{ marginBottom: '16px' }}>
+          <label style={{ 
+            fontSize: '12px', 
+            fontWeight: '500', 
+            color: '#374151', 
+            display: 'flex', 
+            alignItems: 'center', 
+            gap: '8px',
+            marginBottom: '4px'
+          }}>
+            <Gauge size={16} />
+            Speech Speed: <span style={{ fontWeight: 'bold', color: '#2563EB' }}>{speed.toFixed(1)}x</span>
+            <span style={{ fontSize: '10px', color: '#6B7280', fontWeight: 'normal' }}>
+              ({speed < 0.9 ? 'Slower' : speed > 1.1 ? 'Faster' : 'Normal'})
+            </span>
+          </label>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+            <span style={{ fontSize: '10px', color: '#6B7280' }}>🐢</span>
+            <input
+              type="range"
+              min="0.5"
+              max="1.5"
+              step="0.05"
+              value={speed}
+              onChange={(e) => setSpeed(parseFloat(e.target.value))}
+              style={{ 
+                flex: 1,
+                height: '4px',
+                borderRadius: '2px',
+                backgroundColor: '#E5E7EB',
+                outline: 'none',
+                WebkitAppearance: 'none'
+              }}
+            />
+            <span style={{ fontSize: '10px', color: '#6B7280' }}>🐇</span>
+          </div>
+          <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '9px', color: '#9CA3AF', marginTop: '2px' }}>
+            <span>Slow (0.5x)</span>
+            <span>Normal (1.0x)</span>
+            <span>Fast (1.5x)</span>
           </div>
         </div>
 
