@@ -55,7 +55,7 @@ export const VoiceProviderModal: React.FC<VoiceProviderModalProps> = ({
   
   // Voice selection state
   const [availableVoices, setAvailableVoices] = useState<Voice[]>([]);
-  const [selectedVoice, setSelectedVoice] = useState<string>('Auto-Male');
+  const [selectedVoice, setSelectedVoice] = useState<string>('Aasing (Enhanced)');
   const [isLoadingVoices, setIsLoadingVoices] = useState(false);
 
   const [isLoading, setIsLoading] = useState(false);
@@ -95,6 +95,16 @@ export const VoiceProviderModal: React.FC<VoiceProviderModalProps> = ({
   ];
 
   // ============================================
+  // CHECK: Web vs Local
+  // ============================================
+  const isWeb = typeof window !== 'undefined' && 
+    (window.location.hostname.includes('vercel.app') || 
+     window.location.hostname.includes('vibeailink.com'));
+  
+  // Cantonese is only fully supported on local macOS with say command
+  const isCantoneseAvailable = !isWeb;
+
+  // ============================================
   // DEFINE FUNCTIONS FIRST
   // ============================================
 
@@ -117,6 +127,24 @@ export const VoiceProviderModal: React.FC<VoiceProviderModalProps> = ({
 
   const handleVoiceChange = (voice: string) => {
     setSelectedVoice(voice);
+  };
+
+  const handleLanguageChange = (newLang: 'Cantonese' | 'Mandarin' | 'English') => {
+    if (isWeb && newLang === 'Cantonese') {
+      const msg = langKey === 'Traditional Chinese' 
+        ? '粵語語音在網頁版僅支援國語發音（Mandarin fallback）。\n\n如需純正粵語發音，請使用桌面版應用程式（macOS）。'
+        : langKey === 'Simplified Chinese'
+        ? '粤语语音在网页版仅支持普通话发音（Mandarin fallback）。\n\n如需纯正粤语发音，请使用桌面版应用程序（macOS）。'
+        : 'Cantonese on web uses Mandarin pronunciation (fallback).\n\nFor authentic Cantonese, please use the desktop app (macOS).';
+      
+      alert(msg);
+      setLanguage('Mandarin');
+      loadAvailableVoices();
+      return;
+    }
+    
+    setLanguage(newLang);
+    loadAvailableVoices();
   };
 
   const containsChinese = (text: string): boolean => {
@@ -248,6 +276,15 @@ export const VoiceProviderModal: React.FC<VoiceProviderModalProps> = ({
     }
   }, [isOpen]);
 
+  // Auto-switch Cantonese to Mandarin on web
+  useEffect(() => {
+    if (isWeb && language === 'Cantonese') {
+      console.log('Cantonese auto-switched to Mandarin on web');
+      setLanguage('Mandarin');
+      loadAvailableVoices();
+    }
+  }, [isWeb]);
+
   useEffect(() => {
     return () => {
       if (audioRef.current?.src) {
@@ -284,10 +321,14 @@ export const VoiceProviderModal: React.FC<VoiceProviderModalProps> = ({
     
     if (isChineseText(script) && language === 'English') {
       const confirmSwitch = confirm(
-        "You have Chinese text but selected English voice. This will not pronounce correctly. Would you like to switch to Cantonese?"
+        "You have Chinese text but selected English voice. This will not pronounce correctly. Would you like to switch to Cantonese or Mandarin?"
       );
       if (confirmSwitch) {
-        setLanguage('Cantonese');
+        if (isWeb) {
+          setLanguage('Mandarin');
+        } else {
+          setLanguage('Cantonese');
+        }
         await loadAvailableVoices();
       }
     }
@@ -368,10 +409,14 @@ export const VoiceProviderModal: React.FC<VoiceProviderModalProps> = ({
 
     if (isChineseText(script) && language === 'English') {
       const confirmSwitch = confirm(
-        "You have Chinese text but selected English voice. This will not pronounce correctly. Would you like to switch to Cantonese?"
+        "You have Chinese text but selected English voice. This will not pronounce correctly. Would you like to switch to Cantonese or Mandarin?"
       );
       if (confirmSwitch) {
-        setLanguage('Cantonese');
+        if (isWeb) {
+          setLanguage('Mandarin');
+        } else {
+          setLanguage('Cantonese');
+        }
         await loadAvailableVoices();
       }
     }
@@ -552,15 +597,28 @@ export const VoiceProviderModal: React.FC<VoiceProviderModalProps> = ({
   };
 
   // Get language-specific text for voice selector explanation
-  // Use langKey prop instead of language state
   const getVoiceSelectorHelpText = () => {
     if (langKey === 'Traditional Chinese') {
-      return '💡 如果您的電腦未安裝語音，請選擇「自動男聲」或「自動女聲」以使用雲端語音';
+      return '💡 如果您的電腦未安裝語音，請選擇「自動男聲」或「自動女聲」以使用雲端語音。\n📌 粵語在網頁版將使用國語發音作為替代。';
     } else if (langKey === 'Simplified Chinese') {
-      return '💡 如果您的电脑未安装语音，请选择「自动男声」或「自动女声」以使用云端语音';
+      return '💡 如果您的电脑未安装语音，请选择「自动男声」或「自动女声」以使用云端语音。\n📌 粤语在网页版将使用普通话发音作为替代。';
     } else {
-      return '💡 If you don\'t have voices installed, select "Auto-Male" or "Auto-Female" for cloud voices';
+      return '💡 If you don\'t have voices installed, select "Auto-Male" or "Auto-Female" for cloud voices.\n📌 Cantonese on web uses Mandarin pronunciation as fallback.';
     }
+  };
+
+  // Get Cantonese warning for web
+  const getCantoneseWebWarning = () => {
+    if (isWeb && language === 'Cantonese') {
+      if (langKey === 'Traditional Chinese') {
+        return '⚠️ 粵語在網頁版將使用國語發音。如需純正粵語，請使用桌面版 macOS 應用程式。';
+      } else if (langKey === 'Simplified Chinese') {
+        return '⚠️ 粤语在网页版将使用普通话发音。如需纯正粤语，请使用桌面版 macOS 应用程序。';
+      } else {
+        return '⚠️ Cantonese on web uses Mandarin pronunciation. For authentic Cantonese, use the desktop macOS app.';
+      }
+    }
+    return null;
   };
 
   // ============================================
@@ -631,8 +689,7 @@ export const VoiceProviderModal: React.FC<VoiceProviderModalProps> = ({
               💡 Tip: Your text appears to be in Chinese. For best results, select <strong>{suggestedLang}</strong> as the Voice Language.
               <button
                 onClick={() => {
-                  setLanguage(suggestedLang as any);
-                  loadAvailableVoices();
+                  handleLanguageChange(suggestedLang as any);
                 }}
                 style={{
                   marginLeft: '8px',
@@ -647,6 +704,19 @@ export const VoiceProviderModal: React.FC<VoiceProviderModalProps> = ({
               >
                 Switch to {suggestedLang}
               </button>
+            </div>
+          )}
+          {getCantoneseWebWarning() && (
+            <div style={{
+              marginTop: '8px',
+              padding: '8px 12px',
+              backgroundColor: '#FEF3C7',
+              border: '1px solid #F59E0B',
+              borderRadius: '6px',
+              fontSize: '12px',
+              color: '#92400E'
+            }}>
+              {getCantoneseWebWarning()}
             </div>
           )}
           {getLanguageWarning() && (
@@ -669,13 +739,19 @@ export const VoiceProviderModal: React.FC<VoiceProviderModalProps> = ({
           <div>
             <label style={{ fontSize: '12px', fontWeight: '500', color: '#374151', display: 'block', marginBottom: '4px' }}>Voice Language</label>
             <select value={language} onChange={(e: any) => {
-              setLanguage(e.target.value);
-              loadAvailableVoices();
+              handleLanguageChange(e.target.value);
             }} style={{ width: '100%', padding: '6px 10px', borderRadius: '6px', border: '1px solid #D1D5DB', fontSize: '12px' }}>
-              <option value="Cantonese">Cantonese (粵語 - zh-HK)</option>
+              <option value="Cantonese" disabled={isWeb}>
+                Cantonese (粵語 - zh-HK) {isWeb && '⚠️ Web (Mandarin fallback)'}
+              </option>
               <option value="Mandarin">Mandarin (國語 - zh-CN)</option>
               <option value="English">English (en-US)</option>
             </select>
+            {isWeb && (
+              <div style={{ fontSize: '10px', color: '#6B7280', marginTop: '4px' }}>
+                💡 Cantonese on web uses Mandarin pronunciation (fallback)
+              </div>
+            )}
           </div>
 
           <div>
@@ -714,7 +790,6 @@ export const VoiceProviderModal: React.FC<VoiceProviderModalProps> = ({
                 mode="voice"
               />
             </div>
-            {/* Help text for auto voice - using langKey prop */}
             <div style={{
               fontSize: '10px',
               color: '#6B7280',
