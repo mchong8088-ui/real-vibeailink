@@ -164,6 +164,11 @@ async function generateCloudTTS(text: string, language: string): Promise<Buffer>
   }
 }
 
+// Check if voice is an auto voice
+function isAutoVoice(voice: string): boolean {
+  return voice === 'Auto-Male' || voice === 'Auto-Female';
+}
+
 export async function POST(req: Request) {
   try {
     const { script, langCode, language, speed, voiceType, selectedVoice } = await req.json();
@@ -181,9 +186,9 @@ export async function POST(req: Request) {
     const isMandarin = langCode === 'zh-CN' || language === 'Mandarin';
     const isEnglish = langCode === 'en-US' || language === 'English';
 
-    // If on Vercel, use cloud TTS
-    if (isVercel) {
-      console.log('Using cloud TTS (OpenAI) for preview...');
+    // NEW: Check if Auto-Male or Auto-Female is selected - ALWAYS use cloud TTS
+    if (isAutoVoice(selectedVoice)) {
+      console.log('Auto voice selected, using cloud TTS (OpenAI) for preview...');
       
       try {
         const audioBuffer = await generateCloudTTS(cleanScript, language);
@@ -191,7 +196,39 @@ export async function POST(req: Request) {
         console.log('Cloud TTS generated, size:', audioBuffer.length);
         console.log('========== PREVIEW COMPLETE ==========');
         
-        // Convert Buffer to Uint8Array for NextResponse compatibility
+        const audioData = new Uint8Array(audioBuffer);
+        
+        return new NextResponse(audioData, {
+          status: 200,
+          headers: {
+            'Content-Type': 'audio/wav',
+            'Content-Length': audioData.length.toString(),
+            'Cache-Control': 'no-cache, no-store, must-revalidate',
+            'X-Voice-Used': selectedVoice,
+            'X-Language-Used': language,
+            'X-Conversion-Method': 'cloud-tts',
+          },
+        });
+      } catch (cloudError: any) {
+        console.error('Cloud TTS failed:', cloudError);
+        return NextResponse.json({ 
+          success: false, 
+          error: 'Voice generation temporarily unavailable. Please try again later.',
+          fallback: 'You can also use the desktop app for voice features.'
+        }, { status: 503 });
+      }
+    }
+
+    // If on Vercel and NOT auto voice, also use cloud TTS
+    if (isVercel) {
+      console.log('On Vercel, using cloud TTS (OpenAI) for preview...');
+      
+      try {
+        const audioBuffer = await generateCloudTTS(cleanScript, language);
+        
+        console.log('Cloud TTS generated, size:', audioBuffer.length);
+        console.log('========== PREVIEW COMPLETE ==========');
+        
         const audioData = new Uint8Array(audioBuffer);
         
         return new NextResponse(audioData, {
@@ -215,7 +252,7 @@ export async function POST(req: Request) {
       }
     }
 
-    // --- Local macOS TTS (only runs locally, not on Vercel) ---
+    // --- LOCAL macOS TTS (only runs locally, not on Vercel) ---
     // Get voice
     let voiceToUse = selectedVoice;
     
@@ -263,7 +300,6 @@ export async function POST(req: Request) {
       let conversionMethod = 'manual';
       
       try {
-        // Write AIFF to temp file for afconvert
         await fs.promises.writeFile(tempAiff, aiffBuffer);
         const afconvertResult = await convertWithAfconvert(tempAiff, tempWav);
         
@@ -279,7 +315,6 @@ export async function POST(req: Request) {
         console.error('afconvert error:', afconvertError);
       }
 
-      // If afconvert failed, use manual conversion
       if (!wavBuffer || wavBuffer.length < 44) {
         console.log('Falling back to manual AIFF to WAV conversion...');
         wavBuffer = simpleAiffToWav(aiffBuffer);
@@ -294,7 +329,6 @@ export async function POST(req: Request) {
       console.log('Conversion method:', conversionMethod);
       console.log('========== PREVIEW COMPLETE ==========');
 
-      // Convert Buffer to Uint8Array for NextResponse compatibility
       const wavData = new Uint8Array(wavBuffer);
       
       return new NextResponse(wavData, {

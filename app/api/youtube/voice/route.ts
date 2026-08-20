@@ -15,7 +15,70 @@ const supabaseAdmin = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL!,
   process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
 );
+// Check if voice is an auto voice
+function isAutoVoice(voice: string): boolean {
+  return voice === 'Auto-Male' || voice === 'Auto-Female';
+}
 
+export async function POST(req: Request) {
+  try {
+    const { userId, script, langCode, language, selectedVoice, speed, format = 'wav' } = await req.json();
+
+    console.log('========== FULL GENERATION REQUEST ==========');
+    console.log('User ID:', userId);
+    console.log('Script length:', script?.length || 0);
+    console.log('Language:', language);
+    console.log('Format requested:', format);
+    console.log('Selected voice:', selectedVoice);
+    console.log('Environment:', isVercel ? 'Vercel (cloud TTS)' : 'Local (macOS)');
+
+    // NEW: If Auto-Male or Auto-Female is selected, use cloud TTS
+    if (isAutoVoice(selectedVoice)) {
+      console.log('Auto voice selected, using cloud TTS (OpenAI) for full generation...');
+      
+      try {
+        const cleanScript = cleanTextForTTS(script || '你好');
+        const audioBuffer = await generateCloudTTS(cleanScript, language);
+        const audioFormat = 'wav';
+        const audioBase64 = audioBuffer.toString('base64');
+
+        const isChinese = /[\u4e00-\u9fff]/.test(cleanScript);
+        const estimatedDuration = isChinese 
+          ? Math.max(1.5, cleanScript.length / 4)
+          : Math.max(1.5, cleanScript.split(/\s+/).length / 3);
+
+        const creditsToDeduct = 2;
+        await supabaseAdmin
+          .from('profiles')
+          .update({ credits: (profile.credits || 0) - creditsToDeduct })
+          .eq('id', userId);
+
+        console.log('========== FULL GENERATION COMPLETE (CLOUD) ==========');
+        console.log('Audio size:', audioBuffer.length);
+        console.log('Format:', audioFormat);
+
+        return NextResponse.json({
+          success: true,
+          audio: audioBase64,
+          format: audioFormat,
+          voiceUsed: selectedVoice,
+          duration: estimatedDuration,
+          durationFormatted: formatDuration(estimatedDuration),
+          creditsUsed: creditsToDeduct,
+          remainingCredits: (profile.credits || 0) - creditsToDeduct,
+        });
+
+      } catch (cloudError: any) {
+        console.error('Cloud TTS failed:', cloudError);
+        return NextResponse.json({ 
+          success: false, 
+          error: 'Voice generation temporarily unavailable. Please try again later.',
+          fallback: 'You can also use the desktop app for voice features.'
+        }, { status: 503 });
+      }
+    }
+
+    // ... rest of your existing code (profile fetching, local TTS, etc.)
 // Clean text for TTS
 function cleanTextForTTS(text: string): string {
   if (!text) return '你好';
