@@ -8,6 +8,9 @@ import os from 'os';
 
 const execAsync = promisify(exec);
 
+// Check if running on Vercel
+const isVercel = process.env.VERCEL === 'true';
+
 const supabaseAdmin = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL!,
   process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
@@ -36,9 +39,14 @@ function cleanTextForTTS(text: string): string {
   return cleaned;
 }
 
-// Check if voice exists
+// Check if voice exists (macOS only)
 async function voiceExists(voiceName: string): Promise<boolean> {
   if (!voiceName) return false;
+  
+  if (isVercel) {
+    console.log('On Vercel - skipping voice existence check');
+    return false;
+  }
   
   try {
     const { stdout } = await execAsync(`say -v "?"`);
@@ -55,48 +63,89 @@ async function voiceExists(voiceName: string): Promise<boolean> {
   }
 }
 
-// Generate audio using say command and convert with afconvert
-async function generateAndConvertAudio(text: string, voice: string, rate: number): Promise<Buffer> {
-  const tempTxt = path.join(os.tmpdir(), `full_${Date.now()}.txt`);
-  const tempAiff = path.join(os.tmpdir(), `full_${Date.now()}.aiff`);
-  const tempWav = path.join(os.tmpdir(), `full_${Date.now()}.wav`);
+// Generate TTS using OpenAI Cloud (Mandarin/English)
+async function generateOpenAITTS(text: string, language: string, speed: number = 1.0, selectedVoice: string = 'Auto-Female'): Promise<Buffer | null> {
+  const cleanText = cleanTextForTTS(text);
+  console.log('OpenAI TTS text length:', cleanText.length);
+  
+  const getVoice = (): string => {
+    if (selectedVoice === 'Auto-Male') {
+      return 'onyx';
+    }
+    if (selectedVoice === 'Auto-Female') {
+      return 'nova';
+    }
+    return 'nova';
+  };
   
   try {
-    // Step 1: Generate AIFF using say
+    const response = await fetch('https://api.openai.com/v1/audio/speech', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${process.env.OPENAI_API_KEY}`,
+      },
+      body: JSON.stringify({
+        model: 'tts-1',
+        voice: getVoice(),
+        input: cleanText,
+        speed: Math.min(1.5, Math.max(0.5, speed)),
+        response_format: 'wav',
+      }),
+    });
+
+    if (!response.ok) {
+      const errorData = await response.json().catch(() => ({}));
+      console.error('OpenAI TTS error response:', errorData);
+      return null;
+    }
+
+    const audioArrayBuffer = await response.arrayBuffer();
+    const audioBuffer = Buffer.from(audioArrayBuffer);
+    console.log('OpenAI TTS generated, size:', audioBuffer.length, 'bytes');
+    return audioBuffer;
+  } catch (error) {
+    console.error('OpenAI TTS error:', error);
+    return null;
+  }
+}
+
+// Generate audio using say command (macOS only)
+async function generateWithSay(text: string, voice: string, rate: number): Promise<Buffer> {
+  const tempTxt = path.join(os.tmpdir(), `full_${Date.now()}.txt`);
+  const tempAiff = path.join(os.tmpdir(), `full_${Date.now()}.aiff`);
+  
+  try {
     await fs.promises.writeFile(tempTxt, text, 'utf-8');
     
-    const sayCommand = `say -v "${voice}" -r ${rate} -f "${tempTxt}" -o "${tempAiff}"`;
-    console.log('Say Command:', sayCommand);
-    await execAsync(sayCommand, { shell: '/bin/bash' });
+    const command = `say -v "${voice}" -r ${rate} -f "${tempTxt}" -o "${tempAiff}"`;
+    console.log('Say Command:', command);
+    await execAsync(command, { shell: '/bin/bash' });
     
-    // Step 2: Convert AIFF to WAV using afconvert (macOS built-in)
-    const afconvertCommand = `afconvert -f WAVE -d LEI16@22050 "${tempAiff}" "${tempWav}"`;
-    console.log('Afconvert Command:', afconvertCommand);
-    await execAsync(afconvertCommand, { shell: '/bin/bash' });
-    
-    // Step 3: Read the WAV file
-    const wavBuffer = await fs.promises.readFile(tempWav);
-    console.log('WAV size from afconvert:', wavBuffer.length, 'bytes');
-    
-    // Verify WAV header
-    const isWav = wavBuffer.toString('ascii', 0, 4) === 'RIFF';
-    console.log('Is valid WAV from afconvert?', isWav);
-    
-    if (!isWav) {
-      console.error('afconvert produced invalid WAV, trying fallback...');
-      // Fallback: try to convert with different settings
-      const fallbackCommand = `afconvert -f WAVE -d LEI16 "${tempAiff}" "${tempWav}"`;
-      console.log('Fallback afconvert:', fallbackCommand);
-      await execAsync(fallbackCommand, { shell: '/bin/bash' });
-      const fallbackWav = await fs.promises.readFile(tempWav);
-      console.log('Fallback WAV size:', fallbackWav.length);
-      return fallbackWav;
-    }
-    
-    return wavBuffer;
+    const aiffBuffer = await fs.promises.readFile(tempAiff);
+    console.log('AIFF size:', aiffBuffer.length, 'bytes');
+    return aiffBuffer;
     
   } finally {
     await fs.promises.unlink(tempTxt).catch(() => {});
+    await fs.promises.unlink(tempAiff).catch(() => {});
+  }
+}
+
+// Convert AIFF to WAV using afconvert (macOS only)
+async function convertWithAfconvert(aiffBuffer: Buffer): Promise<Buffer> {
+  const tempAiff = path.join(os.tmpdir(), `temp_${Date.now()}.aiff`);
+  const tempWav = path.join(os.tmpdir(), `temp_${Date.now()}.wav`);
+  
+  try {
+    await fs.promises.writeFile(tempAiff, aiffBuffer);
+    const command = `afconvert -f WAVE -d LEI16@22050 "${tempAiff}" "${tempWav}"`;
+    console.log('Afconvert Command:', command);
+    await execAsync(command, { shell: '/bin/bash' });
+    const wavBuffer = await fs.promises.readFile(tempWav);
+    console.log('WAV size from afconvert:', wavBuffer.length, 'bytes');
+    return wavBuffer;
+  } finally {
     await fs.promises.unlink(tempAiff).catch(() => {});
     await fs.promises.unlink(tempWav).catch(() => {});
   }
@@ -156,6 +205,7 @@ export async function POST(req: Request) {
     console.log('Language:', language);
     console.log('Selected voice:', selectedVoice);
     console.log('Format requested:', format);
+    console.log('Is Vercel?', isVercel);
 
     if (!userId) {
       return NextResponse.json({ success: false, error: 'Unauthorized' }, { status: 401 });
@@ -189,8 +239,93 @@ export async function POST(req: Request) {
     const isEnglish = langCode === 'en-US' || language === 'English';
 
     // ============================================================
-    // DETERMINE VOICE TO USE
+    // ON VERCEL - ALWAYS USE CLOUD TTS
     // ============================================================
+    if (isVercel) {
+      console.log('On Vercel - using cloud TTS (OpenAI)');
+      
+      // For Cantonese on Vercel, use Mandarin fallback
+      if (isCantonese) {
+        console.log('Cantonese on Vercel - using Mandarin fallback with OpenAI');
+        try {
+          const audioBuffer = await generateOpenAITTS(cleanScript, 'Mandarin', speed || 1.0, selectedVoice || 'Auto-Female');
+          if (audioBuffer) {
+            const audioBase64 = audioBuffer.toString('base64');
+            const estimatedDuration = Math.max(1.5, cleanScript.length / 4);
+            
+            const creditsToDeduct = 2;
+            await supabaseAdmin
+              .from('profiles')
+              .update({ credits: (profile.credits || 0) - creditsToDeduct })
+              .eq('id', userId);
+
+            console.log('========== FULL GENERATION COMPLETE (VERCEL) ==========');
+            return NextResponse.json({
+              success: true,
+              audio: audioBase64,
+              format: 'wav',
+              voiceUsed: selectedVoice || 'openai-fallback',
+              duration: estimatedDuration,
+              durationFormatted: formatDuration(estimatedDuration),
+              creditsUsed: creditsToDeduct,
+              remainingCredits: (profile.credits || 0) - creditsToDeduct,
+            });
+          }
+        } catch (error) {
+          console.error('OpenAI TTS failed:', error);
+        }
+        return NextResponse.json({ 
+          success: false, 
+          error: 'Cantonese voice generation unavailable on web. Please use the desktop app or select Mandarin/English.',
+        }, { status: 503 });
+      }
+      
+      // For Mandarin or English, use OpenAI TTS
+      if (isMandarin || isEnglish) {
+        console.log(`Using OpenAI TTS for ${language} on Vercel`);
+        try {
+          const audioBuffer = await generateOpenAITTS(cleanScript, language, speed || 1.0, selectedVoice || 'Auto-Female');
+          if (audioBuffer) {
+            const audioBase64 = audioBuffer.toString('base64');
+            const isChinese = /[\u4e00-\u9fff]/.test(cleanScript);
+            const estimatedDuration = isChinese 
+              ? Math.max(1.5, cleanScript.length / 4)
+              : Math.max(1.5, cleanScript.split(/\s+/).length / 3);
+            
+            const creditsToDeduct = 2;
+            await supabaseAdmin
+              .from('profiles')
+              .update({ credits: (profile.credits || 0) - creditsToDeduct })
+              .eq('id', userId);
+
+            console.log('========== FULL GENERATION COMPLETE (VERCEL) ==========');
+            return NextResponse.json({
+              success: true,
+              audio: audioBase64,
+              format: 'wav',
+              voiceUsed: selectedVoice || 'openai',
+              duration: estimatedDuration,
+              durationFormatted: formatDuration(estimatedDuration),
+              creditsUsed: creditsToDeduct,
+              remainingCredits: (profile.credits || 0) - creditsToDeduct,
+            });
+          }
+        } catch (error) {
+          console.error('OpenAI TTS failed:', error);
+        }
+        return NextResponse.json({ 
+          success: false, 
+          error: 'Voice generation temporarily unavailable. Please try again later.',
+        }, { status: 503 });
+      }
+    }
+
+    // ============================================================
+    // LOCAL macOS - USE SAY + A F CONVERT
+    // ============================================================
+    console.log('Local macOS - using say + afconvert');
+    
+    // Get voice
     let voiceToUse = selectedVoice;
     
     if (!voiceToUse || voiceToUse === 'Auto-Male' || voiceToUse === 'Auto-Female') {
@@ -223,25 +358,24 @@ export async function POST(req: Request) {
 
     console.log('Final voice to use:', voiceToUse);
 
-    // ============================================================
-    // GENERATE AUDIO
-    // ============================================================
     let speechRate = 160;
     if (isEnglish) speechRate = 185;
     if (speed) speechRate = Math.round(speed * 175);
 
     try {
-      // Generate audio using say and afconvert
-      const wavBuffer = await generateAndConvertAudio(cleanScript, voiceToUse, speechRate);
+      // Generate AIFF using say
+      const aiffBuffer = await generateWithSay(cleanScript, voiceToUse, speechRate);
       
-      if (!wavBuffer || wavBuffer.length < 44) {
-        throw new Error('Audio generation produced invalid file');
+      if (!aiffBuffer || aiffBuffer.length === 0) {
+        throw new Error('Audio generation produced empty file');
       }
       
-      // Verify WAV header
-      const isWavValid = wavBuffer.toString('ascii', 0, 4) === 'RIFF';
-      console.log('Final WAV valid:', isWavValid);
-      console.log('Final WAV size:', wavBuffer.length, 'bytes');
+      // Convert to WAV using afconvert
+      const wavBuffer = await convertWithAfconvert(aiffBuffer);
+      
+      if (!wavBuffer || wavBuffer.length < 44) {
+        throw new Error('Failed to convert AIFF to WAV');
+      }
 
       // Get audio duration
       let audioDuration = 0;
@@ -275,9 +409,8 @@ export async function POST(req: Request) {
 
       console.log('Final audio size:', audioBuffer.length);
       console.log('Final format:', audioFormat);
-      console.log('========== FULL GENERATION COMPLETE ==========');
+      console.log('========== FULL GENERATION COMPLETE (LOCAL) ==========');
 
-      // Deduct credits
       const creditsToDeduct = 2;
       await supabaseAdmin
         .from('profiles')
@@ -298,7 +431,7 @@ export async function POST(req: Request) {
       });
 
     } catch (error: any) {
-      console.error('Generation error:', error);
+      console.error('Local generation error:', error);
       return NextResponse.json({ 
         success: false, 
         error: error.message || 'TTS generation failed',
