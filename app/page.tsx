@@ -395,7 +395,7 @@ export default function VibeAiMaster() {
     }
   };
 
-  // Mobile navigation handler - FIXED: removed 'watchlist' from setCurrentView
+  // Mobile navigation handler
   const handleMobileNavigate = (page: string, params?: any) => {
     if (page === 'analysis') {
       setMobileView('analysis');
@@ -407,9 +407,7 @@ export default function VibeAiMaster() {
       else if (params?.view === 'about') setCurrentView('about');
       else if (params?.view === 'features') setCurrentView('features');
     } else if (page === 'watchlist') {
-      // Just navigate to analysis view - watchlist is handled inside MobileAnalysis component
       setMobileView('analysis');
-      // Don't set currentView to 'watchlist' - it's not a valid view type
     } else if (page === 'landing') {
       setMobileView('landing');
     }
@@ -418,6 +416,11 @@ export default function VibeAiMaster() {
   // Handle mobile auth open
   const handleMobileAuthOpen = () => {
     setIsAuthOpen(true);
+  };
+
+  // Close auth modal
+  const handleCloseAuth = () => {
+    setIsAuthOpen(false);
   };
 
   if (!isHydrated || !mounted) {
@@ -432,67 +435,91 @@ export default function VibeAiMaster() {
   }
 
   // ============================================================
-  // MOBILE RENDER
+  // MOBILE RENDER - WITH AUTH MODAL
   // ============================================================
   if (isMobile) {
     if (mobileView === 'landing') {
       return (
-        <MobileLanding
-          langKey={language}
-          setLangKey={setLanguage}
-          onAuthOpen={handleMobileAuthOpen}
-          user={user}
-          profile={profile}
-          onNavigate={handleMobileNavigate}
-        />
+        <>
+          <MobileLanding
+            langKey={language}
+            setLangKey={setLanguage}
+            onAuthOpen={handleMobileAuthOpen}
+            user={user}
+            profile={profile}
+            onNavigate={handleMobileNavigate}
+          />
+          {/* AuthModal for mobile */}
+          {isAuthOpen && !user && (
+            <div style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, backgroundColor: 'rgba(0,0,0,0.5)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1000 }}>
+              <AuthModal isOpen={isAuthOpen} onClose={handleCloseAuth} langKey={language} />
+            </div>
+          )}
+        </>
       );
     }
 
     if (mobileView === 'analysis') {
       return (
-        <MobileAnalysis
-          langKey={language}
-          setLangKey={setLanguage}
-          user={user}
-          profile={profile}
-          onAuthOpen={handleMobileAuthOpen}
-          viewType={currentView}
-          topicId={mobileContentType || undefined}
-          legalTitle={legalTitle}
-          onBack={() => {
-            if (currentView === 'analysis') {
-              setMobileView('landing');
-            } else {
-              setCurrentView('analysis');
-              setMobileView('analysis');
-            }
-            setLegalTitle(null);
-          }}
-          voiceLanguage={voiceLanguage}
-          onNavigate={handleMobileNavigate}
-        />
+        <>
+          <MobileAnalysis
+            langKey={language}
+            setLangKey={setLanguage}
+            user={user}
+            profile={profile}
+            onAuthOpen={handleMobileAuthOpen}
+            viewType={currentView}
+            topicId={mobileContentType || undefined}
+            legalTitle={legalTitle}
+            onBack={() => {
+              if (currentView === 'analysis') {
+                setMobileView('landing');
+              } else {
+                setCurrentView('analysis');
+                setMobileView('analysis');
+              }
+              setLegalTitle(null);
+            }}
+            voiceLanguage={voiceLanguage}
+            onNavigate={handleMobileNavigate}
+          />
+          {/* AuthModal for mobile */}
+          {isAuthOpen && !user && (
+            <div style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, backgroundColor: 'rgba(0,0,0,0.5)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1000 }}>
+              <AuthModal isOpen={isAuthOpen} onClose={handleCloseAuth} langKey={language} />
+            </div>
+          )}
+        </>
       );
     }
 
     if (mobileView === 'content') {
       return (
-        <MobileAnalysis
-          langKey={language}
-          setLangKey={setLanguage}
-          user={user}
-          profile={profile}
-          onAuthOpen={handleMobileAuthOpen}
-          viewType={currentView}
-          topicId={mobileContentType || undefined}
-          legalTitle={legalTitle}
-          onBack={() => {
-            setMobileView('landing');
-            setLegalTitle(null);
-            setMobileContentType(null);
-          }}
-          voiceLanguage={voiceLanguage}
-          onNavigate={handleMobileNavigate}
-        />
+        <>
+          <MobileAnalysis
+            langKey={language}
+            setLangKey={setLanguage}
+            user={user}
+            profile={profile}
+            onAuthOpen={handleMobileAuthOpen}
+            viewType={currentView}
+            topicId={mobileContentType || undefined}
+            legalTitle={legalTitle}
+            onBack={() => {
+              setMobileView('landing');
+              setLegalTitle(null);
+              setMobileContentType(null);
+            }}
+            voiceLanguage={voiceLanguage}
+            onNavigate={handleMobileNavigate}
+          />
+          {/* AuthModal for mobile */}
+          {isAuthOpen && !user && (
+            <div style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, backgroundColor: 'rgba(0,0,0,0.5)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1000 }}>
+              <AuthModal isOpen={isAuthOpen} onClose={handleCloseAuth} langKey={language} />
+            </div>
+          )}
+        </>
       );
     }
   }
@@ -720,9 +747,10 @@ export default function VibeAiMaster() {
 
         <SourceMenu isOpen={isMenuOpen} onClose={() => setIsMenuOpen(false)} onSelectSource={() => setIsMenuOpen(false)} langKey={language} />
         
+        {/* Desktop AuthModal */}
         {isAuthOpen && !user && (
           <div style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, backgroundColor: 'rgba(0,0,0,0.5)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1000 }}>
-            <AuthModal isOpen={isAuthOpen} onClose={() => setIsAuthOpen(false)} langKey={language} />
+            <AuthModal isOpen={isAuthOpen} onClose={handleCloseAuth} langKey={language} />
           </div>
         )}
       </div>
