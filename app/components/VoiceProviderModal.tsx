@@ -53,6 +53,10 @@ export const VoiceProviderModal: React.FC<VoiceProviderModalProps> = ({
   // Download format selection
   const [downloadFormat, setDownloadFormat] = useState<'wav' | 'mp3'>('wav');
   
+  // Scene pause controls
+  const [enableScenePause, setEnableScenePause] = useState<boolean>(false);
+  const [scenePause, setScenePause] = useState<number>(2);
+  
   // Voice selection state
   const [availableVoices, setAvailableVoices] = useState<Voice[]>([]);
   const [selectedVoice, setSelectedVoice] = useState<string>('Aasing (Enhanced)');
@@ -438,6 +442,7 @@ export const VoiceProviderModal: React.FC<VoiceProviderModalProps> = ({
           speed,
           selectedVoice,
           format: downloadFormat,
+          scenePause: enableScenePause ? scenePause : 0, // Pass scene pause setting
         }),
       });
 
@@ -450,6 +455,7 @@ export const VoiceProviderModal: React.FC<VoiceProviderModalProps> = ({
         console.log('Audio format:', voiceData.format);
         console.log('Audio duration:', voiceData.duration, 'seconds');
         console.log('Duration formatted:', voiceData.durationFormatted);
+        console.log('Scenes processed:', voiceData.scenesProcessed || 1);
         
         setGeneratedMp3Base64(cleanAudio);
         setAudioDuration(voiceData.duration || 0);
@@ -668,7 +674,7 @@ export const VoiceProviderModal: React.FC<VoiceProviderModalProps> = ({
           <textarea
             value={script}
             onChange={(e) => setScript(e.target.value)}
-            placeholder="Paste your script here..."
+            placeholder="Paste your script here... Use [PAUSE] tags or Episode X: markers for scene pauses"
             rows={6}
             style={{ width: '100%', padding: '10px', borderRadius: '8px', border: '1px solid #D1D5DB', fontSize: '12px', fontFamily: 'inherit', resize: 'vertical' }}
           />
@@ -846,6 +852,75 @@ export const VoiceProviderModal: React.FC<VoiceProviderModalProps> = ({
             <span>Normal (1.0x)</span>
             <span>Fast (1.5x)</span>
           </div>
+        </div>
+
+        {/* Scene Pause Control */}
+        <div style={{ marginBottom: '16px', marginTop: '8px' }}>
+          <label style={{ 
+            fontSize: '12px', 
+            fontWeight: '500', 
+            color: '#374151', 
+            display: 'flex', 
+            alignItems: 'center', 
+            gap: '8px',
+            marginBottom: '4px'
+          }}>
+            <span style={{ fontSize: '16px' }}>🎬</span>
+            Scene Pauses
+            <span style={{ fontSize: '10px', color: '#6B7280', fontWeight: 'normal' }}>
+              (Add pauses between scenes)
+            </span>
+          </label>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+            <label style={{ 
+              display: 'flex', 
+              alignItems: 'center', 
+              gap: '6px', 
+              fontSize: '11px', 
+              cursor: 'pointer',
+              color: enableScenePause ? '#2563EB' : '#6B7280'
+            }}>
+              <input
+                type="checkbox"
+                checked={enableScenePause}
+                onChange={(e) => {
+                  setEnableScenePause(e.target.checked);
+                  if (!e.target.checked) setScenePause(0);
+                }}
+                style={{ cursor: 'pointer' }}
+              />
+              Enable scene pauses
+            </label>
+            {enableScenePause && (
+              <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flex: 1 }}>
+                <span style={{ fontSize: '10px', color: '#6B7280' }}>⏱️</span>
+                <input
+                  type="range"
+                  min="0.5"
+                  max="5"
+                  step="0.5"
+                  value={scenePause}
+                  onChange={(e) => setScenePause(parseFloat(e.target.value))}
+                  style={{ 
+                    flex: 1,
+                    height: '4px',
+                    borderRadius: '2px',
+                    backgroundColor: '#E5E7EB',
+                    outline: 'none',
+                    WebkitAppearance: 'none'
+                  }}
+                />
+                <span style={{ fontSize: '11px', fontWeight: 'bold', color: '#2563EB', minWidth: '30px' }}>
+                  {scenePause}s
+                </span>
+              </div>
+            )}
+          </div>
+          {enableScenePause && (
+            <div style={{ fontSize: '9px', color: '#9CA3AF', marginTop: '2px' }}>
+              💡 Scenes are detected by: <strong>Episode X:</strong>, <strong>Scene X:</strong>, <strong>Part X:</strong>, or paragraph breaks
+            </div>
+          )}
         </div>
 
         {/* Preview Button */}
