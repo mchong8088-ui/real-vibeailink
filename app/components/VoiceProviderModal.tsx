@@ -105,7 +105,6 @@ export const VoiceProviderModal: React.FC<VoiceProviderModalProps> = ({
     (window.location.hostname.includes('vercel.app') || 
      window.location.hostname.includes('vibeailink.com'));
   
-  // Cantonese is only fully supported on local macOS with say command
   const isCantoneseAvailable = !isWeb;
 
   // ============================================
@@ -280,7 +279,6 @@ export const VoiceProviderModal: React.FC<VoiceProviderModalProps> = ({
     }
   }, [isOpen]);
 
-  // Auto-switch Cantonese to Mandarin on web
   useEffect(() => {
     if (isWeb && language === 'Cantonese') {
       console.log('Cantonese auto-switched to Mandarin on web');
@@ -395,76 +393,82 @@ export const VoiceProviderModal: React.FC<VoiceProviderModalProps> = ({
   };
 
   const handleGenerate = async () => {
-    let activeUser = propUser;
-    if (!activeUser) {
-      const { data: { session } } = await supabase.auth.getSession();
-      activeUser = session?.user || null;
-    }
+  let activeUser = propUser;
+  if (!activeUser) {
+    const { data: { session } } = await supabase.auth.getSession();
+    activeUser = session?.user || null;
+  }
 
-    if (!activeUser) {
-      alert("Please login first.");
-      return;
-    }
+  if (!activeUser) {
+    alert("Please login first.");
+    return;
+  }
 
-    if (!script.trim()) {
-      alert("Please provide or upload a script.");
-      return;
-    }
+  if (!script.trim()) {
+    alert("Please provide or upload a script.");
+    return;
+  }
 
-    if (isChineseText(script) && language === 'English') {
-      const confirmSwitch = confirm(
-        "You have Chinese text but selected English voice. This will not pronounce correctly. Would you like to switch to Cantonese or Mandarin?"
-      );
-      if (confirmSwitch) {
-        if (isWeb) {
-          setLanguage('Mandarin');
-        } else {
-          setLanguage('Cantonese');
-        }
-        await loadAvailableVoices();
-      }
-    }
-
-    setIsLoading(true);
-
-    const langCode = languageCodeMap[language] || 'zh-HK';
-
-    try {
-      const voiceRes = await fetch('/api/youtube/voice', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          userId: activeUser.id,
-          script,
-          language,
-          langCode,
-          useGateway: voiceType === 'gateway',
-          speed,
-          selectedVoice,
-          format: downloadFormat,
-          scenePause: enableScenePause ? scenePause : 0, // Pass scene pause setting
-        }),
-      });
-
-      const voiceData = await voiceRes.json();
-      console.log('Voice API response:', voiceData);
-
-      if (voiceData.success) {
-        const cleanAudio = voiceData.audio.replace(/\s/g, '');
-        console.log('Clean audio data length:', cleanAudio.length);
-        console.log('Audio format:', voiceData.format);
-        console.log('Audio duration:', voiceData.duration, 'seconds');
-        console.log('Duration formatted:', voiceData.durationFormatted);
-        console.log('Scenes processed:', voiceData.scenesProcessed || 1);
-        
-        setGeneratedMp3Base64(cleanAudio);
-        setAudioDuration(voiceData.duration || 0);
+  if (isChineseText(script) && language === 'English') {
+    const confirmSwitch = confirm(
+      "You have Chinese text but selected English voice. This will not pronounce correctly. Would you like to switch to Cantonese or Mandarin?"
+    );
+    if (confirmSwitch) {
+      if (isWeb) {
+        setLanguage('Mandarin');
       } else {
-        alert(voiceData.error || "Voice generation failed.");
-        setIsLoading(false);
-        return;
+        setLanguage('Cantonese');
       }
+      await loadAvailableVoices();
+    }
+  }
 
+  setIsLoading(true);
+
+  const langCode = languageCodeMap[language] || 'zh-HK';
+
+  try {
+    // 2.1 Generate Voice
+    const voiceRes = await fetch('/api/youtube/voice', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        userId: activeUser.id,
+        script,
+        language,
+        langCode,
+        useGateway: voiceType === 'gateway',
+        speed,
+        selectedVoice,
+        format: downloadFormat,
+        scenePause: enableScenePause ? scenePause : 0,
+      }),
+    });
+
+    const voiceData = await voiceRes.json();
+    console.log('=== VOICE API RESPONSE ===');
+    console.log('Success:', voiceData.success);
+    console.log('Audio format:', voiceData.format);
+    console.log('Duration from API:', voiceData.duration);
+    console.log('Duration formatted:', voiceData.durationFormatted);
+    console.log('Scenes processed:', voiceData.scenesProcessed);
+    console.log('Full response:', voiceData);
+
+    if (voiceData.success) {
+      const cleanAudio = voiceData.audio.replace(/\s/g, '');
+      console.log('Clean audio data length:', cleanAudio.length);
+      
+      setGeneratedMp3Base64(cleanAudio);
+      
+      // CRITICAL: Store the duration for subtitles
+      const actualDuration = voiceData.duration || 0;
+      setAudioDuration(actualDuration);
+      
+      console.log('=== PASSING TO SUBTITLES ===');
+      console.log('Duration to pass:', actualDuration);
+      console.log('Duration type:', typeof actualDuration);
+
+      // 2.2 Generate Subtitles with the actual duration
       const subRes = await fetch('/api/youtube/subtitles', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -473,28 +477,38 @@ export const VoiceProviderModal: React.FC<VoiceProviderModalProps> = ({
           language,
           langCode,
           targetLanguage: targetLanguage !== 'None' ? targetLanguage : undefined,
-          totalDuration: audioDuration,
+          totalDuration: actualDuration, // Pass the actual duration
         }),
       });
 
       const subData = await subRes.json();
+      console.log('=== SUBTITLE API RESPONSE ===');
+      console.log('Success:', subData.success);
+      console.log('Metadata:', subData.metadata);
+      
       if (subData.success) {
         setGeneratedSrt(subData.srt);
         setGeneratedChapters(subData.youtubeChapters);
         setGeneratedSegments(subData.segments || []);
-        console.log('Subtitles generated:', subData.metadata);
+        console.log('Subtitles generated with duration:', subData.metadata?.totalDuration);
         console.log('Duration source:', subData.metadata?.durationSource);
       } else {
         console.warn('Subtitle generation warning:', subData.error);
       }
 
-    } catch (err) {
-      console.error('Generation failed:', err);
-      alert('Generation failed. Please try again.');
-    } finally {
+    } else {
+      alert(voiceData.error || "Voice generation failed.");
       setIsLoading(false);
+      return;
     }
-  };
+
+  } catch (err) {
+    console.error('Generation failed:', err);
+    alert('Generation failed. Please try again.');
+  } finally {
+    setIsLoading(false);
+  }
+};
 
   const downloadFile = (content: string, filename: string, type: string) => {
     const blob = new Blob([content], { type });
@@ -602,7 +616,6 @@ export const VoiceProviderModal: React.FC<VoiceProviderModalProps> = ({
     return `${mins}:${secs.toString().padStart(2, '0')}`;
   };
 
-  // Get language-specific text for voice selector explanation
   const getVoiceSelectorHelpText = () => {
     if (langKey === 'Traditional Chinese') {
       return '💡 如果您的電腦未安裝語音，請選擇「自動男聲」或「自動女聲」以使用雲端語音。\n📌 粵語在網頁版將使用國語發音作為替代。';
@@ -613,7 +626,6 @@ export const VoiceProviderModal: React.FC<VoiceProviderModalProps> = ({
     }
   };
 
-  // Get Cantonese warning for web
   const getCantoneseWebWarning = () => {
     if (isWeb && language === 'Cantonese') {
       if (langKey === 'Traditional Chinese') {
@@ -674,7 +686,7 @@ export const VoiceProviderModal: React.FC<VoiceProviderModalProps> = ({
           <textarea
             value={script}
             onChange={(e) => setScript(e.target.value)}
-            placeholder="Paste your script here... Use [PAUSE] tags or Episode X: markers for scene pauses"
+            placeholder="Paste your script here..."
             rows={6}
             style={{ width: '100%', padding: '10px', borderRadius: '8px', border: '1px solid #D1D5DB', fontSize: '12px', fontFamily: 'inherit', resize: 'vertical' }}
           />

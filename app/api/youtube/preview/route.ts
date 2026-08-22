@@ -107,7 +107,7 @@ async function generateWithPauses(text: string, voice: string, rate: number): Pr
     
     // Insert silence for pauses if there are any
     if (pauses.length > 0) {
-      wavBuffer = await insertPauses(wavBuffer, pauses);
+      wavBuffer = Buffer.from(await insertPauses(wavBuffer, pauses));
       console.log('WAV size after inserting pauses:', wavBuffer.length, 'bytes');
     }
     
@@ -121,9 +121,12 @@ async function generateWithPauses(text: string, voice: string, rate: number): Pr
 }
 
 // Insert silence into WAV audio at specific positions
-async function insertPauses(audioBuffer: Buffer, pauses: Array<{ position: number; duration: number }>): Promise<Buffer> {
+async function insertPauses(
+  audioBuffer: Buffer | Uint8Array | any, 
+  pauses: Array<{ position: number; duration: number }>
+): Promise<Buffer> {
   console.log('Inserting pauses into audio...');
-  return audioBuffer;
+  return Buffer.from(audioBuffer);
 }
 
 // Check if voice exists (macOS only)
