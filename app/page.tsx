@@ -12,6 +12,7 @@ import { VoiceSelector } from './components/layout/VoiceSelector';
 import { AboutSection } from './components/sections/AboutSection';
 import { FeaturesSection } from './components/sections/FeaturesSection';
 import { PricingModal } from './components/features/pricing/PricingModal';
+import { WatchlistModal } from './components/WatchlistModal';
 import UserMenu from './components/auth/UserMenu';
 import { supabase } from './lib/supabase';
 import { useLanguage } from './context/LanguageContext';
@@ -322,16 +323,38 @@ export default function VibeAiMaster() {
         about: '關於',
         features: '功能',
         pricing: '定價',
+        watchlist: '⭐',
         stockOfDay: '今日精選股票',
         analyze: '分析',
         inputPlaceholderDisabled: '開啟 AI 增強即可進行深度提問',
         inputPlaceholderEnabled: '輸入股票代號、策略或任何市場問題...',
-        myWatchlist: '⭐ 我的關注列表',
+        myWatchlist: '⭐ 關注列表',
         refresh: '重新整理',
         noWatchlist: '暫無股票',
         voiceProviderBtn: '🎙️ Voice Provider',
         aiAssistantBtn: '🤖 AI Assistant',
         aiEnhancementBtn: '⚡ AI Enhancement',
+        watchlistTitle: '⭐ 我的關注列表',
+        legendTitle: '📊 信號說明',
+        legendBuy: '🟢 綠色 = RSI低於30 (超賣) - 考慮買入',
+        legendSell: '🔴 紅色 = RSI高於70 (超買) - 考慮賣出',
+        legendNeutral: '⚪ 灰色 = RSI 30-70 (中性) - 持有觀望',
+        loadingData: '載入中...',
+        noData: '無數據',
+        price: '價格',
+        change: '漲跌',
+        rsi: 'RSI(14)',
+        macd: 'MACD',
+        trend: '趨勢',
+        clickToAnalyze: '點擊查看完整分析',
+        fetchingData: '獲取數據中...',
+        addPlaceholder: '輸入代號',
+        add: '新增',
+        limit: '最多10隻',
+        max: '已達上限',
+        empty: '暫無追蹤股票',
+        addHint: '點擊 + 新增股票',
+        remove: '移除',
       };
     } else if (language === 'Simplified Chinese') {
       return {
@@ -346,16 +369,38 @@ export default function VibeAiMaster() {
         about: '关于',
         features: '功能',
         pricing: '定价',
+        watchlist: '⭐',
         stockOfDay: '今日精选股票',
         analyze: '分析',
         inputPlaceholderDisabled: '开启 AI 增强即可进行深度提问',
         inputPlaceholderEnabled: '输入股票代码、策略或任何市场问题...',
-        myWatchlist: '⭐ 我的关注列表',
+        myWatchlist: '⭐ 关注列表',
         refresh: '刷新',
         noWatchlist: '暂无股票',
         voiceProviderBtn: '🎙️ Voice Provider',
         aiAssistantBtn: '🤖 AI Assistant',
         aiEnhancementBtn: '⚡ AI Enhancement',
+        watchlistTitle: '⭐ 我的关注列表',
+        legendTitle: '📊 信号说明',
+        legendBuy: '🟢 绿色 = RSI低于30 (超卖) - 考虑买入',
+        legendSell: '🔴 红色 = RSI高于70 (超买) - 考虑卖出',
+        legendNeutral: '⚪ 灰色 = RSI 30-70 (中性) - 持有观望',
+        loadingData: '载入中...',
+        noData: '无数据',
+        price: '价格',
+        change: '涨跌',
+        rsi: 'RSI(14)',
+        macd: 'MACD',
+        trend: '趋势',
+        clickToAnalyze: '点击查看完整分析',
+        fetchingData: '获取数据中...',
+        addPlaceholder: '输入代码',
+        add: '新增',
+        limit: '最多10只',
+        max: '已达上限',
+        empty: '暂无追踪股票',
+        addHint: '点击 + 新增股票',
+        remove: '移除',
       };
     } else {
       return {
@@ -370,6 +415,7 @@ export default function VibeAiMaster() {
         about: 'ABOUT',
         features: 'FEATURES',
         pricing: 'PRICING',
+        watchlist: '⭐',
         stockOfDay: '⭐ Stock of the Day',
         analyze: 'Analyze',
         inputPlaceholderDisabled: 'Enable AI Enhancement to ask questions',
@@ -380,6 +426,27 @@ export default function VibeAiMaster() {
         voiceProviderBtn: '🎙️ Voice Provider',
         aiAssistantBtn: '🤖 AI Assistant',
         aiEnhancementBtn: '⚡ AI Enhancement',
+        watchlistTitle: '⭐ My Watchlist',
+        legendTitle: '📊 Signal Legend',
+        legendBuy: '🟢 Green = RSI below 30 (Oversold) - Consider BUY',
+        legendSell: '🔴 Red = RSI above 70 (Overbought) - Consider SELL',
+        legendNeutral: '⚪ Gray = RSI 30-70 (Neutral) - HOLD',
+        loadingData: 'Loading...',
+        noData: 'No data',
+        price: 'Price',
+        change: 'Change',
+        rsi: 'RSI(14)',
+        macd: 'MACD',
+        trend: 'Trend',
+        clickToAnalyze: 'Click to view full analysis',
+        fetchingData: 'Fetching data...',
+        addPlaceholder: 'Enter symbol',
+        add: 'Add',
+        limit: 'Max 10',
+        max: 'Limit reached',
+        empty: 'No stocks in watchlist',
+        addHint: 'Click + to add stocks',
+        remove: 'Remove',
       };
     }
   };
@@ -407,7 +474,7 @@ export default function VibeAiMaster() {
       else if (params?.view === 'about') setCurrentView('about');
       else if (params?.view === 'features') setCurrentView('features');
     } else if (page === 'watchlist') {
-      setMobileView('analysis');
+      setShowWatchlistModal(true);
     } else if (page === 'landing') {
       setMobileView('landing');
     }
@@ -435,7 +502,7 @@ export default function VibeAiMaster() {
   }
 
   // ============================================================
-  // MOBILE RENDER - WITH AUTH MODAL
+  // MOBILE RENDER
   // ============================================================
   if (isMobile) {
     if (mobileView === 'landing') {
@@ -449,7 +516,6 @@ export default function VibeAiMaster() {
             profile={profile}
             onNavigate={handleMobileNavigate}
           />
-          {/* AuthModal for mobile */}
           {isAuthOpen && !user && (
             <div style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, backgroundColor: 'rgba(0,0,0,0.5)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1000 }}>
               <AuthModal isOpen={isAuthOpen} onClose={handleCloseAuth} langKey={language} />
@@ -483,7 +549,6 @@ export default function VibeAiMaster() {
             voiceLanguage={voiceLanguage}
             onNavigate={handleMobileNavigate}
           />
-          {/* AuthModal for mobile */}
           {isAuthOpen && !user && (
             <div style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, backgroundColor: 'rgba(0,0,0,0.5)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1000 }}>
               <AuthModal isOpen={isAuthOpen} onClose={handleCloseAuth} langKey={language} />
@@ -513,7 +578,6 @@ export default function VibeAiMaster() {
             voiceLanguage={voiceLanguage}
             onNavigate={handleMobileNavigate}
           />
-          {/* AuthModal for mobile */}
           {isAuthOpen && !user && (
             <div style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, backgroundColor: 'rgba(0,0,0,0.5)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1000 }}>
               <AuthModal isOpen={isAuthOpen} onClose={handleCloseAuth} langKey={language} />
@@ -530,7 +594,7 @@ export default function VibeAiMaster() {
   return (
     <ErrorBoundary>
       <div style={{ display: 'flex', flexDirection: 'column', height: '100vh', width: '100%', overflow: 'hidden', backgroundColor: '#f0f0f0' }}>
-        {/* Header Bar */}
+        {/* Header Bar - Removed WATCHLIST text, only keep icon */}
         <div style={{ backgroundColor: 'white', padding: '12px 24px', borderBottom: '1px solid #E5E7EB', display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexShrink: 0 }}>
           <h1 style={{ fontSize: '22px', fontWeight: '900', fontStyle: 'italic', color: '#DC2626', margin: 0 }}>vibeAiLink</h1>
           <div style={{ display: 'flex', gap: '32px' }}>
@@ -586,6 +650,13 @@ export default function VibeAiMaster() {
               Michael & Sofia
             </h2>
             <p style={{ fontSize: '14px', fontWeight: '600', color: '#2563EB', textAlign: 'center', margin: '0' }}>{text.financeText}</p>
+            
+            {/* Quick Watchlist Stats */}
+            <div style={{ marginTop: '16px', padding: '10px 16px', backgroundColor: 'rgba(255,255,255,0.7)', borderRadius: '12px', width: '100%', textAlign: 'center' }}>
+              <span style={{ fontSize: '12px', color: '#6B7280' }}>
+                {text.myWatchlist}: <strong style={{ color: '#059669' }}>{getWatchlist().length}</strong>
+              </span>
+            </div>
           </div>
 
           {/* Main Display Area */}
@@ -715,34 +786,17 @@ export default function VibeAiMaster() {
           langKey={language}
         />
 
+        {/* Enhanced Watchlist Modal */}
         {showWatchlistModal && (
-          <div style={{
-            position: 'fixed', top: 0, left: 0, right: 0, bottom: 0,
-            backgroundColor: 'rgba(0,0,0,0.5)', display: 'flex', alignItems: 'center',
-            justifyContent: 'center', zIndex: 1000, padding: '16px'
-          }}>
-            <div style={{ backgroundColor: 'white', padding: '20px', borderRadius: '12px', width: '320px', border: '1px solid #E5E7EB' }}>
-              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '12px' }}>
-                <h4 style={{ margin: 0, color: '#059669', fontSize: '14px' }}>{text.myWatchlist}</h4>
-                <button onClick={() => setShowWatchlistModal(false)} style={{ background: 'none', border: 'none', cursor: 'pointer' }}>✕</button>
-              </div>
-              <div style={{ display: 'flex', gap: '6px', flexWrap: 'wrap', minHeight: '60px' }}>
-                {(() => {
-                  const watchlist = getWatchlist();
-                  if (watchlist.length === 0) return <span style={{ fontSize: '12px', color: '#9CA3AF' }}>{text.noWatchlist}</span>;
-                  return watchlist.map((symbol: string) => (
-                    <button
-                      key={symbol}
-                      onClick={() => { setShowWatchlistModal(false); handleAnalyzeRequest(symbol, [], false); }}
-                      style={{ padding: '4px 8px', backgroundColor: '#ECFDF5', color: '#047857', border: '1px solid #A7F3D0', borderRadius: '6px', fontSize: '11px', cursor: 'pointer' }}
-                    >
-                      {symbol}
-                    </button>
-                  ));
-                })()}
-              </div>
-            </div>
-          </div>
+          <WatchlistModal
+            isOpen={showWatchlistModal}
+            onClose={() => setShowWatchlistModal(false)}
+            onSelectStock={(symbol) => {
+              setShowWatchlistModal(false);
+              handleAnalyzeRequest(symbol, [], false);
+            }}
+            langKey={language}
+          />
         )}
 
         <SourceMenu isOpen={isMenuOpen} onClose={() => setIsMenuOpen(false)} onSelectSource={() => setIsMenuOpen(false)} langKey={language} />

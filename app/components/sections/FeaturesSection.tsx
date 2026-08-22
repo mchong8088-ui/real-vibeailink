@@ -39,7 +39,9 @@ import {
   Newspaper,
   Cpu,
   Database,
-  Network
+  Network,
+  Eye,
+  ListChecks
 } from 'lucide-react';
 
 export const FeaturesSection = ({ lang }: { lang: string }) => {
@@ -96,7 +98,13 @@ export const FeaturesSection = ({ lang }: { lang: string }) => {
                 '生成時間依文字長度而定（約 0.5-30 秒）',
                 '需安裝 macOS 系統語音',
                 '僅支援 macOS 系統'
-              ]
+              ],
+              voiceWarning: {
+                title: '⚠️ 語音選擇重要提示',
+                message: '如果您的電腦未安裝所需的語音，或您選擇的語音無法使用，請使用「Auto-Male (Cloud)」或「Auto-Female (Cloud)」雲端語音選項。這些雲端語音由 AI 驅動，無需本地安裝，可直接在網頁版使用，確保您能順利生成高品質語音。',
+                cloudVoices: '☁️ 雲端語音（Auto-Male / Auto-Female）無需安裝，可直接在網頁版使用',
+                localVoices: '💻 本地語音需安裝 macOS 系統語音，僅限桌面版使用'
+              }
             }
           },
           { 
@@ -228,7 +236,51 @@ export const FeaturesSection = ({ lang }: { lang: string }) => {
             icon: <Shield size={28} />, 
             title: 'AI 信心評分', 
             desc: '0-100% 多維度風險評估與五星評分機制，輔助理性決策。', 
-            gradient: 'linear-gradient(135deg, #FA709A 0%, #FEE140 100%)' 
+            gradient: 'linear-gradient(135deg, #FA709A 0%, #FEE140 100%)',
+            linkTo: 'watchlist',
+            detailed: {
+              description: 'AI 信心評分是綜合技術指標、基本面數據和市場情緒的多維度評估系統。在您的關注列表中，每個股票都會顯示即時的 RSI、MACD 和趨勢信號，讓您一眼掌握所有持股的狀況。',
+              features: [
+                '📊 即時 RSI(14) 指標 - 超賣/超買信號一目瞭然',
+                '📈 MACD 動能指標 - 看多/看空趨勢判斷',
+                '🎯 買入/賣出/持有信號 - 🟢 綠色買入 / 🔴 紅色賣出 / ⚪ 灰色持有',
+                '📋 關注列表整合 - 所有股票狀態集中顯示',
+                '📊 價格與變化 - 即時價格和漲跌百分比',
+                '📈 趨勢判斷 - 上升/下降/盤整趨勢圖標'
+              ],
+              watchlistBenefits: [
+                '⭐ 一頁掌握所有持股狀況',
+                '⏱️ 節省時間 - 無需逐一查看每支股票',
+                '🎯 快速決策 - 信號一目瞭然',
+                '📊 多維度分析 - RSI、MACD、趨勢綜合判斷'
+              ],
+              bestPractices: [
+                '將您關注的股票加入關注列表',
+                '定期查看關注列表的信號變化',
+                '🟢 綠色信號（RSI < 30）可考慮買入',
+                '🔴 紅色信號（RSI > 70）可考慮賣出',
+                '⚪ 灰色信號（RSI 30-70）建議持有觀望'
+              ],
+              steps: [
+                '點擊「⭐ 關注列表」按鈕',
+                '查看所有持股的即時信號',
+                '點擊任何股票查看完整分析報告',
+                '根據信號做出投資決策',
+                '定期刷新獲取最新數據'
+              ],
+              tips: [
+                '💡 綠色 🟢 = RSI低於30 (超賣) - 考慮買入',
+                '💡 紅色 🔴 = RSI高於70 (超買) - 考慮賣出',
+                '💡 灰色 ⚪ = RSI 30-70 (中性) - 持有觀望',
+                '💡 點擊股票可查看完整分析報告',
+                '💡 支援港股、台股、美股三大市場'
+              ],
+              limitations: [
+                '數據來源為公開市場數據，延遲約 15 分鐘',
+                'AI 信號僅供參考，不構成投資建議',
+                'RSI 和 MACD 為技術指標，需結合其他因素判斷'
+              ]
+            }
           },
           // Global & Experience Features
           { 
@@ -236,7 +288,42 @@ export const FeaturesSection = ({ lang }: { lang: string }) => {
             icon: <Volume2 size={28} />, 
             title: '多語音 AI 朗讀', 
             desc: '粵語、國語、普通話、英語自然語音，自由切換監聽。', 
-            gradient: 'linear-gradient(135deg, #FF9A9E 0%, #FECFEF 100%)' 
+            gradient: 'linear-gradient(135deg, #FF9A9E 0%, #FECFEF 100%)',
+            linkTo: 'voiceProvider',
+            detailed: {
+              description: '支援粵語、國語、普通話、英語四種自然語音，並提供雲端 Auto-Male 和 Auto-Female 語音選項，無需本地安裝即可使用。',
+              features: [
+                '🎙️ 粵語 (Cantonese) - 香港/廣東地區用語',
+                '🎙️ 國語 (Mandarin) - 台灣標準用語',
+                '🎙️ 普通話 (Putonghua) - 中國大陸標準用語',
+                '🎙️ 英語 (English) - 國際通用語言',
+                '☁️ Auto-Male (Cloud) - AI 雲端男聲，無需安裝',
+                '☁️ Auto-Female (Cloud) - AI 雲端女聲，無需安裝'
+              ],
+              bestPractices: [
+                '中文內容建議使用粵語、國語或普通話',
+                '英文內容建議使用英語',
+                '如本地無語音，請使用 Auto-Male 或 Auto-Female 雲端語音',
+                '雲端語音可在網頁版直接使用'
+              ],
+              steps: [
+                '在語音生成面板選擇語言',
+                '選擇聲音角色（Aasing, Sinji, Tingting 等）',
+                '如需雲端語音，選擇 Auto-Male 或 Auto-Female',
+                '調整語速後生成語音'
+              ],
+              tips: [
+                '💡 雲端語音 Auto-Male / Auto-Female 無需安裝',
+                '💡 粵語在網頁版使用國語發音作為替代',
+                '💡 本地語音需 macOS 系統支援',
+                '💡 可自由切換不同語言和聲音'
+              ],
+              limitations: [
+                '粵語在網頁版使用國語發音作為替代',
+                '本地語音需 macOS 系統',
+                '雲端語音需要網路連線'
+              ]
+            }
           },
           { 
             category: 'core',
@@ -416,7 +503,13 @@ export const FeaturesSection = ({ lang }: { lang: string }) => {
                 '生成时间依文字长度而定（约 0.5-30 秒）',
                 '需安装 macOS 系统语音',
                 '仅支持 macOS 系统'
-              ]
+              ],
+              voiceWarning: {
+                title: '⚠️ 语音选择重要提示',
+                message: '如果您的电脑未安装所需的语音，或您选择的语音无法使用，请使用「Auto-Male (Cloud)」或「Auto-Female (Cloud)」云端语音选项。这些云端语音由 AI 驱动，无需本地安装，可直接在网页版使用，确保您能顺利生成高品质语音。',
+                cloudVoices: '☁️ 云端语音（Auto-Male / Auto-Female）无需安装，可直接在网页版使用',
+                localVoices: '💻 本地语音需安装 macOS 系统语音，仅限桌面版使用'
+              }
             }
           },
           { 
@@ -548,7 +641,51 @@ export const FeaturesSection = ({ lang }: { lang: string }) => {
             icon: <Shield size={28} />, 
             title: 'AI 信心评分', 
             desc: '0-100% 多维度风险评估与五星评分机制，辅助理性决策。', 
-            gradient: 'linear-gradient(135deg, #FA709A 0%, #FEE140 100%)' 
+            gradient: 'linear-gradient(135deg, #FA709A 0%, #FEE140 100%)',
+            linkTo: 'watchlist',
+            detailed: {
+              description: 'AI 信心评分是综合技术指标、基本面和市场情绪的多维度评估系统。在您的关注列表中，每个股票都会显示即时的 RSI、MACD 和趋势信号，让您一眼掌握所有持股的状况。',
+              features: [
+                '📊 即时 RSI(14) 指标 - 超卖/超买信号一目了然',
+                '📈 MACD 动能指标 - 看多/看空趋势判断',
+                '🎯 买入/卖出/持有信号 - 🟢 绿色买入 / 🔴 红色卖出 / ⚪ 灰色持有',
+                '📋 关注列表整合 - 所有股票状态集中显示',
+                '📊 价格与变化 - 即时价格和涨跌百分比',
+                '📈 趋势判断 - 上升/下降/盘整趋势图标'
+              ],
+              watchlistBenefits: [
+                '⭐ 一页掌握所有持股状况',
+                '⏱️ 节省时间 - 无需逐一查看每支股票',
+                '🎯 快速决策 - 信号一目了然',
+                '📊 多维度分析 - RSI、MACD、趋势综合判断'
+              ],
+              bestPractices: [
+                '将您关注的股票加入关注列表',
+                '定期查看关注列表的信号变化',
+                '🟢 绿色信号（RSI < 30）可考虑买入',
+                '🔴 红色信号（RSI > 70）可考虑卖出',
+                '⚪ 灰色信号（RSI 30-70）建议持有观望'
+              ],
+              steps: [
+                '点击「⭐ 关注列表」按钮',
+                '查看所有持股的即时信号',
+                '点击任何股票查看完整分析报告',
+                '根据信号做出投资决策',
+                '定期刷新获取最新数据'
+              ],
+              tips: [
+                '💡 绿色 🟢 = RSI低于30 (超卖) - 考虑买入',
+                '💡 红色 🔴 = RSI高于70 (超买) - 考虑卖出',
+                '💡 灰色 ⚪ = RSI 30-70 (中性) - 持有观望',
+                '💡 点击股票可查看完整分析报告',
+                '💡 支持港股、台股、美股三大市场'
+              ],
+              limitations: [
+                '数据来源为公开市场数据，延迟约 15 分钟',
+                'AI 信号仅供参考，不构成投资建议',
+                'RSI 和 MACD 为技术指标，需结合其他因素判断'
+              ]
+            }
           },
           // Global & Experience Features
           { 
@@ -556,7 +693,42 @@ export const FeaturesSection = ({ lang }: { lang: string }) => {
             icon: <Volume2 size={28} />, 
             title: '多语音 AI 朗读', 
             desc: '粤语、国语、普通话、英语自然语音，自由切换监听。', 
-            gradient: 'linear-gradient(135deg, #FF9A9E 0%, #FECFEF 100%)' 
+            gradient: 'linear-gradient(135deg, #FF9A9E 0%, #FECFEF 100%)',
+            linkTo: 'voiceProvider',
+            detailed: {
+              description: '支持粤语、国语、普通话、英语四种自然语音，并提供云端 Auto-Male 和 Auto-Female 语音选项，无需本地安装即可使用。',
+              features: [
+                '🎙️ 粤语 (Cantonese) - 香港/广东用语',
+                '🎙️ 国语 (Mandarin) - 台湾标准用语',
+                '🎙️ 普通话 (Putonghua) - 中国大陆标准用语',
+                '🎙️ 英语 (English) - 国际通用语言',
+                '☁️ Auto-Male (Cloud) - AI 云端男声，无需安装',
+                '☁️ Auto-Female (Cloud) - AI 云端女声，无需安装'
+              ],
+              bestPractices: [
+                '中文内容建议使用粤语、国语或普通话',
+                '英文内容建议使用英语',
+                '如本地无语音，请使用 Auto-Male 或 Auto-Female 云端语音',
+                '云端语音可在网页版直接使用'
+              ],
+              steps: [
+                '在语音生成面板选择语言',
+                '选择声音角色（Aasing, Sinji, Tingting 等）',
+                '如需云端语音，选择 Auto-Male 或 Auto-Female',
+                '调整语速后生成语音'
+              ],
+              tips: [
+                '💡 云端语音 Auto-Male / Auto-Female 无需安装',
+                '💡 粤语在网页版使用普通话发音作为替代',
+                '💡 本地语音需 macOS 系统支持',
+                '💡 可自由切换不同语言和声音'
+              ],
+              limitations: [
+                '粤语在网页版使用普通话发音作为替代',
+                '本地语音需 macOS 系统',
+                '云端语音需要网络连线'
+              ]
+            }
           },
           { 
             category: 'core',
@@ -736,7 +908,13 @@ export const FeaturesSection = ({ lang }: { lang: string }) => {
                 'Generation time depends on text length (~0.5-30 seconds)',
                 'Requires macOS system voices',
                 'macOS only'
-              ]
+              ],
+              voiceWarning: {
+                title: '⚠️ Voice Selection Important Notice',
+                message: 'If your computer does not have the required voice installed, or if your selected voice is not available, please use "Auto-Male (Cloud)" or "Auto-Female (Cloud)" cloud voice options. These cloud voices are AI-powered, require no local installation, and work directly on the web version, ensuring you can generate high-quality speech smoothly.',
+                cloudVoices: '☁️ Cloud Voices (Auto-Male / Auto-Female) - No installation required, works directly on web',
+                localVoices: '💻 Local Voices - Requires macOS system voices, desktop version only'
+              }
             }
           },
           { 
@@ -868,15 +1046,94 @@ export const FeaturesSection = ({ lang }: { lang: string }) => {
             icon: <Shield size={28} />, 
             title: 'AI Confidence Score', 
             desc: '0-100% multi-dimensional risk assessment with 5-star rating for smarter decisions.', 
-            gradient: 'linear-gradient(135deg, #FA709A 0%, #FEE140 100%)' 
+            gradient: 'linear-gradient(135deg, #FA709A 0%, #FEE140 100%)',
+            linkTo: 'watchlist',
+            detailed: {
+              description: 'AI Confidence Score is a multi-dimensional assessment system combining technical indicators, fundamentals, and market sentiment. In your watchlist, every stock displays real-time RSI, MACD, and trend signals, giving you a one-glance view of all your holdings.',
+              features: [
+                '📊 Real-time RSI(14) - Oversold/Overbought signals at a glance',
+                '📈 MACD Momentum - Bullish/Bearish trend signals',
+                '🎯 Buy/Sell/Hold Signals - 🟢 Green BUY / 🔴 Red SELL / ⚪ Gray HOLD',
+                '📋 Watchlist Integration - All stocks consolidated view',
+                '📊 Price & Change - Real-time prices and percentages',
+                '📈 Trend Indicators - Uptrend/Downtrend/Sideways icons'
+              ],
+              watchlistBenefits: [
+                '⭐ One page view of all your holdings',
+                '⏱️ Save time - no need to check each stock individually',
+                '🎯 Quick decisions - signals at a glance',
+                '📊 Multi-dimensional analysis - RSI, MACD, Trend combined'
+              ],
+              bestPractices: [
+                'Add your stocks to the watchlist',
+                'Regularly check watchlist for signal changes',
+                '🟢 Green (RSI < 30) - Consider BUY',
+                '🔴 Red (RSI > 70) - Consider SELL',
+                '⚪ Gray (RSI 30-70) - HOLD and observe'
+              ],
+              steps: [
+                'Click "⭐ Watchlist" button',
+                'View real-time signals for all holdings',
+                'Click any stock for complete analysis report',
+                'Make decisions based on signals',
+                'Refresh regularly for updated data'
+              ],
+              tips: [
+                '💡 Green 🟢 = RSI below 30 (Oversold) - Consider BUY',
+                '💡 Red 🔴 = RSI above 70 (Overbought) - Consider SELL',
+                '💡 Gray ⚪ = RSI 30-70 (Neutral) - HOLD',
+                '💡 Click any stock for full analysis',
+                '💡 Supports HK, TW, and US markets'
+              ],
+              limitations: [
+                'Data from public market sources with ~15 min delay',
+                'AI signals for reference only, not investment advice',
+                'RSI and MACD are technical indicators - combine with other factors'
+              ]
+            }
           },
           // Global & Experience Features
           { 
             category: 'core',
             icon: <Volume2 size={28} />, 
             title: 'Multi-Voice Speech Synthesis', 
-            desc: 'Seamless voiceovers available in Cantonese, Mandarin, Taiwanese, and English.', 
-            gradient: 'linear-gradient(135deg, #FF9A9E 0%, #FECFEF 100%)' 
+            desc: 'Cantonese, Mandarin, Taiwanese, and English voices with Auto-Male & Auto-Female cloud options.', 
+            gradient: 'linear-gradient(135deg, #FF9A9E 0%, #FECFEF 100%)',
+            linkTo: 'voiceProvider',
+            detailed: {
+              description: 'Supports Cantonese, Mandarin, Taiwanese, and English natural voices, with cloud Auto-Male and Auto-Female options that require no local installation.',
+              features: [
+                '🎙️ Cantonese - Hong Kong/Guangdong dialect',
+                '🎙️ Mandarin (Guoyu) - Taiwan standard',
+                '🎙️ Putonghua - Mainland China standard',
+                '🎙️ English - International language',
+                '☁️ Auto-Male (Cloud) - AI cloud male voice, no installation',
+                '☁️ Auto-Female (Cloud) - AI cloud female voice, no installation'
+              ],
+              bestPractices: [
+                'Use Cantonese, Mandarin, or Putonghua for Chinese content',
+                'Use English for English content',
+                'Use Auto-Male or Auto-Female if no local voices',
+                'Cloud voices work directly on web version'
+              ],
+              steps: [
+                'Select language in voice generator panel',
+                'Choose voice character (Aasing, Sinji, Tingting, etc.)',
+                'Select Auto-Male or Auto-Female for cloud voices',
+                'Adjust speed and generate'
+              ],
+              tips: [
+                '💡 Cloud voices Auto-Male / Auto-Female - no installation needed',
+                '💡 Cantonese uses Mandarin pronunciation as fallback on web',
+                '💡 Local voices require macOS system support',
+                '💡 Freely switch between different languages and voices'
+              ],
+              limitations: [
+                'Cantonese uses Mandarin pronunciation as fallback on web',
+                'Local voices require macOS system',
+                'Cloud voices require internet connection'
+              ]
+            }
           },
           { 
             category: 'core',
@@ -1029,6 +1286,19 @@ export const FeaturesSection = ({ lang }: { lang: string }) => {
 
   const navigateTo = (target: string) => {
     closeModal();
+    
+    if (target === 'watchlist') {
+      // Find and click the watchlist button
+      const buttons = document.querySelectorAll('button');
+      for (const button of buttons) {
+        const buttonText = button.textContent || '';
+        if (buttonText.includes('Watchlist') || buttonText.includes('關注列表') || buttonText.includes('关注列表')) {
+          button.click();
+          break;
+        }
+      }
+      return;
+    }
     
     const buttons = document.querySelectorAll('button');
     for (const button of buttons) {
@@ -1356,9 +1626,103 @@ export const FeaturesSection = ({ lang }: { lang: string }) => {
               </div>
             </div>
 
+            {/* Voice Warning - For MP3/WAV Audio Generator */}
+            {selectedFeature.linkTo === 'voiceProvider' && selectedFeature.detailed.voiceWarning && (
+              <div style={{
+                background: 'linear-gradient(135deg, #FFF7ED 0%, #FEF3C7 100%)',
+                borderRadius: '16px',
+                padding: '20px',
+                marginBottom: '16px',
+                border: '2px solid #F59E0B'
+              }}>
+                <h4 style={{ 
+                  fontSize: '14px', 
+                  fontWeight: 700, 
+                  color: '#92400E', 
+                  margin: '0 0 8px 0',
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '8px'
+                }}>
+                  <AlertCircle size={18} color="#F59E0B" />
+                  {selectedFeature.detailed.voiceWarning.title}
+                </h4>
+                <p style={{ fontSize: '13px', color: '#78350F', margin: '0 0 12px 0', lineHeight: '1.6' }}>
+                  {selectedFeature.detailed.voiceWarning.message}
+                </p>
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '8px' }}>
+                  <div style={{
+                    background: 'rgba(34, 197, 94, 0.1)',
+                    borderRadius: '8px',
+                    padding: '10px 14px',
+                    border: '1px solid #86EFAC'
+                  }}>
+                    <span style={{ fontSize: '12px', color: '#166534', fontWeight: 600 }}>
+                      {selectedFeature.detailed.voiceWarning.cloudVoices}
+                    </span>
+                  </div>
+                  <div style={{
+                    background: 'rgba(59, 130, 246, 0.1)',
+                    borderRadius: '8px',
+                    padding: '10px 14px',
+                    border: '1px solid #93C5FD'
+                  }}>
+                    <span style={{ fontSize: '12px', color: '#1E40AF', fontWeight: 600 }}>
+                      {selectedFeature.detailed.voiceWarning.localVoices}
+                    </span>
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {/* Watchlist Benefits - For AI Confidence Score */}
+            {selectedFeature.linkTo === 'watchlist' && selectedFeature.detailed.watchlistBenefits && (
+              <div style={{
+                background: 'linear-gradient(135deg, #ECFDF5 0%, #D1FAE5 100%)',
+                borderRadius: '16px',
+                padding: '20px',
+                marginBottom: '16px',
+                border: '2px solid #34D399'
+              }}>
+                <h4 style={{ 
+                  fontSize: '14px', 
+                  fontWeight: 700, 
+                  color: '#065F46', 
+                  margin: '0 0 8px 0',
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '8px'
+                }}>
+                  <ListChecks size={18} color="#10B981" />
+                  Watchlist Benefits
+                </h4>
+                <ul style={{ 
+                  margin: 0, 
+                  padding: 0, 
+                  listStyle: 'none',
+                  display: 'grid',
+                  gap: '6px'
+                }}>
+                  {selectedFeature.detailed.watchlistBenefits.map((item: string, i: number) => (
+                    <li key={i} style={{
+                      fontSize: '13px',
+                      color: '#065F46',
+                      display: 'flex',
+                      alignItems: 'flex-start',
+                      gap: '8px',
+                      lineHeight: '1.5'
+                    }}>
+                      <span style={{ color: '#10B981' }}>▸</span>
+                      {item}
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            )}
+
             {/* Content */}
             <div style={{ display: 'grid', gap: '24px' }}>
-              {/* Features List - safe check for features */}
+              {/* Features List */}
               {selectedFeature.detailed.features && selectedFeature.detailed.features.length > 0 && (
                 <div style={{
                   background: '#F0FDF4',
@@ -1401,7 +1765,7 @@ export const FeaturesSection = ({ lang }: { lang: string }) => {
                 </div>
               )}
 
-              {/* Applications - safe check for applications */}
+              {/* Applications */}
               {selectedFeature.detailed.applications && selectedFeature.detailed.applications.length > 0 && (
                 <div style={{
                   background: '#EFF6FF',
@@ -1444,7 +1808,7 @@ export const FeaturesSection = ({ lang }: { lang: string }) => {
                 </div>
               )}
 
-              {/* Benefits - safe check for benefits */}
+              {/* Benefits */}
               {selectedFeature.detailed.benefits && selectedFeature.detailed.benefits.length > 0 && (
                 <div style={{
                   background: 'linear-gradient(135deg, #1E1B4B 0%, #0F172A 100%)',
@@ -1487,7 +1851,7 @@ export const FeaturesSection = ({ lang }: { lang: string }) => {
                 </div>
               )}
 
-              {/* Capabilities - safe check for capabilities */}
+              {/* Capabilities */}
               {selectedFeature.detailed.capabilities && selectedFeature.detailed.capabilities.length > 0 && (
                 <div style={{
                   background: '#F8FAFC',
@@ -1701,7 +2065,7 @@ export const FeaturesSection = ({ lang }: { lang: string }) => {
                 </div>
               </div>
 
-              {/* 🎬 Workflow Reminder - Only for media features */}
+              {/* Workflow Reminder */}
               {selectedFeature.linkTo === 'voiceProvider' && text.workflowReminder && (
                 <div style={{
                   background: 'linear-gradient(135deg, #1E1B4B 0%, #0F172A 100%)',
