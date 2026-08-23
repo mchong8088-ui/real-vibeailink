@@ -562,7 +562,7 @@ const MobileAnalysis: React.FC<MobileAnalysisProps> = ({
           <VoiceSelector 
   currentVoice={voiceLanguage}
   onVoiceChange={setVoiceLanguage}
-  mode="language"  // Add this line
+mode="voice"  // ✅ This is correct
 />
           <LanguageToggle currentLang={langKey} onLangChange={setLangKey} />
           
