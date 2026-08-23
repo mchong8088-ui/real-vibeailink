@@ -9,7 +9,7 @@ interface VoiceSelectorProps {
 }
 
 // ============================================================
-// ORIGINAL MACOS SYSTEM VOICES (HARDCODED)
+// ORIGINAL MACOS SYSTEM VOICES + AUTO VOICES
 // ============================================================
 const MACOS_VOICES = [
   // Cantonese Voices
@@ -28,9 +28,9 @@ const MACOS_VOICES = [
   { name: 'Fred', language: 'English', gender: 'Male', quality: 'Standard' },
   { name: 'Nick', language: 'English', gender: 'Male', quality: 'Standard' },
   
-  // Auto Voices (Fallback)
-  { name: 'Auto-Male', language: 'Auto', gender: 'Male', quality: 'Auto' },
-  { name: 'Auto-Female', language: 'Auto', gender: 'Female', quality: 'Auto' },
+  // Auto Voices (Fallback to Cloud)
+  { name: 'Auto-Male', language: 'Auto (Cloud)', gender: 'Male', quality: 'Cloud' },
+  { name: 'Auto-Female', language: 'Auto (Cloud)', gender: 'Female', quality: 'Cloud' },
 ];
 
 // Group voices by language for better UX
@@ -52,9 +52,12 @@ export const VoiceSelector: React.FC<VoiceSelectorProps> = ({
   // Set default voice if none selected
   useEffect(() => {
     if (!currentVoice || currentVoice === '') {
-      // Check if Aasing (Enhanced) is available on macOS
-      // If not, fall back to Auto-Female
-      const defaultVoice = 'Aasing (Enhanced)';
+      // Default to Auto-Female for web, Aasing for desktop
+      const isWeb = typeof window !== 'undefined' && 
+        (window.location.hostname.includes('vercel.app') || 
+         window.location.hostname.includes('localhost'));
+      
+      const defaultVoice = isWeb ? 'Auto-Female' : 'Aasing (Enhanced)';
       onVoiceChange(defaultVoice);
     }
   }, []);
@@ -84,38 +87,42 @@ export const VoiceSelector: React.FC<VoiceSelectorProps> = ({
     setIsOpen(false);
   };
 
-  // Check if voice is available on macOS
-  const checkVoiceAvailability = async (voiceName: string): Promise<boolean> => {
-    try {
-      const response = await fetch('/api/check-voice', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ voiceName }),
-      });
-      const data = await response.json();
-      return data.available;
-    } catch {
-      return false;
-    }
-  };
-
   // Render voice group
   const renderVoiceGroup = (groupName: string, voices: string[]) => {
+    const isCloudGroup = groupName.includes('Cloud');
+    
     return (
       <div key={groupName} style={{ marginBottom: '8px' }}>
         <div style={{
           fontSize: '10px',
           fontWeight: '600',
-          color: '#6B7280',
+          color: isCloudGroup ? '#7C3AED' : '#6B7280',
           padding: '4px 12px',
           textTransform: 'uppercase',
           letterSpacing: '0.5px',
+          display: 'flex',
+          alignItems: 'center',
+          gap: '4px',
         }}>
+          {isCloudGroup && '☁️ '}
           {groupName}
+          {isCloudGroup && (
+            <span style={{
+              fontSize: '8px',
+              backgroundColor: '#7C3AED',
+              color: 'white',
+              padding: '1px 8px',
+              borderRadius: '10px',
+              fontWeight: '400',
+            }}>
+              FALLBACK
+            </span>
+          )}
         </div>
         {voices.map((voiceName) => {
           const voice = MACOS_VOICES.find(v => v.name === voiceName);
           const isSelected = currentVoice === voiceName;
+          const isCloud = voice?.quality === 'Cloud';
           
           return (
             <button
@@ -134,10 +141,11 @@ export const VoiceSelector: React.FC<VoiceSelectorProps> = ({
                 fontSize: '12px',
                 color: isSelected ? '#1E40AF' : '#374151',
                 transition: 'all 0.15s ease',
+                opacity: isCloud ? 0.85 : 1,
               }}
               onMouseEnter={(e) => {
                 if (!isSelected) {
-                  e.currentTarget.style.backgroundColor = '#F3F4F6';
+                  e.currentTarget.style.backgroundColor = isCloud ? '#F5F3FF' : '#F3F4F6';
                 }
               }}
               onMouseLeave={(e) => {
@@ -148,7 +156,7 @@ export const VoiceSelector: React.FC<VoiceSelectorProps> = ({
             >
               <span style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
                 {isSelected && <Check size={12} color="#3B82F6" />}
-                {voice?.gender === 'Male' ? '👨' : voice?.gender === 'Female' ? '👩' : '🎤'}
+                {isCloud ? '☁️' : (voice?.gender === 'Male' ? '👨' : voice?.gender === 'Female' ? '👩' : '🎤')}
                 <span>{voiceName}</span>
                 {voice?.quality === 'Enhanced' && (
                   <span style={{
@@ -161,10 +169,21 @@ export const VoiceSelector: React.FC<VoiceSelectorProps> = ({
                     Enhanced
                   </span>
                 )}
+                {isCloud && (
+                  <span style={{
+                    fontSize: '8px',
+                    backgroundColor: '#7C3AED',
+                    color: 'white',
+                    padding: '1px 6px',
+                    borderRadius: '10px',
+                  }}>
+                    Cloud
+                  </span>
+                )}
               </span>
               <span style={{
                 fontSize: '9px',
-                color: '#9CA3AF',
+                color: isCloud ? '#7C3AED' : '#9CA3AF',
               }}>
                 {voice?.language || ''}
               </span>
@@ -187,18 +206,18 @@ export const VoiceSelector: React.FC<VoiceSelectorProps> = ({
           width: '100%',
           padding: '6px 10px',
           borderRadius: '6px',
-          border: '1px solid #D1D5DB',
-          background: '#FFFFFF',
+          border: currentVoice?.includes('Auto') ? '2px solid #7C3AED' : '1px solid #D1D5DB',
+          background: currentVoice?.includes('Auto') ? '#F5F3FF' : '#FFFFFF',
           fontSize: '12px',
           color: '#111827',
           cursor: 'pointer',
           transition: 'border-color 0.15s ease',
         }}
         onMouseEnter={(e) => {
-          e.currentTarget.style.borderColor = '#9CA3AF';
+          e.currentTarget.style.borderColor = currentVoice?.includes('Auto') ? '#6D28D9' : '#9CA3AF';
         }}
         onMouseLeave={(e) => {
-          e.currentTarget.style.borderColor = '#D1D5DB';
+          e.currentTarget.style.borderColor = currentVoice?.includes('Auto') ? '#7C3AED' : '#D1D5DB';
         }}
       >
         <span style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
@@ -206,13 +225,25 @@ export const VoiceSelector: React.FC<VoiceSelectorProps> = ({
             <Loader2 size={14} className="animate-spin" />
           ) : (
             <span style={{ fontSize: '14px' }}>
-              {currentVoice === 'Auto-Male' ? '👨' : 
-               currentVoice === 'Auto-Female' ? '👩' : 
+              {currentVoice === 'Auto-Male' ? '☁️👨' : 
+               currentVoice === 'Auto-Female' ? '☁️👩' : 
                currentVoice?.includes('Aasing') ? '👨' : 
                currentVoice?.includes('Sinji') ? '👩' : '🎤'}
             </span>
           )}
           <span>{getCurrentDisplayName()}</span>
+          {currentVoice?.includes('Auto') && (
+            <span style={{
+              fontSize: '8px',
+              backgroundColor: '#7C3AED',
+              color: 'white',
+              padding: '1px 8px',
+              borderRadius: '10px',
+              fontWeight: '400',
+            }}>
+              CLOUD
+            </span>
+          )}
         </span>
         <ChevronDown 
           size={16} 
@@ -267,6 +298,8 @@ export const VoiceSelector: React.FC<VoiceSelectorProps> = ({
               textAlign: 'center',
             }}>
               💡 {mode === 'preview' ? 'Preview voice' : 'Select a voice for generation'}
+              {' • '}
+              ☁️ Cloud voices work on all devices (fallback to OpenAI)
             </div>
           </div>
         </>
