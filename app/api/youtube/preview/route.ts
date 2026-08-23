@@ -30,86 +30,46 @@ function cleanTextForTTS(text: string): string {
   return cleaned;
 }
 
-// ============================================================
-// PAUSE MARKER PROCESSING - Strip markers and track pause durations
-// ============================================================
-
-interface ProcessedText {
-  text: string;
-  pauses: Array<{ position: number; duration: number }>;
-}
-
-function processPauseMarkers(text: string): ProcessedText {
+// Process pause markers
+function processPauseMarkers(text: string): { text: string; pauses: any[] } {
   let processed = text;
-  const pauses: Array<{ position: number; duration: number }> = [];
+  const pauses: any[] = [];
   
-  console.log('Original text with markers:', processed);
-  
-  // Find and process [PAUSE Xs] markers
-  let match;
-  const pauseRegex = /\[PAUSE\s+(\d+\.?\d*)s\]/gi;
-  let tempText = processed;
-  let offset = 0;
-  
-  // Collect all pause positions
-  while ((match = pauseRegex.exec(processed)) !== null) {
-    const duration = parseFloat(match[1]);
-    const position = match.index - offset;
-    pauses.push({ position, duration: Math.min(duration, 5) });
-    // Replace with a space (will be removed later)
-    tempText = tempText.replace(match[0], ' ');
-    offset += match[0].length - 1;
-  }
-  
-  // Replace other markers with spaces
-  tempText = tempText.replace(/\[PAUSE\]/gi, ' ');
-  tempText = tempText.replace(/\[SHORT_PAUSE\]/gi, ' ');
-  tempText = tempText.replace(/\[LONG_PAUSE\]/gi, ' ');
-  tempText = tempText.replace(/\[SCENE\]/gi, ' ');
-  tempText = tempText.replace(/\[BREAK\]/gi, ' ');
+  // Replace markers with spaces
+  processed = processed.replace(/\[PAUSE\s+(\d+\.?\d*)s\]/gi, ' ');
+  processed = processed.replace(/\[PAUSE\]/gi, ' ');
+  processed = processed.replace(/\[SHORT_PAUSE\]/gi, ' ');
+  processed = processed.replace(/\[LONG_PAUSE\]/gi, ' ');
+  processed = processed.replace(/\[SCENE\]/gi, ' ');
+  processed = processed.replace(/\[BREAK\]/gi, ' ');
   
   // Clean up spaces
-  tempText = tempText.replace(/\s+/g, ' ');
+  processed = processed.replace(/\s+/g, ' ');
   
-  console.log('Processed text:', tempText);
-  console.log('Pauses:', pauses);
-  
-  return { text: tempText.trim(), pauses };
+  return { text: processed.trim(), pauses };
 }
 
-// Generate audio with pauses using say command
-async function generateWithPauses(text: string, voice: string, rate: number): Promise<Buffer> {
-  const { text: cleanText, pauses } = processPauseMarkers(text);
-  
-  console.log('Final clean text:', cleanText);
-  console.log('Pauses to insert:', pauses);
+// Generate TTS using macOS say command
+async function generateWithSay(text: string, voice: string, rate: number): Promise<Buffer> {
+  const { text: cleanText } = processPauseMarkers(text);
   
   const tempTxt = path.join(os.tmpdir(), `preview_${Date.now()}.txt`);
   const tempAiff = path.join(os.tmpdir(), `preview_${Date.now()}.aiff`);
   const tempWav = path.join(os.tmpdir(), `preview_${Date.now()}.wav`);
   
   try {
-    // Write the clean text to file
     await fs.promises.writeFile(tempTxt, cleanText, 'utf-8');
     
-    // Generate audio using say
     const sayCommand = `say -v "${voice}" -r ${rate} -f "${tempTxt}" -o "${tempAiff}"`;
     console.log('Say Command:', sayCommand);
     await execAsync(sayCommand, { shell: '/bin/bash' });
     
-    // Convert AIFF to WAV using afconvert
     const afconvertCommand = `afconvert -f WAVE -d LEI16@22050 "${tempAiff}" "${tempWav}"`;
     console.log('Afconvert Command:', afconvertCommand);
     await execAsync(afconvertCommand, { shell: '/bin/bash' });
     
-    let wavBuffer = await fs.promises.readFile(tempWav);
+    const wavBuffer = await fs.promises.readFile(tempWav);
     console.log('WAV size:', wavBuffer.length, 'bytes');
-    
-    // Insert silence for pauses if there are any
-    if (pauses.length > 0) {
-      wavBuffer = Buffer.from(await insertPauses(wavBuffer, pauses));
-      console.log('WAV size after inserting pauses:', wavBuffer.length, 'bytes');
-    }
     
     return wavBuffer;
     
@@ -120,16 +80,7 @@ async function generateWithPauses(text: string, voice: string, rate: number): Pr
   }
 }
 
-// Insert silence into WAV audio at specific positions
-async function insertPauses(
-  audioBuffer: Buffer | Uint8Array | any, 
-  pauses: Array<{ position: number; duration: number }>
-): Promise<Buffer> {
-  console.log('Inserting pauses into audio...');
-  return Buffer.from(audioBuffer);
-}
-
-// Check if voice exists (macOS only)
+// Check if voice exists
 async function voiceExists(voiceName: string): Promise<boolean> {
   if (!voiceName) return false;
   
@@ -158,20 +109,10 @@ async function isSayAvailable(): Promise<boolean> {
   }
 }
 
-// Generate TTS using OpenAI Cloud (Mandarin/English)
-async function generateOpenAITTS(text: string, language: string, speed: number = 1.0, selectedVoice: string = 'Auto-Female'): Promise<Buffer | null> {
+// Generate OpenAI TTS fallback
+async function generateOpenAITTS(text: string, language: string, speed: number = 1.0): Promise<Buffer | null> {
   const { text: cleanText } = processPauseMarkers(text);
   console.log('OpenAI TTS text:', cleanText);
-  
-  const getVoice = (): string => {
-    if (selectedVoice === 'Auto-Male') {
-      return 'onyx';
-    }
-    if (selectedVoice === 'Auto-Female') {
-      return 'nova';
-    }
-    return 'nova';
-  };
   
   try {
     const response = await fetch('https://api.openai.com/v1/audio/speech', {
@@ -182,7 +123,7 @@ async function generateOpenAITTS(text: string, language: string, speed: number =
       },
       body: JSON.stringify({
         model: 'tts-1',
-        voice: getVoice(),
+        voice: 'nova',
         input: cleanText.slice(0, 200),
         speed: Math.min(1.5, Math.max(0.5, speed)),
         response_format: 'wav',
@@ -190,8 +131,7 @@ async function generateOpenAITTS(text: string, language: string, speed: number =
     });
 
     if (!response.ok) {
-      const errorData = await response.json().catch(() => ({}));
-      console.error('OpenAI TTS error response:', errorData);
+      console.error('OpenAI TTS error:', await response.text());
       return null;
     }
 
@@ -214,7 +154,7 @@ export async function POST(req: Request) {
     console.log('Language:', language);
     console.log('Selected voice:', selectedVoice);
 
-    // Keep more text for preview (300 chars)
+    // Preview text (300 chars max)
     let cleanScript = cleanTextForTTS(script || '你好');
     
     let previewText = cleanScript;
@@ -237,15 +177,17 @@ export async function POST(req: Request) {
     console.log('Say command available:', sayAvailable);
 
     // ============================================================
-    // LOCAL macOS - USE SAY WITH PAUSE PROCESSING
+    // LOCAL MACOS TTS
     // ============================================================
     if (sayAvailable) {
-      console.log('Local macOS - using say with pause processing');
+      console.log('Local macOS - using say');
       
       let voiceToUse = selectedVoice;
       
+      // Auto-select voice if not specified
       if (!voiceToUse || voiceToUse === 'Auto-Male' || voiceToUse === 'Auto-Female') {
         if (isCantonese) {
+          // Try Cantonese voices
           const voices = ['Aasing (Enhanced)', 'Aasing', 'Sinji'];
           for (const v of voices) {
             if (await voiceExists(v)) {
@@ -279,108 +221,67 @@ export async function POST(req: Request) {
       if (speed) speechRate = Math.round(speed * 175);
 
       try {
-        // Use the new function with pause processing
-        const wavBuffer = await generateWithPauses(previewText, voiceToUse, speechRate);
+        const wavBuffer = await generateWithSay(previewText, voiceToUse, speechRate);
         
-        if (!wavBuffer || wavBuffer.length < 44) {
-          throw new Error('Failed to generate valid WAV');
+        if (wavBuffer && wavBuffer.length >= 44) {
+          console.log('Final WAV size:', wavBuffer.length, 'bytes');
+          console.log('========== PREVIEW COMPLETE ==========');
+          
+          const wavData = new Uint8Array(wavBuffer);
+          
+          return new NextResponse(wavData, {
+            status: 200,
+            headers: {
+              'Content-Type': 'audio/wav',
+              'Content-Length': wavData.length.toString(),
+              'Cache-Control': 'no-cache, no-store, must-revalidate',
+              'X-Voice-Used': voiceToUse,
+              'X-Language-Used': language,
+              'X-Environment': 'local',
+            },
+          });
         }
-        
-        console.log('Final WAV size:', wavBuffer.length, 'bytes');
-        console.log('========== PREVIEW COMPLETE ==========');
-        
-        const wavData = new Uint8Array(wavBuffer);
-        
-        return new NextResponse(wavData, {
-          status: 200,
-          headers: {
-            'Content-Type': 'audio/wav',
-            'Content-Length': wavData.length.toString(),
-            'Cache-Control': 'no-cache, no-store, must-revalidate',
-            'X-Voice-Used': voiceToUse,
-            'X-Language-Used': language,
-            'X-Environment': 'local',
-          },
-        });
-        
       } catch (error: any) {
         console.error('Local generation error:', error);
-        // Fall through to cloud TTS
       }
     }
 
     // ============================================================
-    // CLOUD TTS (OpenAI)
+    // CLOUD TTS (OpenAI) FALLBACK
     // ============================================================
-    console.log('Using cloud TTS (OpenAI)');
+    console.log('Using cloud TTS (OpenAI) fallback');
     
-    if (isCantonese) {
-      console.log('Cantonese - using Mandarin fallback');
-      try {
-        const audioBuffer = await generateOpenAITTS(previewText, 'Mandarin', speed || 1.0, selectedVoice || 'Auto-Female');
-        if (audioBuffer) {
-          const audioData = new Uint8Array(audioBuffer);
-          return new NextResponse(audioData, {
-            status: 200,
-            headers: {
-              'Content-Type': 'audio/wav',
-              'Content-Length': audioData.length.toString(),
-              'Cache-Control': 'no-cache, no-store, must-revalidate',
-              'X-Voice-Used': selectedVoice || 'openai-fallback',
-              'X-Language-Used': 'Cantonese (Mandarin fallback)',
-              'X-Provider': 'OpenAI-TTS',
-              'X-Environment': 'cloud',
-            },
-          });
-        }
-      } catch (error) {
-        console.error('OpenAI TTS failed:', error);
+    try {
+      const audioBuffer = await generateOpenAITTS(previewText, language, speed || 1.0);
+      if (audioBuffer) {
+        const audioData = new Uint8Array(audioBuffer);
+        return new NextResponse(audioData, {
+          status: 200,
+          headers: {
+            'Content-Type': 'audio/wav',
+            'Content-Length': audioData.length.toString(),
+            'Cache-Control': 'no-cache, no-store, must-revalidate',
+            'X-Voice-Used': 'openai-fallback',
+            'X-Language-Used': language,
+            'X-Provider': 'OpenAI-TTS',
+            'X-Environment': 'cloud',
+          },
+        });
       }
-      return NextResponse.json({ 
-        success: false, 
-        error: 'Cantonese voice generation unavailable. Please select Mandarin or English for web.',
-      }, { status: 503 });
-    }
-    
-    if (isMandarin || isEnglish) {
-      console.log(`Using OpenAI TTS for ${language}`);
-      try {
-        const audioBuffer = await generateOpenAITTS(previewText, language, speed || 1.0, selectedVoice || 'Auto-Female');
-        if (audioBuffer) {
-          const audioData = new Uint8Array(audioBuffer);
-          return new NextResponse(audioData, {
-            status: 200,
-            headers: {
-              'Content-Type': 'audio/wav',
-              'Content-Length': audioData.length.toString(),
-              'Cache-Control': 'no-cache, no-store, must-revalidate',
-              'X-Voice-Used': selectedVoice || 'openai',
-              'X-Language-Used': language,
-              'X-Provider': 'OpenAI-TTS',
-              'X-Environment': 'cloud',
-            },
-          });
-        }
-      } catch (error) {
-        console.error('OpenAI TTS failed:', error);
-      }
-      return NextResponse.json({ 
-        success: false, 
-        error: 'Voice generation temporarily unavailable. Please try again later.',
-      }, { status: 503 });
+    } catch (error) {
+      console.error('OpenAI TTS fallback failed:', error);
     }
 
     return NextResponse.json({ 
       success: false, 
-      error: 'Unsupported language',
-    }, { status: 400 });
+      error: 'Voice generation unavailable',
+    }, { status: 503 });
 
   } catch (error: any) {
     console.error('Preview TTS Error:', error);
     return NextResponse.json({ 
       success: false, 
       error: error.message || 'TTS generation failed',
-      details: error.stack 
     }, { status: 500 });
   }
 }

@@ -3,8 +3,7 @@ import React, { useState, useRef, useEffect } from 'react';
 import { 
   X, Upload, Play, Pause, Download, Sparkles, 
   FileText, Music, Video, Globe, Settings, AlertCircle, Loader2,
-  User, Send, CheckSquare, Square, Mail, Gauge, Mic, FileAudio,
-  CheckCircle, AlertTriangle, RefreshCw, Type, Info
+  User, Send, CheckSquare, Square, Mail, Gauge, Mic, FileAudio
 } from 'lucide-react';
 import { supabase } from '../lib/supabase';
 import { VoiceSelector } from './layout/VoiceSelector';
@@ -19,6 +18,7 @@ interface VoiceProviderModalProps {
   langKey?: string;
 }
 
+// Define voice type
 interface Voice {
   name: string;
   language: string;
@@ -26,6 +26,7 @@ interface Voice {
   quality?: string;
 }
 
+// Digital Twin Survey State
 interface SurveyState {
   isOpen: boolean;
   selectedOptions: string[];
@@ -48,12 +49,20 @@ export const VoiceProviderModal: React.FC<VoiceProviderModalProps> = ({
   const [targetLanguage, setTargetLanguage] = useState<string>('None');
   const [voiceType, setVoiceType] = useState<'local' | 'gateway'>('local');
   const [speed, setSpeed] = useState<number>(1.0);
+  
+  // Download format selection
   const [downloadFormat, setDownloadFormat] = useState<'wav' | 'mp3'>('wav');
+  
+  // Scene pause controls
   const [enableScenePause, setEnableScenePause] = useState<boolean>(false);
   const [scenePause, setScenePause] = useState<number>(2);
+  
+  // Voice selection state
   const [availableVoices, setAvailableVoices] = useState<Voice[]>([]);
   const [selectedVoice, setSelectedVoice] = useState<string>('Aasing (Enhanced)');
   const [isLoadingVoices, setIsLoadingVoices] = useState(false);
+
+  // Uploaded audio file state
   const [uploadedAudioFile, setUploadedAudioFile] = useState<File | null>(null);
   const [uploadedAudioUrl, setUploadedAudioUrl] = useState<string | null>(null);
   const [isAudioUploaded, setIsAudioUploaded] = useState<boolean>(false);
@@ -62,13 +71,6 @@ export const VoiceProviderModal: React.FC<VoiceProviderModalProps> = ({
   const [isPreviewing, setIsPreviewing] = useState(false);
   const [isPlayingAudio, setIsPlayingAudio] = useState(false);
   const [previewError, setPreviewError] = useState<string | null>(null);
-  const [generationError, setGenerationError] = useState<string | null>(null);
-  const [generationSuccess, setGenerationSuccess] = useState<boolean>(false);
-  
-  // Speech-to-Text states
-  const [isTranscribing, setIsTranscribing] = useState<boolean>(false);
-  const [transcriptionError, setTranscriptionError] = useState<string | null>(null);
-  const [transcriptionSuccess, setTranscriptionSuccess] = useState<boolean>(false);
 
   // Generated Outputs
   const [generatedMp3Base64, setGeneratedMp3Base64] = useState<string | null>(null);
@@ -90,6 +92,7 @@ export const VoiceProviderModal: React.FC<VoiceProviderModalProps> = ({
   const fileInputRef = useRef<HTMLInputElement>(null);
   const audioFileInputRef = useRef<HTMLInputElement>(null);
 
+  // Survey options
   const surveyOptions = [
     { id: 'youtube_intro', label: 'Create YouTube intro/outro videos' },
     { id: 'talking_avatar', label: 'Create a talking avatar of myself' },
@@ -101,6 +104,9 @@ export const VoiceProviderModal: React.FC<VoiceProviderModalProps> = ({
     { id: 'other', label: 'Other (please specify)' },
   ];
 
+  // ============================================
+  // CHECK: Web vs Local
+  // ============================================
   const isWeb = typeof window !== 'undefined' && 
     (window.location.hostname.includes('vercel.app') || 
      window.location.hostname.includes('vibeailink.com'));
@@ -108,7 +114,7 @@ export const VoiceProviderModal: React.FC<VoiceProviderModalProps> = ({
   const isCantoneseAvailable = !isWeb;
 
   // ============================================
-  // FUNCTIONS
+  // DEFINE FUNCTIONS FIRST
   // ============================================
 
   const loadAvailableVoices = async () => {
@@ -116,8 +122,10 @@ export const VoiceProviderModal: React.FC<VoiceProviderModalProps> = ({
     try {
       const response = await fetch('/api/voices');
       const data = await response.json();
+      
       if (data.success && data.voices) {
         setAvailableVoices(data.voices);
+        console.log('Available voices loaded:', data.voices);
       }
     } catch (error) {
       console.error('Failed to load voices:', error);
@@ -137,16 +145,20 @@ export const VoiceProviderModal: React.FC<VoiceProviderModalProps> = ({
         : langKey === 'Simplified Chinese'
         ? '粤语语音在网页版仅支持普通话发音（Mandarin fallback）。\n\n如需纯正粤语发音，请使用桌面版应用程序（macOS）。'
         : 'Cantonese on web uses Mandarin pronunciation (fallback).\n\nFor authentic Cantonese, please use the desktop app (macOS).';
+      
       alert(msg);
       setLanguage('Mandarin');
       loadAvailableVoices();
       return;
     }
+    
     setLanguage(newLang);
     loadAvailableVoices();
   };
 
-  const containsChinese = (text: string): boolean => /[\u4e00-\u9fff]/.test(text);
+  const containsChinese = (text: string): boolean => {
+    return /[\u4e00-\u9fff]/.test(text);
+  };
 
   const isChineseText = (text: string): boolean => {
     const chineseChars = text.match(/[\u4e00-\u9fff]/g) || [];
@@ -172,7 +184,9 @@ export const VoiceProviderModal: React.FC<VoiceProviderModalProps> = ({
   };
 
   const getSuggestedLanguage = () => {
-    if (isChineseText(script)) return 'Cantonese';
+    if (isChineseText(script)) {
+      return 'Cantonese';
+    }
     return null;
   };
 
@@ -183,13 +197,14 @@ export const VoiceProviderModal: React.FC<VoiceProviderModalProps> = ({
   };
 
   // ============================================
-  // AUDIO FILE UPLOAD & TRANSCRIPTION
+  // AUDIO FILE UPLOAD FUNCTIONS
   // ============================================
 
   const handleAudioFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
 
+    // Check if file is audio
     if (!file.type.startsWith('audio/')) {
       alert('Please upload an audio file (MP3, WAV, M4A, etc.)');
       return;
@@ -203,131 +218,36 @@ export const VoiceProviderModal: React.FC<VoiceProviderModalProps> = ({
 
     setUploadedAudioFile(file);
     setIsAudioUploaded(true);
-    setTranscriptionSuccess(false);
-    setTranscriptionError(null);
 
+    // Create URL for preview
     const url = URL.createObjectURL(file);
     setUploadedAudioUrl(url);
 
+    // Set duration if possible
     const audio = new Audio();
     audio.src = url;
     audio.onloadedmetadata = () => {
       setAudioDuration(audio.duration);
     };
+
+    console.log('📁 Audio file uploaded:', file.name, file.size, 'bytes');
   };
 
   const clearUploadedAudio = () => {
-    if (uploadedAudioUrl) URL.revokeObjectURL(uploadedAudioUrl);
+    if (uploadedAudioUrl) {
+      URL.revokeObjectURL(uploadedAudioUrl);
+    }
     setUploadedAudioFile(null);
     setUploadedAudioUrl(null);
     setIsAudioUploaded(false);
     setAudioDuration(0);
-    setTranscriptionSuccess(false);
-    setTranscriptionError(null);
-    if (audioFileInputRef.current) audioFileInputRef.current.value = '';
+    if (audioFileInputRef.current) {
+      audioFileInputRef.current.value = '';
+    }
   };
 
   // ============================================
-  // SPEECH-TO-TEXT (Convert Audio to Script)
-  // ============================================
-
-  const handleConvertToScript = async () => {
-  if (!uploadedAudioFile) {
-    alert('Please upload an audio file first.');
-    return;
-  }
-
-  setIsTranscribing(true);
-  setTranscriptionError(null);
-  setTranscriptionSuccess(false);
-
-  try {
-    // Convert the audio file to base64
-    const reader = new FileReader();
-    const audioBase64 = await new Promise<string>((resolve, reject) => {
-      reader.onload = () => {
-        const result = reader.result as string;
-        const base64 = result.split(',')[1];
-        resolve(base64);
-      };
-      reader.onerror = reject;
-      reader.readAsDataURL(uploadedAudioFile);
-    });
-
-    // Detect language from the audio (use the selected language as hint)
-    const detectLang = language === 'Cantonese' ? 'zh-HK' : 
-                       language === 'Mandarin' ? 'zh-CN' : 'en-US';
-
-    console.log('📤 Sending to speech-to-text API...');
-
-    // Call the speech-to-text API
-    const response = await fetch('/api/speech-to-text', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        audioBase64: audioBase64,
-        language: detectLang,
-        format: uploadedAudioFile.type.includes('wav') ? 'wav' : 'mp3',
-      }),
-    });
-
-    const result = await response.json();
-    console.log('📥 Speech-to-text response:', result);
-    
-    // Handle errors
-    if (!response.ok) {
-      if (response.status === 402) {
-        const errorMsg = langKey === 'Traditional Chinese' 
-          ? `❌ 積分不足！需要 ${result.creditsNeeded || '?'} 積分，您只有 ${result.creditsAvailable || 0} 積分。\n\n請充值後再試。`
-          : langKey === 'Simplified Chinese'
-          ? `❌ 积分不足！需要 ${result.creditsNeeded || '?'} 积分，您只有 ${result.creditsAvailable || 0} 积分。\n\n请充值后再试。`
-          : `❌ Insufficient credits! Need ${result.creditsNeeded || '?'} credits, you have ${result.creditsAvailable || 0}.\n\nPlease top up and try again.`;
-        
-        setTranscriptionError(errorMsg);
-        setIsTranscribing(false);
-        return;
-      }
-      
-      throw new Error(result.error || `HTTP ${response.status}: ${response.statusText}`);
-    }
-    
-    if (result.success && result.text) {
-      // Set the transcribed text to the script
-      setScript(result.text);
-      setTranscriptionSuccess(true);
-      
-      // Auto-detect language if Chinese
-      if (isChineseText(result.text)) {
-        setLanguage('Cantonese');
-      }
-      
-      // Show success with credit info
-      const successMsg = langKey === 'Traditional Chinese'
-        ? `✅ 轉錄完成！${result.isDevMode ? '（測試模式）' : `使用了 ${result.creditsUsed} 積分，剩餘 ${result.creditsRemaining} 積分`}`
-        : langKey === 'Simplified Chinese'
-        ? `✅ 转录完成！${result.isDevMode ? '（测试模式）' : `使用了 ${result.creditsUsed} 积分，剩余 ${result.creditsRemaining} 积分`}`
-        : `✅ Transcription complete!${result.isDevMode ? ' (Test Mode)' : ` Used ${result.creditsUsed} credits, ${result.creditsRemaining} remaining`}`;
-      
-      console.log(successMsg);
-    } else {
-      throw new Error(result.error || 'Transcription failed');
-    }
-  } catch (error) {
-    console.error('Transcription error:', error);
-    const errorMsg = langKey === 'Traditional Chinese'
-      ? `轉錄失敗：${error instanceof Error ? error.message : '請重試'}`
-      : langKey === 'Simplified Chinese'
-      ? `转录失败：${error instanceof Error ? error.message : '请重试'}`
-      : `Transcription failed: ${error instanceof Error ? error.message : 'Please try again'}`;
-    
-    setTranscriptionError(errorMsg);
-  } finally {
-    setIsTranscribing(false);
-  }
-};
-
-  // ============================================
-  // SURVEY
+  // SURVEY FUNCTIONS
   // ============================================
 
   const toggleSurveyOption = (optionId: string) => {
@@ -409,16 +329,15 @@ export const VoiceProviderModal: React.FC<VoiceProviderModalProps> = ({
   useEffect(() => {
     if (isOpen) {
       loadAvailableVoices();
-      if (script && isChineseText(script)) setLanguage('Cantonese');
-      setGenerationSuccess(false);
-      setGenerationError(null);
-      setTranscriptionSuccess(false);
-      setTranscriptionError(null);
+      if (script && isChineseText(script)) {
+        setLanguage('Cantonese');
+      }
     }
   }, [isOpen]);
 
   useEffect(() => {
     if (isWeb && language === 'Cantonese') {
+      console.log('Cantonese auto-switched to Mandarin on web');
       setLanguage('Mandarin');
       loadAvailableVoices();
     }
@@ -426,8 +345,12 @@ export const VoiceProviderModal: React.FC<VoiceProviderModalProps> = ({
 
   useEffect(() => {
     return () => {
-      if (audioRef.current?.src) URL.revokeObjectURL(audioRef.current.src);
-      if (uploadedAudioUrl) URL.revokeObjectURL(uploadedAudioUrl);
+      if (audioRef.current?.src) {
+        URL.revokeObjectURL(audioRef.current.src);
+      }
+      if (uploadedAudioUrl) {
+        URL.revokeObjectURL(uploadedAudioUrl);
+      }
     };
   }, []);
 
@@ -445,11 +368,14 @@ export const VoiceProviderModal: React.FC<VoiceProviderModalProps> = ({
     if (fileName.endsWith('.txt') || fileName.endsWith('.docx')) {
       const text = await file.text();
       setScript(text);
-      if (isChineseText(text)) setLanguage('Cantonese');
+      if (isChineseText(text)) {
+        setLanguage('Cantonese');
+      }
     }
   };
 
   const handleAudioPreview = async () => {
+    // If there's an uploaded audio file, play it
     if (uploadedAudioUrl) {
       if (audioRef.current) {
         audioRef.current.src = uploadedAudioUrl;
@@ -475,8 +401,11 @@ export const VoiceProviderModal: React.FC<VoiceProviderModalProps> = ({
         "You have Chinese text but selected English voice. This will not pronounce correctly. Would you like to switch to Cantonese or Mandarin?"
       );
       if (confirmSwitch) {
-        if (isWeb) setLanguage('Mandarin');
-        else setLanguage('Cantonese');
+        if (isWeb) {
+          setLanguage('Mandarin');
+        } else {
+          setLanguage('Cantonese');
+        }
         await loadAvailableVoices();
       }
     }
@@ -511,13 +440,16 @@ export const VoiceProviderModal: React.FC<VoiceProviderModalProps> = ({
         throw new Error("Generated audio is empty");
       }
 
-      if (audioRef.current?.src) URL.revokeObjectURL(audioRef.current.src);
+      if (audioRef.current?.src) {
+        URL.revokeObjectURL(audioRef.current.src);
+      }
 
       const url = URL.createObjectURL(blob);
       
       if (audioRef.current) {
         audioRef.current.src = url;
         audioRef.current.load();
+        
         try {
           await audioRef.current.play();
           setIsPlayingAudio(true);
@@ -536,15 +468,9 @@ export const VoiceProviderModal: React.FC<VoiceProviderModalProps> = ({
   };
 
   const handleGenerate = async () => {
-    setGenerationError(null);
-    setGenerationSuccess(false);
-    setGeneratedMp3Base64(null);
-    setGeneratedSrt(null);
-    setGeneratedChapters(null);
-    setGeneratedSegments(null);
-
+    // If there's an uploaded audio file, we can skip generation
     if (uploadedAudioFile) {
-      alert('You have uploaded an audio file. Use the preview to listen, or remove it to generate new audio.');
+      alert('You have uploaded an audio file. Use the preview to listen, or generate subtitles from the script.');
       return;
     }
 
@@ -569,8 +495,11 @@ export const VoiceProviderModal: React.FC<VoiceProviderModalProps> = ({
         "You have Chinese text but selected English voice. This will not pronounce correctly. Would you like to switch to Cantonese or Mandarin?"
       );
       if (confirmSwitch) {
-        if (isWeb) setLanguage('Mandarin');
-        else setLanguage('Cantonese');
+        if (isWeb) {
+          setLanguage('Mandarin');
+        } else {
+          setLanguage('Cantonese');
+        }
         await loadAvailableVoices();
       }
     }
@@ -580,6 +509,7 @@ export const VoiceProviderModal: React.FC<VoiceProviderModalProps> = ({
     const langCode = languageCodeMap[language] || 'zh-HK';
 
     try {
+      // Generate Voice
       const voiceRes = await fetch('/api/youtube/voice', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -602,11 +532,14 @@ export const VoiceProviderModal: React.FC<VoiceProviderModalProps> = ({
 
       if (voiceData.success) {
         const cleanAudio = voiceData.audio.replace(/\s/g, '');
+        console.log('Clean audio data length:', cleanAudio.length);
+        
         setGeneratedMp3Base64(cleanAudio);
         
         const actualDuration = voiceData.duration || 0;
         setAudioDuration(actualDuration);
 
+        // Generate Subtitles
         const subRes = await fetch('/api/youtube/subtitles', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
@@ -620,6 +553,7 @@ export const VoiceProviderModal: React.FC<VoiceProviderModalProps> = ({
         });
 
         const subData = await subRes.json();
+        console.log('=== SUBTITLE API RESPONSE ===');
         
         if (subData.success) {
           setGeneratedSrt(subData.srt);
@@ -629,16 +563,15 @@ export const VoiceProviderModal: React.FC<VoiceProviderModalProps> = ({
           console.warn('Subtitle generation warning:', subData.error);
         }
 
-        setGenerationSuccess(true);
-        setGenerationError(null);
-
       } else {
-        setGenerationError(voiceData.error || "Voice generation failed.");
+        alert(voiceData.error || "Voice generation failed.");
+        setIsLoading(false);
+        return;
       }
 
     } catch (err) {
       console.error('Generation failed:', err);
-      setGenerationError(err instanceof Error ? err.message : 'Generation failed. Please try again.');
+      alert('Generation failed. Please try again.');
     } finally {
       setIsLoading(false);
     }
@@ -717,6 +650,9 @@ export const VoiceProviderModal: React.FC<VoiceProviderModalProps> = ({
       }
     }
   };
+
+  const isSubscriber = Boolean(profile?.subscription_plan && profile.subscription_plan !== 'Free Explorer');
+  const hasEnoughCredits = (profile?.credits || 0) >= 100;
 
   const charCount = script.length;
   let baseCredits = charCount < 500 ? 2 : (charCount > 2000 ? 10 : 5);
@@ -830,9 +766,7 @@ export const VoiceProviderModal: React.FC<VoiceProviderModalProps> = ({
               border: '1px solid #86EFAC',
               display: 'flex',
               alignItems: 'center',
-              justifyContent: 'space-between',
-              flexWrap: 'wrap',
-              gap: '8px'
+              justifyContent: 'space-between'
             }}>
               <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
                 <Music size={16} color="#10B981" />
@@ -841,81 +775,19 @@ export const VoiceProviderModal: React.FC<VoiceProviderModalProps> = ({
                   {audioDuration > 0 && ` • ${formatDurationDisplay(audioDuration)}`}
                 </span>
               </div>
-              <div style={{ display: 'flex', gap: '6px' }}>
-                {/* Convert to Script Button */}
-                <button
-                  onClick={handleConvertToScript}
-                  disabled={isTranscribing}
-                  style={{
-                    display: 'flex',
-                    alignItems: 'center',
-                    gap: '4px',
-                    padding: '4px 10px',
-                    borderRadius: '6px',
-                    border: 'none',
-                    background: isTranscribing ? '#9CA3AF' : '#8B5CF6',
-                    color: 'white',
-                    fontSize: '11px',
-                    cursor: isTranscribing ? 'not-allowed' : 'pointer',
-                    fontWeight: '500'
-                  }}
-                >
-                  {isTranscribing ? (
-                    <Loader2 size={14} className="animate-spin" />
-                  ) : (
-                    <Type size={14} />
-                  )}
-                  {isTranscribing ? 'Transcribing...' : 'Convert to Script'}
-                </button>
-                <button
-                  onClick={clearUploadedAudio}
-                  style={{
-                    background: 'none',
-                    border: 'none',
-                    cursor: 'pointer',
-                    color: '#EF4444',
-                    fontSize: '12px',
-                    padding: '2px 8px'
-                  }}
-                >
-                  ✕ Remove
-                </button>
-              </div>
-            </div>
-          )}
-
-          {/* Transcription Status */}
-          {transcriptionError && (
-            <div style={{
-              marginTop: '8px',
-              padding: '8px 12px',
-              backgroundColor: '#FEF2F2',
-              borderRadius: '6px',
-              border: '1px solid #FCA5A5',
-              display: 'flex',
-              alignItems: 'center',
-              gap: '6px'
-            }}>
-              <AlertTriangle size={14} color="#EF4444" />
-              <span style={{ fontSize: '12px', color: '#991B1B' }}>{transcriptionError}</span>
-            </div>
-          )}
-          
-          {transcriptionSuccess && (
-            <div style={{
-              marginTop: '8px',
-              padding: '8px 12px',
-              backgroundColor: '#F0FDF4',
-              borderRadius: '6px',
-              border: '1px solid #86EFAC',
-              display: 'flex',
-              alignItems: 'center',
-              gap: '6px'
-            }}>
-              <CheckCircle size={14} color="#10B981" />
-              <span style={{ fontSize: '12px', color: '#065F46' }}>
-                ✅ Transcription complete! Script updated above. You can now edit and generate audio.
-              </span>
+              <button
+                onClick={clearUploadedAudio}
+                style={{
+                  background: 'none',
+                  border: 'none',
+                  cursor: 'pointer',
+                  color: '#EF4444',
+                  fontSize: '12px',
+                  padding: '2px 8px'
+                }}
+              >
+                ✕ Remove
+              </button>
             </div>
           )}
 
@@ -923,7 +795,6 @@ export const VoiceProviderModal: React.FC<VoiceProviderModalProps> = ({
             <span>Characters: {charCount}</span>
             <span>Est. Cost: <strong>{estimatedCredits} Credits</strong></span>
           </div>
-
           {suggestedLang && language !== suggestedLang && (
             <div style={{
               marginTop: '8px',
@@ -980,71 +851,9 @@ export const VoiceProviderModal: React.FC<VoiceProviderModalProps> = ({
               {getLanguageWarning()}
             </div>
           )}
-
-          {/* ── USER GUIDE / LIMITATIONS ── */}
-          <div style={{
-            marginTop: '12px',
-            padding: '12px 14px',
-            backgroundColor: '#F0F9FF',
-            borderRadius: '8px',
-            border: '1px solid #BAE6FD',
-            fontSize: '11px'
-          }}>
-            <div style={{ fontWeight: '600', color: '#0369A1', marginBottom: '6px', display: 'flex', alignItems: 'center', gap: '6px' }}>
-              <Info size={14} /> 📋 Voice Provider Guide
-            </div>
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '4px 16px', color: '#0C4A6E' }}>
-              <div>
-                <span style={{ fontWeight: '600' }}>📝 Script Import:</span>
-                <span style={{ fontSize: '10px', display: 'block', color: '#475569' }}>
-                  • Max 10,000 characters<br />
-                  • Supports .txt, .docx<br />
-                  • Est. cost: 2-10 credits
-                </span>
-              </div>
-              <div>
-                <span style={{ fontWeight: '600' }}>🎵 Audio Upload:</span>
-                <span style={{ fontSize: '10px', display: 'block', color: '#475569' }}>
-                  • Max 10MB (Free) / 50MB (Subscriber)<br />
-                  • Max 5 mins (Free) / 30 mins (Subscriber)<br />
-                  • Supports MP3, WAV, M4A
-                </span>
-              </div>
-              <div>
-                <span style={{ fontWeight: '600' }}>🎙️ Convert to Script:</span>
-                <span style={{ fontSize: '10px', display: 'block', color: '#475569' }}>
-                  • 5 credits per minute<br />
-                  • Min 2 credits per file<br />
-                  • Auto-detects language
-                </span>
-              </div>
-              <div>
-                <span style={{ fontWeight: '600' }}>📥 Generate Package:</span>
-                <span style={{ fontSize: '10px', display: 'block', color: '#475569' }}>
-                  • WAV (Lossless) / MP3 (Compressed)<br />
-                  • SRT Subtitles with timing<br />
-                  • YouTube chapter markers
-                </span>
-              </div>
-            </div>
-            <div style={{ 
-              marginTop: '8px', 
-              paddingTop: '8px', 
-              borderTop: '1px solid #BAE6FD',
-              fontSize: '10px',
-              color: '#64748B',
-              display: 'flex',
-              justifyContent: 'space-between',
-              flexWrap: 'wrap',
-              gap: '4px'
-            }}>
-              <span>💡 <strong>Tip:</strong> Upload audio → Convert to Script → Edit → Generate new audio + subtitles</span>
-              <span style={{ color: '#DC2626' }}>⚠️ For educational use only. Max 30 mins per file.</span>
-            </div>
-          </div>
         </div>
 
-        {/* Controls */}
+        {/* Controls - Two columns */}
         <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px', marginBottom: '16px' }}>
           <div>
             <label style={{ fontSize: '12px', fontWeight: '500', color: '#374151', display: 'block', marginBottom: '4px' }}>Voice Language</label>
@@ -1075,7 +884,7 @@ export const VoiceProviderModal: React.FC<VoiceProviderModalProps> = ({
           </div>
         </div>
 
-        {/* Voice Engine and Voice Selector */}
+        {/* Voice Engine and Voice Selector - Two columns */}
         <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px', marginBottom: '16px' }}>
           <div>
             <label style={{ fontSize: '12px', fontWeight: '500', color: '#374151', display: 'block', marginBottom: '4px' }}>Voice Engine</label>
@@ -1114,7 +923,7 @@ export const VoiceProviderModal: React.FC<VoiceProviderModalProps> = ({
           </div>
         </div>
 
-        {/* Speed Control */}
+        {/* Speed Control Bar */}
         <div style={{ marginBottom: '16px', marginTop: '8px' }}>
           <label style={{ 
             fontSize: '12px', 
@@ -1158,7 +967,7 @@ export const VoiceProviderModal: React.FC<VoiceProviderModalProps> = ({
           </div>
         </div>
 
-        {/* Scene Pause */}
+        {/* Scene Pause Control */}
         <div style={{ marginBottom: '16px', marginTop: '8px' }}>
           <label style={{ 
             fontSize: '12px', 
@@ -1227,7 +1036,7 @@ export const VoiceProviderModal: React.FC<VoiceProviderModalProps> = ({
           )}
         </div>
 
-        {/* Preview & Generate */}
+        {/* Preview Button */}
         <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '20px', padding: '8px 12px', background: '#F9FAFB', borderRadius: '8px' }}>
           <button
             onClick={handleAudioPreview}
@@ -1265,81 +1074,29 @@ export const VoiceProviderModal: React.FC<VoiceProviderModalProps> = ({
           )}
         </div>
 
-        {/* Generate Button - Hidden when audio is uploaded */}
-        {!isAudioUploaded && (
-          <button
-            onClick={handleGenerate}
-            disabled={isLoading}
-            style={{
-              width: '100%', padding: '10px', borderRadius: '8px',
-              backgroundColor: '#10B981',
-              color: 'white', border: 'none',
-              fontWeight: '600', fontSize: '14px', cursor: 'pointer',
-              display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px', marginBottom: '16px'
-            }}
-          >
-            {isLoading ? <Loader2 size={16} className="animate-spin" /> : <Sparkles size={16} />}
-            {isLoading ? 'Generating Audio & Subtitles...' : `Generate Package (${estimatedCredits} Credits)`}
-          </button>
-        )}
+        {/* Generate Action */}
+        <button
+          onClick={handleGenerate}
+          disabled={isLoading || isAudioUploaded}
+          style={{
+            width: '100%', padding: '10px', borderRadius: '8px',
+            backgroundColor: isAudioUploaded ? '#9CA3AF' : '#10B981',
+            color: 'white', border: 'none',
+            fontWeight: '600', fontSize: '14px', cursor: isAudioUploaded ? 'not-allowed' : 'pointer',
+            display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px', marginBottom: '16px',
+            opacity: isAudioUploaded ? 0.6 : 1
+          }}
+          title={isAudioUploaded ? 'Audio file uploaded - use it directly or remove it to generate new audio' : ''}
+        >
+          {isLoading ? <Loader2 size={16} className="animate-spin" /> : <Sparkles size={16} />}
+          {isLoading ? 'Generating Audio & Subtitles...' : isAudioUploaded ? 'Audio Uploaded - Ready' : `Generate Package (${estimatedCredits} Credits)`}
+        </button>
 
-        {/* Audio Uploaded - Ready message when audio is uploaded */}
-        {isAudioUploaded && (
-          <div style={{
-            marginBottom: '16px',
-            padding: '10px 14px',
-            backgroundColor: '#FEF3C7',
-            borderRadius: '8px',
-            border: '1px solid #FDE68A',
-            textAlign: 'center'
-          }}>
-            <p style={{ fontSize: '12px', color: '#92400E', margin: 0 }}>
-              ⚡ Audio uploaded. Use <strong>"Convert to Script"</strong> to transcribe, then edit and generate new audio.
-            </p>
-          </div>
-        )}
-
-        {/* Generation Status */}
-        {generationError && (
-          <div style={{
-            padding: '10px 14px',
-            backgroundColor: '#FEF2F2',
-            borderRadius: '8px',
-            border: '1px solid #FCA5A5',
-            marginBottom: '16px',
-            display: 'flex',
-            alignItems: 'center',
-            gap: '8px'
-          }}>
-            <AlertTriangle size={16} color="#EF4444" />
-            <span style={{ fontSize: '12px', color: '#991B1B' }}>{generationError}</span>
-          </div>
-        )}
-
-        {generationSuccess && (
-          <div style={{
-            padding: '10px 14px',
-            backgroundColor: '#F0FDF4',
-            borderRadius: '8px',
-            border: '1px solid #86EFAC',
-            marginBottom: '16px',
-            display: 'flex',
-            alignItems: 'center',
-            gap: '8px'
-          }}>
-            <CheckCircle size={16} color="#10B981" />
-            <span style={{ fontSize: '12px', color: '#065F46' }}>
-              ✅ Generation successful! Download your assets below.
-              {audioDuration > 0 && ` Duration: ${formatDurationDisplay(audioDuration)}`}
-            </span>
-          </div>
-        )}
-
-        {/* Download Section */}
+        {/* Downloads */}
         {generatedMp3Base64 && (
-          <div style={{ borderTop: '1px solid #E5E7EB', paddingTop: '16px', marginBottom: '16px' }}>
+          <div style={{ borderTop: '1px solid #E5E7EB', paddingTop: '16px' }}>
             <span style={{ fontSize: '12px', fontWeight: '600', color: '#111827', display: 'block', marginBottom: '8px' }}>
-              📥 Download Generated Assets:
+              Download Generated Assets:
               {generatedSegments && generatedSegments.length > 0 && (
                 <span style={{ fontSize: '11px', fontWeight: '400', color: '#6B7280', marginLeft: '8px' }}>
                   ({generatedSegments.length} segments)
@@ -1352,6 +1109,7 @@ export const VoiceProviderModal: React.FC<VoiceProviderModalProps> = ({
               )}
             </span>
             
+            {/* Download Format Selection */}
             <div style={{ 
               display: 'flex', 
               alignItems: 'center', 
@@ -1462,6 +1220,7 @@ export const VoiceProviderModal: React.FC<VoiceProviderModalProps> = ({
                 <Video size={12} /> Subtitles
               </button>
 
+              {/* Digital Twin Survey Button */}
               <button 
                 onClick={() => setSurvey(prev => ({ ...prev, isOpen: true }))}
                 style={{ 
@@ -1509,6 +1268,7 @@ export const VoiceProviderModal: React.FC<VoiceProviderModalProps> = ({
               </button>
             </div>
             
+            {/* Info text */}
             <div style={{ 
               marginTop: '8px', 
               fontSize: '10px', 
@@ -1537,7 +1297,7 @@ export const VoiceProviderModal: React.FC<VoiceProviderModalProps> = ({
               ✅ Audio file uploaded: <strong>{uploadedAudioFile?.name}</strong>
               <br />
               <span style={{ fontSize: '11px', color: '#6B7280' }}>
-                Click <strong>Play Uploaded Audio</strong> to listen, or <strong>Convert to Script</strong> to transcribe.
+                Click the <strong>Play Uploaded Audio</strong> button above to listen.
                 {audioDuration > 0 && ` Duration: ${formatDurationDisplay(audioDuration)}`}
               </span>
             </p>
@@ -1580,6 +1340,7 @@ export const VoiceProviderModal: React.FC<VoiceProviderModalProps> = ({
           }} onClick={(e) => e.stopPropagation()}>
             
             {survey.submitted ? (
+              // Success State
               <div style={{ textAlign: 'center', padding: '20px 0' }}>
                 <div style={{ 
                   fontSize: '60px', 
@@ -1621,6 +1382,7 @@ export const VoiceProviderModal: React.FC<VoiceProviderModalProps> = ({
                 </button>
               </div>
             ) : (
+              // Survey Content
               <>
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '16px' }}>
                   <div>
@@ -1782,26 +1544,26 @@ export const VoiceProviderModal: React.FC<VoiceProviderModalProps> = ({
         </div>
       )}
 
+      {/* Styles for animations */}
       <style>{`
         @keyframes fadeIn {
           from { opacity: 0; }
           to { opacity: 1; }
         }
         @keyframes slideUp {
-          from { opacity: 0; transform: translateY(20px); }
-          to { opacity: 1; transform: translateY(0); }
+          from { 
+            opacity: 0;
+            transform: translateY(20px);
+          }
+          to { 
+            opacity: 1;
+            transform: translateY(0);
+          }
         }
         @keyframes pulse {
           0% { opacity: 1; }
           50% { opacity: 0.7; }
           100% { opacity: 1; }
-        }
-        @keyframes spin {
-          from { transform: rotate(0deg); }
-          to { transform: rotate(360deg); }
-        }
-        .animate-spin {
-          animation: spin 1s linear infinite;
         }
       `}</style>
     </div>

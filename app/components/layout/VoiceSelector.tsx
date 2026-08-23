@@ -1,246 +1,278 @@
 "use client";
-import React, { useState, useRef, useEffect } from 'react';
+import React, { useState, useEffect } from 'react';
+import { ChevronDown, Check, Loader2 } from 'lucide-react';
 
 interface VoiceSelectorProps {
   currentVoice: string;
   onVoiceChange: (voice: string) => void;
-  mode?: 'language' | 'voice';
+  mode?: 'voice' | 'preview';
 }
 
-export const VoiceSelector: React.FC<VoiceSelectorProps> = ({ 
-  currentVoice, 
+// ============================================================
+// ORIGINAL MACOS SYSTEM VOICES (HARDCODED)
+// ============================================================
+const MACOS_VOICES = [
+  // Cantonese Voices
+  { name: 'Aasing (Enhanced)', language: 'Cantonese', gender: 'Male', quality: 'Enhanced' },
+  { name: 'Aasing', language: 'Cantonese', gender: 'Male', quality: 'Standard' },
+  { name: 'Sinji', language: 'Cantonese', gender: 'Female', quality: 'Standard' },
+  
+  // Mandarin Voices
+  { name: 'Tingting', language: 'Mandarin', gender: 'Female', quality: 'Standard' },
+  { name: 'Han (Enhanced)', language: 'Mandarin', gender: 'Male', quality: 'Enhanced' },
+  
+  // English Voices
+  { name: 'Samantha', language: 'English', gender: 'Female', quality: 'Standard' },
+  { name: 'Victoria', language: 'English', gender: 'Female', quality: 'Standard' },
+  { name: 'Alex', language: 'English', gender: 'Male', quality: 'Standard' },
+  { name: 'Fred', language: 'English', gender: 'Male', quality: 'Standard' },
+  { name: 'Nick', language: 'English', gender: 'Male', quality: 'Standard' },
+  
+  // Auto Voices (Fallback)
+  { name: 'Auto-Male', language: 'Auto', gender: 'Male', quality: 'Auto' },
+  { name: 'Auto-Female', language: 'Auto', gender: 'Female', quality: 'Auto' },
+];
+
+// Group voices by language for better UX
+const VOICE_GROUPS = {
+  'Cantonese (粤語)': ['Aasing (Enhanced)', 'Aasing', 'Sinji'],
+  'Mandarin (國語)': ['Tingting', 'Han (Enhanced)'],
+  'English': ['Samantha', 'Victoria', 'Alex', 'Fred', 'Nick'],
+  'Auto (Cloud Fallback)': ['Auto-Male', 'Auto-Female'],
+};
+
+export const VoiceSelector: React.FC<VoiceSelectorProps> = ({
+  currentVoice,
   onVoiceChange,
-  mode = 'language'
+  mode = 'voice',
 }) => {
   const [isOpen, setIsOpen] = useState(false);
-  const [isMobile, setIsMobile] = useState(false);
-  const dropdownRef = useRef<HTMLDivElement>(null);
+  const [isLoading, setIsLoading] = useState(false);
 
+  // Set default voice if none selected
   useEffect(() => {
-    const mobile = /iPhone|iPad|iPod|Android/i.test(navigator.userAgent);
-    setIsMobile(mobile);
+    if (!currentVoice || currentVoice === '') {
+      // Check if Aasing (Enhanced) is available on macOS
+      // If not, fall back to Auto-Female
+      const defaultVoice = 'Aasing (Enhanced)';
+      onVoiceChange(defaultVoice);
+    }
   }, []);
 
-  // Language options
-  const languageOptions = [
-    { id: 'English', label: 'English', emoji: '🔊' },
-    { id: 'Cantonese', label: '粵語 (Cantonese)', emoji: '🔊' },
-    { id: 'Mandarin', label: '普通話 (Mandarin)', emoji: '🔊' },
-    { id: 'Taiwanese', label: '國語 (Taiwanese)', emoji: '🔊' },
-  ];
-
-  // Voice options - INCLUDING Auto-Male and Auto-Female
-  const voiceOptions = [
-    // Auto Voices (Cloud-compatible)
-    { id: 'Auto-Male', label: '🤖 Auto-Male (Cloud)', category: 'Auto', emoji: '🤖' },
-    { id: 'Auto-Female', label: '🤖 Auto-Female (Cloud)', category: 'Auto', emoji: '🤖' },
-    
-    // Cantonese Voices (zh_HK)
-    { id: 'Aasing (Enhanced)', label: 'Aasing (Enhanced)', category: 'Cantonese', emoji: '🇭🇰' },
-    { id: 'Aasing', label: 'Aasing', category: 'Cantonese', emoji: '🇭🇰' },
-    { id: 'Sinji', label: 'Sinji', category: 'Cantonese', emoji: '🇭🇰' },
-    
-    // Mandarin Voices (zh_CN)
-    { id: 'Tingting', label: 'Tingting', category: 'Mandarin', emoji: '🇨🇳' },
-    { id: 'Han (Enhanced)', label: 'Han (Enhanced)', category: 'Mandarin', emoji: '🇨🇳' },
-    { id: 'Lili (Enhanced)', label: 'Lili (Enhanced)', category: 'Mandarin', emoji: '🇨🇳' },
-    { id: 'Tiantian (Enhanced)', label: 'Tiantian (Enhanced)', category: 'Mandarin', emoji: '🇨🇳' },
-    
-    // Taiwanese (zh_TW)
-    { id: 'Meijia', label: 'Meijia', category: 'Taiwanese', emoji: '🇹🇼' },
-    { id: 'Meijia (Premium)', label: 'Meijia (Premium)', category: 'Taiwanese', emoji: '🇹🇼' },
-    
-    // English Voices
-    { id: 'Samantha', label: 'Samantha', category: 'English', emoji: '🇺🇸' },
-    { id: 'Ava (Enhanced)', label: 'Ava (Enhanced)', category: 'English', emoji: '🇺🇸' },
-    { id: 'Evan (Enhanced)', label: 'Evan (Enhanced)', category: 'English', emoji: '🇺🇸' },
-    { id: 'Daniel', label: 'Daniel', category: 'English', emoji: '🇬🇧' },
-    { id: 'Karen', label: 'Karen', category: 'English', emoji: '🇦🇺' },
-    { id: 'Moira', label: 'Moira', category: 'English', emoji: '🇮🇪' },
-  ];
-
-  const options = mode === 'language' ? languageOptions : voiceOptions;
-
-  const getDisplayName = (id: string) => {
-    const option = options.find(o => o.id === id);
-    if (!option) return mode === 'language' ? '🔊 Select Language' : '🔊 Select Voice';
-    return `${option.emoji} ${option.label}`;
+  // Get voice label
+  const getVoiceLabel = (voiceName: string): string => {
+    const voice = MACOS_VOICES.find(v => v.name === voiceName);
+    if (voice) {
+      return `${voice.name} (${voice.language}${voice.quality !== 'Standard' ? ` • ${voice.quality}` : ''})`;
+    }
+    return voiceName;
   };
 
-  const handleChange = (id: string) => {
-    console.log('Voice selected:', id);
-    onVoiceChange(id);
+  // Get current voice display name
+  const getCurrentDisplayName = (): string => {
+    if (!currentVoice) return 'Select Voice...';
+    const voice = MACOS_VOICES.find(v => v.name === currentVoice);
+    if (voice) {
+      return `${voice.name} (${voice.gender})`;
+    }
+    return currentVoice;
+  };
+
+  // Handle voice selection
+  const handleSelect = (voiceName: string) => {
+    onVoiceChange(voiceName);
     setIsOpen(false);
   };
 
-  useEffect(() => {
-    const handleClickOutside = (event: MouseEvent) => {
-      if (dropdownRef.current && !dropdownRef.current.contains(event.target as Node)) {
-        setIsOpen(false);
-      }
-    };
-    document.addEventListener('mousedown', handleClickOutside);
-    return () => document.removeEventListener('mousedown', handleClickOutside);
-  }, []);
+  // Check if voice is available on macOS
+  const checkVoiceAvailability = async (voiceName: string): Promise<boolean> => {
+    try {
+      const response = await fetch('/api/check-voice', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ voiceName }),
+      });
+      const data = await response.json();
+      return data.available;
+    } catch {
+      return false;
+    }
+  };
 
-  // Group voices by category for voice mode
-  const groupedVoices = mode === 'voice' 
-    ? voiceOptions.reduce((acc, voice) => {
-        if (!acc[voice.category]) {
-          acc[voice.category] = [];
-        }
-        acc[voice.category].push(voice);
-        return acc;
-      }, {} as Record<string, typeof voiceOptions>)
-    : null;
+  // Render voice group
+  const renderVoiceGroup = (groupName: string, voices: string[]) => {
+    return (
+      <div key={groupName} style={{ marginBottom: '8px' }}>
+        <div style={{
+          fontSize: '10px',
+          fontWeight: '600',
+          color: '#6B7280',
+          padding: '4px 12px',
+          textTransform: 'uppercase',
+          letterSpacing: '0.5px',
+        }}>
+          {groupName}
+        </div>
+        {voices.map((voiceName) => {
+          const voice = MACOS_VOICES.find(v => v.name === voiceName);
+          const isSelected = currentVoice === voiceName;
+          
+          return (
+            <button
+              key={voiceName}
+              onClick={() => handleSelect(voiceName)}
+              style={{
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'space-between',
+                width: '100%',
+                padding: '6px 12px',
+                border: 'none',
+                background: isSelected ? '#EFF6FF' : 'transparent',
+                borderRadius: '6px',
+                cursor: 'pointer',
+                fontSize: '12px',
+                color: isSelected ? '#1E40AF' : '#374151',
+                transition: 'all 0.15s ease',
+              }}
+              onMouseEnter={(e) => {
+                if (!isSelected) {
+                  e.currentTarget.style.backgroundColor = '#F3F4F6';
+                }
+              }}
+              onMouseLeave={(e) => {
+                if (!isSelected) {
+                  e.currentTarget.style.backgroundColor = 'transparent';
+                }
+              }}
+            >
+              <span style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                {isSelected && <Check size={12} color="#3B82F6" />}
+                {voice?.gender === 'Male' ? '👨' : voice?.gender === 'Female' ? '👩' : '🎤'}
+                <span>{voiceName}</span>
+                {voice?.quality === 'Enhanced' && (
+                  <span style={{
+                    fontSize: '8px',
+                    backgroundColor: '#10B981',
+                    color: 'white',
+                    padding: '1px 6px',
+                    borderRadius: '10px',
+                  }}>
+                    Enhanced
+                  </span>
+                )}
+              </span>
+              <span style={{
+                fontSize: '9px',
+                color: '#9CA3AF',
+              }}>
+                {voice?.language || ''}
+              </span>
+            </button>
+          );
+        })}
+      </div>
+    );
+  };
 
   return (
-    <div style={{ position: 'relative', width: '100%' }} ref={dropdownRef}>
+    <div style={{ position: 'relative', width: '100%' }}>
+      {/* Dropdown Trigger */}
       <button
         onClick={() => setIsOpen(!isOpen)}
         style={{
-          width: '100%',
-          padding: '6px 10px',
-          borderRadius: '6px',
-          backgroundColor: '#FFFFFF',
-          border: '1px solid #D1D5DB',
-          cursor: 'pointer',
-          fontSize: '12px',
-          fontWeight: '500',
-          color: '#1F2937',
           display: 'flex',
           alignItems: 'center',
           justifyContent: 'space-between',
-          gap: '6px'
+          width: '100%',
+          padding: '6px 10px',
+          borderRadius: '6px',
+          border: '1px solid #D1D5DB',
+          background: '#FFFFFF',
+          fontSize: '12px',
+          color: '#111827',
+          cursor: 'pointer',
+          transition: 'border-color 0.15s ease',
+        }}
+        onMouseEnter={(e) => {
+          e.currentTarget.style.borderColor = '#9CA3AF';
+        }}
+        onMouseLeave={(e) => {
+          e.currentTarget.style.borderColor = '#D1D5DB';
         }}
       >
         <span style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-          {getDisplayName(currentVoice)}
+          {isLoading ? (
+            <Loader2 size={14} className="animate-spin" />
+          ) : (
+            <span style={{ fontSize: '14px' }}>
+              {currentVoice === 'Auto-Male' ? '👨' : 
+               currentVoice === 'Auto-Female' ? '👩' : 
+               currentVoice?.includes('Aasing') ? '👨' : 
+               currentVoice?.includes('Sinji') ? '👩' : '🎤'}
+            </span>
+          )}
+          <span>{getCurrentDisplayName()}</span>
         </span>
-        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2}>
-          <path strokeLinecap="round" strokeLinejoin="round" d="M19 9l-7 7-7-7" />
-        </svg>
+        <ChevronDown 
+          size={16} 
+          style={{ 
+            transform: isOpen ? 'rotate(180deg)' : 'rotate(0deg)',
+            transition: 'transform 0.2s ease',
+            color: '#6B7280'
+          }} 
+        />
       </button>
 
+      {/* Dropdown Menu */}
       {isOpen && (
-        <div style={{
-          position: 'absolute',
-          top: '100%',
-          right: 0,
-          marginTop: '4px',
-          backgroundColor: 'white',
-          border: '1px solid #E5E7EB',
-          borderRadius: '8px',
-          boxShadow: '0 4px 6px -1px rgba(0,0,0,0.1)',
-          zIndex: 50,
-          minWidth: isMobile ? '200px' : (mode === 'voice' ? '260px' : '200px'),
-          maxHeight: '300px',
-          overflowY: 'auto',
-          padding: '4px 0'
-        }}>
-          {mode === 'voice' ? (
-            // Voice mode - show grouped by category
-            Object.entries(groupedVoices || {}).map(([category, voices]) => (
-              <div key={category}>
-                <div style={{
-                  padding: '6px 12px',
-                  fontSize: '10px',
-                  fontWeight: '600',
-                  color: '#6B7280',
-                  textTransform: 'uppercase',
-                  letterSpacing: '0.5px',
-                  backgroundColor: '#F9FAFB',
-                  borderBottom: '1px solid #E5E7EB'
-                }}>
-                  {category === 'Auto' ? '🤖 Cloud Voices' : category}
-                </div>
-                {voices.map((voice) => (
-                  <button
-                    key={voice.id}
-                    onClick={() => handleChange(voice.id)}
-                    style={{
-                      display: 'flex',
-                      alignItems: 'center',
-                      gap: '8px',
-                      width: '100%',
-                      padding: '8px 12px',
-                      textAlign: 'left',
-                      backgroundColor: currentVoice === voice.id ? '#EFF6FF' : 'white',
-                      color: currentVoice === voice.id ? '#2563EB' : '#4B5563',
-                      border: 'none',
-                      cursor: 'pointer',
-                      fontSize: '12px',
-                      fontWeight: currentVoice === voice.id ? '600' : '400',
-                      borderBottom: '1px solid #F3F4F6',
-                      transition: 'background-color 0.2s'
-                    }}
-                    onMouseEnter={(e) => {
-                      if (currentVoice !== voice.id) {
-                        e.currentTarget.style.backgroundColor = '#F9FAFB';
-                      }
-                    }}
-                    onMouseLeave={(e) => {
-                      if (currentVoice !== voice.id) {
-                        e.currentTarget.style.backgroundColor = 'white';
-                      }
-                    }}
-                  >
-                    <span style={{ fontSize: '14px' }}>{voice.emoji}</span>
-                    <span style={{ flex: 1 }}>{voice.label}</span>
-                    {currentVoice === voice.id && (
-                      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#2563EB" strokeWidth={2}>
-                        <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
-                      </svg>
-                    )}
-                  </button>
-                ))}
-              </div>
-            ))
-          ) : (
-            // Language mode - simple list
-            options.map((option) => (
-              <button
-                key={option.id}
-                onClick={() => handleChange(option.id)}
-                style={{
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: '8px',
-                  width: '100%',
-                  padding: '8px 12px',
-                  textAlign: 'left',
-                  backgroundColor: currentVoice === option.id ? '#EFF6FF' : 'white',
-                  color: currentVoice === option.id ? '#2563EB' : '#4B5563',
-                  border: 'none',
-                  cursor: 'pointer',
-                  fontSize: '12px',
-                  fontWeight: currentVoice === option.id ? '600' : '400',
-                  borderBottom: '1px solid #F3F4F6',
-                  transition: 'background-color 0.2s'
-                }}
-                onMouseEnter={(e) => {
-                  if (currentVoice !== option.id) {
-                    e.currentTarget.style.backgroundColor = '#F9FAFB';
-                  }
-                }}
-                onMouseLeave={(e) => {
-                  if (currentVoice !== option.id) {
-                    e.currentTarget.style.backgroundColor = 'white';
-                  }
-                }}
-              >
-                <span style={{ fontSize: '14px' }}>{option.emoji}</span>
-                <span style={{ flex: 1 }}>{option.label}</span>
-                {currentVoice === option.id && (
-                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#2563EB" strokeWidth={2}>
-                    <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
-                  </svg>
-                )}
-              </button>
-            ))
-          )}
-        </div>
+        <>
+          {/* Overlay to close dropdown */}
+          <div
+            onClick={() => setIsOpen(false)}
+            style={{
+              position: 'fixed',
+              top: 0,
+              left: 0,
+              right: 0,
+              bottom: 0,
+              zIndex: 999,
+            }}
+          />
+          
+          <div style={{
+            position: 'absolute',
+            top: 'calc(100% + 4px)',
+            left: 0,
+            right: 0,
+            zIndex: 1000,
+            backgroundColor: '#FFFFFF',
+            borderRadius: '8px',
+            border: '1px solid #E5E7EB',
+            boxShadow: '0 4px 12px rgba(0,0,0,0.15)',
+            maxHeight: '300px',
+            overflowY: 'auto',
+            padding: '8px 0',
+          }}>
+            {Object.entries(VOICE_GROUPS).map(([groupName, voices]) => 
+              renderVoiceGroup(groupName, voices)
+            )}
+            
+            {/* Help text */}
+            <div style={{
+              padding: '8px 12px',
+              borderTop: '1px solid #F3F4F6',
+              fontSize: '9px',
+              color: '#9CA3AF',
+              textAlign: 'center',
+            }}>
+              💡 {mode === 'preview' ? 'Preview voice' : 'Select a voice for generation'}
+            </div>
+          </div>
+        </>
       )}
     </div>
   );
 };
+
+export default VoiceSelector;
