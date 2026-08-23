@@ -188,7 +188,7 @@ const MobileLanding: React.FC<MobileLandingProps> = ({
           <VoiceSelector 
   currentVoice={voiceLanguage}
   onVoiceChange={setVoiceLanguage}
-  mode="language"  // Add this line
+  mode="voice"  // ✅ Correct
 />
           <LanguageToggle currentLang={langKey} onLangChange={setLangKey} />
 

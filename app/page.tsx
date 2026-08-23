@@ -609,7 +609,7 @@ export default function VibeAiMaster() {
             ))}
           </div>
           <div style={{ display: 'flex', gap: '10px', alignItems: 'center' }}>
-            <VoiceSelector currentVoice={voiceLanguage} onVoiceChange={setVoiceLanguage} mode="language" />
+            <VoiceSelector currentVoice={voiceLanguage} onVoiceChange={setVoiceLanguage} mode="voice" />
             <LanguageToggle currentLang={language} onLangChange={setLanguage as any} />
             {user ? (
               <div style={{ position: 'relative' }}>
