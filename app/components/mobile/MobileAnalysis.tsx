@@ -7,6 +7,9 @@ import { AboutSection } from '../sections/AboutSection';
 import { FeaturesSection } from '../sections/FeaturesSection';
 import { PricingModal } from '../features/pricing/PricingModal';
 import { StockAnalysisModule } from '../features/stock-analysis/StockAnalysisModule';
+import { VoiceProviderModal } from '../VoiceProviderModal';
+import { AIResearchAssistantModal } from '../AIResearchAssistant';
+import { WatchlistModal } from '../WatchlistModal';
 import { footerContent } from '../../constants/content';
 import { speak as speakText, stopSpeech as stopSpeaking } from '../../utils/ttsMaster';
 import { supabase } from '../../lib/supabase';
@@ -26,7 +29,7 @@ interface MobileAnalysisProps {
   onNavigate?: (page: string, params?: any) => void;
 }
 
-// iOS Version Warning Component - Updated to be more generic
+// iOS Version Warning Component
 const IOSVersionWarning = ({ voiceLanguage }: { voiceLanguage: string }) => {
   const [iosVersion, setIosVersion] = useState<number | null>(null);
   const [visible, setVisible] = useState(true);
@@ -118,6 +121,11 @@ const MobileAnalysis: React.FC<MobileAnalysisProps> = ({
   const [watchlistItems, setWatchlistItems] = useState<string[]>([]);
   const [showRetentionModal, setShowRetentionModal] = useState(false);
   const [showDowngradeModal, setShowDowngradeModal] = useState(false);
+  
+  // NEW: Modal states for the 4 green buttons
+  const [showVoiceProvider, setShowVoiceProvider] = useState(false);
+  const [showAIAssistant, setShowAIAssistant] = useState(false);
+  const [showWatchlistModal, setShowWatchlistModal] = useState(false);
 
   // Load watchlist items on mount
   useEffect(() => {
@@ -310,12 +318,10 @@ const MobileAnalysis: React.FC<MobileAnalysisProps> = ({
     
     const data = await response.json();
     
-    // EXACT SAME LOGIC AS DESKTOP page.tsx
     if (!data.success) {
       throw new Error(data.summary || 'Analysis failed');
     }
     
-    // SAME DATA STRUCTURE AS DESKTOP
     setAnalysisData({
       symbol: data.symbol || inputValue.trim().toUpperCase(),
       summary: data.text || data.summary,
@@ -341,7 +347,6 @@ const MobileAnalysis: React.FC<MobileAnalysisProps> = ({
     });
       } catch (error) {
       console.error('Analysis error:', error);
-      // ✅ 修改此处提示语
       const errorMsg = langKey === 'Traditional Chinese' ? `無法分析 ${inputValue.trim().toUpperCase()}，請重新輸入正確的股票代號。` :
                        langKey === 'Simplified Chinese' ? `无法分析 ${inputValue.trim().toUpperCase()}，请重新输入正确的股票代码。` :
                        `Unable to analyze ${inputValue.trim().toUpperCase()}. Please try to enter a correct stock symbol again.`;
@@ -538,11 +543,9 @@ const MobileAnalysis: React.FC<MobileAnalysisProps> = ({
   // Analyze a symbol from watchlist
   const analyzeWatchlistItem = (symbol: string) => {
     setInputValue(symbol);
-    // Navigate back to analysis mode
     if (onNavigate) {
       onNavigate('analysis');
     }
-    // Auto-analyze after navigation
     setTimeout(() => {
       handleAnalyze();
     }, 200);
@@ -560,10 +563,10 @@ const MobileAnalysis: React.FC<MobileAnalysisProps> = ({
         <h2 style={{ fontSize: '15px', fontWeight: '600', color: '#1F2937', margin: 0 }}>{getTitle()}</h2>
         <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
           <VoiceSelector 
-  currentVoice={voiceLanguage}
-  onVoiceChange={setVoiceLanguage}
-mode="voice"  // ✅ This is correct
-/>
+            currentVoice={voiceLanguage}
+            onVoiceChange={setVoiceLanguage}
+            mode="voice"
+          />
           <LanguageToggle currentLang={langKey} onLangChange={setLangKey} />
           
           {user ? (
@@ -628,9 +631,7 @@ mode="voice"  // ✅ This is correct
                   <button
                     onClick={() => {
                       setShowUserMenu(false);
-                      if (onNavigate) {
-                        onNavigate('watchlist');
-                      }
+                      setShowWatchlistModal(true);
                     }}
                     style={{
                       width: '100%',
@@ -934,7 +935,7 @@ mode="voice"  // ✅ This is correct
       {isAnalysisMode && !displayLegalTitle && (
         <div style={{ backgroundColor: 'white', borderTop: '1px solid #E5E7EB', padding: '10px 12px', paddingBottom: 'max(10px, env(safe-area-inset-bottom))', flexShrink: 0, zIndex: 20, width: '100%', boxSizing: 'border-box', position: 'relative' }}>
           
-          {/* AI Enhancement Toggle */}
+          {/* AI Enhancement Toggle - Integrated into the input area */}
           <div style={{ 
             marginBottom: '8px', 
             padding: '6px 12px', 
@@ -1028,8 +1029,187 @@ mode="voice"  // ✅ This is correct
           </div>
         </div>
       )}
+
+      {/* ============================================================
+          BOTTOM CONTROLS - 4 GREEN BUTTONS
+          ============================================================ */}
+      <div style={{ 
+        backgroundColor: 'white', 
+        borderTop: '1px solid #E5E7EB', 
+        padding: '8px 12px', 
+        paddingBottom: 'max(8px, env(safe-area-inset-bottom))', 
+        flexShrink: 0, 
+        zIndex: 20, 
+        width: '100%', 
+        boxSizing: 'border-box' 
+      }}>
+        <div style={{ 
+          display: 'grid', 
+          gridTemplateColumns: '1fr 1fr 1fr 1fr', 
+          gap: '6px', 
+          marginBottom: '8px' 
+        }}>
+          {/* Voice Provider Button */}
+          <button 
+            onClick={() => setShowVoiceProvider(true)}
+            style={{
+              backgroundColor: '#10B981',
+              color: 'white',
+              border: 'none',
+              borderRadius: '8px',
+              padding: '8px 4px',
+              fontSize: '10px',
+              fontWeight: 'bold',
+              cursor: 'pointer',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              gap: '4px',
+              flexDirection: 'column'
+            }}
+          >
+            <span style={{ fontSize: '16px' }}>🎙️</span>
+            <span style={{ fontSize: '8px' }}>Voice</span>
+          </button>
+
+          {/* AI Assistant Button */}
+          <button 
+            onClick={() => setShowAIAssistant(true)}
+            style={{
+              backgroundColor: '#10B981',
+              color: 'white',
+              border: 'none',
+              borderRadius: '8px',
+              padding: '8px 4px',
+              fontSize: '10px',
+              fontWeight: 'bold',
+              cursor: 'pointer',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              gap: '4px',
+              flexDirection: 'column'
+            }}
+          >
+            <span style={{ fontSize: '16px' }}>🤖</span>
+            <span style={{ fontSize: '8px' }}>AI</span>
+          </button>
+
+          {/* AI Enhancement Toggle */}
+          <button 
+            onClick={() => setUseAIEnhancement(!useAIEnhancement)}
+            style={{
+              backgroundColor: useAIEnhancement ? '#059669' : '#10B981',
+              color: 'white',
+              border: 'none',
+              borderRadius: '8px',
+              padding: '8px 4px',
+              fontSize: '10px',
+              fontWeight: 'bold',
+              cursor: 'pointer',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              gap: '4px',
+              flexDirection: 'column'
+            }}
+          >
+            <span style={{ fontSize: '16px' }}>⚡</span>
+            <span style={{ fontSize: '8px' }}>{useAIEnhancement ? 'ON' : 'OFF'}</span>
+          </button>
+
+          {/* Watchlist Button */}
+          <button 
+            onClick={() => setShowWatchlistModal(true)}
+            style={{
+              backgroundColor: '#10B981',
+              color: 'white',
+              border: 'none',
+              borderRadius: '8px',
+              padding: '8px 4px',
+              fontSize: '10px',
+              fontWeight: 'bold',
+              cursor: 'pointer',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              gap: '4px',
+              flexDirection: 'column',
+              position: 'relative'
+            }}
+          >
+            <span style={{ fontSize: '16px' }}>⭐</span>
+            <span style={{ fontSize: '8px' }}>Watch</span>
+            {watchlistCount > 0 && (
+              <span style={{
+                position: 'absolute',
+                top: '-4px',
+                right: '-4px',
+                backgroundColor: '#EF4444',
+                color: 'white',
+                fontSize: '8px',
+                fontWeight: 'bold',
+                padding: '1px 5px',
+                borderRadius: '10px',
+                minWidth: '16px',
+                textAlign: 'center'
+              }}>
+                {watchlistCount}
+              </span>
+            )}
+          </button>
+        </div>
+      </div>
       
       <SourceMenu isOpen={isMenuOpen} onClose={() => setIsMenuOpen(false)} onSelectSource={handleSourceSelect} langKey={langKey} />
+
+      {/* ============================================================
+          MODALS
+          ============================================================ */}
+
+      {/* Voice Provider Modal */}
+      <VoiceProviderModal
+        isOpen={showVoiceProvider}
+        onClose={() => setShowVoiceProvider(false)}
+        user={user}
+        profile={profile}
+        onUpgradePlan={() => {
+          setShowVoiceProvider(false);
+          if (onNavigate) {
+            onNavigate('content', { view: 'pricing' });
+          }
+        }}
+        langKey={langKey}
+      />
+
+      {/* AI Assistant Modal */}
+      <AIResearchAssistantModal
+        isOpen={showAIAssistant}
+        onClose={() => setShowAIAssistant(false)}
+        user={user}
+        profile={profile}
+        onUpgradePlan={() => {
+          setShowAIAssistant(false);
+          if (onNavigate) {
+            onNavigate('content', { view: 'pricing' });
+          }
+        }}
+        langKey={langKey}
+      />
+
+      {/* Watchlist Modal */}
+      {showWatchlistModal && (
+        <WatchlistModal
+          isOpen={showWatchlistModal}
+          onClose={() => setShowWatchlistModal(false)}
+          onSelectStock={(symbol) => {
+            setShowWatchlistModal(false);
+            setInputValue(symbol);
+            setTimeout(() => handleAnalyze(), 200);
+          }}
+          langKey={langKey}
+        />
+      )}
 
       {/* Retention Modal */}
       {showRetentionModal && (
