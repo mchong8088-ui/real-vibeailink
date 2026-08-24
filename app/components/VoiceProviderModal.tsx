@@ -105,13 +105,19 @@ export const VoiceProviderModal: React.FC<VoiceProviderModalProps> = ({
   ];
 
   // ============================================
-  // CHECK: Web vs Local
+  // CHECK: Web vs Local vs Mobile
   // ============================================
   const isWeb = typeof window !== 'undefined' && 
     (window.location.hostname.includes('vercel.app') || 
      window.location.hostname.includes('vibeailink.com'));
   
-  const isCantoneseAvailable = !isWeb;
+  const isMobileDevice = typeof window !== 'undefined' && 
+    (/iPhone|iPad|iPod|Android/i.test(navigator.userAgent) || window.innerWidth < 768);
+  
+  const isMacOS = typeof window !== 'undefined' && 
+    navigator.userAgent.indexOf('Mac') !== -1 && !isMobileDevice;
+
+  const isCantoneseAvailable = !isWeb && isMacOS;
 
   // ============================================
   // DEFINE FUNCTIONS FIRST
@@ -139,12 +145,12 @@ export const VoiceProviderModal: React.FC<VoiceProviderModalProps> = ({
   };
 
   const handleLanguageChange = (newLang: 'Cantonese' | 'Mandarin' | 'English') => {
-    if (isWeb && newLang === 'Cantonese') {
+    if ((isWeb || isMobileDevice) && newLang === 'Cantonese') {
       const msg = langKey === 'Traditional Chinese' 
-        ? '粵語語音在網頁版僅支援國語發音（Mandarin fallback）。\n\n如需純正粵語發音，請使用桌面版應用程式（macOS）。'
+        ? '粵語語音在網頁版及手機版僅支援國語發音（Mandarin fallback）。\n\n如需純正粵語發音，請使用桌面版 macOS 應用程式。'
         : langKey === 'Simplified Chinese'
-        ? '粤语语音在网页版仅支持普通话发音（Mandarin fallback）。\n\n如需纯正粤语发音，请使用桌面版应用程序（macOS）。'
-        : 'Cantonese on web uses Mandarin pronunciation (fallback).\n\nFor authentic Cantonese, please use the desktop app (macOS).';
+        ? '粤语语音在网页版及手机版仅支持普通话发音（Mandarin fallback）。\n\n如需纯正粤语发音，请使用桌面版 macOS 应用程序。'
+        : 'Cantonese on web and mobile uses Mandarin pronunciation (fallback).\n\nFor authentic Cantonese, please use the desktop macOS app.';
       
       alert(msg);
       setLanguage('Mandarin');
@@ -336,12 +342,12 @@ export const VoiceProviderModal: React.FC<VoiceProviderModalProps> = ({
   }, [isOpen]);
 
   useEffect(() => {
-    if (isWeb && language === 'Cantonese') {
-      console.log('Cantonese auto-switched to Mandarin on web');
+    if ((isWeb || isMobileDevice) && language === 'Cantonese') {
+      console.log('Cantonese auto-switched to Mandarin on web/mobile');
       setLanguage('Mandarin');
       loadAvailableVoices();
     }
-  }, [isWeb]);
+  }, [isWeb, isMobileDevice]);
 
   useEffect(() => {
     return () => {
@@ -401,7 +407,7 @@ export const VoiceProviderModal: React.FC<VoiceProviderModalProps> = ({
         "You have Chinese text but selected English voice. This will not pronounce correctly. Would you like to switch to Cantonese or Mandarin?"
       );
       if (confirmSwitch) {
-        if (isWeb) {
+        if (isWeb || isMobileDevice) {
           setLanguage('Mandarin');
         } else {
           setLanguage('Cantonese');
@@ -495,7 +501,7 @@ export const VoiceProviderModal: React.FC<VoiceProviderModalProps> = ({
         "You have Chinese text but selected English voice. This will not pronounce correctly. Would you like to switch to Cantonese or Mandarin?"
       );
       if (confirmSwitch) {
-        if (isWeb) {
+        if (isWeb || isMobileDevice) {
           setLanguage('Mandarin');
         } else {
           setLanguage('Cantonese');
@@ -678,13 +684,13 @@ export const VoiceProviderModal: React.FC<VoiceProviderModalProps> = ({
   };
 
   const getCantoneseWebWarning = () => {
-    if (isWeb && language === 'Cantonese') {
+    if ((isWeb || isMobileDevice) && language === 'Cantonese') {
       if (langKey === 'Traditional Chinese') {
-        return '⚠️ 粵語在網頁版將使用國語發音。如需純正粵語，請使用桌面版 macOS 應用程式。';
+        return '⚠️ 粵語在網頁版及手機版將使用國語發音。如需純正粵語，請使用桌面版 macOS 應用程式。';
       } else if (langKey === 'Simplified Chinese') {
-        return '⚠️ 粤语在网页版将使用普通话发音。如需纯正粤语，请使用桌面版 macOS 应用程序。';
+        return '⚠️ 粤语在网页版及手机版将使用普通话发音。如需纯正粤语，请使用桌面版 macOS 应用程序。';
       } else {
-        return '⚠️ Cantonese on web uses Mandarin pronunciation. For authentic Cantonese, use the desktop macOS app.';
+        return '⚠️ Cantonese on web and mobile uses Mandarin pronunciation. For authentic Cantonese, use the desktop macOS app.';
       }
     }
     return null;
@@ -719,7 +725,7 @@ export const VoiceProviderModal: React.FC<VoiceProviderModalProps> = ({
         border: '1px solid #E5E7EB',
         position: 'relative'
       }}>
-        {/* Header - Fixed with sticky close button */}
+        {/* Header */}
         <div style={{ 
           display: 'flex', 
           justifyContent: 'space-between', 
@@ -761,7 +767,72 @@ export const VoiceProviderModal: React.FC<VoiceProviderModalProps> = ({
           </button>
         </div>
 
-        {/* Rest of the content remains the same */}
+        {/* ============================================================
+            CANTONESE MOBILE WARNING - PROMINENT BANNER
+            ============================================================ */}
+        {(isMobileDevice || isWeb) && (
+          <div style={{
+            backgroundColor: '#FEF3C7',
+            border: '2px solid #F59E0B',
+            borderRadius: '12px',
+            padding: '14px 16px',
+            marginBottom: '16px',
+            display: 'flex',
+            alignItems: 'flex-start',
+            gap: '12px'
+          }}>
+            <span style={{ fontSize: '24px', flexShrink: 0 }}>📱</span>
+            <div>
+              <div style={{ 
+                fontWeight: 'bold', 
+                fontSize: '13px', 
+                color: '#92400E',
+                marginBottom: '4px'
+              }}>
+                {langKey === 'Traditional Chinese' ? '💡 桌面版應用程式推薦' :
+                 langKey === 'Simplified Chinese' ? '💡 桌面版应用程序推荐' :
+                 '💡 Desktop App Recommended'}
+              </div>
+              <div style={{ 
+                fontSize: '12px', 
+                color: '#78350F',
+                lineHeight: '1.5'
+              }}>
+                {langKey === 'Traditional Chinese' 
+                  ? '此功能於桌面版 macOS 應用程式可提供最佳的粵語語音體驗。手機版與網頁版將使用國語發音作為替代。'
+                  : langKey === 'Simplified Chinese'
+                  ? '此功能于桌面版 macOS 应用程序可提供最佳的粤语语音体验。手机版与网页版将使用普通话发音作为替代。'
+                  : 'This feature works best with the desktop macOS app for authentic Cantonese voices. Mobile and web versions use Mandarin pronunciation as fallback.'}
+              </div>
+              <div style={{
+                marginTop: '6px',
+                display: 'flex',
+                gap: '8px',
+                flexWrap: 'wrap'
+              }}>
+                <span style={{
+                  fontSize: '10px',
+                  backgroundColor: '#FDE68A',
+                  color: '#78350F',
+                  padding: '2px 8px',
+                  borderRadius: '4px'
+                }}>
+                  {isMobileDevice ? '📱 Mobile' : '🌐 Web'}
+                </span>
+                <span style={{
+                  fontSize: '10px',
+                  backgroundColor: '#D1FAE5',
+                  color: '#065F46',
+                  padding: '2px 8px',
+                  borderRadius: '4px'
+                }}>
+                  🎯 Mandarin Fallback
+                </span>
+              </div>
+            </div>
+          </div>
+        )}
+
         {/* Script Area */}
         <div style={{ marginBottom: '16px' }}>
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '8px' }}>
@@ -904,15 +975,20 @@ export const VoiceProviderModal: React.FC<VoiceProviderModalProps> = ({
             <select value={language} onChange={(e: any) => {
               handleLanguageChange(e.target.value);
             }} style={{ width: '100%', padding: '6px 10px', borderRadius: '6px', border: '1px solid #D1D5DB', fontSize: '12px' }}>
-              <option value="Cantonese" disabled={isWeb}>
-                Cantonese (粵語 - zh-HK) {isWeb && '⚠️ Web (Mandarin fallback)'}
+              <option value="Cantonese" disabled={isWeb || isMobileDevice}>
+                Cantonese (粵語 - zh-HK) {(isWeb || isMobileDevice) && '⚠️ Web/Mobile (Mandarin fallback)'}
               </option>
               <option value="Mandarin">Mandarin (國語 - zh-CN)</option>
               <option value="English">English (en-US)</option>
             </select>
-            {isWeb && (
+            {(isWeb || isMobileDevice) && (
               <div style={{ fontSize: '10px', color: '#6B7280', marginTop: '4px' }}>
-                💡 Cantonese on web uses Mandarin pronunciation (fallback)
+                💡 Cantonese on web/mobile uses Mandarin pronunciation (fallback)
+              </div>
+            )}
+            {isMacOS && !isWeb && !isMobileDevice && (
+              <div style={{ fontSize: '10px', color: '#10B981', marginTop: '4px' }}>
+                ✅ macOS Desktop - Full Cantonese support available
               </div>
             )}
           </div>
