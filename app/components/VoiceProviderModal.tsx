@@ -59,7 +59,7 @@ export const VoiceProviderModal: React.FC<VoiceProviderModalProps> = ({
   
   // Voice selection state
   const [availableVoices, setAvailableVoices] = useState<Voice[]>([]);
-  const [selectedVoice, setSelectedVoice] = useState<string>('Aasing (Enhanced)');
+  const [selectedVoice, setSelectedVoice] = useState<string>('Auto-Male');
   const [isLoadingVoices, setIsLoadingVoices] = useState(false);
 
   // Uploaded audio file state
@@ -88,12 +88,14 @@ export const VoiceProviderModal: React.FC<VoiceProviderModalProps> = ({
     submitted: false
   });
 
-  // iOS Native TTS state
-  const [useiOSNativeTTS, setUseiOSNativeTTS] = useState<boolean>(true);
-
   const audioRef = useRef<HTMLAudioElement | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const audioFileInputRef = useRef<HTMLInputElement>(null);
+
+  // Web Speech API state
+  const utteranceRef = useRef<SpeechSynthesisUtterance | null>(null);
+  const [availableWebVoices, setAvailableWebVoices] = useState<SpeechSynthesisVoice[]>([]);
+  const [selectedWebVoice, setSelectedWebVoice] = useState<SpeechSynthesisVoice | null>(null);
 
   // Survey options
   const surveyOptions = [
@@ -122,10 +124,121 @@ export const VoiceProviderModal: React.FC<VoiceProviderModalProps> = ({
 
   const isCantoneseAvailable = !isWeb && isMacOS;
 
-  // Check if iOS native Cantonese TTS is available
-  const isiOSNativeCantoneseAvailable = typeof window !== 'undefined' && 
-    /iPhone|iPad|iPod/i.test(navigator.userAgent) && 
-    'speechSynthesis' in window;
+  // Check if Web Speech API is available (for mobile fallback)
+  const isWebSpeechAvailable = typeof window !== 'undefined' && 'speechSynthesis' in window;
+
+  // ============================================
+  // Web Speech API Voice Selection (Same as AI Assistant)
+  // ============================================
+
+  useEffect(() => {
+    if (isWebSpeechAvailable) {
+      const updateVoices = () => {
+        const voices = window.speechSynthesis.getVoices();
+        setAvailableWebVoices(voices);
+        
+        // Find best voice for current language
+        const bestVoice = findBestWebVoice(voices);
+        setSelectedWebVoice(bestVoice);
+        
+        console.log('🔊 Available Web Speech voices:', voices.map(v => `${v.name} (${v.lang})`).join(', '));
+        console.log('🔊 Selected Web Speech voice:', bestVoice?.name, bestVoice?.lang);
+      };
+      
+      updateVoices();
+      window.speechSynthesis.onvoiceschanged = updateVoices;
+    }
+  }, [isWebSpeechAvailable]);
+
+  const findBestWebVoice = (voices: SpeechSynthesisVoice[]): SpeechSynthesisVoice | null => {
+    // Try to find Cantonese voice
+    const cantonesePatterns = ['zh-hk', 'cantonese', '粵語', 'hong kong'];
+    for (const pattern of cantonesePatterns) {
+      const found = voices.find(v => 
+        v.lang.toLowerCase().includes(pattern) || 
+        v.name.toLowerCase().includes(pattern)
+      );
+      if (found) return found;
+    }
+    
+    // Try Mandarin
+    const mandarinPatterns = ['zh-cn', 'mandarin', 'chinese', '普通话'];
+    for (const pattern of mandarinPatterns) {
+      const found = voices.find(v => 
+        v.lang.toLowerCase().includes(pattern) || 
+        v.name.toLowerCase().includes(pattern)
+      );
+      if (found) return found;
+    }
+    
+    // Any Chinese voice
+    const found = voices.find(v => 
+      v.lang.startsWith('zh') || 
+      v.lang.startsWith('chi')
+    );
+    if (found) return found;
+    
+    // Default to first available
+    return voices.length > 0 ? voices[0] : null;
+  };
+
+  // ============================================
+  // Web Speech API Preview (Mobile Fallback)
+  // ============================================
+
+  const speakWithWebSpeech = (text: string): Promise<void> => {
+    return new Promise((resolve, reject) => {
+      if (!isWebSpeechAvailable) {
+        reject(new Error('Web Speech API not available'));
+        return;
+      }
+
+      // Cancel any ongoing speech
+      window.speechSynthesis.cancel();
+
+      const utterance = new SpeechSynthesisUtterance(text);
+      utteranceRef.current = utterance;
+      
+      // Set language
+      if (language === 'Cantonese') {
+        utterance.lang = 'zh-HK';
+      } else if (language === 'Mandarin') {
+        utterance.lang = 'zh-CN';
+      } else {
+        utterance.lang = 'en-US';
+      }
+      
+      // Set speed
+      utterance.rate = speed;
+      utterance.pitch = 1;
+      utterance.volume = 1;
+      
+      // Use selected voice if available
+      if (selectedWebVoice) {
+        utterance.voice = selectedWebVoice;
+        console.log('🔊 Using Web Speech voice:', selectedWebVoice.name, selectedWebVoice.lang);
+      }
+      
+      utterance.onstart = () => {
+        console.log('🔊 Web Speech started');
+        setIsPlayingAudio(true);
+      };
+      
+      utterance.onend = () => {
+        console.log('🔊 Web Speech ended');
+        setIsPlayingAudio(false);
+        resolve();
+      };
+      
+      utterance.onerror = (event) => {
+        console.error('🔊 Web Speech error:', event);
+        setIsPlayingAudio(false);
+        reject(new Error(`Speech error: ${event.error}`));
+      };
+      
+      window.speechSynthesis.speak(utterance);
+    });
+  };
 
   // ============================================
   // DEFINE FUNCTIONS FIRST
@@ -155,13 +268,13 @@ export const VoiceProviderModal: React.FC<VoiceProviderModalProps> = ({
   const handleLanguageChange = (newLang: 'Cantonese' | 'Mandarin' | 'English') => {
     if ((isWeb || isMobileDevice) && newLang === 'Cantonese') {
       const msg = langKey === 'Traditional Chinese' 
-        ? '粵語語音在網頁版及手機版僅支援國語發音（Mandarin fallback）。\n\n如需純正粵語發音，請使用桌面版 macOS 應用程式。'
+        ? '粵語語音在網頁版及手機版將使用瀏覽器語音（Web Speech API）作為替代。\n\n如需純正粵語發音，請使用桌面版 macOS 應用程式。'
         : langKey === 'Simplified Chinese'
-        ? '粤语语音在网页版及手机版仅支持普通话发音（Mandarin fallback）。\n\n如需纯正粤语发音，请使用桌面版 macOS 应用程序。'
-        : 'Cantonese on web and mobile uses Mandarin pronunciation (fallback).\n\nFor authentic Cantonese, please use the desktop macOS app.';
+        ? '粤语语音在网页版及手机版将使用浏览器语音（Web Speech API）作为替代。\n\n如需纯正粤语发音，请使用桌面版 macOS 应用程序。'
+        : 'Cantonese on web and mobile will use browser speech (Web Speech API) as fallback.\n\nFor authentic Cantonese, please use the desktop macOS app.';
       
       alert(msg);
-      setLanguage('Mandarin');
+      setLanguage(newLang);
       loadAvailableVoices();
       return;
     }
@@ -204,63 +317,6 @@ export const VoiceProviderModal: React.FC<VoiceProviderModalProps> = ({
   };
 
   // ============================================
-  // iOS NATIVE TTS FUNCTION
-  // ============================================
-  
-  const speakWithiOSNativeTTS = (text: string, language: string, speed: number = 1.0) => {
-    return new Promise<Buffer>((resolve, reject) => {
-      if (typeof window === 'undefined' || !window.speechSynthesis) {
-        reject(new Error('Speech synthesis not available'));
-        return;
-      }
-
-      // Create utterance
-      const utterance = new SpeechSynthesisUtterance(text);
-      
-      // Set language
-      if (language === 'Cantonese' || language === 'zh-HK') {
-        utterance.lang = 'zh-HK';
-      } else if (language === 'Mandarin' || language === 'zh-CN') {
-        utterance.lang = 'zh-CN';
-      } else {
-        utterance.lang = 'en-US';
-      }
-      
-      // Set speed
-      utterance.rate = speed;
-      
-      // Try to find a Cantonese voice
-      const voices = window.speechSynthesis.getVoices();
-      let cantoneseVoice = voices.find(v => v.lang === 'zh-HK' || v.lang.startsWith('zh'));
-      
-      if (cantoneseVoice) {
-        utterance.voice = cantoneseVoice;
-        console.log('🔊 iOS Native TTS: Using voice:', cantoneseVoice.name, 'Language:', cantoneseVoice.lang);
-      } else {
-        console.log('🔊 iOS Native TTS: No Cantonese voice found, using default');
-      }
-
-      // Collect audio data
-      const audioChunks: BlobPart[] = [];
-      
-      // Use MediaRecorder to capture audio
-      const stream = new MediaStream();
-      
-      // For now, just speak and resolve with a mock buffer
-      utterance.onend = () => {
-        console.log('🔊 iOS Native TTS: Speech finished');
-        resolve(Buffer.from('mock-audio-data'));
-      };
-      
-      utterance.onerror = (event) => {
-        reject(new Error(`Speech error: ${event.error}`));
-      };
-      
-      window.speechSynthesis.speak(utterance);
-    });
-  };
-
-  // ============================================
   // AUDIO FILE UPLOAD FUNCTIONS
   // ============================================
 
@@ -268,13 +324,11 @@ export const VoiceProviderModal: React.FC<VoiceProviderModalProps> = ({
     const file = e.target.files?.[0];
     if (!file) return;
 
-    // Check if file is audio
     if (!file.type.startsWith('audio/')) {
       alert('Please upload an audio file (MP3, WAV, M4A, etc.)');
       return;
     }
 
-    // Check file size (max 50MB)
     if (file.size > 50 * 1024 * 1024) {
       alert('File size too large. Maximum 50MB.');
       return;
@@ -283,11 +337,9 @@ export const VoiceProviderModal: React.FC<VoiceProviderModalProps> = ({
     setUploadedAudioFile(file);
     setIsAudioUploaded(true);
 
-    // Create URL for preview
     const url = URL.createObjectURL(file);
     setUploadedAudioUrl(url);
 
-    // Set duration if possible
     const audio = new Audio();
     audio.src = url;
     audio.onloadedmetadata = () => {
@@ -398,7 +450,7 @@ export const VoiceProviderModal: React.FC<VoiceProviderModalProps> = ({
 
   useEffect(() => {
     if ((isWeb || isMobileDevice) && language === 'Cantonese') {
-      console.log('Cantonese selected on web/mobile - showing fallback notice');
+      console.log('Cantonese selected on web/mobile - using Web Speech API fallback');
     }
   }, [isWeb, isMobileDevice, language]);
 
@@ -409,6 +461,9 @@ export const VoiceProviderModal: React.FC<VoiceProviderModalProps> = ({
       }
       if (uploadedAudioUrl) {
         URL.revokeObjectURL(uploadedAudioUrl);
+      }
+      if (isWebSpeechAvailable) {
+        window.speechSynthesis.cancel();
       }
     };
   }, []);
@@ -455,16 +510,32 @@ export const VoiceProviderModal: React.FC<VoiceProviderModalProps> = ({
       return;
     }
     
+    // Use Web Speech API for preview on mobile/web (like AI Assistant)
+    if (isWeb || isMobileDevice) {
+      console.log('📱 Using Web Speech API for preview (mobile/web fallback)');
+      setIsPreviewing(true);
+      
+      try {
+        // Get the text to speak (first 200 chars)
+        const previewText = script.slice(0, 200);
+        await speakWithWebSpeech(previewText);
+      } catch (err) {
+        console.error('Web Speech preview error:', err);
+        setPreviewError('Failed to play audio preview.');
+        alert(`Preview failed: ${err instanceof Error ? err.message : 'Unknown error'}`);
+      } finally {
+        setIsPreviewing(false);
+      }
+      return;
+    }
+
+    // Desktop macOS - use the original API
     if (isChineseText(script) && language === 'English') {
       const confirmSwitch = confirm(
         "You have Chinese text but selected English voice. This will not pronounce correctly. Would you like to switch to Cantonese or Mandarin?"
       );
       if (confirmSwitch) {
-        if (isWeb || isMobileDevice) {
-          setLanguage('Mandarin');
-        } else {
-          setLanguage('Cantonese');
-        }
+        setLanguage('Cantonese');
         await loadAvailableVoices();
       }
     }
@@ -527,7 +598,6 @@ export const VoiceProviderModal: React.FC<VoiceProviderModalProps> = ({
   };
 
   const handleGenerate = async () => {
-    // If there's an uploaded audio file, we can skip generation
     if (uploadedAudioFile) {
       alert('You have uploaded an audio file. Use the preview to listen, or generate subtitles from the script.');
       return;
@@ -568,7 +638,6 @@ export const VoiceProviderModal: React.FC<VoiceProviderModalProps> = ({
     const langCode = languageCodeMap[language] || 'zh-HK';
 
     try {
-      // Generate Voice
       const voiceRes = await fetch('/api/youtube/voice', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -598,7 +667,6 @@ export const VoiceProviderModal: React.FC<VoiceProviderModalProps> = ({
         const actualDuration = voiceData.duration || 0;
         setAudioDuration(actualDuration);
 
-        // Generate Subtitles
         const subRes = await fetch('/api/youtube/subtitles', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
@@ -726,29 +794,29 @@ export const VoiceProviderModal: React.FC<VoiceProviderModalProps> = ({
 
   const getVoiceSelectorHelpText = () => {
     if (langKey === 'Traditional Chinese') {
-      return '💡 如果您的電腦未安裝語音，請選擇「自動男聲」或「自動女聲」以使用雲端語音。\n📌 粵語在網頁版將使用國語發音作為替代。';
+      return '💡 手機版使用瀏覽器語音（Web Speech API）支援粵語。\n📌 桌面版 macOS 可獲得最佳語音品質。';
     } else if (langKey === 'Simplified Chinese') {
-      return '💡 如果您的电脑未安装语音，请选择「自动男声」或「自动女声」以使用云端语音。\n📌 粤语在网页版将使用普通话发音作为替代。';
+      return '💡 手机版使用浏览器语音（Web Speech API）支持粤语。\n📌 桌面版 macOS 可获得最佳语音品质。';
     } else {
-      return '💡 If you don\'t have voices installed, select "Auto-Male" or "Auto-Female" for cloud voices.\n📌 Cantonese on web uses Mandarin pronunciation as fallback.';
+      return '💡 Mobile uses browser speech (Web Speech API) for Cantonese support.\n📌 Desktop macOS provides best voice quality.';
     }
   };
 
   const getCantoneseWebWarning = () => {
     if ((isWeb || isMobileDevice) && language === 'Cantonese') {
       if (langKey === 'Traditional Chinese') {
-        return '⚠️ 粵語在網頁版及手機版將使用國語發音。如需純正粵語，請使用桌面版 macOS 應用程式。';
+        return '📱 手機版將使用瀏覽器語音（Web Speech API）朗讀粵語。如需更高品質，請使用桌面版 macOS。';
       } else if (langKey === 'Simplified Chinese') {
-        return '⚠️ 粤语在网页版及手机版将使用普通话发音。如需纯正粤语，请使用桌面版 macOS 应用程序。';
+        return '📱 手机版将使用浏览器语音（Web Speech API）朗读粤语。如需更高质量，请使用桌面版 macOS。';
       } else {
-        return '⚠️ Cantonese on web and mobile uses Mandarin pronunciation. For authentic Cantonese, use the desktop macOS app.';
+        return '📱 Mobile uses browser speech (Web Speech API) for Cantonese. For higher quality, use desktop macOS.';
       }
     }
     return null;
   };
 
   // ============================================
-  // RENDER - FIXED MOBILE VERSION WITH SCROLLING
+  // RENDER
   // ============================================
 
   return (
@@ -781,7 +849,7 @@ export const VoiceProviderModal: React.FC<VoiceProviderModalProps> = ({
         position: 'relative',
         overflow: 'hidden'
       }}>
-        {/* Header - Sticky */}
+        {/* Header */}
         <div style={{ 
           display: 'flex', 
           justifyContent: 'space-between', 
@@ -820,11 +888,11 @@ export const VoiceProviderModal: React.FC<VoiceProviderModalProps> = ({
           </button>
         </div>
 
-        {/* Mobile Warning - Compact */}
+        {/* Mobile/Web Speech API Info */}
         {(isMobileDevice || isWeb) && (
           <div style={{
-            backgroundColor: '#FEF3C7',
-            border: '1px solid #F59E0B',
+            backgroundColor: '#EFF6FF',
+            border: '1px solid #3B82F6',
             borderRadius: '8px',
             padding: '6px 10px',
             marginBottom: '8px',
@@ -838,23 +906,22 @@ export const VoiceProviderModal: React.FC<VoiceProviderModalProps> = ({
               <div style={{ 
                 fontWeight: 'bold', 
                 fontSize: '10px', 
-                color: '#92400E',
-                marginBottom: '1px'
+                color: '#1E40AF'
               }}>
-                {langKey === 'Traditional Chinese' ? '💡 桌面版 macOS 推薦' :
-                 langKey === 'Simplified Chinese' ? '💡 桌面版 macOS 推荐' :
-                 '💡 Desktop macOS Recommended'}
+                {langKey === 'Traditional Chinese' ? '🔊 瀏覽器語音（Web Speech API）' :
+                 langKey === 'Simplified Chinese' ? '🔊 浏览器语音（Web Speech API）' :
+                 '🔊 Browser Speech (Web Speech API)'}
               </div>
               <div style={{ 
                 fontSize: '9px', 
-                color: '#78350F',
+                color: '#3B82F6',
                 lineHeight: '1.3'
               }}>
                 {langKey === 'Traditional Chinese' 
-                  ? '手機版與網頁版使用國語發音替代。'
+                  ? '手機版自動使用瀏覽器語音朗讀，支援粵語（依系統語音而定）'
                   : langKey === 'Simplified Chinese'
-                  ? '手机版与网页版使用普通话发音替代。'
-                  : 'Mobile/web uses Mandarin fallback.'}
+                  ? '手机版自动使用浏览器语音朗读，支持粤语（依系统语音而定）'
+                  : 'Mobile automatically uses browser speech, supports Cantonese (depends on system voice)'}
               </div>
             </div>
           </div>
@@ -904,7 +971,6 @@ export const VoiceProviderModal: React.FC<VoiceProviderModalProps> = ({
               style={{ width: '100%', padding: '8px', borderRadius: '6px', border: '1px solid #D1D5DB', fontSize: '11px', fontFamily: 'inherit', resize: 'vertical' }}
             />
             
-            {/* Uploaded Audio File Display */}
             {isAudioUploaded && uploadedAudioFile && (
               <div style={{
                 marginTop: '4px',
@@ -948,11 +1014,11 @@ export const VoiceProviderModal: React.FC<VoiceProviderModalProps> = ({
               <div style={{
                 marginTop: '4px',
                 padding: '4px 8px',
-                backgroundColor: '#FEF3C7',
-                border: '1px solid #F59E0B',
+                backgroundColor: '#EFF6FF',
+                border: '1px solid #3B82F6',
                 borderRadius: '4px',
                 fontSize: '10px',
-                color: '#92400E'
+                color: '#1E40AF'
               }}>
                 {getCantoneseWebWarning()}
               </div>
@@ -972,16 +1038,14 @@ export const VoiceProviderModal: React.FC<VoiceProviderModalProps> = ({
             )}
           </div>
 
-          {/* Controls - Two columns */}
+          {/* Controls */}
           <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '8px', marginBottom: '8px' }}>
             <div>
               <label style={{ fontSize: '10px', fontWeight: '500', color: '#374151', display: 'block', marginBottom: '2px' }}>Voice Language</label>
               <select value={language} onChange={(e: any) => {
                 handleLanguageChange(e.target.value);
               }} style={{ width: '100%', padding: '4px 6px', borderRadius: '4px', border: '1px solid #D1D5DB', fontSize: '10px' }}>
-                <option value="Cantonese" disabled={isWeb || isMobileDevice}>
-                  Cantonese {(isWeb || isMobileDevice) && '⚠️'}
-                </option>
+                <option value="Cantonese">Cantonese {(isWeb || isMobileDevice) && '📱'}</option>
                 <option value="Mandarin">Mandarin</option>
                 <option value="English">English</option>
               </select>
@@ -998,7 +1062,7 @@ export const VoiceProviderModal: React.FC<VoiceProviderModalProps> = ({
             </div>
           </div>
 
-          {/* Voice Engine and Voice Selector - Two columns */}
+          {/* Voice Engine and Voice Selector */}
           <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '8px', marginBottom: '8px' }}>
             <div>
               <label style={{ fontSize: '10px', fontWeight: '500', color: '#374151', display: 'block', marginBottom: '2px' }}>Voice Engine</label>
@@ -1134,7 +1198,7 @@ export const VoiceProviderModal: React.FC<VoiceProviderModalProps> = ({
               }}
             >
               {isPreviewing ? <Loader2 size={10} className="animate-spin" /> : (isPlayingAudio ? <Pause size={10} /> : <Play size={10} />)}
-              {uploadedAudioFile ? 'Play' : `5s ${language}`}
+              {(isWeb || isMobileDevice) && language === 'Cantonese' ? '🔊 Listen' : uploadedAudioFile ? 'Play' : `5s ${language}`}
             </button>
             <audio 
               ref={audioRef} 
@@ -1163,7 +1227,6 @@ export const VoiceProviderModal: React.FC<VoiceProviderModalProps> = ({
           borderTop: '1px solid #E5E7EB',
           marginTop: '4px'
         }}>
-          {/* Generate Action */}
           <button
             onClick={handleGenerate}
             disabled={isLoading || isAudioUploaded}
@@ -1180,7 +1243,6 @@ export const VoiceProviderModal: React.FC<VoiceProviderModalProps> = ({
             {isLoading ? 'Generating...' : isAudioUploaded ? 'Audio Uploaded' : `Generate (${estimatedCredits} Credits)`}
           </button>
 
-          {/* Downloads */}
           {generatedMp3Base64 && (
             <div style={{ marginTop: '8px' }}>
               <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr 1fr', gap: '4px' }}>
