@@ -1,6 +1,6 @@
 "use client";
 import React, { useState, useRef, useEffect } from 'react';
-import { Send, Sparkles, Loader2, Volume2, VolumeX, Download, Mic, X, AlertCircle, Coffee } from 'lucide-react';
+import { Send, Sparkles, Loader2, Volume2, VolumeX, Mic, X, AlertCircle, Coffee, Copy, Check, Globe } from 'lucide-react';
 
 interface AIResearchAssistantModalProps {
   isOpen: boolean;
@@ -26,7 +26,11 @@ export const AIResearchAssistantModal: React.FC<AIResearchAssistantModalProps> =
   const [isLoading, setIsLoading] = useState(false);
   const [isSpeaking, setIsSpeaking] = useState(false);
   const [availableVoices, setAvailableVoices] = useState<SpeechSynthesisVoice[]>([]);
-  const [isExportingMP3, setIsExportingMP3] = useState(false);
+  const [speakingMessageIndex, setSpeakingMessageIndex] = useState<number | null>(null);
+  const [selectedVoiceName, setSelectedVoiceName] = useState<string>('');
+  const [speechRate, setSpeechRate] = useState(0.85);
+  const [copiedIndex, setCopiedIndex] = useState<number | null>(null);
+  const [voiceLanguage, setVoiceLanguage] = useState<'auto' | 'cantonese' | 'mandarin' | 'english'>('auto');
   
   // Voice input states
   const [isListening, setIsListening] = useState(false);
@@ -35,10 +39,41 @@ export const AIResearchAssistantModal: React.FC<AIResearchAssistantModalProps> =
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const utteranceRef = useRef<SpeechSynthesisUtterance | null>(null);
 
+  // FORCE SHOW SPEAKER BUTTON FOR TESTING - set to true to always show
+  const FORCE_SHOW_SPEAKER = true;
+  
+  const isChineseLanguage = () => {
+    const chineseKeywords = [
+      'Chinese', 'Cantonese', 'Taiwanese', 'zh', 
+      '中文', '粵語', '台語', '国语', '普通话', 
+      'Mandarin', 'mandarin', 'Traditional', 'Simplified'
+    ];
+    const lowerLang = langKey.toLowerCase();
+    return chineseKeywords.some(keyword => lowerLang.includes(keyword.toLowerCase()));
+  };
+
+  const isCantonese = () => {
+    const keywords = ['cantonese', '粵語', 'yue', 'zh-hk'];
+    const lowerLang = langKey.toLowerCase();
+    return keywords.some(keyword => lowerLang.includes(keyword.toLowerCase()));
+  };
+
+  const showSpeakerButton = FORCE_SHOW_SPEAKER || isChineseLanguage();
+
+  // Scroll to bottom when messages change
+  useEffect(() => {
+    if (messagesEndRef.current) {
+      messagesEndRef.current.scrollTop = messagesEndRef.current.scrollHeight;
+    }
+  }, [messages]);
+
+  // Get available voices
   useEffect(() => {
     const updateVoices = () => {
       if (typeof window !== 'undefined' && 'speechSynthesis' in window) {
-        setAvailableVoices(window.speechSynthesis.getVoices());
+        const voices = window.speechSynthesis.getVoices();
+        setAvailableVoices(voices);
+        console.log('🔍 Available voices:', voices.map(v => `${v.name} (${v.lang})`).join(', '));
       }
     };
     updateVoices();
@@ -55,32 +90,186 @@ export const AIResearchAssistantModal: React.FC<AIResearchAssistantModalProps> =
         const recognitionInstance = new SpeechRecognition();
         recognitionInstance.continuous = false;
         recognitionInstance.interimResults = false;
-        recognitionInstance.lang = langKey === 'Traditional Chinese' || langKey === 'Cantonese' || langKey === 'Taiwanese'
-          ? 'zh-TW'
-          : langKey === 'Simplified Chinese'
-          ? 'zh-CN'
-          : 'en-US';
+        recognitionInstance.lang = isChineseLanguage() ? 'zh-TW' : 'en-US';
         
         recognitionInstance.onresult = (event: any) => {
           const transcript = event.results[0][0].transcript;
           setInput(transcript);
           setIsListening(false);
-          // Auto-send after voice input
-          setTimeout(() => {
-            handleSend(transcript);
-          }, 300);
+          setTimeout(() => handleSend(transcript), 300);
         };
         
-        recognitionInstance.onerror = () => {
-          setIsListening(false);
-        };
-        recognitionInstance.onend = () => {
-          setIsListening(false);
-        };
+        recognitionInstance.onerror = () => setIsListening(false);
+        recognitionInstance.onend = () => setIsListening(false);
         setRecognition(recognitionInstance);
       }
     }
   }, [langKey]);
+
+  // Enhanced voice selection with language preference
+  const findBestVoice = () => {
+    console.log('🔍 Finding best voice for language:', voiceLanguage);
+    
+    let selectedVoice = null;
+
+    // Check if we should use a specific language
+    if (voiceLanguage === 'cantonese') {
+      // PRIORITY 1: Exact Cantonese voices
+      const cantoneseVoicePatterns = [
+        'sin-ji', 'ting-ting', 'mui', 'yue', 'canton', 'hk', 
+        'hong kong', 'cantonese', 'zh-hk', '粵語', '廣東話',
+        'mei-jia', 'li-jing', 'hui'
+      ];
+      
+      selectedVoice = availableVoices.find(voice => {
+        const name = voice.name.toLowerCase();
+        const lang = voice.lang.toLowerCase();
+        return cantoneseVoicePatterns.some(pattern => 
+          name.includes(pattern) || lang.includes(pattern) || lang.includes('zh-hk')
+        );
+      });
+
+      if (selectedVoice) {
+        console.log('✅ Found Cantonese voice:', selectedVoice.name, selectedVoice.lang);
+        setSelectedVoiceName(`🎤 ${selectedVoice.name} (Cantonese)`);
+        return selectedVoice;
+      }
+    }
+
+    if (voiceLanguage === 'mandarin' || voiceLanguage === 'auto') {
+      // PRIORITY 2: Mandarin/Chinese voices
+      const mandarinPatterns = ['zh-cn', 'mandarin', 'chinese', 'putonghua', '普通话'];
+      selectedVoice = availableVoices.find(voice => {
+        const name = voice.name.toLowerCase();
+        const lang = voice.lang.toLowerCase();
+        return mandarinPatterns.some(pattern => 
+          name.includes(pattern) || lang.includes(pattern) || lang.includes('zh-cn')
+        );
+      });
+
+      if (selectedVoice) {
+        console.log('✅ Found Mandarin voice:', selectedVoice.name, selectedVoice.lang);
+        setSelectedVoiceName(`🎤 ${selectedVoice.name} (Mandarin)`);
+        return selectedVoice;
+      }
+    }
+
+    if (voiceLanguage === 'english' || voiceLanguage === 'auto') {
+      // PRIORITY 3: English voices
+      const englishPatterns = ['en-us', 'en-gb', 'english', 'zira', 'david'];
+      selectedVoice = availableVoices.find(voice => {
+        const name = voice.name.toLowerCase();
+        const lang = voice.lang.toLowerCase();
+        return englishPatterns.some(pattern => 
+          name.includes(pattern) || lang.includes('en-')
+        );
+      });
+
+      if (selectedVoice) {
+        console.log('✅ Found English voice:', selectedVoice.name, selectedVoice.lang);
+        setSelectedVoiceName(`🎤 ${selectedVoice.name} (English)`);
+        return selectedVoice;
+      }
+    }
+
+    // PRIORITY 4: Any Chinese voice (fallback)
+    selectedVoice = availableVoices.find(voice => {
+      const name = voice.name.toLowerCase();
+      const lang = voice.lang.toLowerCase();
+      return name.includes('chinese') || lang.includes('zh') || lang.includes('chi');
+    });
+
+    if (selectedVoice) {
+      console.log('⚠️ Fallback to Chinese voice:', selectedVoice.name, selectedVoice.lang);
+      setSelectedVoiceName(`🎤 ${selectedVoice.name} (Chinese - Fallback)`);
+      return selectedVoice;
+    }
+
+    // PRIORITY 5: Any voice (last resort)
+    if (availableVoices.length > 0) {
+      console.log('⚠️ Using default voice');
+      setSelectedVoiceName('🎤 Default Voice');
+      return availableVoices[0];
+    }
+
+    console.log('❌ No voices available');
+    setSelectedVoiceName('❌ No voice available');
+    return null;
+  };
+
+  const speakText = (text: string, index: number) => {
+    if (typeof window === 'undefined' || !('speechSynthesis' in window)) {
+      alert('Text-to-speech is not supported in this browser.');
+      return;
+    }
+
+    if (isSpeaking && speakingMessageIndex === index) {
+      window.speechSynthesis.cancel();
+      setIsSpeaking(false);
+      setSpeakingMessageIndex(null);
+      return;
+    }
+
+    window.speechSynthesis.cancel();
+
+    const utterance = new SpeechSynthesisUtterance(text);
+    utteranceRef.current = utterance;
+
+    const bestVoice = findBestVoice();
+    if (bestVoice) {
+      utterance.voice = bestVoice;
+    }
+
+    // Set language based on selection
+    if (voiceLanguage === 'cantonese' || (voiceLanguage === 'auto' && isCantonese())) {
+      utterance.lang = 'zh-HK';
+    } else if (voiceLanguage === 'mandarin' || (voiceLanguage === 'auto' && isChineseLanguage())) {
+      utterance.lang = 'zh-CN';
+    } else if (voiceLanguage === 'english') {
+      utterance.lang = 'en-US';
+    } else {
+      utterance.lang = 'en-US';
+    }
+    
+    utterance.rate = speechRate;
+    utterance.pitch = 1;
+    utterance.volume = 1;
+
+    utterance.onstart = () => {
+      setIsSpeaking(true);
+      setSpeakingMessageIndex(index);
+    };
+
+    utterance.onend = () => {
+      setIsSpeaking(false);
+      setSpeakingMessageIndex(null);
+    };
+
+    utterance.onerror = (event) => {
+      console.error('Speech error:', event);
+      setIsSpeaking(false);
+      setSpeakingMessageIndex(null);
+    };
+
+    window.speechSynthesis.speak(utterance);
+  };
+
+  const copyToClipboard = (text: string, index: number) => {
+    navigator.clipboard.writeText(text).then(() => {
+      setCopiedIndex(index);
+      setTimeout(() => setCopiedIndex(null), 2000);
+    }).catch(() => {
+      // Fallback for older browsers
+      const textarea = document.createElement('textarea');
+      textarea.value = text;
+      document.body.appendChild(textarea);
+      textarea.select();
+      document.execCommand('copy');
+      document.body.removeChild(textarea);
+      setCopiedIndex(index);
+      setTimeout(() => setCopiedIndex(null), 2000);
+    });
+  };
 
   const handleSend = async (overrideInput?: string) => {
     const textToSend = overrideInput || input.trim();
@@ -163,6 +352,15 @@ export const AIResearchAssistantModal: React.FC<AIResearchAssistantModalProps> =
     }
   };
 
+  // Cleanup speech on unmount
+  useEffect(() => {
+    return () => {
+      if (typeof window !== 'undefined' && 'speechSynthesis' in window) {
+        window.speechSynthesis.cancel();
+      }
+    };
+  }, []);
+
   if (!isOpen) return null;
 
   return (
@@ -186,11 +384,12 @@ export const AIResearchAssistantModal: React.FC<AIResearchAssistantModalProps> =
         overflowY: 'auto',
         padding: '24px',
         paddingTop: '16px',
+        paddingBottom: '16px',
         boxShadow: '0 20px 25px -5px rgba(0, 0, 0, 0.1)',
         border: '1px solid #E5E7EB',
         position: 'relative'
       }}>
-        {/* Header - Fixed with sticky close button */}
+        {/* Header */}
         <div style={{ 
           display: 'flex', 
           justifyContent: 'space-between', 
@@ -201,13 +400,103 @@ export const AIResearchAssistantModal: React.FC<AIResearchAssistantModalProps> =
           backgroundColor: '#FFFFFF',
           zIndex: 10,
           paddingBottom: '12px',
-          borderBottom: '1px solid #E5E7EB'
+          borderBottom: '1px solid #E5E7EB',
+          flexWrap: 'wrap',
+          gap: '8px'
         }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
             <Sparkles color="#10B981" size={20} />
             <h3 style={{ margin: 0, fontSize: '18px', fontWeight: '600', color: '#111827' }}>
               🤖 AI Assistant
             </h3>
+            
+            {/* Language Selector */}
+            <div style={{ 
+              display: 'flex', 
+              alignItems: 'center', 
+              gap: '4px',
+              background: '#F3F4F6',
+              padding: '2px 6px',
+              borderRadius: '8px',
+              marginLeft: '4px'
+            }}>
+              <Globe size={14} color="#6B7280" />
+              <select
+                value={voiceLanguage}
+                onChange={(e) => setVoiceLanguage(e.target.value as any)}
+                style={{
+                  fontSize: '10px',
+                  padding: '2px 4px',
+                  borderRadius: '4px',
+                  border: 'none',
+                  background: 'transparent',
+                  color: '#374151',
+                  cursor: 'pointer',
+                  outline: 'none',
+                  maxWidth: '80px'
+                }}
+                aria-label="Select voice language"
+              >
+                <option value="auto">🔄 Auto</option>
+                <option value="cantonese">🇭🇰 Cantonese</option>
+                <option value="mandarin">🇨🇳 Mandarin</option>
+                <option value="english">🇬🇧 English</option>
+              </select>
+            </div>
+
+            {showSpeakerButton && (
+              <button
+                onClick={() => {
+                  const lastAssistantMessage = [...messages].reverse().find(m => m.role === 'assistant');
+                  if (lastAssistantMessage) {
+                    const index = messages.findIndex(m => m === lastAssistantMessage);
+                    speakText(lastAssistantMessage.content, index);
+                  } else {
+                    alert('No assistant message to read. Please ask a question first.');
+                  }
+                }}
+                style={{
+                  background: isSpeaking ? '#EF4444' : '#10B981',
+                  border: 'none',
+                  cursor: 'pointer',
+                  color: 'white',
+                  padding: '4px 10px',
+                  borderRadius: '8px',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  gap: '4px',
+                  minWidth: '36px',
+                  minHeight: '32px',
+                  fontSize: '12px',
+                  transition: 'all 0.2s ease'
+                }}
+                aria-label="Read last assistant message aloud"
+                title={isSpeaking ? 'Stop speaking' : '🔊 Read last response aloud'}
+              >
+                {isSpeaking ? <VolumeX size={14} /> : <Volume2 size={14} />}
+                <span style={{ fontSize: '10px', fontWeight: '500' }}>
+                  {isSpeaking ? 'Stop' : 'Listen'}
+                </span>
+              </button>
+            )}
+            
+            {/* Voice info badge */}
+            {selectedVoiceName && (
+              <span style={{ 
+                fontSize: '9px', 
+                color: '#6B7280', 
+                background: '#F3F4F6', 
+                padding: '2px 6px', 
+                borderRadius: '10px',
+                maxWidth: '120px',
+                overflow: 'hidden',
+                textOverflow: 'ellipsis',
+                whiteSpace: 'nowrap'
+              }}>
+                {selectedVoiceName}
+              </span>
+            )}
           </div>
           <button 
             onClick={onClose} 
@@ -234,8 +523,14 @@ export const AIResearchAssistantModal: React.FC<AIResearchAssistantModalProps> =
 
         {/* Notice Banner */}
         <div style={{
-          backgroundColor: '#ECFDF5', border: '1px solid #A7F3D0', borderRadius: '8px',
-          padding: '10px 14px', marginBottom: '16px', display: 'flex', alignItems: 'flex-start', gap: '10px'
+          backgroundColor: '#ECFDF5', 
+          border: '1px solid #A7F3D0', 
+          borderRadius: '8px',
+          padding: '10px 14px', 
+          marginBottom: '12px', 
+          display: 'flex', 
+          alignItems: 'flex-start', 
+          gap: '10px'
         }}>
           <AlertCircle color="#059669" size={18} style={{ flexShrink: 0, marginTop: '2px' }} />
           <div style={{ fontSize: '12px', color: '#065F46', lineHeight: '1.4' }}>
@@ -256,11 +551,52 @@ export const AIResearchAssistantModal: React.FC<AIResearchAssistantModalProps> =
           </div>
         </div>
 
-        {/* Message Log */}
-        <div style={{
-          height: '260px', overflowY: 'auto', backgroundColor: '#F9FAFB',
-          borderRadius: '10px', padding: '12px', marginBottom: '12px', border: '1px solid #E5E7EB'
+        {/* Speed Control */}
+        <div style={{ 
+          display: 'flex', 
+          alignItems: 'center', 
+          gap: '8px', 
+          marginBottom: '10px',
+          padding: '0 4px'
         }}>
+          <span style={{ fontSize: '11px', color: '#6B7280' }}>🐢</span>
+          <input 
+            type="range" 
+            min="0.5" 
+            max="1.5" 
+            step="0.05" 
+            value={speechRate}
+            onChange={(e) => setSpeechRate(parseFloat(e.target.value))}
+            style={{ 
+              flex: 1, 
+              height: '4px',
+              borderRadius: '2px',
+              background: '#D1D5DB',
+              outline: 'none',
+              WebkitAppearance: 'none'
+            }}
+            aria-label="Speech speed"
+          />
+          <span style={{ fontSize: '11px', color: '#6B7280' }}>🐇</span>
+          <span style={{ fontSize: '10px', color: '#6B7280', minWidth: '30px' }}>
+            {speechRate.toFixed(1)}x
+          </span>
+        </div>
+
+        {/* Message Log */}
+        <div 
+          ref={messagesEndRef}
+          style={{
+            height: '240px', 
+            overflowY: 'auto', 
+            backgroundColor: '#F9FAFB',
+            borderRadius: '10px', 
+            padding: '12px', 
+            marginBottom: '12px', 
+            border: '1px solid #E5E7EB',
+            WebkitOverflowScrolling: 'touch'
+          }}
+        >
           {messages.length === 0 && (
             <div style={{ textAlign: 'center', color: '#9CA3AF', fontSize: '12px', paddingTop: '80px' }}>
               Ask any question or generate research analysis...
@@ -268,17 +604,95 @@ export const AIResearchAssistantModal: React.FC<AIResearchAssistantModalProps> =
           )}
           {messages.map((msg, idx) => (
             <div key={idx} style={{
-              display: 'flex', flexDirection: 'column',
-              alignItems: msg.role === 'user' ? 'flex-end' : 'flex-start', marginBottom: '8px'
+              display: 'flex', 
+              flexDirection: 'column',
+              alignItems: msg.role === 'user' ? 'flex-end' : 'flex-start', 
+              marginBottom: '10px',
+              width: '100%'
             }}>
               <div style={{
-                maxWidth: '85%', padding: '8px 12px', borderRadius: '10px',
+                maxWidth: '85%', 
+                padding: '8px 12px', 
+                borderRadius: '10px',
                 backgroundColor: msg.role === 'user' ? '#10B981' : 'white',
                 color: msg.role === 'user' ? 'white' : '#1F2937',
-                fontSize: '12px', border: msg.role === 'assistant' ? '1px solid #E5E7EB' : 'none'
+                fontSize: '12px', 
+                border: msg.role === 'assistant' ? '1px solid #E5E7EB' : 'none',
+                wordBreak: 'break-word'
               }}>
                 {msg.content}
               </div>
+              
+              {/* Action buttons for assistant messages */}
+              {msg.role === 'assistant' && (
+                <div style={{
+                  display: 'flex',
+                  gap: '6px',
+                  marginTop: '4px',
+                  marginLeft: '4px',
+                  flexWrap: 'wrap'
+                }}>
+                  {showSpeakerButton && (
+                    <button
+                      onClick={() => speakText(msg.content, idx)}
+                      style={{
+                        background: 'transparent',
+                        border: 'none',
+                        cursor: 'pointer',
+                        color: speakingMessageIndex === idx && isSpeaking ? '#EF4444' : '#6B7280',
+                        padding: '2px 6px',
+                        borderRadius: '4px',
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: '3px',
+                        fontSize: '10px',
+                        transition: 'all 0.2s ease'
+                      }}
+                      aria-label="Read message aloud"
+                      title={speakingMessageIndex === idx && isSpeaking ? 'Stop speaking' : '🔊 Read this message'}
+                    >
+                      {speakingMessageIndex === idx && isSpeaking ? (
+                        <>
+                          <VolumeX size={12} /> Stop
+                        </>
+                      ) : (
+                        <>
+                          <Volume2 size={12} /> 🔊 Listen
+                        </>
+                      )}
+                    </button>
+                  )}
+                  
+                  <button
+                    onClick={() => copyToClipboard(msg.content, idx)}
+                    style={{
+                      background: 'transparent',
+                      border: 'none',
+                      cursor: 'pointer',
+                      color: copiedIndex === idx ? '#10B981' : '#6B7280',
+                      padding: '2px 6px',
+                      borderRadius: '4px',
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: '3px',
+                      fontSize: '10px',
+                      transition: 'all 0.2s ease'
+                    }}
+                    aria-label="Copy message"
+                    title="Copy to clipboard"
+                  >
+                    {copiedIndex === idx ? (
+                      <>
+                        <Check size={12} /> Copied!
+                      </>
+                    ) : (
+                      <>
+                        <Copy size={12} /> Copy
+                      </>
+                    )}
+                  </button>
+                </div>
+              )}
             </div>
           ))}
           {isLoading && (
@@ -288,7 +702,7 @@ export const AIResearchAssistantModal: React.FC<AIResearchAssistantModalProps> =
           )}
         </div>
 
-        {/* Input Control with Voice Button */}
+        {/* Input Control */}
         <div style={{ display: 'flex', gap: '8px' }}>
           <input
             type="text"
@@ -297,13 +711,18 @@ export const AIResearchAssistantModal: React.FC<AIResearchAssistantModalProps> =
             onKeyDown={(e) => e.key === 'Enter' && handleSend()}
             placeholder={isListening ? "🎤 Listening..." : "Type stock ticker, strategy, or market questions..."}
             style={{
-              flex: 1, padding: '8px 12px', borderRadius: '8px',
-              border: '1px solid #D1D5DB', fontSize: '12px', outline: 'none',
-              backgroundColor: isListening ? '#FEF3C7' : '#FFFFFF'
+              flex: 1, 
+              padding: '8px 12px', 
+              borderRadius: '8px',
+              border: '1px solid #D1D5DB', 
+              fontSize: '12px', 
+              outline: 'none',
+              backgroundColor: isListening ? '#FEF3C7' : '#FFFFFF',
+              WebkitAppearance: 'none'
             }}
           />
           
-          {/* Voice Input Button */}
+          {/* MIC Button */}
           <button
             onClick={handleMicToggle}
             style={{
@@ -320,7 +739,8 @@ export const AIResearchAssistantModal: React.FC<AIResearchAssistantModalProps> =
               minHeight: '44px',
               transition: 'all 0.2s ease',
               boxShadow: isListening ? '0 0 0 4px rgba(239, 68, 68, 0.3)' : 'none',
-              animation: isListening ? 'pulse 1.5s infinite' : 'none'
+              animation: isListening ? 'pulse 1.5s infinite' : 'none',
+              touchAction: 'manipulation'
             }}
             aria-label="Voice input"
             title={isListening ? 'Stop listening' : 'Start voice input'}
@@ -333,15 +753,20 @@ export const AIResearchAssistantModal: React.FC<AIResearchAssistantModalProps> =
             onClick={() => handleSend()}
             disabled={isLoading || !input.trim()}
             style={{
-              padding: '8px 16px', borderRadius: '8px',
+              padding: '8px 16px', 
+              borderRadius: '8px',
               backgroundColor: (isLoading || !input.trim()) ? '#9CA3AF' : '#10B981',
-              color: 'white', border: 'none', cursor: (isLoading || !input.trim()) ? 'not-allowed' : 'pointer',
-              fontWeight: '600', fontSize: '12px',
+              color: 'white', 
+              border: 'none', 
+              cursor: (isLoading || !input.trim()) ? 'not-allowed' : 'pointer',
+              fontWeight: '600', 
+              fontSize: '12px',
               display: 'flex',
               alignItems: 'center',
               justifyContent: 'center',
               minWidth: '44px',
-              minHeight: '44px'
+              minHeight: '44px',
+              touchAction: 'manipulation'
             }}
           >
             <Send size={16} />
@@ -359,12 +784,18 @@ export const AIResearchAssistantModal: React.FC<AIResearchAssistantModalProps> =
             gap: '6px',
             justifyContent: 'center'
           }}>
-            <span style={{ display: 'inline-block', width: '8px', height: '8px', borderRadius: '50%', backgroundColor: '#EF4444', animation: 'blink 1s infinite' }} />
+            <span style={{ 
+              display: 'inline-block', 
+              width: '8px', 
+              height: '8px', 
+              borderRadius: '50%', 
+              backgroundColor: '#EF4444', 
+              animation: 'blink 1s infinite' 
+            }} />
             Listening... Speak your question
           </div>
         )}
 
-        {/* Styles for animations */}
         <style>{`
           @keyframes pulse {
             0% { box-shadow: 0 0 0 0 rgba(239, 68, 68, 0.4); }
@@ -375,6 +806,46 @@ export const AIResearchAssistantModal: React.FC<AIResearchAssistantModalProps> =
             0% { opacity: 1; }
             50% { opacity: 0.3; }
             100% { opacity: 1; }
+          }
+          @keyframes spin {
+            from { transform: rotate(0deg); }
+            to { transform: rotate(360deg); }
+          }
+          .animate-spin {
+            animation: spin 1s linear infinite;
+          }
+          
+          /* Mobile responsive adjustments */
+          @media (max-width: 480px) {
+            .voice-badge {
+              display: none;
+            }
+          }
+          
+          /* Range input styling for mobile */
+          input[type="range"] {
+            -webkit-appearance: none;
+            appearance: none;
+          }
+          input[type="range"]::-webkit-slider-thumb {
+            -webkit-appearance: none;
+            appearance: none;
+            width: 14px;
+            height: 14px;
+            border-radius: 50%;
+            background: #10B981;
+            cursor: pointer;
+            border: 2px solid white;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.2);
+          }
+          input[type="range"]::-moz-range-thumb {
+            width: 14px;
+            height: 14px;
+            border-radius: 50%;
+            background: #10B981;
+            cursor: pointer;
+            border: 2px solid white;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.2);
           }
         `}</style>
       </div>
