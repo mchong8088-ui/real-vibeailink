@@ -365,14 +365,17 @@ export const AIResearchAssistantModal: React.FC<AIResearchAssistantModalProps> =
 
   return (
     <div style={{
-      position: 'fixed', top: 0, left: 0, right: 0, bottom: 0,
+      position: 'fixed',
+      top: 0,
+      left: 0,
+      right: 0,
+      bottom: 0,
       backgroundColor: 'rgba(0, 0, 0, 0.5)',
       display: 'flex',
-      alignItems: 'flex-start',
+      alignItems: 'center',
       justifyContent: 'center',
       zIndex: 1000,
       padding: '16px',
-      paddingTop: '60px',
       overflow: 'hidden'
     }}>
       <div style={{
@@ -380,33 +383,29 @@ export const AIResearchAssistantModal: React.FC<AIResearchAssistantModalProps> =
         borderRadius: '16px',
         width: '100%',
         maxWidth: '640px',
-        maxHeight: 'calc(100vh - 120px)',
-        overflowY: 'auto',
-        padding: '24px',
-        paddingTop: '16px',
+        maxHeight: '90vh',
+        display: 'flex',
+        flexDirection: 'column',
+        padding: '20px',
         paddingBottom: '16px',
         boxShadow: '0 20px 25px -5px rgba(0, 0, 0, 0.1)',
         border: '1px solid #E5E7EB',
-        position: 'relative'
+        position: 'relative',
+        overflow: 'hidden'
       }}>
-        {/* Header */}
+        {/* Header - Sticky */}
         <div style={{ 
           display: 'flex', 
           justifyContent: 'space-between', 
           alignItems: 'center', 
-          marginBottom: '16px',
-          position: 'sticky',
-          top: 0,
-          backgroundColor: '#FFFFFF',
-          zIndex: 10,
-          paddingBottom: '12px',
-          borderBottom: '1px solid #E5E7EB',
+          marginBottom: '12px',
+          flexShrink: 0,
           flexWrap: 'wrap',
           gap: '8px'
         }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
-            <Sparkles color="#10B981" size={20} />
-            <h3 style={{ margin: 0, fontSize: '18px', fontWeight: '600', color: '#111827' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '6px', flexWrap: 'wrap' }}>
+            <Sparkles color="#10B981" size={18} />
+            <h3 style={{ margin: 0, fontSize: '16px', fontWeight: '600', color: '#111827' }}>
               🤖 AI Assistant
             </h3>
             
@@ -414,28 +413,26 @@ export const AIResearchAssistantModal: React.FC<AIResearchAssistantModalProps> =
             <div style={{ 
               display: 'flex', 
               alignItems: 'center', 
-              gap: '4px',
+              gap: '3px',
               background: '#F3F4F6',
               padding: '2px 6px',
-              borderRadius: '8px',
-              marginLeft: '4px'
+              borderRadius: '6px'
             }}>
-              <Globe size={14} color="#6B7280" />
+              <Globe size={12} color="#6B7280" />
               <select
                 value={voiceLanguage}
                 onChange={(e) => setVoiceLanguage(e.target.value as any)}
                 style={{
-                  fontSize: '10px',
-                  padding: '2px 4px',
+                  fontSize: '9px',
+                  padding: '1px 3px',
                   borderRadius: '4px',
                   border: 'none',
                   background: 'transparent',
                   color: '#374151',
                   cursor: 'pointer',
                   outline: 'none',
-                  maxWidth: '80px'
+                  maxWidth: '70px'
                 }}
-                aria-label="Select voice language"
               >
                 <option value="auto">🔄 Auto</option>
                 <option value="cantonese">🇭🇰 Cantonese</option>
@@ -460,22 +457,18 @@ export const AIResearchAssistantModal: React.FC<AIResearchAssistantModalProps> =
                   border: 'none',
                   cursor: 'pointer',
                   color: 'white',
-                  padding: '4px 10px',
-                  borderRadius: '8px',
+                  padding: '3px 8px',
+                  borderRadius: '6px',
                   display: 'flex',
                   alignItems: 'center',
-                  justifyContent: 'center',
-                  gap: '4px',
-                  minWidth: '36px',
-                  minHeight: '32px',
-                  fontSize: '12px',
-                  transition: 'all 0.2s ease'
+                  gap: '3px',
+                  fontSize: '10px',
+                  transition: 'all 0.2s ease',
+                  flexShrink: 0
                 }}
-                aria-label="Read last assistant message aloud"
-                title={isSpeaking ? 'Stop speaking' : '🔊 Read last response aloud'}
               >
-                {isSpeaking ? <VolumeX size={14} /> : <Volume2 size={14} />}
-                <span style={{ fontSize: '10px', fontWeight: '500' }}>
+                {isSpeaking ? <VolumeX size={12} /> : <Volume2 size={12} />}
+                <span style={{ fontSize: '9px', fontWeight: '500' }}>
                   {isSpeaking ? 'Stop' : 'Listen'}
                 </span>
               </button>
@@ -484,12 +477,12 @@ export const AIResearchAssistantModal: React.FC<AIResearchAssistantModalProps> =
             {/* Voice info badge */}
             {selectedVoiceName && (
               <span style={{ 
-                fontSize: '9px', 
+                fontSize: '8px', 
                 color: '#6B7280', 
                 background: '#F3F4F6', 
-                padding: '2px 6px', 
-                borderRadius: '10px',
-                maxWidth: '120px',
+                padding: '1px 4px', 
+                borderRadius: '8px',
+                maxWidth: '100px',
                 overflow: 'hidden',
                 textOverflow: 'ellipsis',
                 whiteSpace: 'nowrap'
@@ -505,61 +498,62 @@ export const AIResearchAssistantModal: React.FC<AIResearchAssistantModalProps> =
               border: 'none',
               cursor: 'pointer',
               color: '#374151',
-              padding: '8px 12px',
-              borderRadius: '8px',
+              padding: '6px 10px',
+              borderRadius: '6px',
               display: 'flex',
               alignItems: 'center',
               justifyContent: 'center',
-              minWidth: '44px',
-              minHeight: '44px',
-              fontSize: '20px',
-              fontWeight: 'bold'
+              minWidth: '36px',
+              minHeight: '36px',
+              fontSize: '18px',
+              fontWeight: 'bold',
+              flexShrink: 0
             }}
-            aria-label="Close"
           >
             ✕
           </button>
         </div>
 
-        {/* Notice Banner */}
+        {/* Notice Banner - Compact */}
         <div style={{
           backgroundColor: '#ECFDF5', 
           border: '1px solid #A7F3D0', 
           borderRadius: '8px',
-          padding: '10px 14px', 
-          marginBottom: '12px', 
+          padding: '8px 12px', 
+          marginBottom: '10px', 
           display: 'flex', 
           alignItems: 'flex-start', 
-          gap: '10px'
+          gap: '8px',
+          flexShrink: 0
         }}>
-          <AlertCircle color="#059669" size={18} style={{ flexShrink: 0, marginTop: '2px' }} />
-          <div style={{ fontSize: '12px', color: '#065F46', lineHeight: '1.4' }}>
+          <AlertCircle color="#059669" size={14} style={{ flexShrink: 0, marginTop: '1px' }} />
+          <div style={{ fontSize: '11px', color: '#065F46', lineHeight: '1.3' }}>
             {getNoticeText()}
             {!canExecute && onUpgradePlan && (
               <button 
                 onClick={onUpgradePlan}
                 style={{
-                  display: 'inline-flex', alignItems: 'center', gap: '4px',
-                  marginLeft: '8px', padding: '2px 8px', borderRadius: '4px',
+                  display: 'inline-flex', alignItems: 'center', gap: '3px',
+                  marginLeft: '6px', padding: '1px 6px', borderRadius: '4px',
                   backgroundColor: '#10B981', color: 'white', border: 'none',
-                  fontSize: '11px', fontWeight: 'bold', cursor: 'pointer'
+                  fontSize: '10px', fontWeight: 'bold', cursor: 'pointer'
                 }}
               >
-                <Coffee size={12} /> Buy me a coffee ($5)
+                <Coffee size={10} /> Buy me a coffee ($5)
               </button>
             )}
           </div>
         </div>
 
-        {/* Speed Control */}
+        {/* Speed Control - Compact */}
         <div style={{ 
           display: 'flex', 
           alignItems: 'center', 
-          gap: '8px', 
-          marginBottom: '10px',
-          padding: '0 4px'
+          gap: '6px', 
+          marginBottom: '8px',
+          flexShrink: 0
         }}>
-          <span style={{ fontSize: '11px', color: '#6B7280' }}>🐢</span>
+          <span style={{ fontSize: '10px', color: '#6B7280' }}>🐢</span>
           <input 
             type="range" 
             min="0.5" 
@@ -569,36 +563,37 @@ export const AIResearchAssistantModal: React.FC<AIResearchAssistantModalProps> =
             onChange={(e) => setSpeechRate(parseFloat(e.target.value))}
             style={{ 
               flex: 1, 
-              height: '4px',
+              height: '3px',
               borderRadius: '2px',
               background: '#D1D5DB',
               outline: 'none',
               WebkitAppearance: 'none'
             }}
-            aria-label="Speech speed"
           />
-          <span style={{ fontSize: '11px', color: '#6B7280' }}>🐇</span>
-          <span style={{ fontSize: '10px', color: '#6B7280', minWidth: '30px' }}>
+          <span style={{ fontSize: '10px', color: '#6B7280' }}>🐇</span>
+          <span style={{ fontSize: '9px', color: '#6B7280', minWidth: '25px' }}>
             {speechRate.toFixed(1)}x
           </span>
         </div>
 
-        {/* Message Log */}
+        {/* Message Log - Scrollable */}
         <div 
           ref={messagesEndRef}
           style={{
-            height: '240px', 
-            overflowY: 'auto', 
+            flex: 1,
+            minHeight: '150px',
+            maxHeight: '300px',
+            overflowY: 'auto',
             backgroundColor: '#F9FAFB',
-            borderRadius: '10px', 
-            padding: '12px', 
-            marginBottom: '12px', 
+            borderRadius: '8px', 
+            padding: '10px', 
+            marginBottom: '10px', 
             border: '1px solid #E5E7EB',
             WebkitOverflowScrolling: 'touch'
           }}
         >
           {messages.length === 0 && (
-            <div style={{ textAlign: 'center', color: '#9CA3AF', fontSize: '12px', paddingTop: '80px' }}>
+            <div style={{ textAlign: 'center', color: '#9CA3AF', fontSize: '11px', paddingTop: '40px' }}>
               Ask any question or generate research analysis...
             </div>
           )}
@@ -607,16 +602,16 @@ export const AIResearchAssistantModal: React.FC<AIResearchAssistantModalProps> =
               display: 'flex', 
               flexDirection: 'column',
               alignItems: msg.role === 'user' ? 'flex-end' : 'flex-start', 
-              marginBottom: '10px',
+              marginBottom: '8px',
               width: '100%'
             }}>
               <div style={{
                 maxWidth: '85%', 
-                padding: '8px 12px', 
-                borderRadius: '10px',
+                padding: '6px 10px', 
+                borderRadius: '8px',
                 backgroundColor: msg.role === 'user' ? '#10B981' : 'white',
                 color: msg.role === 'user' ? 'white' : '#1F2937',
-                fontSize: '12px', 
+                fontSize: '11px', 
                 border: msg.role === 'assistant' ? '1px solid #E5E7EB' : 'none',
                 wordBreak: 'break-word'
               }}>
@@ -627,8 +622,8 @@ export const AIResearchAssistantModal: React.FC<AIResearchAssistantModalProps> =
               {msg.role === 'assistant' && (
                 <div style={{
                   display: 'flex',
-                  gap: '6px',
-                  marginTop: '4px',
+                  gap: '4px',
+                  marginTop: '3px',
                   marginLeft: '4px',
                   flexWrap: 'wrap'
                 }}>
@@ -640,24 +635,22 @@ export const AIResearchAssistantModal: React.FC<AIResearchAssistantModalProps> =
                         border: 'none',
                         cursor: 'pointer',
                         color: speakingMessageIndex === idx && isSpeaking ? '#EF4444' : '#6B7280',
-                        padding: '2px 6px',
-                        borderRadius: '4px',
+                        padding: '1px 4px',
+                        borderRadius: '3px',
                         display: 'flex',
                         alignItems: 'center',
-                        gap: '3px',
-                        fontSize: '10px',
+                        gap: '2px',
+                        fontSize: '9px',
                         transition: 'all 0.2s ease'
                       }}
-                      aria-label="Read message aloud"
-                      title={speakingMessageIndex === idx && isSpeaking ? 'Stop speaking' : '🔊 Read this message'}
                     >
                       {speakingMessageIndex === idx && isSpeaking ? (
                         <>
-                          <VolumeX size={12} /> Stop
+                          <VolumeX size={10} /> Stop
                         </>
                       ) : (
                         <>
-                          <Volume2 size={12} /> 🔊 Listen
+                          <Volume2 size={10} /> 🔊 Listen
                         </>
                       )}
                     </button>
@@ -670,24 +663,22 @@ export const AIResearchAssistantModal: React.FC<AIResearchAssistantModalProps> =
                       border: 'none',
                       cursor: 'pointer',
                       color: copiedIndex === idx ? '#10B981' : '#6B7280',
-                      padding: '2px 6px',
-                      borderRadius: '4px',
+                      padding: '1px 4px',
+                      borderRadius: '3px',
                       display: 'flex',
                       alignItems: 'center',
-                      gap: '3px',
-                      fontSize: '10px',
+                      gap: '2px',
+                      fontSize: '9px',
                       transition: 'all 0.2s ease'
                     }}
-                    aria-label="Copy message"
-                    title="Copy to clipboard"
                   >
                     {copiedIndex === idx ? (
                       <>
-                        <Check size={12} /> Copied!
+                        <Check size={10} /> Copied!
                       </>
                     ) : (
                       <>
-                        <Copy size={12} /> Copy
+                        <Copy size={10} /> Copy
                       </>
                     )}
                   </button>
@@ -696,29 +687,36 @@ export const AIResearchAssistantModal: React.FC<AIResearchAssistantModalProps> =
             </div>
           ))}
           {isLoading && (
-            <div style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '12px', color: '#6B7280' }}>
-              <Loader2 size={14} className="animate-spin" /> Thinking...
+            <div style={{ display: 'flex', alignItems: 'center', gap: '4px', fontSize: '11px', color: '#6B7280' }}>
+              <Loader2 size={12} className="animate-spin" /> Thinking...
             </div>
           )}
         </div>
 
-        {/* Input Control */}
-        <div style={{ display: 'flex', gap: '8px' }}>
+        {/* Input Control - Fixed at bottom */}
+        <div style={{ 
+          display: 'flex', 
+          gap: '6px', 
+          flexShrink: 0,
+          paddingTop: '4px',
+          borderTop: '1px solid #F3F4F6'
+        }}>
           <input
             type="text"
             value={input}
             onChange={(e) => setInput(e.target.value)}
             onKeyDown={(e) => e.key === 'Enter' && handleSend()}
-            placeholder={isListening ? "🎤 Listening..." : "Type stock ticker, strategy, or market questions..."}
+            placeholder={isListening ? "🎤 Listening..." : "Type your question..."}
             style={{
               flex: 1, 
-              padding: '8px 12px', 
-              borderRadius: '8px',
+              padding: '8px 10px', 
+              borderRadius: '6px',
               border: '1px solid #D1D5DB', 
-              fontSize: '12px', 
+              fontSize: '11px', 
               outline: 'none',
               backgroundColor: isListening ? '#FEF3C7' : '#FFFFFF',
-              WebkitAppearance: 'none'
+              WebkitAppearance: 'none',
+              minHeight: '40px'
             }}
           />
           
@@ -726,8 +724,8 @@ export const AIResearchAssistantModal: React.FC<AIResearchAssistantModalProps> =
           <button
             onClick={handleMicToggle}
             style={{
-              padding: '8px 12px',
-              borderRadius: '8px',
+              padding: '6px 10px',
+              borderRadius: '6px',
               backgroundColor: isListening ? '#EF4444' : '#3B82F6',
               color: 'white',
               border: 'none',
@@ -735,17 +733,14 @@ export const AIResearchAssistantModal: React.FC<AIResearchAssistantModalProps> =
               display: 'flex',
               alignItems: 'center',
               justifyContent: 'center',
-              minWidth: '44px',
-              minHeight: '44px',
+              minWidth: '40px',
+              minHeight: '40px',
               transition: 'all 0.2s ease',
-              boxShadow: isListening ? '0 0 0 4px rgba(239, 68, 68, 0.3)' : 'none',
-              animation: isListening ? 'pulse 1.5s infinite' : 'none',
-              touchAction: 'manipulation'
+              boxShadow: isListening ? '0 0 0 3px rgba(239, 68, 68, 0.3)' : 'none',
+              animation: isListening ? 'pulse 1.5s infinite' : 'none'
             }}
-            aria-label="Voice input"
-            title={isListening ? 'Stop listening' : 'Start voice input'}
           >
-            <Mic size={18} />
+            <Mic size={16} />
           </button>
 
           {/* Send Button */}
@@ -753,41 +748,41 @@ export const AIResearchAssistantModal: React.FC<AIResearchAssistantModalProps> =
             onClick={() => handleSend()}
             disabled={isLoading || !input.trim()}
             style={{
-              padding: '8px 16px', 
-              borderRadius: '8px',
+              padding: '6px 14px', 
+              borderRadius: '6px',
               backgroundColor: (isLoading || !input.trim()) ? '#9CA3AF' : '#10B981',
               color: 'white', 
               border: 'none', 
               cursor: (isLoading || !input.trim()) ? 'not-allowed' : 'pointer',
               fontWeight: '600', 
-              fontSize: '12px',
+              fontSize: '11px',
               display: 'flex',
               alignItems: 'center',
               justifyContent: 'center',
-              minWidth: '44px',
-              minHeight: '44px',
-              touchAction: 'manipulation'
+              minWidth: '40px',
+              minHeight: '40px'
             }}
           >
-            <Send size={16} />
+            <Send size={14} />
           </button>
         </div>
 
         {/* Voice Input Status */}
         {isListening && (
           <div style={{
-            marginTop: '8px',
-            fontSize: '11px',
+            marginTop: '6px',
+            fontSize: '10px',
             color: '#EF4444',
             display: 'flex',
             alignItems: 'center',
-            gap: '6px',
-            justifyContent: 'center'
+            gap: '4px',
+            justifyContent: 'center',
+            flexShrink: 0
           }}>
             <span style={{ 
               display: 'inline-block', 
-              width: '8px', 
-              height: '8px', 
+              width: '6px', 
+              height: '6px', 
               borderRadius: '50%', 
               backgroundColor: '#EF4444', 
               animation: 'blink 1s infinite' 
@@ -799,7 +794,7 @@ export const AIResearchAssistantModal: React.FC<AIResearchAssistantModalProps> =
         <style>{`
           @keyframes pulse {
             0% { box-shadow: 0 0 0 0 rgba(239, 68, 68, 0.4); }
-            70% { box-shadow: 0 0 0 8px rgba(239, 68, 68, 0); }
+            70% { box-shadow: 0 0 0 6px rgba(239, 68, 68, 0); }
             100% { box-shadow: 0 0 0 0 rgba(239, 68, 68, 0); }
           }
           @keyframes blink {
@@ -815,14 +810,6 @@ export const AIResearchAssistantModal: React.FC<AIResearchAssistantModalProps> =
             animation: spin 1s linear infinite;
           }
           
-          /* Mobile responsive adjustments */
-          @media (max-width: 480px) {
-            .voice-badge {
-              display: none;
-            }
-          }
-          
-          /* Range input styling for mobile */
           input[type="range"] {
             -webkit-appearance: none;
             appearance: none;
@@ -830,8 +817,8 @@ export const AIResearchAssistantModal: React.FC<AIResearchAssistantModalProps> =
           input[type="range"]::-webkit-slider-thumb {
             -webkit-appearance: none;
             appearance: none;
-            width: 14px;
-            height: 14px;
+            width: 12px;
+            height: 12px;
             border-radius: 50%;
             background: #10B981;
             cursor: pointer;
@@ -839,8 +826,8 @@ export const AIResearchAssistantModal: React.FC<AIResearchAssistantModalProps> =
             box-shadow: 0 1px 3px rgba(0,0,0,0.2);
           }
           input[type="range"]::-moz-range-thumb {
-            width: 14px;
-            height: 14px;
+            width: 12px;
+            height: 12px;
             border-radius: 50%;
             background: #10B981;
             cursor: pointer;

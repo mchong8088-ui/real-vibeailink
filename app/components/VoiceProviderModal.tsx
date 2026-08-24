@@ -245,13 +245,10 @@ export const VoiceProviderModal: React.FC<VoiceProviderModalProps> = ({
       
       // Use MediaRecorder to capture audio
       const stream = new MediaStream();
-      // Note: This is a simplified approach - in production you'd use a more robust method
       
       // For now, just speak and resolve with a mock buffer
-      // In production, you'd capture the audio output
       utterance.onend = () => {
         console.log('🔊 iOS Native TTS: Speech finished');
-        // Return a mock buffer (in production, you'd have actual audio data)
         resolve(Buffer.from('mock-audio-data'));
       };
       
@@ -396,7 +393,6 @@ export const VoiceProviderModal: React.FC<VoiceProviderModalProps> = ({
   useEffect(() => {
     if (isOpen) {
       loadAvailableVoices();
-      // Don't auto-switch language - let user decide
     }
   }, [isOpen]);
 
@@ -752,19 +748,22 @@ export const VoiceProviderModal: React.FC<VoiceProviderModalProps> = ({
   };
 
   // ============================================
-  // RENDER - FIXED MOBILE VERSION
+  // RENDER - FIXED MOBILE VERSION WITH SCROLLING
   // ============================================
 
   return (
     <div style={{
-      position: 'fixed', top: 0, left: 0, right: 0, bottom: 0,
+      position: 'fixed',
+      top: 0,
+      left: 0,
+      right: 0,
+      bottom: 0,
       backgroundColor: 'rgba(0, 0, 0, 0.5)',
       display: 'flex',
-      alignItems: 'flex-start',
+      alignItems: 'center',
       justifyContent: 'center',
       zIndex: 1000,
       padding: '16px',
-      paddingTop: '40px',
       overflow: 'hidden'
     }}>
       <div style={{
@@ -772,32 +771,30 @@ export const VoiceProviderModal: React.FC<VoiceProviderModalProps> = ({
         borderRadius: '16px',
         width: '100%',
         maxWidth: '640px',
-        height: 'calc(100vh - 80px)',
-        overflowY: 'auto',
-        padding: '20px',
-        paddingTop: '16px',
-        paddingBottom: '30px',
+        maxHeight: '90vh',
+        display: 'flex',
+        flexDirection: 'column',
+        padding: '16px',
+        paddingBottom: '16px',
         boxShadow: '0 20px 25px -5px rgba(0, 0, 0, 0.1)',
         border: '1px solid #E5E7EB',
-        position: 'relative'
+        position: 'relative',
+        overflow: 'hidden'
       }}>
-        {/* Header - Fixed with sticky close button */}
+        {/* Header - Sticky */}
         <div style={{ 
           display: 'flex', 
           justifyContent: 'space-between', 
           alignItems: 'center', 
-          marginBottom: '12px',
-          position: 'sticky',
-          top: 0,
-          backgroundColor: '#FFFFFF',
-          zIndex: 10,
+          marginBottom: '10px',
+          flexShrink: 0,
           paddingBottom: '10px',
           borderBottom: '1px solid #E5E7EB'
         }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-            <Sparkles color="#8B5CF6" size={20} />
-            <h3 style={{ margin: 0, fontSize: '18px', fontWeight: '600', color: '#111827' }}>
-              Voice Provider Studio
+            <Sparkles color="#8B5CF6" size={18} />
+            <h3 style={{ margin: 0, fontSize: '16px', fontWeight: '600', color: '#111827' }}>
+              Voice Provider
             </h3>
           </div>
           <button 
@@ -807,562 +804,479 @@ export const VoiceProviderModal: React.FC<VoiceProviderModalProps> = ({
               border: 'none',
               cursor: 'pointer',
               color: '#374151',
-              padding: '8px 12px',
-              borderRadius: '8px',
+              padding: '6px 10px',
+              borderRadius: '6px',
               display: 'flex',
               alignItems: 'center',
               justifyContent: 'center',
-              minWidth: '44px',
-              minHeight: '44px',
-              fontSize: '20px',
-              fontWeight: 'bold'
+              minWidth: '36px',
+              minHeight: '36px',
+              fontSize: '16px',
+              fontWeight: 'bold',
+              flexShrink: 0
             }}
-            aria-label="Close"
           >
             ✕
           </button>
         </div>
 
-        {/* ============================================================
-            CANTONESE MOBILE WARNING - COMPACT VERSION
-            ============================================================ */}
+        {/* Mobile Warning - Compact */}
         {(isMobileDevice || isWeb) && (
           <div style={{
             backgroundColor: '#FEF3C7',
             border: '1px solid #F59E0B',
-            borderRadius: '10px',
-            padding: '10px 14px',
-            marginBottom: '12px',
+            borderRadius: '8px',
+            padding: '6px 10px',
+            marginBottom: '8px',
             display: 'flex',
-            alignItems: 'flex-start',
-            gap: '10px'
+            alignItems: 'center',
+            gap: '8px',
+            flexShrink: 0
           }}>
-            <span style={{ fontSize: '18px', flexShrink: 0 }}>📱</span>
+            <span style={{ fontSize: '14px', flexShrink: 0 }}>📱</span>
             <div>
               <div style={{ 
                 fontWeight: 'bold', 
-                fontSize: '12px', 
+                fontSize: '10px', 
                 color: '#92400E',
-                marginBottom: '2px'
+                marginBottom: '1px'
               }}>
                 {langKey === 'Traditional Chinese' ? '💡 桌面版 macOS 推薦' :
                  langKey === 'Simplified Chinese' ? '💡 桌面版 macOS 推荐' :
                  '💡 Desktop macOS Recommended'}
               </div>
               <div style={{ 
-                fontSize: '11px', 
+                fontSize: '9px', 
                 color: '#78350F',
-                lineHeight: '1.4'
+                lineHeight: '1.3'
               }}>
                 {langKey === 'Traditional Chinese' 
-                  ? '此功能在桌面版 macOS 可提供最佳粵語語音。手機版與網頁版使用國語發音替代。'
+                  ? '手機版與網頁版使用國語發音替代。'
                   : langKey === 'Simplified Chinese'
-                  ? '此功能在桌面版 macOS 可提供最佳粤语语音。手机版与网页版使用普通话发音替代。'
-                  : 'Best Cantonese voice experience on desktop macOS. Mobile/web uses Mandarin fallback.'}
+                  ? '手机版与网页版使用普通话发音替代。'
+                  : 'Mobile/web uses Mandarin fallback.'}
               </div>
+            </div>
+          </div>
+        )}
+
+        {/* Scrollable Content Area */}
+        <div style={{
+          flex: 1,
+          overflowY: 'auto',
+          paddingRight: '4px',
+          WebkitOverflowScrolling: 'touch'
+        }}>
+          {/* Script Area */}
+          <div style={{ marginBottom: '10px' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '4px' }}>
+              <label style={{ fontSize: '11px', fontWeight: '500', color: '#374151' }}>Script Content</label>
+              <div style={{ display: 'flex', gap: '4px' }}>
+                <button
+                  onClick={() => fileInputRef.current?.click()}
+                  style={{
+                    display: 'flex', alignItems: 'center', gap: '3px', background: '#F3F4F6',
+                    border: 'none', padding: '2px 6px', borderRadius: '4px', cursor: 'pointer',
+                    fontSize: '9px', color: '#4B5563'
+                  }}
+                >
+                  <FileText size={10} /> Import
+                </button>
+                <button
+                  onClick={() => audioFileInputRef.current?.click()}
+                  style={{
+                    display: 'flex', alignItems: 'center', gap: '3px', background: '#F3F4F6',
+                    border: 'none', padding: '2px 6px', borderRadius: '4px', cursor: 'pointer',
+                    fontSize: '9px', color: '#4B5563'
+                  }}
+                >
+                  <FileAudio size={10} /> Upload Audio
+                </button>
+              </div>
+              <input type="file" ref={fileInputRef} onChange={handleFileUpload} accept=".txt,.docx" style={{ display: 'none' }} />
+              <input type="file" ref={audioFileInputRef} onChange={handleAudioFileUpload} accept="audio/*" style={{ display: 'none' }} />
+            </div>
+            <textarea
+              value={script}
+              onChange={(e) => setScript(e.target.value)}
+              placeholder="Paste your script here..."
+              rows={3}
+              style={{ width: '100%', padding: '8px', borderRadius: '6px', border: '1px solid #D1D5DB', fontSize: '11px', fontFamily: 'inherit', resize: 'vertical' }}
+            />
+            
+            {/* Uploaded Audio File Display */}
+            {isAudioUploaded && uploadedAudioFile && (
               <div style={{
                 marginTop: '4px',
+                padding: '4px 8px',
+                backgroundColor: '#ECFDF5',
+                borderRadius: '6px',
+                border: '1px solid #86EFAC',
                 display: 'flex',
-                gap: '6px',
-                flexWrap: 'wrap'
+                alignItems: 'center',
+                justifyContent: 'space-between'
               }}>
-                <span style={{
-                  fontSize: '9px',
-                  backgroundColor: '#FDE68A',
-                  color: '#78350F',
-                  padding: '1px 8px',
-                  borderRadius: '4px'
-                }}>
-                  {isMobileDevice ? '📱 Mobile' : '🌐 Web'}
-                </span>
-                <span style={{
-                  fontSize: '9px',
-                  backgroundColor: '#D1FAE5',
-                  color: '#065F46',
-                  padding: '1px 8px',
-                  borderRadius: '4px'
-                }}>
-                  🎯 Mandarin Fallback
-                </span>
-                {isiOSNativeCantoneseAvailable && (
-                  <span style={{
-                    fontSize: '9px',
-                    backgroundColor: '#DBEAFE',
-                    color: '#1E40AF',
-                    padding: '1px 8px',
-                    borderRadius: '4px'
-                  }}>
-                    🍎 iOS TTS Available
+                <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                  <Music size={12} color="#10B981" />
+                  <span style={{ fontSize: '10px', color: '#065F46' }}>
+                    {uploadedAudioFile.name} ({(uploadedAudioFile.size / 1024 / 1024).toFixed(1)} MB)
+                    {audioDuration > 0 && ` • ${formatDurationDisplay(audioDuration)}`}
                   </span>
-                )}
-              </div>
-            </div>
-          </div>
-        )}
-
-        {/* ============================================================
-            iOS Native TTS Option - ONLY FOR iOS DEVICES
-            ============================================================ */}
-        {isiOSNativeCantoneseAvailable && (
-          <div style={{
-            backgroundColor: '#EFF6FF',
-            border: '1px solid #3B82F6',
-            borderRadius: '10px',
-            padding: '10px 14px',
-            marginBottom: '12px',
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'space-between'
-          }}>
-            <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-              <span style={{ fontSize: '18px' }}>🍎</span>
-              <div>
-                <div style={{ fontSize: '12px', fontWeight: 'bold', color: '#1E40AF' }}>
-                  {langKey === 'Traditional Chinese' ? 'iOS 粵語 TTS 可用' :
-                   langKey === 'Simplified Chinese' ? 'iOS 粤语 TTS 可用' :
-                   'iOS Cantonese TTS Available'}
                 </div>
-                <div style={{ fontSize: '10px', color: '#3B82F6' }}>
-                  {langKey === 'Traditional Chinese' ? '使用 iOS 原生粵語語音（與通知相同）' :
-                   langKey === 'Simplified Chinese' ? '使用 iOS 原生粤语语音（与通知相同）' :
-                   'Use iOS native Cantonese voice (same as notifications)'}
-                </div>
-              </div>
-            </div>
-            <label style={{
-              display: 'flex',
-              alignItems: 'center',
-              gap: '6px',
-              cursor: 'pointer'
-            }}>
-              <input
-                type="checkbox"
-                checked={useiOSNativeTTS}
-                onChange={(e) => setUseiOSNativeTTS(e.target.checked)}
-                style={{ width: '18px', height: '18px', cursor: 'pointer' }}
-              />
-              <span style={{ fontSize: '11px', fontWeight: '500', color: '#1E40AF' }}>
-                {langKey === 'Traditional Chinese' ? '啟用' :
-                 langKey === 'Simplified Chinese' ? '启用' :
-                 'Enable'}
-              </span>
-            </label>
-          </div>
-        )}
-
-        {/* Script Area */}
-        <div style={{ marginBottom: '12px' }}>
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '6px' }}>
-            <label style={{ fontSize: '12px', fontWeight: '500', color: '#374151' }}>Script Content</label>
-            <div style={{ display: 'flex', gap: '6px' }}>
-              <button
-                onClick={() => fileInputRef.current?.click()}
-                style={{
-                  display: 'flex', alignItems: 'center', gap: '4px', background: '#F3F4F6',
-                  border: 'none', padding: '3px 8px', borderRadius: '6px', cursor: 'pointer',
-                  fontSize: '10px', color: '#4B5563'
-                }}
-              >
-                <FileText size={12} /> Import
-              </button>
-              <button
-                onClick={() => audioFileInputRef.current?.click()}
-                style={{
-                  display: 'flex', alignItems: 'center', gap: '4px', background: '#F3F4F6',
-                  border: 'none', padding: '3px 8px', borderRadius: '6px', cursor: 'pointer',
-                  fontSize: '10px', color: '#4B5563'
-                }}
-                title="Upload MP3, WAV, M4A audio files"
-              >
-                <FileAudio size={12} /> Upload Audio
-              </button>
-            </div>
-            <input type="file" ref={fileInputRef} onChange={handleFileUpload} accept=".txt,.docx" style={{ display: 'none' }} />
-            <input type="file" ref={audioFileInputRef} onChange={handleAudioFileUpload} accept="audio/*" style={{ display: 'none' }} />
-          </div>
-          <textarea
-            value={script}
-            onChange={(e) => setScript(e.target.value)}
-            placeholder="Paste your script here..."
-            rows={4}
-            style={{ width: '100%', padding: '10px', borderRadius: '8px', border: '1px solid #D1D5DB', fontSize: '12px', fontFamily: 'inherit', resize: 'vertical' }}
-          />
-          
-          {/* Uploaded Audio File Display */}
-          {isAudioUploaded && uploadedAudioFile && (
-            <div style={{
-              marginTop: '6px',
-              padding: '8px 12px',
-              backgroundColor: '#ECFDF5',
-              borderRadius: '8px',
-              border: '1px solid #86EFAC',
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'space-between'
-            }}>
-              <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                <Music size={16} color="#10B981" />
-                <span style={{ fontSize: '11px', color: '#065F46' }}>
-                  {uploadedAudioFile.name} ({(uploadedAudioFile.size / 1024 / 1024).toFixed(2)} MB)
-                  {audioDuration > 0 && ` • ${formatDurationDisplay(audioDuration)}`}
-                </span>
-              </div>
-              <button
-                onClick={clearUploadedAudio}
-                style={{
-                  background: 'none',
-                  border: 'none',
-                  cursor: 'pointer',
-                  color: '#EF4444',
-                  fontSize: '11px',
-                  padding: '2px 8px'
-                }}
-              >
-                ✕ Remove
-              </button>
-            </div>
-          )}
-
-          <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: '4px', fontSize: '10px', color: '#6B7280' }}>
-            <span>Characters: {charCount}</span>
-            <span>Est. Cost: <strong>{estimatedCredits} Credits</strong></span>
-          </div>
-          
-          {getCantoneseWebWarning() && (
-            <div style={{
-              marginTop: '6px',
-              padding: '6px 10px',
-              backgroundColor: '#FEF3C7',
-              border: '1px solid #F59E0B',
-              borderRadius: '6px',
-              fontSize: '11px',
-              color: '#92400E'
-            }}>
-              {getCantoneseWebWarning()}
-            </div>
-          )}
-          {getLanguageWarning() && (
-            <div style={{
-              marginTop: '6px',
-              padding: '6px 10px',
-              backgroundColor: '#FEF3C7',
-              border: '1px solid #F59E0B',
-              borderRadius: '6px',
-              fontSize: '11px',
-              color: '#92400E'
-            }}>
-              {getLanguageWarning()}
-            </div>
-          )}
-        </div>
-
-        {/* Controls - Two columns */}
-        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px', marginBottom: '12px' }}>
-          <div>
-            <label style={{ fontSize: '11px', fontWeight: '500', color: '#374151', display: 'block', marginBottom: '3px' }}>Voice Language</label>
-            <select value={language} onChange={(e: any) => {
-              handleLanguageChange(e.target.value);
-            }} style={{ width: '100%', padding: '5px 8px', borderRadius: '6px', border: '1px solid #D1D5DB', fontSize: '11px' }}>
-              <option value="Cantonese" disabled={isWeb || isMobileDevice}>
-                Cantonese (粵語 - zh-HK) {(isWeb || isMobileDevice) && '⚠️ Fallback'}
-              </option>
-              <option value="Mandarin">Mandarin (國語 - zh-CN)</option>
-              <option value="English">English (en-US)</option>
-            </select>
-            {(isWeb || isMobileDevice) && (
-              <div style={{ fontSize: '9px', color: '#6B7280', marginTop: '2px' }}>
-                💡 Uses Mandarin pronunciation on mobile/web
+                <button
+                  onClick={clearUploadedAudio}
+                  style={{
+                    background: 'none',
+                    border: 'none',
+                    cursor: 'pointer',
+                    color: '#EF4444',
+                    fontSize: '10px',
+                    padding: '2px 6px'
+                  }}
+                >
+                  ✕
+                </button>
               </div>
             )}
-            {isMacOS && !isWeb && !isMobileDevice && (
-              <div style={{ fontSize: '9px', color: '#10B981', marginTop: '2px' }}>
-                ✅ Full Cantonese support on macOS
+
+            <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: '3px', fontSize: '9px', color: '#6B7280' }}>
+              <span>Characters: {charCount}</span>
+              <span>Est. Cost: <strong>{estimatedCredits} Credits</strong></span>
+            </div>
+            
+            {getCantoneseWebWarning() && (
+              <div style={{
+                marginTop: '4px',
+                padding: '4px 8px',
+                backgroundColor: '#FEF3C7',
+                border: '1px solid #F59E0B',
+                borderRadius: '4px',
+                fontSize: '10px',
+                color: '#92400E'
+              }}>
+                {getCantoneseWebWarning()}
+              </div>
+            )}
+            {getLanguageWarning() && (
+              <div style={{
+                marginTop: '4px',
+                padding: '4px 8px',
+                backgroundColor: '#FEF3C7',
+                border: '1px solid #F59E0B',
+                borderRadius: '4px',
+                fontSize: '10px',
+                color: '#92400E'
+              }}>
+                {getLanguageWarning()}
               </div>
             )}
           </div>
 
-          <div>
-            <label style={{ fontSize: '11px', fontWeight: '500', color: '#374151', display: 'block', marginBottom: '3px' }}>Subtitle Translation</label>
-            <select value={targetLanguage} onChange={(e) => setTargetLanguage(e.target.value)} style={{ width: '100%', padding: '5px 8px', borderRadius: '6px', border: '1px solid #D1D5DB', fontSize: '11px' }}>
-              <option value="None">None (Original)</option>
-              <option value="English">Bilingual English</option>
-              <option value="Traditional Chinese">Bilingual Traditional</option>
-              <option value="Simplified Chinese">Bilingual Simplified</option>
-            </select>
-          </div>
-        </div>
+          {/* Controls - Two columns */}
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '8px', marginBottom: '8px' }}>
+            <div>
+              <label style={{ fontSize: '10px', fontWeight: '500', color: '#374151', display: 'block', marginBottom: '2px' }}>Voice Language</label>
+              <select value={language} onChange={(e: any) => {
+                handleLanguageChange(e.target.value);
+              }} style={{ width: '100%', padding: '4px 6px', borderRadius: '4px', border: '1px solid #D1D5DB', fontSize: '10px' }}>
+                <option value="Cantonese" disabled={isWeb || isMobileDevice}>
+                  Cantonese {(isWeb || isMobileDevice) && '⚠️'}
+                </option>
+                <option value="Mandarin">Mandarin</option>
+                <option value="English">English</option>
+              </select>
+            </div>
 
-        {/* Voice Engine and Voice Selector - Two columns */}
-        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px', marginBottom: '12px' }}>
-          <div>
-            <label style={{ fontSize: '11px', fontWeight: '500', color: '#374151', display: 'block', marginBottom: '3px' }}>Voice Engine</label>
-            <select 
-              value={voiceType} 
-              onChange={(e: any) => setVoiceType(e.target.value)} 
-              style={{ width: '100%', padding: '5px 8px', borderRadius: '6px', border: '1px solid #D1D5DB', fontSize: '11px' }}
-            >
-              <option value="local">Local (Desktop)</option>
-              <option value="gateway">Gateway (Cloud)</option>
-            </select>
-          </div>
-
-          <div>
-            <label style={{ fontSize: '11px', fontWeight: '500', color: '#374151', display: 'block', marginBottom: '3px' }}>
-              Select Voice {isLoadingVoices && <Loader2 size={12} className="animate-spin" />}
-            </label>
-            <div style={{ width: '100%' }}>
-              <VoiceSelector 
-                currentVoice={selectedVoice}
-                onVoiceChange={handleVoiceChange}
-                mode="voice"
-              />
+            <div>
+              <label style={{ fontSize: '10px', fontWeight: '500', color: '#374151', display: 'block', marginBottom: '2px' }}>Subtitle Translation</label>
+              <select value={targetLanguage} onChange={(e) => setTargetLanguage(e.target.value)} style={{ width: '100%', padding: '4px 6px', borderRadius: '4px', border: '1px solid #D1D5DB', fontSize: '10px' }}>
+                <option value="None">None</option>
+                <option value="English">English</option>
+                <option value="Traditional Chinese">Traditional</option>
+                <option value="Simplified Chinese">Simplified</option>
+              </select>
             </div>
           </div>
-        </div>
 
-        {/* Speed Control Bar - Compact */}
-        <div style={{ marginBottom: '12px' }}>
-          <label style={{ 
-            fontSize: '11px', 
-            fontWeight: '500', 
-            color: '#374151', 
-            display: 'flex', 
-            alignItems: 'center', 
-            gap: '6px',
-            marginBottom: '3px'
-          }}>
-            <Gauge size={14} />
-            Speed: <span style={{ fontWeight: 'bold', color: '#2563EB' }}>{speed.toFixed(1)}x</span>
-          </label>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-            <span style={{ fontSize: '9px', color: '#6B7280' }}>🐢</span>
-            <input
-              type="range"
-              min="0.5"
-              max="1.5"
-              step="0.05"
-              value={speed}
-              onChange={(e) => setSpeed(parseFloat(e.target.value))}
-              style={{ 
-                flex: 1,
-                height: '4px',
-                borderRadius: '2px',
-                backgroundColor: '#E5E7EB',
-                outline: 'none',
-                WebkitAppearance: 'none'
-              }}
-            />
-            <span style={{ fontSize: '9px', color: '#6B7280' }}>🐇</span>
+          {/* Voice Engine and Voice Selector - Two columns */}
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '8px', marginBottom: '8px' }}>
+            <div>
+              <label style={{ fontSize: '10px', fontWeight: '500', color: '#374151', display: 'block', marginBottom: '2px' }}>Voice Engine</label>
+              <select 
+                value={voiceType} 
+                onChange={(e: any) => setVoiceType(e.target.value)} 
+                style={{ width: '100%', padding: '4px 6px', borderRadius: '4px', border: '1px solid #D1D5DB', fontSize: '10px' }}
+              >
+                <option value="local">Local</option>
+                <option value="gateway">Gateway</option>
+              </select>
+            </div>
+
+            <div>
+              <label style={{ fontSize: '10px', fontWeight: '500', color: '#374151', display: 'block', marginBottom: '2px' }}>
+                Select Voice {isLoadingVoices && <Loader2 size={10} className="animate-spin" />}
+              </label>
+              <div style={{ width: '100%' }}>
+                <VoiceSelector 
+                  currentVoice={selectedVoice}
+                  onVoiceChange={handleVoiceChange}
+                  mode="voice"
+                />
+              </div>
+            </div>
           </div>
-        </div>
 
-        {/* Scene Pause Control - Compact */}
-        <div style={{ marginBottom: '12px' }}>
-          <label style={{ 
-            fontSize: '11px', 
-            fontWeight: '500', 
-            color: '#374151', 
-            display: 'flex', 
-            alignItems: 'center', 
-            gap: '6px',
-            marginBottom: '3px'
-          }}>
-            <span style={{ fontSize: '14px' }}>🎬</span>
-            Scene Pauses
-          </label>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+          {/* Speed Control */}
+          <div style={{ marginBottom: '8px' }}>
             <label style={{ 
+              fontSize: '10px', 
+              fontWeight: '500', 
+              color: '#374151', 
               display: 'flex', 
               alignItems: 'center', 
-              gap: '6px', 
-              fontSize: '10px', 
-              cursor: 'pointer',
-              color: enableScenePause ? '#2563EB' : '#6B7280'
+              gap: '4px',
+              marginBottom: '2px'
             }}>
-              <input
-                type="checkbox"
-                checked={enableScenePause}
-                onChange={(e) => {
-                  setEnableScenePause(e.target.checked);
-                  if (!e.target.checked) setScenePause(0);
-                }}
-                style={{ cursor: 'pointer' }}
-              />
-              Enable
+              <Gauge size={12} />
+              Speed: <span style={{ fontWeight: 'bold', color: '#2563EB' }}>{speed.toFixed(1)}x</span>
             </label>
-            {enableScenePause && (
-              <div style={{ display: 'flex', alignItems: 'center', gap: '6px', flex: 1 }}>
-                <span style={{ fontSize: '9px', color: '#6B7280' }}>⏱️</span>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+              <span style={{ fontSize: '8px', color: '#6B7280' }}>🐢</span>
+              <input
+                type="range"
+                min="0.5"
+                max="1.5"
+                step="0.05"
+                value={speed}
+                onChange={(e) => setSpeed(parseFloat(e.target.value))}
+                style={{ 
+                  flex: 1,
+                  height: '3px',
+                  borderRadius: '2px',
+                  backgroundColor: '#E5E7EB',
+                  outline: 'none',
+                  WebkitAppearance: 'none'
+                }}
+              />
+              <span style={{ fontSize: '8px', color: '#6B7280' }}>🐇</span>
+            </div>
+          </div>
+
+          {/* Scene Pause */}
+          <div style={{ marginBottom: '8px' }}>
+            <label style={{ 
+              fontSize: '10px', 
+              fontWeight: '500', 
+              color: '#374151', 
+              display: 'flex', 
+              alignItems: 'center', 
+              gap: '4px',
+              marginBottom: '2px'
+            }}>
+              <span style={{ fontSize: '12px' }}>🎬</span> Scene Pauses
+            </label>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+              <label style={{ 
+                display: 'flex', 
+                alignItems: 'center', 
+                gap: '4px', 
+                fontSize: '9px', 
+                cursor: 'pointer',
+                color: enableScenePause ? '#2563EB' : '#6B7280'
+              }}>
                 <input
-                  type="range"
-                  min="0.5"
-                  max="5"
-                  step="0.5"
-                  value={scenePause}
-                  onChange={(e) => setScenePause(parseFloat(e.target.value))}
-                  style={{ 
-                    flex: 1,
-                    height: '4px',
-                    borderRadius: '2px',
-                    backgroundColor: '#E5E7EB',
-                    outline: 'none',
-                    WebkitAppearance: 'none'
+                  type="checkbox"
+                  checked={enableScenePause}
+                  onChange={(e) => {
+                    setEnableScenePause(e.target.checked);
+                    if (!e.target.checked) setScenePause(0);
                   }}
+                  style={{ cursor: 'pointer' }}
                 />
-                <span style={{ fontSize: '10px', fontWeight: 'bold', color: '#2563EB', minWidth: '25px' }}>
-                  {scenePause}s
-                </span>
-              </div>
+                Enable
+              </label>
+              {enableScenePause && (
+                <div style={{ display: 'flex', alignItems: 'center', gap: '4px', flex: 1 }}>
+                  <span style={{ fontSize: '8px', color: '#6B7280' }}>⏱️</span>
+                  <input
+                    type="range"
+                    min="0.5"
+                    max="5"
+                    step="0.5"
+                    value={scenePause}
+                    onChange={(e) => setScenePause(parseFloat(e.target.value))}
+                    style={{ 
+                      flex: 1,
+                      height: '3px',
+                      borderRadius: '2px',
+                      backgroundColor: '#E5E7EB',
+                      outline: 'none',
+                      WebkitAppearance: 'none'
+                    }}
+                  />
+                  <span style={{ fontSize: '9px', fontWeight: 'bold', color: '#2563EB', minWidth: '22px' }}>
+                    {scenePause}s
+                  </span>
+                </div>
+              )}
+            </div>
+          </div>
+
+          {/* Preview Button */}
+          <div style={{ display: 'flex', alignItems: 'center', gap: '6px', marginBottom: '8px', padding: '4px 8px', background: '#F9FAFB', borderRadius: '6px' }}>
+            <button
+              onClick={handleAudioPreview}
+              disabled={isPreviewing || (!script.trim() && !uploadedAudioFile)}
+              style={{ 
+                display: 'flex', alignItems: 'center', gap: '3px', padding: '4px 10px', 
+                borderRadius: '12px', border: '1px solid #10B981', background: '#ECFDF5', 
+                color: '#047857', cursor: 'pointer', fontSize: '10px', fontWeight: '600'
+              }}
+            >
+              {isPreviewing ? <Loader2 size={10} className="animate-spin" /> : (isPlayingAudio ? <Pause size={10} /> : <Play size={10} />)}
+              {uploadedAudioFile ? 'Play' : `5s ${language}`}
+            </button>
+            <audio 
+              ref={audioRef} 
+              onEnded={() => setIsPlayingAudio(false)}
+              onError={(e) => {
+                console.error('Audio error:', e);
+                setPreviewError('Audio playback error');
+              }}
+              style={{ display: 'none' }} 
+            />
+            {previewError && (
+              <span style={{ fontSize: '9px', color: '#EF4444' }}>{previewError}</span>
+            )}
+            {selectedVoice && !uploadedAudioFile && (
+              <span style={{ fontSize: '9px', color: '#6B7280', marginLeft: 'auto' }}>
+                {selectedVoice}
+              </span>
             )}
           </div>
         </div>
 
-        {/* Preview Button */}
-        <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '12px', padding: '6px 10px', background: '#F9FAFB', borderRadius: '8px' }}>
+        {/* Bottom Fixed Area */}
+        <div style={{
+          flexShrink: 0,
+          paddingTop: '8px',
+          borderTop: '1px solid #E5E7EB',
+          marginTop: '4px'
+        }}>
+          {/* Generate Action */}
           <button
-            onClick={handleAudioPreview}
-            disabled={isPreviewing || (!script.trim() && !uploadedAudioFile)}
-            style={{ 
-              display: 'flex', alignItems: 'center', gap: '4px', padding: '5px 12px', 
-              borderRadius: '16px', border: '1px solid #10B981', background: '#ECFDF5', 
-              color: '#047857', cursor: 'pointer', fontSize: '11px', fontWeight: '600'
+            onClick={handleGenerate}
+            disabled={isLoading || isAudioUploaded}
+            style={{
+              width: '100%', padding: '8px', borderRadius: '8px',
+              backgroundColor: isAudioUploaded ? '#9CA3AF' : '#10B981',
+              color: 'white', border: 'none',
+              fontWeight: '600', fontSize: '12px', cursor: isAudioUploaded ? 'not-allowed' : 'pointer',
+              display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '6px',
+              opacity: isAudioUploaded ? 0.6 : 1
             }}
           >
-            {isPreviewing ? <Loader2 size={12} className="animate-spin" /> : (isPlayingAudio ? <Pause size={12} /> : <Play size={12} />)}
-            {uploadedAudioFile ? 'Play Audio' : `5s ${language} Preview`}
+            {isLoading ? <Loader2 size={14} className="animate-spin" /> : <Sparkles size={14} />}
+            {isLoading ? 'Generating...' : isAudioUploaded ? 'Audio Uploaded' : `Generate (${estimatedCredits} Credits)`}
           </button>
-          <audio 
-            ref={audioRef} 
-            onEnded={() => setIsPlayingAudio(false)}
-            onError={(e) => {
-              console.error('Audio error:', e);
-              setPreviewError('Audio playback error');
-            }}
-            style={{ display: 'none' }} 
-          />
-          {previewError && (
-            <span style={{ fontSize: '10px', color: '#EF4444' }}>{previewError}</span>
-          )}
-          {selectedVoice && !uploadedAudioFile && (
-            <span style={{ fontSize: '10px', color: '#6B7280', marginLeft: 'auto' }}>
-              Voice: {selectedVoice}
-            </span>
+
+          {/* Downloads */}
+          {generatedMp3Base64 && (
+            <div style={{ marginTop: '8px' }}>
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr 1fr', gap: '4px' }}>
+                <button 
+                  onClick={downloadScript} 
+                  style={{ 
+                    display: 'flex', 
+                    alignItems: 'center', 
+                    justifyContent: 'center', 
+                    gap: '3px', 
+                    padding: '4px', 
+                    borderRadius: '4px', 
+                    border: '1px solid #D1D5DB', 
+                    background: '#FFFFFF', 
+                    fontSize: '9px', 
+                    cursor: 'pointer' 
+                  }}
+                >
+                  <FileText size={10} /> Script
+                </button>
+                
+                <button 
+                  onClick={downloadAudio} 
+                  style={{ 
+                    display: 'flex', 
+                    alignItems: 'center', 
+                    justifyContent: 'center', 
+                    gap: '3px', 
+                    padding: '4px', 
+                    borderRadius: '4px', 
+                    border: 'none', 
+                    background: '#10B981', 
+                    color: 'white', 
+                    fontSize: '9px', 
+                    cursor: 'pointer' 
+                  }}
+                >
+                  <Music size={10} /> {downloadFormat.toUpperCase()}
+                </button>
+                
+                <button 
+                  onClick={downloadSubtitles} 
+                  style={{ 
+                    display: 'flex', 
+                    alignItems: 'center', 
+                    justifyContent: 'center', 
+                    gap: '3px', 
+                    padding: '4px', 
+                    borderRadius: '4px', 
+                    border: 'none', 
+                    background: '#3B82F6', 
+                    color: 'white', 
+                    fontSize: '9px', 
+                    cursor: 'pointer' 
+                  }}
+                >
+                  <Video size={10} /> Subtitles
+                </button>
+
+                <button 
+                  onClick={() => setSurvey(prev => ({ ...prev, isOpen: true }))}
+                  style={{ 
+                    display: 'flex', 
+                    alignItems: 'center', 
+                    justifyContent: 'center', 
+                    gap: '3px', 
+                    padding: '4px', 
+                    borderRadius: '4px', 
+                    border: 'none', 
+                    background: 'linear-gradient(135deg, #9333EA 0%, #7C3AED 100%)',
+                    color: 'white', 
+                    fontSize: '9px', 
+                    cursor: 'pointer',
+                    fontWeight: '500',
+                    position: 'relative'
+                  }}
+                >
+                  <span style={{ 
+                    position: 'absolute',
+                    top: '-1px',
+                    right: '-1px',
+                    background: '#EF4444',
+                    color: 'white',
+                    fontSize: '5px',
+                    fontWeight: 'bold',
+                    padding: '1px 3px',
+                    borderRadius: '6px'
+                  }}>
+                    NEW
+                  </span>
+                  <User size={10} /> Twin
+                </button>
+              </div>
+            </div>
           )}
         </div>
-
-        {/* Generate Action */}
-        <button
-          onClick={handleGenerate}
-          disabled={isLoading || isAudioUploaded}
-          style={{
-            width: '100%', padding: '8px', borderRadius: '8px',
-            backgroundColor: isAudioUploaded ? '#9CA3AF' : '#10B981',
-            color: 'white', border: 'none',
-            fontWeight: '600', fontSize: '13px', cursor: isAudioUploaded ? 'not-allowed' : 'pointer',
-            display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '6px', marginBottom: '12px',
-            opacity: isAudioUploaded ? 0.6 : 1
-          }}
-        >
-          {isLoading ? <Loader2 size={14} className="animate-spin" /> : <Sparkles size={14} />}
-          {isLoading ? 'Generating...' : isAudioUploaded ? 'Audio Uploaded - Ready' : `Generate Package (${estimatedCredits} Credits)`}
-        </button>
-
-        {/* Downloads - Compact */}
-        {generatedMp3Base64 && (
-          <div style={{ borderTop: '1px solid #E5E7EB', paddingTop: '10px' }}>
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr 1fr', gap: '6px' }}>
-              <button 
-                onClick={downloadScript} 
-                style={{ 
-                  display: 'flex', 
-                  alignItems: 'center', 
-                  justifyContent: 'center', 
-                  gap: '4px', 
-                  padding: '6px', 
-                  borderRadius: '6px', 
-                  border: '1px solid #D1D5DB', 
-                  background: '#FFFFFF', 
-                  fontSize: '10px', 
-                  cursor: 'pointer' 
-                }}
-              >
-                <FileText size={11} /> Script
-              </button>
-              
-              <button 
-                onClick={downloadAudio} 
-                style={{ 
-                  display: 'flex', 
-                  alignItems: 'center', 
-                  justifyContent: 'center', 
-                  gap: '4px', 
-                  padding: '6px', 
-                  borderRadius: '6px', 
-                  border: 'none', 
-                  background: '#10B981', 
-                  color: 'white', 
-                  fontSize: '10px', 
-                  cursor: 'pointer' 
-                }}
-              >
-                <Music size={11} /> {downloadFormat.toUpperCase()}
-              </button>
-              
-              <button 
-                onClick={downloadSubtitles} 
-                style={{ 
-                  display: 'flex', 
-                  alignItems: 'center', 
-                  justifyContent: 'center', 
-                  gap: '4px', 
-                  padding: '6px', 
-                  borderRadius: '6px', 
-                  border: 'none', 
-                  background: '#3B82F6', 
-                  color: 'white', 
-                  fontSize: '10px', 
-                  cursor: 'pointer' 
-                }}
-              >
-                <Video size={11} /> Subtitles
-              </button>
-
-              <button 
-                onClick={() => setSurvey(prev => ({ ...prev, isOpen: true }))}
-                style={{ 
-                  display: 'flex', 
-                  alignItems: 'center', 
-                  justifyContent: 'center', 
-                  gap: '4px', 
-                  padding: '6px', 
-                  borderRadius: '6px', 
-                  border: 'none', 
-                  background: 'linear-gradient(135deg, #9333EA 0%, #7C3AED 100%)',
-                  color: 'white', 
-                  fontSize: '10px', 
-                  cursor: 'pointer',
-                  fontWeight: '500',
-                  position: 'relative'
-                }}
-              >
-                <span style={{ 
-                  position: 'absolute',
-                  top: '-2px',
-                  right: '-2px',
-                  background: '#EF4444',
-                  color: 'white',
-                  fontSize: '6px',
-                  fontWeight: 'bold',
-                  padding: '1px 4px',
-                  borderRadius: '8px'
-                }}>
-                  NEW
-                </span>
-                <User size={11} /> Twin
-              </button>
-            </div>
-          </div>
-        )}
       </div>
 
       {/* Digital Twin Survey Modal */}
@@ -1400,7 +1314,6 @@ export const VoiceProviderModal: React.FC<VoiceProviderModalProps> = ({
           }} onClick={(e) => e.stopPropagation()}>
             
             {survey.submitted ? (
-              // Success State
               <div style={{ textAlign: 'center', padding: '20px 0' }}>
                 <div style={{ 
                   fontSize: '60px', 
@@ -1442,7 +1355,6 @@ export const VoiceProviderModal: React.FC<VoiceProviderModalProps> = ({
                 </button>
               </div>
             ) : (
-              // Survey Content
               <>
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '16px' }}>
                   <div>
@@ -1624,6 +1536,38 @@ export const VoiceProviderModal: React.FC<VoiceProviderModalProps> = ({
           0% { opacity: 1; }
           50% { opacity: 0.7; }
           100% { opacity: 1; }
+        }
+        @keyframes spin {
+          from { transform: rotate(0deg); }
+          to { transform: rotate(360deg); }
+        }
+        .animate-spin {
+          animation: spin 1s linear infinite;
+        }
+        
+        input[type="range"] {
+          -webkit-appearance: none;
+          appearance: none;
+        }
+        input[type="range"]::-webkit-slider-thumb {
+          -webkit-appearance: none;
+          appearance: none;
+          width: 12px;
+          height: 12px;
+          border-radius: 50%;
+          background: #10B981;
+          cursor: pointer;
+          border: 2px solid white;
+          box-shadow: 0 1px 3px rgba(0,0,0,0.2);
+        }
+        input[type="range"]::-moz-range-thumb {
+          width: 12px;
+          height: 12px;
+          border-radius: 50%;
+          background: #10B981;
+          cursor: pointer;
+          border: 2px solid white;
+          box-shadow: 0 1px 3px rgba(0,0,0,0.2);
         }
       `}</style>
     </div>
