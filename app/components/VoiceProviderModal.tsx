@@ -691,33 +691,77 @@ export const VoiceProviderModal: React.FC<VoiceProviderModalProps> = ({
   };
 
   // ============================================
-  // RENDER
+  // RENDER - FIXED MOBILE VERSION
   // ============================================
 
   return (
     <div style={{
       position: 'fixed', top: 0, left: 0, right: 0, bottom: 0,
-      backgroundColor: 'rgba(0, 0, 0, 0.5)', display: 'flex',
-      alignItems: 'center', justifyContent: 'center', zIndex: 1000, padding: '16px'
+      backgroundColor: 'rgba(0, 0, 0, 0.5)',
+      display: 'flex',
+      alignItems: 'flex-start',
+      justifyContent: 'center',
+      zIndex: 1000,
+      padding: '16px',
+      paddingTop: '60px',
+      overflow: 'hidden'
     }}>
       <div style={{
-        backgroundColor: '#FFFFFF', borderRadius: '16px', width: '100%',
-        maxWidth: '640px', maxHeight: '90vh', overflowY: 'auto', padding: '24px',
-        boxShadow: '0 20px 25px -5px rgba(0, 0, 0, 0.1)', border: '1px solid #E5E7EB'
+        backgroundColor: '#FFFFFF',
+        borderRadius: '16px',
+        width: '100%',
+        maxWidth: '640px',
+        maxHeight: 'calc(100vh - 120px)',
+        overflowY: 'auto',
+        padding: '24px',
+        paddingTop: '16px',
+        boxShadow: '0 20px 25px -5px rgba(0, 0, 0, 0.1)',
+        border: '1px solid #E5E7EB',
+        position: 'relative'
       }}>
-        {/* Header */}
-        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px' }}>
+        {/* Header - Fixed with sticky close button */}
+        <div style={{ 
+          display: 'flex', 
+          justifyContent: 'space-between', 
+          alignItems: 'center', 
+          marginBottom: '16px',
+          position: 'sticky',
+          top: 0,
+          backgroundColor: '#FFFFFF',
+          zIndex: 10,
+          paddingBottom: '12px',
+          borderBottom: '1px solid #E5E7EB'
+        }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
             <Sparkles color="#8B5CF6" size={20} />
             <h3 style={{ margin: 0, fontSize: '18px', fontWeight: '600', color: '#111827' }}>
               Voice Provider Studio
             </h3>
           </div>
-          <button onClick={onClose} style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#6B7280' }}>
-            <X size={20} />
+          <button 
+            onClick={onClose} 
+            style={{ 
+              background: '#F3F4F6',
+              border: 'none',
+              cursor: 'pointer',
+              color: '#374151',
+              padding: '8px 12px',
+              borderRadius: '8px',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              minWidth: '44px',
+              minHeight: '44px',
+              fontSize: '20px',
+              fontWeight: 'bold'
+            }}
+            aria-label="Close"
+          >
+            ✕
           </button>
         </div>
 
+        {/* Rest of the content remains the same */}
         {/* Script Area */}
         <div style={{ marginBottom: '16px' }}>
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '8px' }}>

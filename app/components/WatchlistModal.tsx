@@ -317,24 +317,40 @@ export const WatchlistModal: React.FC<WatchlistModalProps> = ({
       backgroundColor: 'rgba(0, 0, 0, 0.5)',
       backdropFilter: 'blur(4px)',
       display: 'flex',
-      alignItems: 'center',
+      alignItems: 'flex-start',
       justifyContent: 'center',
       zIndex: 1000,
-      padding: '16px'
+      padding: '16px',
+      paddingTop: '60px',
+      overflow: 'hidden'
     }}>
       <div style={{
         backgroundColor: '#FFFFFF',
         borderRadius: '16px',
         width: '100%',
         maxWidth: '700px',
-        maxHeight: '90vh',
+        maxHeight: 'calc(100vh - 120px)',
         overflowY: 'auto',
         padding: '24px',
+        paddingBottom: '30px',
         boxShadow: '0 20px 25px -5px rgba(0, 0, 0, 0.1)',
-        border: '1px solid #E5E7EB'
+        border: '1px solid #E5E7EB',
+        position: 'relative',
+        marginTop: '10px'
       }}>
-        {/* Header */}
-        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px' }}>
+        {/* Header - Sticky with larger close button */}
+        <div style={{ 
+          display: 'flex', 
+          justifyContent: 'space-between', 
+          alignItems: 'center', 
+          marginBottom: '16px',
+          position: 'sticky',
+          top: 0,
+          backgroundColor: '#FFFFFF',
+          zIndex: 10,
+          paddingBottom: '12px',
+          borderBottom: '1px solid #E5E7EB'
+        }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
             <Star size={20} color="#F59E0B" fill="#F59E0B" />
             <h3 style={{ margin: 0, fontSize: '18px', fontWeight: '600', color: '#111827' }}>
@@ -366,17 +382,23 @@ export const WatchlistModal: React.FC<WatchlistModalProps> = ({
             <button
               onClick={onClose}
               style={{ 
-                background: 'none', 
-                border: 'none', 
-                cursor: 'pointer', 
-                color: '#6B7280',
-                padding: '4px',
+                background: '#F3F4F6',
+                border: 'none',
+                cursor: 'pointer',
+                color: '#374151',
+                padding: '8px 12px',
+                borderRadius: '8px',
                 display: 'flex',
                 alignItems: 'center',
-                justifyContent: 'center'
+                justifyContent: 'center',
+                minWidth: '44px',
+                minHeight: '44px',
+                fontSize: '20px',
+                fontWeight: 'bold'
               }}
+              aria-label="Close"
             >
-              <X size={20} />
+              ✕
             </button>
           </div>
         </div>
