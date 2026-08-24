@@ -7,6 +7,7 @@ import {
 } from 'lucide-react';
 import { supabase } from '../lib/supabase';
 import { VoiceSelector } from './layout/VoiceSelector';
+import { VoiceCloner } from './VoiceCloner';
 
 interface VoiceProviderModalProps {
   isOpen: boolean;
@@ -35,6 +36,16 @@ interface SurveyState {
   submitted: boolean;
 }
 
+// Cloned Voice Interface
+interface ClonedVoice {
+  id: string;
+  name: string;
+  voiceId: string;
+  sampleText: string;
+  voiceType: string;
+  timestamp: number;
+}
+
 export const VoiceProviderModal: React.FC<VoiceProviderModalProps> = ({
   isOpen,
   onClose,
@@ -61,6 +72,11 @@ export const VoiceProviderModal: React.FC<VoiceProviderModalProps> = ({
   const [availableVoices, setAvailableVoices] = useState<Voice[]>([]);
   const [selectedVoice, setSelectedVoice] = useState<string>('Auto-Male');
   const [isLoadingVoices, setIsLoadingVoices] = useState(false);
+
+  // Voice Cloner state
+  const [showVoiceCloner, setShowVoiceCloner] = useState(false);
+  const [clonedVoices, setClonedVoices] = useState<ClonedVoice[]>([]);
+  const [selectedClonedVoice, setSelectedClonedVoice] = useState<string | null>(null);
 
   // Uploaded audio file state
   const [uploadedAudioFile, setUploadedAudioFile] = useState<File | null>(null);
@@ -241,6 +257,57 @@ export const VoiceProviderModal: React.FC<VoiceProviderModalProps> = ({
   };
 
   // ============================================
+  // VOICE CLONER FUNCTIONS
+  // ============================================
+
+  const loadClonedVoices = () => {
+    try {
+      const saved = localStorage.getItem('clonedVoices');
+      if (saved) {
+        const voices = JSON.parse(saved);
+        setClonedVoices(voices);
+        console.log('📁 Loaded cloned voices:', voices.length);
+      }
+    } catch (error) {
+      console.error('Failed to load cloned voices:', error);
+    }
+  };
+
+  const saveClonedVoices = (voices: ClonedVoice[]) => {
+    try {
+      localStorage.setItem('clonedVoices', JSON.stringify(voices));
+    } catch (error) {
+      console.error('Failed to save cloned voices:', error);
+    }
+  };
+
+  const handleVoiceCloned = (voiceData: any) => {
+    const newVoice: ClonedVoice = {
+      id: `cloned-${Date.now()}`,
+      name: voiceData.name || `Cloned Voice ${clonedVoices.length + 1}`,
+      voiceId: voiceData.voiceId || 'default',
+      sampleText: voiceData.sampleText || 'Hello',
+      voiceType: voiceData.voiceType || 'web-speech-api',
+      timestamp: Date.now()
+    };
+    
+    const updated = [...clonedVoices, newVoice];
+    setClonedVoices(updated);
+    saveClonedVoices(updated);
+    setSelectedClonedVoice(newVoice.id);
+    alert('✅ Voice cloned successfully! You can now use it in the Voice Selector.');
+  };
+
+  const deleteClonedVoice = (id: string) => {
+    const updated = clonedVoices.filter(v => v.id !== id);
+    setClonedVoices(updated);
+    saveClonedVoices(updated);
+    if (selectedClonedVoice === id) {
+      setSelectedClonedVoice(null);
+    }
+  };
+
+  // ============================================
   // DEFINE FUNCTIONS FIRST
   // ============================================
 
@@ -262,7 +329,14 @@ export const VoiceProviderModal: React.FC<VoiceProviderModalProps> = ({
   };
 
   const handleVoiceChange = (voice: string) => {
-    setSelectedVoice(voice);
+    // Check if it's a cloned voice
+    if (voice.startsWith('cloned-')) {
+      setSelectedClonedVoice(voice);
+      setSelectedVoice(voice);
+    } else {
+      setSelectedClonedVoice(null);
+      setSelectedVoice(voice);
+    }
   };
 
   const handleLanguageChange = (newLang: 'Cantonese' | 'Mandarin' | 'English') => {
@@ -445,6 +519,7 @@ export const VoiceProviderModal: React.FC<VoiceProviderModalProps> = ({
   useEffect(() => {
     if (isOpen) {
       loadAvailableVoices();
+      loadClonedVoices();
     }
   }, [isOpen]);
 
@@ -794,11 +869,11 @@ export const VoiceProviderModal: React.FC<VoiceProviderModalProps> = ({
 
   const getVoiceSelectorHelpText = () => {
     if (langKey === 'Traditional Chinese') {
-      return '💡 手機版使用瀏覽器語音（Web Speech API）支援粵語。\n📌 桌面版 macOS 可獲得最佳語音品質。';
+      return '💡 手機版使用瀏覽器語音（Web Speech API）支援粵語。\n📌 桌面版 macOS 可獲得最佳語音品質。\n🎤 使用「克隆聲音」複製喜愛的語音。';
     } else if (langKey === 'Simplified Chinese') {
-      return '💡 手机版使用浏览器语音（Web Speech API）支持粤语。\n📌 桌面版 macOS 可获得最佳语音品质。';
+      return '💡 手机版使用浏览器语音（Web Speech API）支持粤语。\n📌 桌面版 macOS 可获得最佳语音品质。\n🎤 使用「克隆声音」复制喜爱的语音。';
     } else {
-      return '💡 Mobile uses browser speech (Web Speech API) for Cantonese support.\n📌 Desktop macOS provides best voice quality.';
+      return '💡 Mobile uses browser speech (Web Speech API) for Cantonese support.\n📌 Desktop macOS provides best voice quality.\n🎤 Use "Clone Voice" to copy your favorite voices.';
     }
   };
 
@@ -1090,6 +1165,101 @@ export const VoiceProviderModal: React.FC<VoiceProviderModalProps> = ({
             </div>
           </div>
 
+          {/* Voice Cloner Button */}
+          <button
+            onClick={() => setShowVoiceCloner(true)}
+            style={{
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              gap: '6px',
+              width: '100%',
+              padding: '6px',
+              borderRadius: '6px',
+              border: '1px solid #9333EA',
+              backgroundColor: '#F5F3FF',
+              color: '#7C3AED',
+              cursor: 'pointer',
+              fontSize: '10px',
+              fontWeight: '500',
+              marginBottom: '8px',
+              transition: 'all 0.2s ease'
+            }}
+            onMouseEnter={(e) => {
+              e.currentTarget.style.backgroundColor = '#EDE9FE';
+            }}
+            onMouseLeave={(e) => {
+              e.currentTarget.style.backgroundColor = '#F5F3FF';
+            }}
+          >
+            <Mic size={14} /> 🎤 Clone Voice {clonedVoices.length > 0 && `(${clonedVoices.length})`}
+          </button>
+
+          {/* Cloned Voices List */}
+          {clonedVoices.length > 0 && (
+            <div style={{
+              marginBottom: '8px',
+              padding: '6px 8px',
+              backgroundColor: '#F9FAFB',
+              borderRadius: '6px',
+              border: '1px solid #E5E7EB'
+            }}>
+              <div style={{
+                fontSize: '9px',
+                fontWeight: '600',
+                color: '#6B7280',
+                marginBottom: '4px'
+              }}>
+                🎤 Cloned Voices
+              </div>
+              <div style={{ display: 'flex', flexWrap: 'wrap', gap: '4px' }}>
+                {clonedVoices.map((voice) => (
+                  <div
+                    key={voice.id}
+                    style={{
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: '4px',
+                      padding: '2px 6px',
+                      borderRadius: '4px',
+                      backgroundColor: selectedClonedVoice === voice.id ? '#EDE9FE' : 'white',
+                      border: selectedClonedVoice === voice.id ? '1px solid #9333EA' : '1px solid #E5E7EB',
+                      fontSize: '9px'
+                    }}
+                  >
+                    <button
+                      onClick={() => handleVoiceChange(voice.id)}
+                      style={{
+                        background: 'none',
+                        border: 'none',
+                        cursor: 'pointer',
+                        color: selectedClonedVoice === voice.id ? '#7C3AED' : '#374151',
+                        padding: '2px 4px',
+                        fontSize: '9px',
+                        fontWeight: selectedClonedVoice === voice.id ? '600' : '400'
+                      }}
+                    >
+                      {voice.name}
+                    </button>
+                    <button
+                      onClick={() => deleteClonedVoice(voice.id)}
+                      style={{
+                        background: 'none',
+                        border: 'none',
+                        cursor: 'pointer',
+                        color: '#EF4444',
+                        padding: '2px 4px',
+                        fontSize: '10px'
+                      }}
+                    >
+                      ✕
+                    </button>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+
           {/* Speed Control */}
           <div style={{ marginBottom: '8px' }}>
             <label style={{ 
@@ -1340,6 +1510,15 @@ export const VoiceProviderModal: React.FC<VoiceProviderModalProps> = ({
           )}
         </div>
       </div>
+
+      {/* Voice Cloner Modal */}
+      {showVoiceCloner && (
+        <VoiceCloner
+          isOpen={showVoiceCloner}
+          onClose={() => setShowVoiceCloner(false)}
+          onVoiceCloned={handleVoiceCloned}
+        />
+      )}
 
       {/* Digital Twin Survey Modal */}
       {survey.isOpen && (
