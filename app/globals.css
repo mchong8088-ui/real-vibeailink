@@ -74,6 +74,11 @@ button:hover {
   animation: spin 1s linear infinite;
 }
 
+/* Add this class for the refresh button spinner */
+.animate-spin {
+  animation: spin 0.8s linear infinite;
+}
+
 /* Utility classes */
 .text-center {
   text-align: center;

@@ -24,7 +24,7 @@ async function fetchCompanyInfo(symbol: string): Promise<{ name: string; chinese
     if (symbol.endsWith('.HK')) yahooSymbol = symbol.replace('.HK', '');
     if (symbol.endsWith('.TW')) yahooSymbol = symbol.replace('.TW', '');
     
-    const url = `https://query1.finance.yahoo.com/v8/finance/chart/${yahooSymbol}`;
+    const url = `https://query1.finance.yahoo.com/v8/finance/chart/${encodeURIComponent(symbol)}?interval=1d&range=3m`;
     const res = await fetch(url, {
       headers: {
         "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36",
@@ -53,14 +53,32 @@ async function fetchCompanyInfo(symbol: string): Promise<{ name: string; chinese
 
 function calculateRSI(prices: number[], period: number = 14): number | null {
   if (prices.length < period + 1) return null;
-  let gains = 0, losses = 0;
-  for (let i = prices.length - period; i < prices.length; i++) {
-    const change = prices[i] - (prices[i-1] || prices[i]);
-    if (change >= 0) gains += change;
-    else losses -= change;
+  
+  let gains = 0;
+  let losses = 0;
+  
+  // First average gain/loss
+  for (let i = 1; i <= period; i++) {
+    const diff = prices[i] - prices[i - 1];
+    if (diff >= 0) gains += diff;
+    else losses -= diff;
   }
-  const avgGain = gains / period;
-  const avgLoss = losses / period;
+  
+  let avgGain = gains / period;
+  let avgLoss = losses / period;
+  
+  // Smoothed RSI for remaining data
+  for (let i = period + 1; i < prices.length; i++) {
+    const diff = prices[i] - prices[i - 1];
+    if (diff >= 0) {
+      avgGain = (avgGain * (period - 1) + diff) / period;
+      avgLoss = (avgLoss * (period - 1)) / period;
+    } else {
+      avgGain = (avgGain * (period - 1)) / period;
+      avgLoss = (avgLoss * (period - 1) - diff) / period;
+    }
+  }
+  
   if (avgLoss === 0) return 100;
   const rs = avgGain / avgLoss;
   return 100 - (100 / (1 + rs));
@@ -68,10 +86,17 @@ function calculateRSI(prices: number[], period: number = 14): number | null {
 
 function calculateMACD(prices: number[]): string {
   if (prices.length < 26) return 'Neutral';
-  const ema12 = prices.slice(-12).reduce((a, b) => a + b, 0) / 12;
-  const ema26 = prices.slice(-26).reduce((a, b) => a + b, 0) / 26;
+  
+  const ema12 = calculateEMA(prices, 12);
+  const ema26 = calculateEMA(prices, 26);
+  
+  if (!ema12 || !ema26) return 'Neutral';
+  
   const macd = ema12 - ema26;
-  const signal = prices.slice(-9).reduce((a, b) => a + b, 0) / 9;
+  const signal = calculateEMA(prices, 9);
+  
+  if (!signal) return macd > 0 ? 'Bullish' : macd < 0 ? 'Bearish' : 'Neutral';
+  
   if (macd > signal) return 'Bullish';
   if (macd < signal) return 'Bearish';
   return 'Neutral';

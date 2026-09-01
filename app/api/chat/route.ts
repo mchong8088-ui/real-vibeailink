@@ -116,25 +116,47 @@ function addBollingerBands(historical: any[], period: number = 20, multiplier: n
 
 function calculateRSI(prices: number[], period: number = 14): number | null {
   if (prices.length < period + 1) return null;
-  let gains = 0, losses = 0;
-  for (let i = prices.length - period; i < prices.length; i++) {
-    const change = prices[i] - (prices[i-1] || prices[i]);
-    if (change >= 0) gains += change;
-    else losses -= change;
+  
+  let gains = 0;
+  let losses = 0;
+  
+  // First average gain/loss
+  for (let i = 1; i <= period; i++) {
+    const diff = prices[i] - prices[i - 1];
+    if (diff >= 0) gains += diff;
+    else losses -= diff;
   }
-  const avgGain = gains / period;
-  const avgLoss = losses / period;
+  
+  let avgGain = gains / period;
+  let avgLoss = losses / period;
+  
+  // Smoothed RSI for remaining data (exponential smoothing)
+  for (let i = period + 1; i < prices.length; i++) {
+    const diff = prices[i] - prices[i - 1];
+    if (diff >= 0) {
+      avgGain = (avgGain * (period - 1) + diff) / period;
+      avgLoss = (avgLoss * (period - 1)) / period;
+    } else {
+      avgGain = (avgGain * (period - 1)) / period;
+      avgLoss = (avgLoss * (period - 1) - diff) / period;
+    }
+  }
+  
   if (avgLoss === 0) return 100;
   const rs = avgGain / avgLoss;
-  return 100 - (100 / (1 + rs));
+  const rsiValue = 100 - (100 / (1 + rs));
+  
+  return Math.round(rsiValue * 10) / 10;
 }
 
 function calculateMACD(prices: number[]): string {
   if (prices.length < 26) return 'Neutral';
+  
   const ema12 = prices.slice(-12).reduce((a, b) => a + b, 0) / 12;
   const ema26 = prices.slice(-26).reduce((a, b) => a + b, 0) / 26;
   const macd = ema12 - ema26;
   const signal = prices.slice(-9).reduce((a, b) => a + b, 0) / 9;
+  
   if (macd > signal) return 'Bullish';
   if (macd < signal) return 'Bearish';
   return 'Neutral';
@@ -182,9 +204,31 @@ async function fetchRealStockData(symbol: string) {
       return null;
     }
     
-    const price = meta.regularMarketPrice;
-    const previousClose = meta.previousClose || validCloses[validCloses.length - 2] || price;
-    const changePercent = ((price - previousClose) / previousClose) * 100;
+    const price = meta.regularMarketPrice || validCloses[validCloses.length - 1] || 0;
+    
+    // FIX: Use the same logic as watchlist - prioritize the second last close
+    let prevClose = null;
+    
+    // Method 1: Use the second last close from the data array (MOST RELIABLE)
+    if (validCloses.length >= 2) {
+      prevClose = validCloses[validCloses.length - 2];
+      console.log(`📊 ${symbol}: Using second last close as previous: ${prevClose}`);
+    }
+    
+    // Method 2: If that fails, try meta.previousClose
+    if (!prevClose || prevClose <= 0) {
+      prevClose = meta.regularMarketPreviousClose || meta.previousClose || meta.chartPreviousClose || null;
+      console.log(`📊 ${symbol}: Using meta previous close: ${prevClose}`);
+    }
+    
+    // Method 3: If still no valid previous close, use current price (0% change)
+    if (!prevClose || prevClose <= 0) {
+      prevClose = price;
+      console.log(`📊 ${symbol}: Using current price as previous (fallback)`);
+    }
+    
+    const change = price - prevClose;
+    const changePercent = prevClose ? (change / prevClose) * 100 : 0;
     const dayLow = meta.regularMarketDayLow || null;
     const dayHigh = meta.regularMarketDayHigh || null;
     
@@ -227,27 +271,26 @@ async function fetchRealStockData(symbol: string) {
     const lows = result.indicators?.quote?.[0]?.low || [];
     
     const historical = [];
-for (let i = 0; i < timestamps.length; i++) {
-  if (timestamps[i] && closes[i] && closes[i] > 0) {
-    const date = new Date(timestamps[i] * 1000);
-    // Format as YYYY-MM-DD for consistent parsing
-    const year = date.getFullYear();
-    const month = String(date.getMonth() + 1).padStart(2, '0');
-    const day = String(date.getDate()).padStart(2, '0');
-    const dateStr = `${year}-${month}-${day}`;
-    
-    historical.push({
-      date: dateStr,
-      price: closes[i],
-      close: closes[i],
-      open: opens[i] || null,
-      high: highs[i] || null,
-      low: lows[i] || null,
-      volume: volumes[i] || 0,
-      timestamp: timestamps[i], // Keep original for debugging
-    });
-  }
-}
+    for (let i = 0; i < timestamps.length; i++) {
+      if (timestamps[i] && closes[i] && closes[i] > 0) {
+        const date = new Date(timestamps[i] * 1000);
+        const year = date.getFullYear();
+        const month = String(date.getMonth() + 1).padStart(2, '0');
+        const day = String(date.getDate()).padStart(2, '0');
+        const dateStr = `${year}-${month}-${day}`;
+        
+        historical.push({
+          date: dateStr,
+          price: closes[i],
+          close: closes[i],
+          open: opens[i] || null,
+          high: highs[i] || null,
+          low: lows[i] || null,
+          volume: volumes[i] || 0,
+          timestamp: timestamps[i],
+        });
+      }
+    }
     
     console.log(`✅ ${symbol}: ${currency}${price} (${changePercent > 0 ? '+' : ''}${changePercent.toFixed(2)}%) - ${historical.length} data points`);
     
@@ -256,7 +299,7 @@ for (let i = 0; i < timestamps.length; i++) {
     return { 
       price, 
       changePercent,
-      previousClose,
+      previousClose: prevClose,
       dayLow,
       dayHigh,
       rsi, 

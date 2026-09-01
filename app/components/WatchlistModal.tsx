@@ -1,6 +1,6 @@
 "use client";
-import React, { useState, useEffect } from 'react';
-import { X, Star, RefreshCw, Plus, Trash2, TrendingUp, TrendingDown, Minus } from 'lucide-react';
+import React, { useState, useEffect, useMemo } from 'react';
+import { X, Star, RefreshCw, Plus, Trash2, TrendingUp, TrendingDown, Minus, Search, ArrowUpDown, Scan, Sparkles } from 'lucide-react';
 
 interface WatchlistModalProps {
   isOpen: boolean;
@@ -12,6 +12,8 @@ interface WatchlistModalProps {
 interface StockData {
   symbol: string;
   price: number;
+  previousClose: number;
+  change: number;
   changePercent: number;
   rsi: number | null;
   macd: string;
@@ -21,7 +23,12 @@ interface StockData {
   dayHigh?: number;
   dayLow?: number;
   volume?: number;
+  isFallback?: boolean;
+  marketState?: string;
+  error?: string;
 }
+
+type SortOption = 'symbol' | 'price' | 'change' | 'rsi' | 'trend' | 'default';
 
 export const WatchlistModal: React.FC<WatchlistModalProps> = ({
   isOpen,
@@ -36,8 +43,15 @@ export const WatchlistModal: React.FC<WatchlistModalProps> = ({
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [isLoadingData, setIsLoadingData] = useState(false);
+  const [sortBy, setSortBy] = useState<SortOption>('default');
+  const [isSortMenuOpen, setIsSortMenuOpen] = useState(false);
+  const [scanning, setScanning] = useState(false);
+  const [scanResults, setScanResults] = useState<string[]>([]);
+  const [isScanning, setIsScanning] = useState(false);
 
-  // Load watchlist from localStorage and fetch real data
+  const [userProfile, setUserProfile] = useState<any>(null);
+  const [credits, setCredits] = useState<number>(0);
+
   useEffect(() => {
     if (isOpen) {
       console.log('📋 Watchlist modal opened');
@@ -61,14 +75,36 @@ export const WatchlistModal: React.FC<WatchlistModalProps> = ({
         console.log('📋 No watchlist found in localStorage');
         setWatchlist([]);
       }
+      
+      loadUserProfile();
     }
   }, [isOpen]);
 
-  // Fetch real stock data from the API
+  const loadUserProfile = async () => {
+    try {
+      const { supabase } = await import('../lib/supabase');
+      const { data: { session } } = await supabase.auth.getSession();
+      
+      if (session?.user) {
+        const { data: profile } = await supabase
+          .from('profiles')
+          .select('credits')
+          .eq('id', session.user.id)
+          .single();
+        
+        if (profile) {
+          setUserProfile(profile);
+          setCredits(profile.credits || 0);
+        }
+      }
+    } catch (error) {
+      console.error('Error loading user profile:', error);
+    }
+  };
+
   const fetchRealStockData = async (symbols: string[]) => {
     console.log('📊 Fetching real data for:', symbols);
     
-    // Set loading state
     const loadingState: Record<string, boolean> = {};
     symbols.forEach(s => { loadingState[s] = true; });
     setLoading(loadingState);
@@ -76,11 +112,11 @@ export const WatchlistModal: React.FC<WatchlistModalProps> = ({
     setError(null);
 
     try {
-      // Call the watchlist API endpoint
       const response = await fetch('/api/watchlist', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ symbols }),
+        cache: 'no-store'
       });
 
       const result = await response.json();
@@ -88,24 +124,34 @@ export const WatchlistModal: React.FC<WatchlistModalProps> = ({
 
       if (result.success && result.data) {
         const dataMap: Record<string, StockData> = {};
+        let hasError = false;
+        
         result.data.forEach((item: StockData) => {
           dataMap[item.symbol] = item;
+          if (item.error || item.isFallback) {
+            hasError = true;
+          }
           console.log(`✅ Data for ${item.symbol}:`, item);
         });
+        
         setStockData(dataMap);
+        
+        const hasErrors = result.data.some((item: StockData) => item.error || item.isFallback);
+        if (hasErrors) {
+          setError('Some stocks could not be loaded. Please try refreshing.');
+        }
         
         if (result.data.length === 0) {
           setError('Unable to load stock data. Please try again.');
         }
       } else {
-        console.warn('⚠️ API returned error, falling back to mock data');
-        // Fallback to mock data if API fails
-        generateMockData(symbols);
+        setError(result.error || 'Failed to load stock data. Please try again.');
+        setStockData({});
       }
     } catch (error) {
       console.error('❌ Error fetching real data:', error);
-      // Fallback to mock data on error
-      generateMockData(symbols);
+      setError('Network error. Please check your connection and try again.');
+      setStockData({});
     } finally {
       const loadingStateClear: Record<string, boolean> = {};
       symbols.forEach(s => { loadingStateClear[s] = false; });
@@ -114,61 +160,94 @@ export const WatchlistModal: React.FC<WatchlistModalProps> = ({
     }
   };
 
-  // Mock data as fallback when API fails
-  const generateMockData = (symbols: string[]) => {
-    console.log('📊 Generating mock data as fallback for:', symbols);
-    
-    const dataMap: Record<string, StockData> = {};
-    
-    const mockData: Record<string, any> = {
-      'TSLA': { price: 313.03, changePercent: -1.47, rsi: 27.3, macd: 'Bearish', trend: 'Downtrend', currency: '$', companyName: 'Tesla, Inc.' },
-      'NBIS': { price: 169.69, changePercent: -9.68, rsi: 35.1, macd: 'Bearish', trend: 'Downtrend', currency: '$', companyName: 'Nebius Group' },
-      'SPCX': { price: 12.45, changePercent: 3.21, rsi: 62.5, macd: 'Bullish', trend: 'Uptrend', currency: '$', companyName: 'SPAC X' },
-      'AAPL': { price: 175.34, changePercent: 0.85, rsi: 48.2, macd: 'Neutral', trend: 'Sideways', currency: '$', companyName: 'Apple Inc.' },
-      '0700.HK': { price: 345.60, changePercent: -0.52, rsi: 44.6, macd: 'Neutral', trend: 'Sideways', currency: 'HK$', companyName: 'Tencent Holdings' },
-      '2330.TW': { price: 542.00, changePercent: 1.23, rsi: 55.8, macd: 'Bullish', trend: 'Uptrend', currency: 'NT$', companyName: 'Taiwan Semiconductor' },
-    };
-    
-    symbols.forEach(symbol => {
-      if (mockData[symbol]) {
-        dataMap[symbol] = {
-          symbol: symbol,
-          ...mockData[symbol]
-        };
-      } else {
-        dataMap[symbol] = {
-          symbol: symbol,
-          price: 0,
-          changePercent: 0,
-          rsi: null,
-          macd: 'Neutral',
-          trend: 'Sideways',
-          currency: '$',
-          companyName: symbol,
-        };
-      }
-    });
-    
-    setStockData(dataMap);
-    setError('Using sample data. Please try refreshing.');
-  };
-
-  // Refresh data - fetch real data again
   const handleRefresh = () => {
     if (watchlist.length === 0) return;
     setIsRefreshing(true);
     fetchRealStockData(watchlist);
-    setTimeout(() => setIsRefreshing(false), 500);
+    setTimeout(() => setIsRefreshing(false), 800);
   };
 
-  // Save watchlist
+  const handleScanAll = async () => {
+    if (watchlist.length === 0 || isScanning) return;
+    
+    setIsScanning(true);
+    setScanning(true);
+    
+    try {
+      await fetchRealStockData(watchlist);
+      
+      const signals: string[] = [];
+      const data = stockData;
+      
+      watchlist.forEach(symbol => {
+        const stock = data[symbol];
+        if (stock && stock.rsi !== null && !stock.error) {
+          if (stock.rsi < 30) {
+            signals.push(`🟢 ${symbol} - RSI ${stock.rsi.toFixed(1)} (Oversold) - BUY signal`);
+          } else if (stock.rsi > 70) {
+            signals.push(`🔴 ${symbol} - RSI ${stock.rsi.toFixed(1)} (Overbought) - SELL signal`);
+          } else {
+            signals.push(`⚪ ${symbol} - RSI ${stock.rsi.toFixed(1)} (Neutral) - HOLD`);
+          }
+        } else if (stock && stock.error) {
+          signals.push(`⚠️ ${symbol} - ${stock.error}`);
+        } else {
+          signals.push(`⚪ ${symbol} - No data available`);
+        }
+      });
+      
+      setScanResults(signals);
+      
+      setTimeout(() => {
+        setScanning(false);
+      }, 5000);
+      
+    } catch (error) {
+      console.error('Scan error:', error);
+      setError('Error scanning stocks. Please try again.');
+      setScanning(false);
+    } finally {
+      setIsScanning(false);
+    }
+  };
+
+  const getSortedWatchlist = useMemo(() => {
+    if (sortBy === 'default') return watchlist;
+    
+    return [...watchlist].sort((a, b) => {
+      const dataA = stockData[a];
+      const dataB = stockData[b];
+      
+      if (!dataA || dataA.error) return 1;
+      if (!dataB || dataB.error) return -1;
+      
+      switch (sortBy) {
+        case 'symbol':
+          return a.localeCompare(b);
+        case 'price':
+          return (dataB.price || 0) - (dataA.price || 0);
+        case 'change':
+          return (dataB.changePercent || 0) - (dataA.changePercent || 0);
+        case 'rsi':
+          if (dataA.rsi === null) return 1;
+          if (dataB.rsi === null) return -1;
+          return (dataB.rsi || 0) - (dataA.rsi || 0);
+        case 'trend':
+          const trendOrder = { 'Uptrend': 1, 'Sideways': 2, 'Downtrend': 3 };
+          return (trendOrder[dataA.trend as keyof typeof trendOrder] || 0) - 
+                 (trendOrder[dataB.trend as keyof typeof trendOrder] || 0);
+        default:
+          return 0;
+      }
+    });
+  }, [watchlist, stockData, sortBy]);
+
   const saveWatchlist = (newList: string[]) => {
     setWatchlist(newList);
     localStorage.setItem('stockWatchlist', JSON.stringify(newList));
     console.log('💾 Saved watchlist:', newList);
   };
 
-  // Add stock
   const addStock = () => {
     const symbol = newStock.trim().toUpperCase();
     if (!symbol) return;
@@ -186,7 +265,6 @@ export const WatchlistModal: React.FC<WatchlistModalProps> = ({
     fetchRealStockData(newList);
   };
 
-  // Remove stock
   const removeStock = (symbol: string, e: React.MouseEvent) => {
     e.stopPropagation();
     const newList = watchlist.filter(s => s !== symbol);
@@ -196,7 +274,6 @@ export const WatchlistModal: React.FC<WatchlistModalProps> = ({
     setStockData(newData);
   };
 
-  // Get RSI status
   const getRSIStatus = (rsi: number | null) => {
     if (rsi === null || rsi === undefined) return { color: '#9CA3AF', text: '⚪', label: 'N/A' };
     if (rsi < 30) return { color: '#22C55E', text: '🟢', label: 'BUY' };
@@ -204,14 +281,12 @@ export const WatchlistModal: React.FC<WatchlistModalProps> = ({
     return { color: '#9CA3AF', text: '⚪', label: 'HOLD' };
   };
 
-  // Get MACD status
   const getMACDStatus = (macd: string) => {
     if (macd === 'Bullish') return { color: '#22C55E', text: '🟢' };
     if (macd === 'Bearish') return { color: '#EF4444', text: '🔴' };
     return { color: '#9CA3AF', text: '⚪' };
   };
 
-  // Get trend
   const getTrendDisplay = (trend: string) => {
     if (trend === 'Uptrend') return { icon: '📈', color: '#22C55E' };
     if (trend === 'Downtrend') return { icon: '📉', color: '#EF4444' };
@@ -238,12 +313,27 @@ export const WatchlistModal: React.FC<WatchlistModalProps> = ({
         legendSell: '🔴 紅色 = RSI高於70 (超買) - 考慮賣出',
         legendNeutral: '⚪ 灰色 = RSI 30-70 (中性) - 持有觀望',
         refresh: '刷新',
+        scanAll: '掃描全部',
+        sortBy: '排序',
+        goToAI: 'AI 股票分析',
         loadingData: '載入中...',
         noData: '無數據',
         clickToAnalyze: '點擊查看完整分析',
         fetchingData: '獲取數據中...',
         remove: '移除',
         error: '載入失敗，請重試',
+        credits: '積分',
+        sortOptions: {
+          default: '默認排序',
+          symbol: '按代號',
+          price: '按價格',
+          change: '按漲跌',
+          rsi: '按RSI',
+          trend: '按趨勢'
+        },
+        scanning: '掃描中...',
+        scanResults: '掃描結果',
+        realtime: '即時數據'
       };
     } else if (langKey === 'Simplified Chinese') {
       return {
@@ -264,12 +354,27 @@ export const WatchlistModal: React.FC<WatchlistModalProps> = ({
         legendSell: '🔴 红色 = RSI高于70 (超买) - 考虑卖出',
         legendNeutral: '⚪ 灰色 = RSI 30-70 (中性) - 持有观望',
         refresh: '刷新',
+        scanAll: '扫描全部',
+        sortBy: '排序',
+        goToAI: 'AI 股票分析',
         loadingData: '载入中...',
         noData: '无数据',
         clickToAnalyze: '点击查看完整分析',
         fetchingData: '获取数据中...',
         remove: '移除',
         error: '载入失败，请重试',
+        credits: '积分',
+        sortOptions: {
+          default: '默认排序',
+          symbol: '按代码',
+          price: '按价格',
+          change: '按涨跌',
+          rsi: '按RSI',
+          trend: '按趋势'
+        },
+        scanning: '扫描中...',
+        scanResults: '扫描结果',
+        realtime: '实时数据'
       };
     } else {
       return {
@@ -290,12 +395,27 @@ export const WatchlistModal: React.FC<WatchlistModalProps> = ({
         legendSell: '🔴 Red = RSI above 70 (Overbought) - Consider SELL',
         legendNeutral: '⚪ Gray = RSI 30-70 (Neutral) - HOLD',
         refresh: 'Refresh',
+        scanAll: 'Scan All',
+        sortBy: 'Sort By',
+        goToAI: 'Go to AI Stock',
         loadingData: 'Loading...',
         noData: 'No data',
         clickToAnalyze: 'Click to view full analysis',
         fetchingData: 'Fetching data...',
         remove: 'Remove',
         error: 'Failed to load data',
+        credits: 'Credits',
+        sortOptions: {
+          default: 'Default',
+          symbol: 'Symbol',
+          price: 'Price',
+          change: 'Change %',
+          rsi: 'RSI',
+          trend: 'Trend'
+        },
+        scanning: 'Scanning...',
+        scanResults: 'Scan Results',
+        realtime: 'Real-time'
       };
     }
   };
@@ -306,6 +426,8 @@ export const WatchlistModal: React.FC<WatchlistModalProps> = ({
 
   const hasStocks = watchlist.length > 0;
   const isLoading = Object.values(loading).some(v => v === true) || isLoadingData;
+  const sortedWatchlist = getSortedWatchlist;
+  const hasValidData = Object.values(stockData).some(data => data && data.price > 0 && !data.error);
 
   return (
     <div style={{
@@ -328,7 +450,7 @@ export const WatchlistModal: React.FC<WatchlistModalProps> = ({
         backgroundColor: '#FFFFFF',
         borderRadius: '16px',
         width: '100%',
-        maxWidth: '700px',
+        maxWidth: '750px',
         maxHeight: 'calc(100vh - 120px)',
         overflowY: 'auto',
         padding: '24px',
@@ -338,7 +460,7 @@ export const WatchlistModal: React.FC<WatchlistModalProps> = ({
         position: 'relative',
         marginTop: '10px'
       }}>
-        {/* Header - Sticky with larger close button */}
+        {/* Header */}
         <div style={{ 
           display: 'flex', 
           justifyContent: 'space-between', 
@@ -351,25 +473,149 @@ export const WatchlistModal: React.FC<WatchlistModalProps> = ({
           paddingBottom: '12px',
           borderBottom: '1px solid #E5E7EB'
         }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
             <Star size={20} color="#F59E0B" fill="#F59E0B" />
             <h3 style={{ margin: 0, fontSize: '18px', fontWeight: '600', color: '#111827' }}>
               {t.title}
             </h3>
             <span style={{ fontSize: '12px', color: '#6B7280' }}>({watchlist.length}/10)</span>
+            {credits > 0 && (
+              <span style={{ 
+                fontSize: '11px', 
+                color: '#059669', 
+                backgroundColor: '#D1FAE5', 
+                padding: '2px 10px', 
+                borderRadius: '12px',
+                fontWeight: '600'
+              }}>
+                #{t.credits}: {credits}
+              </span>
+            )}
           </div>
-          <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
+          <div style={{ display: 'flex', gap: '6px', alignItems: 'center', flexWrap: 'wrap' }}>
+            <button
+              onClick={handleScanAll}
+              disabled={isScanning || !hasStocks || isLoading}
+              style={{
+                padding: '6px 10px',
+                backgroundColor: isScanning || !hasStocks || isLoading ? '#9CA3AF' : '#8B5CF6',
+                color: 'white',
+                border: 'none',
+                borderRadius: '8px',
+                cursor: isScanning || !hasStocks || isLoading ? 'not-allowed' : 'pointer',
+                fontSize: '11px',
+                fontWeight: '500',
+                display: 'flex',
+                alignItems: 'center',
+                gap: '4px',
+                opacity: isScanning || !hasStocks || isLoading ? 0.6 : 1
+              }}
+            >
+              <Scan size={14} /> {isScanning ? t.scanning : t.scanAll}
+            </button>
+
+            <div style={{ position: 'relative' }}>
+              <button
+                onClick={() => setIsSortMenuOpen(!isSortMenuOpen)}
+                disabled={!hasStocks || isLoading}
+                style={{
+                  padding: '6px 10px',
+                  backgroundColor: !hasStocks || isLoading ? '#9CA3AF' : '#6B7280',
+                  color: 'white',
+                  border: 'none',
+                  borderRadius: '8px',
+                  cursor: !hasStocks || isLoading ? 'not-allowed' : 'pointer',
+                  fontSize: '11px',
+                  fontWeight: '500',
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '4px',
+                  opacity: !hasStocks || isLoading ? 0.6 : 1
+                }}
+              >
+                <ArrowUpDown size={14} /> {t.sortBy}
+              </button>
+              {isSortMenuOpen && (
+                <div style={{
+                  position: 'absolute',
+                  top: '100%',
+                  right: 0,
+                  marginTop: '4px',
+                  backgroundColor: 'white',
+                  borderRadius: '8px',
+                  boxShadow: '0 4px 12px rgba(0,0,0,0.15)',
+                  border: '1px solid #E5E7EB',
+                  zIndex: 20,
+                  minWidth: '140px',
+                  overflow: 'hidden'
+                }}>
+                  {Object.entries(t.sortOptions).map(([key, label]) => (
+                    <button
+                      key={key}
+                      onClick={() => {
+                        setSortBy(key as SortOption);
+                        setIsSortMenuOpen(false);
+                      }}
+                      style={{
+                        display: 'block',
+                        width: '100%',
+                        padding: '8px 14px',
+                        border: 'none',
+                        background: sortBy === key ? '#F3F4F6' : 'transparent',
+                        color: '#1F2937',
+                        fontSize: '12px',
+                        textAlign: 'left',
+                        cursor: 'pointer',
+                        borderBottom: '1px solid #F3F4F6'
+                      }}
+                      onMouseEnter={(e) => { e.currentTarget.style.backgroundColor = '#F3F4F6'; }}
+                      onMouseLeave={(e) => { 
+                        if (sortBy !== key) e.currentTarget.style.backgroundColor = 'transparent'; 
+                      }}
+                    >
+                      {label}
+                    </button>
+                  ))}
+                </div>
+              )}
+            </div>
+
+            <button
+              onClick={() => {
+                onClose();
+                const analysisTab = document.querySelector('[data-view="analysis"]');
+                if (analysisTab) {
+                  (analysisTab as HTMLElement).click();
+                }
+              }}
+              style={{
+                padding: '6px 10px',
+                backgroundColor: '#10B981',
+                color: 'white',
+                border: 'none',
+                borderRadius: '8px',
+                cursor: 'pointer',
+                fontSize: '11px',
+                fontWeight: '500',
+                display: 'flex',
+                alignItems: 'center',
+                gap: '4px'
+              }}
+            >
+              <Sparkles size={14} /> {t.goToAI}
+            </button>
+
             <button
               onClick={handleRefresh}
               disabled={isRefreshing || !hasStocks || isLoading}
               style={{
-                padding: '6px 12px',
+                padding: '6px 10px',
                 backgroundColor: isRefreshing || !hasStocks || isLoading ? '#9CA3AF' : '#3B82F6',
                 color: 'white',
                 border: 'none',
                 borderRadius: '8px',
                 cursor: isRefreshing || !hasStocks || isLoading ? 'not-allowed' : 'pointer',
-                fontSize: '12px',
+                fontSize: '11px',
                 fontWeight: '500',
                 display: 'flex',
                 alignItems: 'center',
@@ -377,8 +623,9 @@ export const WatchlistModal: React.FC<WatchlistModalProps> = ({
                 opacity: isRefreshing || !hasStocks || isLoading ? 0.6 : 1
               }}
             >
-              <RefreshCw size={14} /> {t.refresh}
+              <RefreshCw size={14} className={isRefreshing ? 'animate-spin' : ''} /> {t.refresh}
             </button>
+
             <button
               onClick={onClose}
               style={{ 
@@ -386,14 +633,14 @@ export const WatchlistModal: React.FC<WatchlistModalProps> = ({
                 border: 'none',
                 cursor: 'pointer',
                 color: '#374151',
-                padding: '8px 12px',
+                padding: '6px 10px',
                 borderRadius: '8px',
                 display: 'flex',
                 alignItems: 'center',
                 justifyContent: 'center',
-                minWidth: '44px',
-                minHeight: '44px',
-                fontSize: '20px',
+                minWidth: '36px',
+                minHeight: '36px',
+                fontSize: '16px',
                 fontWeight: 'bold'
               }}
               aria-label="Close"
@@ -447,6 +694,26 @@ export const WatchlistModal: React.FC<WatchlistModalProps> = ({
           </button>
         </div>
 
+        {/* Scan Results */}
+        {scanning && scanResults.length > 0 && (
+          <div style={{
+            padding: '12px 14px',
+            backgroundColor: '#F0FDF4',
+            border: '1px solid #86EFAC',
+            borderRadius: '8px',
+            marginBottom: '12px'
+          }}>
+            <div style={{ fontWeight: '600', fontSize: '13px', color: '#065F46', marginBottom: '6px' }}>
+              🔍 {t.scanResults}
+            </div>
+            {scanResults.map((result, index) => (
+              <div key={index} style={{ fontSize: '12px', color: '#1F2937', padding: '2px 0' }}>
+                {result}
+              </div>
+            ))}
+          </div>
+        )}
+
         {/* Error Display */}
         {error && (
           <div style={{
@@ -462,6 +729,19 @@ export const WatchlistModal: React.FC<WatchlistModalProps> = ({
           </div>
         )}
 
+        {/* Real-time indicator */}
+        {hasStocks && !isLoading && hasValidData && (
+          <div style={{
+            display: 'flex',
+            justifyContent: 'flex-end',
+            marginBottom: '8px',
+            fontSize: '10px',
+            color: '#6B7280'
+          }}>
+            <span>🟢 {t.realtime}</span>
+          </div>
+        )}
+
         {/* Content */}
         {!hasStocks ? (
           <div style={{ textAlign: 'center', padding: '60px 20px', color: '#9CA3AF' }}>
@@ -473,15 +753,18 @@ export const WatchlistModal: React.FC<WatchlistModalProps> = ({
           <div style={{ textAlign: 'center', padding: '40px 20px', color: '#6B7280' }}>
             <p style={{ fontSize: '14px' }}>⏳ {t.fetchingData}</p>
           </div>
-        ) : Object.keys(stockData).length === 0 ? (
+        ) : !hasValidData ? (
           <div style={{ textAlign: 'center', padding: '40px 20px', color: '#6B7280' }}>
             <p style={{ fontSize: '14px' }}>📊 {t.noData}</p>
+            <p style={{ fontSize: '12px', marginTop: '8px' }}>Click refresh to try again</p>
           </div>
         ) : (
           <div style={{ display: 'flex', flexDirection: 'column', gap: '10px', marginBottom: '16px' }}>
-            {watchlist.map((symbol) => {
+            {sortedWatchlist.map((symbol) => {
               const data = stockData[symbol];
               const isLoadingStock = loading[symbol];
+              const isFallback = data?.isFallback || false;
+              const hasError = data?.error || false;
               const rsiStatus = data?.rsi !== undefined && data?.rsi !== null ? getRSIStatus(data.rsi) : getRSIStatus(null);
               const macdStatus = data?.macd ? getMACDStatus(data.macd) : getMACDStatus('Neutral');
               const trendDisplay = data?.trend ? getTrendDisplay(data.trend) : getTrendDisplay('Sideways');
@@ -490,38 +773,55 @@ export const WatchlistModal: React.FC<WatchlistModalProps> = ({
                 <div
                   key={symbol}
                   onClick={() => {
-                    console.log('🔍 Selected stock:', symbol);
-                    onSelectStock(symbol);
+                    if (!hasError && data?.price > 0) {
+                      console.log('🔍 Selected stock:', symbol);
+                      onSelectStock(symbol);
+                    }
                   }}
                   style={{
                     display: 'flex',
                     flexDirection: 'column',
                     padding: '14px 16px',
-                    backgroundColor: '#F9FAFB',
+                    backgroundColor: hasError ? '#FEF2F2' : isFallback ? '#FFFBEB' : '#F9FAFB',
                     borderRadius: '12px',
-                    border: '1px solid #E5E7EB',
-                    cursor: 'pointer',
-                    transition: 'all 0.2s ease'
+                    border: hasError ? '1px solid #FCA5A5' : isFallback ? '1px solid #FCD34D' : '1px solid #E5E7EB',
+                    cursor: hasError ? 'default' : 'pointer',
+                    transition: 'all 0.2s ease',
+                    opacity: hasError ? 0.7 : 1
                   }}
                   onMouseEnter={(e) => {
-                    e.currentTarget.style.backgroundColor = '#F3F4F6';
-                    e.currentTarget.style.borderColor = '#3B82F6';
-                    e.currentTarget.style.boxShadow = '0 4px 12px rgba(59,130,246,0.15)';
+                    if (!hasError) {
+                      e.currentTarget.style.backgroundColor = '#F3F4F6';
+                      e.currentTarget.style.borderColor = '#3B82F6';
+                      e.currentTarget.style.boxShadow = '0 4px 12px rgba(59,130,246,0.15)';
+                    }
                   }}
                   onMouseLeave={(e) => {
-                    e.currentTarget.style.backgroundColor = '#F9FAFB';
-                    e.currentTarget.style.borderColor = '#E5E7EB';
-                    e.currentTarget.style.boxShadow = 'none';
+                    if (!hasError) {
+                      e.currentTarget.style.backgroundColor = hasError ? '#FEF2F2' : isFallback ? '#FFFBEB' : '#F9FAFB';
+                      e.currentTarget.style.borderColor = hasError ? '#FCA5A5' : isFallback ? '#FCD34D' : '#E5E7EB';
+                      e.currentTarget.style.boxShadow = 'none';
+                    }
                   }}
                 >
                   <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '10px', flexWrap: 'wrap' }}>
                       <span style={{ fontSize: '16px', fontWeight: 'bold', color: '#1F2937' }}>
                         {symbol}
                       </span>
-                      {data?.companyName && data.companyName !== symbol && (
+                      {data?.companyName && data.companyName !== symbol && !hasError && (
                         <span style={{ fontSize: '12px', color: '#6B7280' }}>
                           {data.companyName}
+                        </span>
+                      )}
+                      {isFallback && !hasError && (
+                        <span style={{ fontSize: '10px', color: '#D97706', backgroundColor: '#FEF3C7', padding: '1px 8px', borderRadius: '4px' }}>
+                          ⚠️ sample
+                        </span>
+                      )}
+                      {hasError && (
+                        <span style={{ fontSize: '10px', color: '#DC2626', backgroundColor: '#FEE2E2', padding: '1px 8px', borderRadius: '4px' }}>
+                          ⚠️ error
                         </span>
                       )}
                       {isLoadingStock && (
@@ -552,6 +852,10 @@ export const WatchlistModal: React.FC<WatchlistModalProps> = ({
                   {isLoadingStock ? (
                     <div style={{ padding: '12px 0', textAlign: 'center', color: '#9CA3AF' }}>
                       <span style={{ fontSize: '13px' }}>⏳ {t.loadingData}</span>
+                    </div>
+                  ) : hasError ? (
+                    <div style={{ padding: '8px 0', textAlign: 'center', color: '#DC2626', fontSize: '12px' }}>
+                      ⚠️ {data?.error || t.error}
                     </div>
                   ) : data && data.price > 0 ? (
                     <div style={{ 
@@ -633,7 +937,7 @@ export const WatchlistModal: React.FC<WatchlistModalProps> = ({
         )}
 
         {/* Legend */}
-        {hasStocks && Object.keys(stockData).length > 0 && !isLoading && (
+        {hasStocks && hasValidData && !isLoading && (
           <div style={{
             padding: '12px 16px',
             borderTop: '1px solid #E5E7EB',
